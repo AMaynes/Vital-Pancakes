@@ -54,6 +54,7 @@ artificially-neuroscience/
   - **Subcategory Practice**: Focus on specific topics (Limits, Derivatives, Matrices, etc.)
   - **Master Mode**: Practice all cards within a category branch
   - **Mixed Mode**: Random cards from all topics
+  - **Test Your Knowledge**: Multiple-choice quiz mode with daily score tracking
   - **LaTeX Rendering**: Full support for equations, integrals, matrices, and vectors
   - **Submit Cards**: Submit new flashcard ideas for review (stored locally)
   - **Pending Reviews**: View and manage submitted cards before adding to the deck
@@ -131,7 +132,7 @@ The flashcards use a hierarchical JSON structure with categories and subcategori
    ```
 
 **Current Categories:**
-- **Foundations**: Algebra, Trigonometry, Vector Math
+- **Foundations**: Basics (Integers, Fractions, Decimals), Algebra, Trigonometry, Vector Math
 - **Calculus**: Limits, Derivatives, Integrals, Series, Differential Equations, Multivariable
 - **Linear Algebra**: Matrices, Eigenvalues, Linear Systems
 

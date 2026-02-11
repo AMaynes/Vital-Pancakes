@@ -704,6 +704,178 @@
         font-size: 0.85rem;
       }
     }
+
+    /* Quiz Mode Styles */
+    .quiz-stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      flex-wrap: wrap;
+    }
+
+    .stat-box {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .stat-value.correct {
+      color: #28a745;
+    }
+
+    .stat-value.incorrect {
+      color: #dc3545;
+    }
+
+    .stat-value.streak {
+      color: #fd7e14;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .quiz-card {
+      width: 100%;
+      max-width: 600px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      padding: 1.5rem;
+      margin: 0 auto;
+    }
+
+    .quiz-question {
+      font-size: 1.2rem;
+      text-align: center;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      line-height: 1.8;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .quiz-option {
+      padding: 1rem;
+      font-size: 1rem;
+      border: 2px solid #ddd;
+      background: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      line-height: 1.6;
+    }
+
+    .quiz-option:hover:not(:disabled) {
+      border-color: rgb(43,59,116);
+      background: #f0f4ff;
+    }
+
+    .quiz-option.selected {
+      border-color: rgb(43,59,116);
+      background: #e8f0fe;
+    }
+
+    .quiz-option.correct {
+      border-color: #28a745;
+      background: #d4edda;
+    }
+
+    .quiz-option.incorrect {
+      border-color: #dc3545;
+      background: #f8d7da;
+    }
+
+    .quiz-option:disabled {
+      cursor: default;
+    }
+
+    .quiz-feedback {
+      text-align: center;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .quiz-feedback.correct {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .quiz-feedback.incorrect {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .quiz-next-btn {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .quiz-next-btn:hover {
+      background: #218838;
+    }
+
+    .quiz-topic-badge {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .today-date {
+      text-align: center;
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .quiz-stats {
+        gap: 1rem;
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+      }
+
+      .quiz-question {
+        font-size: 1.1rem;
+        padding: 1rem;
+      }
+
+      .quiz-option {
+        padding: 0.75rem;
+        font-size: 0.95rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -727,6 +899,9 @@
         <button class="tab-btn active" onclick="showTab('practice')" id="tab-practice">
           🎴 Practice
         </button>
+        <button class="tab-btn" onclick="showTab('quiz')" id="tab-quiz">
+          🧠 Test Your Knowledge
+        </button>
         <button class="tab-btn" onclick="showTab('submit')" id="tab-submit">
           ➕ Submit Card
         </button>
@@ -739,6 +914,13 @@
       <div id="practice-tab" class="tab-content">
         <div id="app">
           <div class="loading">Loading flashcards...</div>
+        </div>
+      </div>
+
+      <!-- Quiz Tab -->
+      <div id="quiz-tab" class="tab-content" style="display:none">
+        <div id="quiz-app">
+          <div class="loading">Loading quiz...</div>
         </div>
       </div>
 
@@ -808,8 +990,17 @@
     let currentMode = '';
     let pendingReviews = [];
 
+    // Quiz State
+    let quizCorrect = 0;
+    let quizIncorrect = 0;
+    let quizStreak = 0;
+    let quizCurrentCard = null;
+    let quizOptions = [];
+    let quizAnswered = false;
+
     // Local Storage Keys
     const STORAGE_KEY = 'flashcard_pending_reviews';
+    const QUIZ_STORAGE_KEY = 'flashcard_quiz_daily_stats';
 
     // Tab Management
     function showTab(tabName) {
@@ -825,6 +1016,11 @@
       if (tabName === 'reviews') {
         renderReviews();
       }
+      
+      // Initialize quiz if switching to quiz tab
+      if (tabName === 'quiz' && data) {
+        initQuiz();
+      }
     }
 
     // Load pending reviews from localStorage
@@ -832,6 +1028,20 @@
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
         pendingReviews = stored ? JSON.parse(stored) : [];
+        
+        // Auto-delete reviews older than 6 months
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const originalLength = pendingReviews.length;
+        pendingReviews = pendingReviews.filter(review => {
+          const submittedDate = new Date(review.submittedAt);
+          return submittedDate > sixMonthsAgo;
+        });
+        
+        // Save if any were removed
+        if (pendingReviews.length < originalLength) {
+          savePendingReviews();
+        }
       } catch (e) {
         pendingReviews = [];
       }
@@ -1348,6 +1558,207 @@
         backToTopics();
       }
     });
+
+    // ========== QUIZ MODE FUNCTIONS ==========
+
+    // Get today's date as a string
+    function getTodayString() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    // Load quiz stats from localStorage
+    function loadQuizStats() {
+      try {
+        const stored = localStorage.getItem(QUIZ_STORAGE_KEY);
+        if (stored) {
+          const stats = JSON.parse(stored);
+          if (stats.date === getTodayString()) {
+            quizCorrect = stats.correct || 0;
+            quizIncorrect = stats.incorrect || 0;
+            quizStreak = stats.streak || 0;
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Error loading quiz stats:', e);
+      }
+      // Reset for new day
+      quizCorrect = 0;
+      quizIncorrect = 0;
+      quizStreak = 0;
+    }
+
+    // Save quiz stats to localStorage
+    function saveQuizStats() {
+      const stats = {
+        date: getTodayString(),
+        correct: quizCorrect,
+        incorrect: quizIncorrect,
+        streak: quizStreak
+      };
+      localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(stats));
+    }
+
+    // Initialize the quiz
+    function initQuiz() {
+      loadQuizStats();
+      quizAnswered = false;
+      showQuizQuestion();
+    }
+
+    // Get random wrong answers for quiz
+    function getWrongAnswers(correctCard, count) {
+      const allCards = getAllCards();
+      const wrongAnswers = [];
+      const usedIndices = new Set();
+      const correctAnswer = correctCard.answer;
+
+      // Find the index of the correct card to exclude it
+      const correctIndex = allCards.findIndex(c => c.answer === correctAnswer);
+      if (correctIndex >= 0) usedIndices.add(correctIndex);
+
+      let attempts = 0;
+      while (wrongAnswers.length < count && attempts < 100) {
+        const idx = Math.floor(Math.random() * allCards.length);
+        if (!usedIndices.has(idx) && allCards[idx].answer !== correctAnswer) {
+          usedIndices.add(idx);
+          wrongAnswers.push(allCards[idx].answer);
+        }
+        attempts++;
+      }
+
+      return wrongAnswers;
+    }
+
+    // Shuffle array
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    // Show a quiz question
+    function showQuizQuestion() {
+      const allCards = getAllCards();
+      if (allCards.length < 4) {
+        document.getElementById('quiz-app').innerHTML = `
+          <div class="error">Need at least 4 flashcards for quiz mode.</div>
+        `;
+        return;
+      }
+
+      // Pick a random card
+      quizCurrentCard = allCards[Math.floor(Math.random() * allCards.length)];
+      quizAnswered = false;
+
+      // Get wrong answers
+      const wrongAnswers = getWrongAnswers(quizCurrentCard, 3);
+      
+      // Create options with correct answer and shuffle
+      quizOptions = shuffleArray([quizCurrentCard.answer, ...wrongAnswers]);
+
+      renderQuiz();
+    }
+
+    // Render the quiz UI
+    function renderQuiz() {
+      const todayFormatted = new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+
+      let html = `
+        <div class="today-date">${todayFormatted}</div>
+        <div class="quiz-stats">
+          <div class="stat-box">
+            <div class="stat-value correct">${quizCorrect}</div>
+            <div class="stat-label">Correct</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value incorrect">${quizIncorrect}</div>
+            <div class="stat-label">Incorrect</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value streak">🔥 ${quizStreak}</div>
+            <div class="stat-label">Streak</div>
+          </div>
+        </div>
+        <div class="quiz-card">
+          <div class="quiz-topic-badge">${quizCurrentCard.subcategory || quizCurrentCard.category}</div>
+          <div class="quiz-question">${quizCurrentCard.question}</div>
+          <div class="quiz-options" id="quiz-options">
+      `;
+
+      quizOptions.forEach((option, idx) => {
+        html += `
+          <button class="quiz-option" onclick="selectQuizAnswer(${idx})" id="quiz-opt-${idx}">
+            ${option}
+          </button>
+        `;
+      });
+
+      html += `
+          </div>
+          <div id="quiz-feedback"></div>
+          <button class="quiz-next-btn" id="quiz-next-btn" style="display:none" onclick="showQuizQuestion()">
+            Next Question →
+          </button>
+        </div>
+      `;
+
+      document.getElementById('quiz-app').innerHTML = html;
+      setTimeout(renderMath, 10);
+    }
+
+    // Handle answer selection
+    function selectQuizAnswer(idx) {
+      if (quizAnswered) return;
+      quizAnswered = true;
+
+      const selectedAnswer = quizOptions[idx];
+      const isCorrect = selectedAnswer === quizCurrentCard.answer;
+      const correctIdx = quizOptions.indexOf(quizCurrentCard.answer);
+
+      // Disable all options and show colors
+      quizOptions.forEach((_, i) => {
+        const btn = document.getElementById(`quiz-opt-${i}`);
+        btn.disabled = true;
+        if (i === correctIdx) {
+          btn.classList.add('correct');
+        } else if (i === idx) {
+          btn.classList.add('incorrect');
+        }
+      });
+
+      // Update stats
+      if (isCorrect) {
+        quizCorrect++;
+        quizStreak++;
+      } else {
+        quizIncorrect++;
+        quizStreak = 0;
+      }
+      saveQuizStats();
+
+      // Show feedback
+      const feedbackDiv = document.getElementById('quiz-feedback');
+      feedbackDiv.innerHTML = isCorrect 
+        ? '<div class="quiz-feedback correct">✅ Correct!</div>'
+        : '<div class="quiz-feedback incorrect">❌ Incorrect!</div>';
+
+      // Show next button
+      document.getElementById('quiz-next-btn').style.display = 'block';
+
+      // Update stats display
+      document.querySelector('.stat-value.correct').textContent = quizCorrect;
+      document.querySelector('.stat-value.incorrect').textContent = quizIncorrect;
+      document.querySelector('.stat-value.streak').textContent = '🔥 ' + quizStreak;
+    }
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {

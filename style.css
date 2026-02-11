@@ -51,24 +51,85 @@ main p  { margin-bottom:2rem }
 /* Lists */
 #resources-list,
 #research-pub-list,
-#more-pubs-list {
+#more-pubs-list,
+#pub-list,
+#tools-list {
   list-style:none; padding-left:1rem; margin-bottom:2rem
 }
 #resources-list li,
 #research-pub-list li,
-#more-pubs-list li {
-  margin:0 0 1rem 2rem
+#more-pubs-list li,
+#pub-list li,
+#tools-list li {
+  margin:0 0 1rem 1rem
+}
+
+@media (max-width: 768px) {
+  #resources-list li,
+  #research-pub-list li,
+  #more-pubs-list li,
+  #pub-list li,
+  #tools-list li {
+    margin-left: 0;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  #resources-list,
+  #research-pub-list,
+  #more-pubs-list,
+  #pub-list,
+  #tools-list {
+    padding-left: 0;
+  }
 }
 
 /* Links */
 #resources-list a,
 #research-pub-list a,
-#more-pubs-list a {
-  color:rgb(43,59,116); text-decoration:none
+#more-pubs-list a,
+#pub-list a,
+#tools-list a {
+  color:rgb(43,59,116); text-decoration:none;
+  display: inline-block;
+  padding: 0.25rem 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 #resources-list a:visited,
 #research-pub-list a:visited,
-#more-pubs-list a:visited { color:inherit }
+#more-pubs-list a:visited,
+#pub-list a:visited,
+#tools-list a:visited { color:inherit }
 #resources-list a:hover,
 #research-pub-list a:hover,
-#more-pubs-list a:hover { text-decoration:underline }
+#more-pubs-list a:hover,
+#pub-list a:hover,
+#tools-list a:hover { text-decoration:underline }
+
+/* Sections */
+section {
+  margin-bottom: 2rem;
+}
+
+/* Touch-friendly link sizing for mobile */
+@media (max-width: 768px) {
+  #resources-list a,
+  #research-pub-list a,
+  #more-pubs-list a,
+  #pub-list a,
+  #tools-list a {
+    padding: 0.5rem 0;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  
+  main h3 {
+    margin-left: 0;
+    font-size: 1.1rem;
+  }
+  
+  main p {
+    margin-bottom: 1rem;
+  }
+}
