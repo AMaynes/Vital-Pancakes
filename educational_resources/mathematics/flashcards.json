@@ -1,0 +1,450 @@
+{
+  "categories": {
+    "foundations": {
+      "name": "Foundations",
+      "icon": "📐",
+      "subcategories": {
+        "algebra": {
+          "name": "Algebra",
+          "cards": [
+            {
+              "question": "Simplify: $(x+2)(x-2)$",
+              "answer": "$$x^2 - 4$$"
+            },
+            {
+              "question": "Factor: $x^2 + 5x + 6$",
+              "answer": "$$(x+2)(x+3)$$"
+            },
+            {
+              "question": "Solve for $x$: $2x + 5 = 13$",
+              "answer": "$$x = 4$$"
+            },
+            {
+              "question": "What is the quadratic formula?",
+              "answer": "$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$"
+            },
+            {
+              "question": "Simplify: $\\frac{x^2 - 9}{x - 3}$",
+              "answer": "$$x + 3$$ (for $x \\neq 3$)"
+            },
+            {
+              "question": "Expand: $(a+b)^2$",
+              "answer": "$$a^2 + 2ab + b^2$$"
+            },
+            {
+              "question": "What is $\\sqrt{48}$ in simplest form?",
+              "answer": "$$4\\sqrt{3}$$"
+            },
+            {
+              "question": "Solve: $|x - 3| = 5$",
+              "answer": "$$x = 8 \\text{ or } x = -2$$"
+            }
+          ]
+        },
+        "trigonometry": {
+          "name": "Trigonometry",
+          "cards": [
+            {
+              "question": "What is $\\sin(0)$?",
+              "answer": "$$0$$"
+            },
+            {
+              "question": "What is $\\cos(0)$?",
+              "answer": "$$1$$"
+            },
+            {
+              "question": "What is $\\sin(\\pi/2)$?",
+              "answer": "$$1$$"
+            },
+            {
+              "question": "What is $\\cos(\\pi)$?",
+              "answer": "$$-1$$"
+            },
+            {
+              "question": "What is $\\tan(\\pi/4)$?",
+              "answer": "$$1$$"
+            },
+            {
+              "question": "State the Pythagorean identity.",
+              "answer": "$$\\sin^2\\theta + \\cos^2\\theta = 1$$"
+            },
+            {
+              "question": "What is $\\sin(\\pi/6)$?",
+              "answer": "$$\\frac{1}{2}$$"
+            },
+            {
+              "question": "What is $\\cos(\\pi/3)$?",
+              "answer": "$$\\frac{1}{2}$$"
+            },
+            {
+              "question": "What is $\\sin(\\pi/4)$?",
+              "answer": "$$\\frac{\\sqrt{2}}{2}$$"
+            },
+            {
+              "question": "Express $\\tan\\theta$ in terms of sin and cos.",
+              "answer": "$$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$$"
+            },
+            {
+              "question": "What is $\\sin(2\\theta)$ in terms of $\\sin\\theta$ and $\\cos\\theta$?",
+              "answer": "$$\\sin(2\\theta) = 2\\sin\\theta\\cos\\theta$$"
+            },
+            {
+              "question": "What is $\\arctan(1)$?",
+              "answer": "$$\\frac{\\pi}{4}$$"
+            }
+          ]
+        },
+        "vectors": {
+          "name": "Vector Math",
+          "cards": [
+            {
+              "question": "What is the magnitude of vector $\\vec{v} = (3, 4)$?",
+              "answer": "$$|\\vec{v}| = 5$$"
+            },
+            {
+              "question": "What is $(2,3) + (1,5)$?",
+              "answer": "$$(3, 8)$$"
+            },
+            {
+              "question": "What is $3 \\cdot (2, -1)$?",
+              "answer": "$$(6, -3)$$"
+            },
+            {
+              "question": "What is the dot product $(1,2) \\cdot (3,4)$?",
+              "answer": "$$1(3) + 2(4) = 11$$"
+            },
+            {
+              "question": "What is $\\vec{i} \\times \\vec{j}$?",
+              "answer": "$$\\vec{k}$$"
+            },
+            {
+              "question": "What is the unit vector in the direction of $(3,4)$?",
+              "answer": "$$\\left(\\frac{3}{5}, \\frac{4}{5}\\right)$$"
+            },
+            {
+              "question": "If $\\vec{a} \\cdot \\vec{b} = 0$, what does this tell us?",
+              "answer": "The vectors are perpendicular (orthogonal)"
+            },
+            {
+              "question": "What is the magnitude of $(1, 1, 1)$?",
+              "answer": "$$\\sqrt{3}$$"
+            }
+          ]
+        }
+      }
+    },
+    "calculus": {
+      "name": "Calculus",
+      "icon": "∫",
+      "subcategories": {
+        "limits": {
+          "name": "Limits",
+          "cards": [
+            {
+              "question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{\\sin x}{x}$?",
+              "answer": "$$1$$"
+            },
+            {
+              "question": "What is $\\displaystyle\\lim_{x \\to \\infty} \\frac{1}{x}$?",
+              "answer": "$$0$$"
+            },
+            {
+              "question": "What is $\\displaystyle\\lim_{n \\to \\infty} \\left(1 + \\frac{1}{n}\\right)^n$?",
+              "answer": "$$e$$"
+            },
+            {
+              "question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{e^x - 1}{x}$?",
+              "answer": "$$1$$"
+            },
+            {
+              "question": "What is $\\displaystyle\\lim_{x \\to 2} (x^2 - 4)/(x-2)$?",
+              "answer": "$$4$$"
+            },
+            {
+              "question": "What is $\\displaystyle\\lim_{x \\to 0^+} \\ln(x)$?",
+              "answer": "$$-\\infty$$"
+            },
+            {
+              "question": "What is $\\displaystyle\\lim_{x \\to \\infty} e^{-x}$?",
+              "answer": "$$0$$"
+            },
+            {
+              "question": "When does $\\displaystyle\\lim_{x \\to a} f(x)$ exist?",
+              "answer": "When left and right limits are equal: $$\\lim_{x \\to a^-} f(x) = \\lim_{x \\to a^+} f(x)$$"
+            }
+          ]
+        },
+        "derivatives": {
+          "name": "Derivatives",
+          "cards": [
+            {
+              "question": "What is $\\frac{d}{dx}[x^n]$?",
+              "answer": "$$nx^{n-1}$$"
+            },
+            {
+              "question": "What is $\\frac{d}{dx}[\\sin x]$?",
+              "answer": "$$\\cos x$$"
+            },
+            {
+              "question": "What is $\\frac{d}{dx}[\\cos x]$?",
+              "answer": "$$-\\sin x$$"
+            },
+            {
+              "question": "What is $\\frac{d}{dx}[e^x]$?",
+              "answer": "$$e^x$$"
+            },
+            {
+              "question": "What is $\\frac{d}{dx}[\\ln x]$?",
+              "answer": "$$\\frac{1}{x}$$"
+            },
+            {
+              "question": "State the chain rule.",
+              "answer": "$$\\frac{d}{dx}[f(g(x))] = f'(g(x)) \\cdot g'(x)$$"
+            },
+            {
+              "question": "State the product rule.",
+              "answer": "$$\\frac{d}{dx}[uv] = u'v + uv'$$"
+            },
+            {
+              "question": "What is $\\frac{d}{dx}[\\tan x]$?",
+              "answer": "$$\\sec^2 x$$"
+            },
+            {
+              "question": "What is $\\frac{d}{dx}[x^3]$ at $x=2$?",
+              "answer": "$$3(2)^2 = 12$$"
+            },
+            {
+              "question": "What is $\\frac{d}{dx}[e^{2x}]$?",
+              "answer": "$$2e^{2x}$$"
+            }
+          ]
+        },
+        "integrals": {
+          "name": "Integrals",
+          "cards": [
+            {
+              "question": "What is $\\int x^n \\, dx$?",
+              "answer": "$$\\frac{x^{n+1}}{n+1} + C$$ (for $n \\neq -1$)"
+            },
+            {
+              "question": "What is $\\int e^x \\, dx$?",
+              "answer": "$$e^x + C$$"
+            },
+            {
+              "question": "What is $\\int \\frac{1}{x} \\, dx$?",
+              "answer": "$$\\ln|x| + C$$"
+            },
+            {
+              "question": "What is $\\int \\cos x \\, dx$?",
+              "answer": "$$\\sin x + C$$"
+            },
+            {
+              "question": "What is $\\int \\sin x \\, dx$?",
+              "answer": "$$-\\cos x + C$$"
+            },
+            {
+              "question": "Evaluate $\\int_0^1 x^2 \\, dx$",
+              "answer": "$$\\frac{1}{3}$$"
+            },
+            {
+              "question": "What is the integration by parts formula?",
+              "answer": "$$\\int u \\, dv = uv - \\int v \\, du$$"
+            },
+            {
+              "question": "What is $\\int_0^{\\pi} \\sin x \\, dx$?",
+              "answer": "$$2$$"
+            },
+            {
+              "question": "What is $\\int 2x \\, dx$?",
+              "answer": "$$x^2 + C$$"
+            },
+            {
+              "question": "What is $\\int_0^1 e^x \\, dx$?",
+              "answer": "$$e - 1$$"
+            }
+          ]
+        },
+        "series": {
+          "name": "Series",
+          "cards": [
+            {
+              "question": "What is $\\sum_{n=0}^{\\infty} ar^n$ for $|r| < 1$?",
+              "answer": "$$\\frac{a}{1-r}$$"
+            },
+            {
+              "question": "What is $\\sum_{k=1}^{n} k$?",
+              "answer": "$$\\frac{n(n+1)}{2}$$"
+            },
+            {
+              "question": "First 3 terms of Taylor series for $e^x$ at $x=0$?",
+              "answer": "$$1 + x + \\frac{x^2}{2}$$"
+            },
+            {
+              "question": "What is $\\sum_{n=0}^{\\infty} \\frac{1}{2^n}$?",
+              "answer": "$$2$$"
+            },
+            {
+              "question": "Does $\\sum_{n=1}^{\\infty} \\frac{1}{n}$ converge?",
+              "answer": "No, the harmonic series diverges"
+            },
+            {
+              "question": "Does $\\sum_{n=1}^{\\infty} \\frac{1}{n^2}$ converge?",
+              "answer": "Yes, it converges to $\\frac{\\pi^2}{6}$"
+            }
+          ]
+        },
+        "diffeq": {
+          "name": "Differential Equations",
+          "cards": [
+            {
+              "question": "Solve: $\\frac{dy}{dx} = y$",
+              "answer": "$$y = Ce^x$$"
+            },
+            {
+              "question": "Solve: $\\frac{dy}{dx} = ky$",
+              "answer": "$$y = Ce^{kx}$$"
+            },
+            {
+              "question": "What type of DE is $y'' + y = 0$?",
+              "answer": "Second-order linear homogeneous ODE"
+            },
+            {
+              "question": "Solution to $y'' + y = 0$?",
+              "answer": "$$y = A\\cos x + B\\sin x$$"
+            },
+            {
+              "question": "Solve: $\\frac{dy}{dx} = 2x$",
+              "answer": "$$y = x^2 + C$$"
+            },
+            {
+              "question": "What is a separable differential equation?",
+              "answer": "One that can be written as $\\frac{dy}{dx} = f(x)g(y)$"
+            }
+          ]
+        },
+        "multivariable": {
+          "name": "Multivariable",
+          "cards": [
+            {
+              "question": "What is $\\nabla f$ for $f(x,y,z)$?",
+              "answer": "$$\\left(\\frac{\\partial f}{\\partial x}, \\frac{\\partial f}{\\partial y}, \\frac{\\partial f}{\\partial z}\\right)$$"
+            },
+            {
+              "question": "What is $\\frac{\\partial}{\\partial x}(x^2y)$?",
+              "answer": "$$2xy$$"
+            },
+            {
+              "question": "What is $\\frac{\\partial}{\\partial y}(x^2y)$?",
+              "answer": "$$x^2$$"
+            },
+            {
+              "question": "What is $\\nabla \\cdot \\vec{F}$ called?",
+              "answer": "Divergence"
+            },
+            {
+              "question": "What is $\\nabla \\times \\vec{F}$ called?",
+              "answer": "Curl"
+            },
+            {
+              "question": "What does it mean if $\\nabla \\cdot \\vec{F} = 0$?",
+              "answer": "The field is incompressible (divergence-free)"
+            }
+          ]
+        }
+      }
+    },
+    "linearalgebra": {
+      "name": "Linear Algebra",
+      "icon": "🔢",
+      "subcategories": {
+        "matrices": {
+          "name": "Matrices",
+          "cards": [
+            {
+              "question": "Determinant of $\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$?",
+              "answer": "$$ad - bc$$"
+            },
+            {
+              "question": "What is $I_2$?",
+              "answer": "$$\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}$$"
+            },
+            {
+              "question": "Determinant of $\\begin{pmatrix} 3 & 2 \\\\ 1 & 4 \\end{pmatrix}$?",
+              "answer": "$$3(4) - 2(1) = 10$$"
+            },
+            {
+              "question": "What is $A \\cdot I$?",
+              "answer": "$$A$$"
+            },
+            {
+              "question": "If $\\det(A) = 0$, is $A$ invertible?",
+              "answer": "No, the matrix is singular"
+            },
+            {
+              "question": "What is $(AB)^T$?",
+              "answer": "$$B^T A^T$$"
+            },
+            {
+              "question": "$\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix} + \\begin{pmatrix} 5 & 6 \\\\ 7 & 8 \\end{pmatrix} = ?$",
+              "answer": "$$\\begin{pmatrix} 6 & 8 \\\\ 10 & 12 \\end{pmatrix}$$"
+            },
+            {
+              "question": "What does \"rank\" of a matrix mean?",
+              "answer": "The number of linearly independent rows (or columns)"
+            }
+          ]
+        },
+        "eigenvalues": {
+          "name": "Eigenvalues",
+          "cards": [
+            {
+              "question": "How to find eigenvalues of $A$?",
+              "answer": "Solve $\\det(A - \\lambda I) = 0$"
+            },
+            {
+              "question": "If $A\\vec{v} = \\lambda\\vec{v}$, what is $\\vec{v}$?",
+              "answer": "An eigenvector of $A$ with eigenvalue $\\lambda$"
+            },
+            {
+              "question": "Eigenvalues of $\\begin{pmatrix} 2 & 0 \\\\ 0 & 3 \\end{pmatrix}$?",
+              "answer": "$$\\lambda = 2, \\lambda = 3$$"
+            },
+            {
+              "question": "Sum of eigenvalues equals what?",
+              "answer": "The trace of the matrix (sum of diagonal)"
+            },
+            {
+              "question": "Product of eigenvalues equals what?",
+              "answer": "The determinant of the matrix"
+            }
+          ]
+        },
+        "systems": {
+          "name": "Linear Systems",
+          "cards": [
+            {
+              "question": "How many solutions if $\\det(A) \\neq 0$?",
+              "answer": "Exactly one unique solution"
+            },
+            {
+              "question": "What is row echelon form?",
+              "answer": "Leading 1s with zeros below, staircase pattern"
+            },
+            {
+              "question": "What does RREF stand for?",
+              "answer": "Reduced Row Echelon Form"
+            },
+            {
+              "question": "Solve: $x + y = 5$ and $x - y = 1$",
+              "answer": "$$x = 3, y = 2$$"
+            },
+            {
+              "question": "What is Cramer's rule for?",
+              "answer": "Solving systems of linear equations using determinants"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

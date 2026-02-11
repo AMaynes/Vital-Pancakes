@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flash Card Practice - Mathematics</title>
+  <link rel="stylesheet" href="../../style.css" />
+  <!-- KaTeX for LaTeX rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    /* Topic Selection Styles */
+    .topic-selection {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .mode-section {
+      margin-bottom: 2rem;
+    }
+
+    .mode-section h3 {
+      margin-bottom: 1rem;
+      color: rgb(43,59,116);
+      border-bottom: 2px solid rgb(43,59,116);
+      padding-bottom: 0.5rem;
+    }
+
+    .special-modes {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .mode-btn {
+      padding: 1rem 1.5rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .mode-btn.mixed {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+
+    .mode-btn.mixed:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .category-tree {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .category {
+      border-bottom: 1px solid #eee;
+    }
+
+    .category:last-child {
+      border-bottom: none;
+    }
+
+    .category-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: #f8f9fa;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .category-header:hover {
+      background: #e9ecef;
+    }
+
+    .category-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .category-icon {
+      font-size: 1.4rem;
+    }
+
+    .master-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      font-weight: bold;
+      border: 2px solid rgb(43,59,116);
+      background: #fff;
+      color: rgb(43,59,116);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .master-btn:hover {
+      background: rgb(43,59,116);
+      color: #fff;
+    }
+
+    .subcategories {
+      padding: 0.5rem 1.5rem 1rem 2.5rem;
+      display: none;
+    }
+
+    .subcategories.open {
+      display: block;
+    }
+
+    .subcategory-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      margin: 0.3rem 0;
+      font-size: 1rem;
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .subcategory-btn:hover {
+      background: rgb(43,59,116);
+      color: #fff;
+      border-color: rgb(43,59,116);
+    }
+
+    .subcategory-btn .card-count {
+      float: right;
+      color: #888;
+      font-size: 0.85rem;
+    }
+
+    .subcategory-btn:hover .card-count {
+      color: rgba(255,255,255,0.8);
+    }
+
+    .toggle-icon {
+      font-size: 1.2rem;
+      transition: transform 0.2s;
+    }
+
+    .category.open .toggle-icon {
+      transform: rotate(90deg);
+    }
+
+    /* Flashcard Styles */
+    .flashcard-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 2rem;
+    }
+
+    .flashcard {
+      width: 100%;
+      max-width: 600px;
+      min-height: 300px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+    }
+
+    .flashcard:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+    }
+
+    .flashcard.flipped {
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+    }
+
+    .topic-badge {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: rgb(43,59,116);
+      color: #fff;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    .card-label {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      color: #888;
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    .card-content {
+      font-size: 1.3rem;
+      text-align: center;
+      line-height: 1.8;
+      margin-top: 1rem;
+    }
+
+    .flip-hint {
+      position: absolute;
+      bottom: 1rem;
+      color: #aaa;
+      font-size: 0.85rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .controls button {
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-back-topic {
+      background: #6c757d;
+      color: #fff;
+    }
+
+    .btn-back-topic:hover {
+      background: #5a6268;
+    }
+
+    .btn-back {
+      background: #495057;
+      color: #fff;
+    }
+
+    .btn-back:hover:not(:disabled) {
+      background: #343a40;
+    }
+
+    .btn-back:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-flip {
+      background: rgb(43,59,116);
+      color: #fff;
+    }
+
+    .btn-flip:hover {
+      background: rgb(33,49,106);
+    }
+
+    .btn-next {
+      background: #28a745;
+      color: #fff;
+    }
+
+    .btn-next:hover {
+      background: #218838;
+    }
+
+    .card-counter {
+      margin-top: 1.5rem;
+      color: #666;
+      font-size: 0.95rem;
+    }
+
+    .current-mode {
+      margin-top: 0.5rem;
+      color: #888;
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: #666;
+    }
+
+    .error {
+      text-align: center;
+      padding: 3rem;
+      color: #dc3545;
+    }
+
+    .keyboard-hint {
+      margin-top: 1rem;
+      color: #999;
+      font-size: 0.8rem;
+      text-align: center;
+    }
+
+    .keyboard-hint kbd {
+      background: #eee;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-family: monospace;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Artificially Neuroscience</h1>
+    <nav>
+      <a href="../../index.html">Home</a>
+      <a href="../../research_publications/index.html">Research Publications</a>
+      <a href="../../literature_analysis/index.html">Literature Analysis</a>
+      <a href="../../educational_resources/index.html">Educational Resources</a>
+    </nav>
+  </header>
+
+  <main>
+    <section>
+      <h2>Flash Card Practice</h2>
+      <p><a href="index.html">&larr; Back to Mathematics Resources</a></p>
+      
+      <div id="app">
+        <div class="loading">Loading flashcards...</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let data = null;
+    let activeCards = [];
+    let currentCard = null;
+    let previousCard = null;
+    let isFlipped = false;
+    let canGoBack = false;
+    let currentMode = '';
+
+    // Load flashcards from JSON
+    async function loadFlashcards() {
+      try {
+        const response = await fetch('flashcards.json');
+        if (!response.ok) throw new Error('Failed to load flashcards');
+        data = await response.json();
+        showTopicSelection();
+      } catch (error) {
+        document.getElementById('app').innerHTML = 
+          '<div class="error">Error loading flashcards. Please try again later.</div>';
+        console.error('Error:', error);
+      }
+    }
+
+    // Get all cards from all categories
+    function getAllCards() {
+      const cards = [];
+      for (const catKey in data.categories) {
+        const cat = data.categories[catKey];
+        for (const subKey in cat.subcategories) {
+          const sub = cat.subcategories[subKey];
+          sub.cards.forEach(card => {
+            cards.push({
+              ...card,
+              category: cat.name,
+              subcategory: sub.name
+            });
+          });
+        }
+      }
+      return cards;
+    }
+
+    // Get cards from a specific category (master mode)
+    function getCategoryCards(catKey) {
+      const cards = [];
+      const cat = data.categories[catKey];
+      for (const subKey in cat.subcategories) {
+        const sub = cat.subcategories[subKey];
+        sub.cards.forEach(card => {
+          cards.push({
+            ...card,
+            category: cat.name,
+            subcategory: sub.name
+          });
+        });
+      }
+      return cards;
+    }
+
+    // Get cards from a specific subcategory
+    function getSubcategoryCards(catKey, subKey) {
+      const cat = data.categories[catKey];
+      const sub = cat.subcategories[subKey];
+      return sub.cards.map(card => ({
+        ...card,
+        category: cat.name,
+        subcategory: sub.name
+      }));
+    }
+
+    // Count cards in a category
+    function countCategoryCards(catKey) {
+      let count = 0;
+      const cat = data.categories[catKey];
+      for (const subKey in cat.subcategories) {
+        count += cat.subcategories[subKey].cards.length;
+      }
+      return count;
+    }
+
+    // Show topic selection UI
+    function showTopicSelection() {
+      let html = '<div class="topic-selection">';
+      
+      // Mixed mode
+      html += '<div class="mode-section">';
+      html += '<h3>🎲 Special Modes</h3>';
+      html += '<div class="special-modes">';
+      html += `<button class="mode-btn mixed" onclick="startMixed()">
+        🔀 Mixed Mode
+        <span style="font-size:0.8em;opacity:0.8">(${getAllCards().length} cards)</span>
+      </button>`;
+      html += '</div>';
+      html += '</div>';
+
+      // Category tree
+      html += '<div class="mode-section">';
+      html += '<h3>📚 Browse by Topic</h3>';
+      html += '<div class="category-tree">';
+
+      for (const catKey in data.categories) {
+        const cat = data.categories[catKey];
+        const cardCount = countCategoryCards(catKey);
+        
+        html += `<div class="category" id="cat-${catKey}">`;
+        html += `<div class="category-header" onclick="toggleCategory('${catKey}')">`;
+        html += `<div class="category-title">`;
+        html += `<span class="category-icon">${cat.icon}</span>`;
+        html += `<span>${cat.name}</span>`;
+        html += `</div>`;
+        html += `<div style="display:flex;align-items:center;gap:1rem;">`;
+        html += `<button class="master-btn" onclick="event.stopPropagation();startMaster('${catKey}')">Master All (${cardCount})</button>`;
+        html += `<span class="toggle-icon">▶</span>`;
+        html += `</div>`;
+        html += `</div>`;
+        
+        html += `<div class="subcategories" id="sub-${catKey}">`;
+        for (const subKey in cat.subcategories) {
+          const sub = cat.subcategories[subKey];
+          html += `<button class="subcategory-btn" onclick="startSubcategory('${catKey}','${subKey}')">
+            ${sub.name}
+            <span class="card-count">${sub.cards.length} cards</span>
+          </button>`;
+        }
+        html += '</div>';
+        html += '</div>';
+      }
+
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+
+      document.getElementById('app').innerHTML = html;
+    }
+
+    // Toggle category open/closed
+    function toggleCategory(catKey) {
+      const cat = document.getElementById(`cat-${catKey}`);
+      const sub = document.getElementById(`sub-${catKey}`);
+      cat.classList.toggle('open');
+      sub.classList.toggle('open');
+    }
+
+    // Start mixed mode
+    function startMixed() {
+      activeCards = getAllCards();
+      currentMode = '🔀 Mixed Mode';
+      startPractice();
+    }
+
+    // Start master mode for a category
+    function startMaster(catKey) {
+      const cat = data.categories[catKey];
+      activeCards = getCategoryCards(catKey);
+      currentMode = `${cat.icon} Master: ${cat.name}`;
+      startPractice();
+    }
+
+    // Start subcategory practice
+    function startSubcategory(catKey, subKey) {
+      const cat = data.categories[catKey];
+      const sub = cat.subcategories[subKey];
+      activeCards = getSubcategoryCards(catKey, subKey);
+      currentMode = `${cat.icon} ${cat.name} → ${sub.name}`;
+      startPractice();
+    }
+
+    // Start practice session
+    function startPractice() {
+      currentCard = null;
+      previousCard = null;
+      canGoBack = false;
+      showRandomCard();
+    }
+
+    // Get a random card
+    function getRandomCard() {
+      if (activeCards.length === 0) return null;
+      if (activeCards.length === 1) return activeCards[0];
+      
+      let newCard;
+      do {
+        const randomIndex = Math.floor(Math.random() * activeCards.length);
+        newCard = activeCards[randomIndex];
+      } while (newCard === currentCard && activeCards.length > 1);
+      
+      return newCard;
+    }
+
+    // Render KaTeX
+    function renderMath() {
+      if (typeof renderMathInElement !== 'undefined') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    // Show a card
+    function showCard(card, flipped = false) {
+      isFlipped = flipped;
+      
+      const content = flipped ? card.answer : card.question;
+      const label = flipped ? 'Answer' : 'Question';
+      const topicLabel = card.subcategory || card.category;
+      
+      document.getElementById('app').innerHTML = `
+        <div class="flashcard-container">
+          <div class="flashcard ${flipped ? 'flipped' : ''}" onclick="flipCard()">
+            <div class="topic-badge">${topicLabel}</div>
+            <div class="card-label">${label}</div>
+            <div class="card-content">${content}</div>
+            <div class="flip-hint">Click card or press Space to flip</div>
+          </div>
+          <div class="controls">
+            <button class="btn-back-topic" onclick="backToTopics()">
+              ← Topics
+            </button>
+            <button class="btn-back" onclick="goBack()" ${!canGoBack ? 'disabled' : ''}>
+              ↩ Back
+            </button>
+            <button class="btn-flip" onclick="flipCard()">
+              ↻ Flip
+            </button>
+            <button class="btn-next" onclick="nextCard()">
+              Next →
+            </button>
+          </div>
+          <div class="card-counter">
+            ${activeCards.length} cards in deck
+          </div>
+          <div class="current-mode">${currentMode}</div>
+          <div class="keyboard-hint">
+            <kbd>Space</kbd> flip &nbsp;
+            <kbd>→</kbd> next &nbsp;
+            <kbd>←</kbd> back &nbsp;
+            <kbd>Esc</kbd> topics
+          </div>
+        </div>
+      `;
+      
+      // Render math after DOM update
+      setTimeout(renderMath, 10);
+    }
+
+    // Show a random card
+    function showRandomCard() {
+      previousCard = currentCard;
+      currentCard = getRandomCard();
+      canGoBack = previousCard !== null;
+      showCard(currentCard, false);
+    }
+
+    // Flip the current card
+    function flipCard() {
+      if (currentCard) {
+        showCard(currentCard, !isFlipped);
+      }
+    }
+
+    // Go to next random card
+    function nextCard() {
+      showRandomCard();
+    }
+
+    // Go back to previous card
+    function goBack() {
+      if (previousCard && canGoBack) {
+        currentCard = previousCard;
+        previousCard = null;
+        canGoBack = false;
+        showCard(currentCard, false);
+      }
+    }
+
+    // Back to topic selection
+    function backToTopics() {
+      showTopicSelection();
+    }
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      // Only handle keys during practice
+      if (!currentCard) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        flipCard();
+      } else if (e.code === 'ArrowRight' || e.code === 'Enter') {
+        e.preventDefault();
+        nextCard();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        goBack();
+      } else if (e.code === 'Escape') {
+        e.preventDefault();
+        backToTopics();
+      }
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', loadFlashcards);
+  </script>
+</body>
+</html>
