@@ -45,6 +45,7 @@ artificially-neuroscience/
 
 - **Dynamic Content Loading**: Uses a custom JavaScript loader to parse and display content from text files
 - **Responsive Navigation**: Consistent header navigation across all pages
+- **Mobile Friendly**: Fully responsive design optimized for phones, tablets, and desktops
 - **Organized by Discipline**: Educational resources separated into CS, Neuroscience, and Mathematics
 - **Alphabetical Sorting**: All lists are automatically sorted alphabetically
 - **Clean Design**: Minimalist CSS with professional styling
@@ -54,6 +55,8 @@ artificially-neuroscience/
   - **Master Mode**: Practice all cards within a category branch
   - **Mixed Mode**: Random cards from all topics
   - **LaTeX Rendering**: Full support for equations, integrals, matrices, and vectors
+  - **Submit Cards**: Submit new flashcard ideas for review (stored locally)
+  - **Pending Reviews**: View and manage submitted cards before adding to the deck
 
 ## 🔧 Technical Implementation
 
@@ -136,6 +139,23 @@ The flashcards use a hierarchical JSON structure with categories and subcategori
 - Use `$...$` for inline math
 - Use `$$...$$` for display math
 - Supports integrals, limits, matrices, vectors, and all standard LaTeX notation
+
+### Submitting Flashcards from Mobile
+
+The flashcard practice page includes a submission system for drafting new cards on the go:
+
+1. Navigate to the Flash Card Practice page
+2. Click the **"➕ Submit Card"** tab
+3. Select a topic from the dropdown (or "Unrelated Topics" if none fit)
+4. Enter the question and answer using LaTeX for equations
+5. Submit - the card is saved to your browser's local storage
+
+**Reviewing Submissions:**
+- Click **"📋 Pending Reviews"** to see all submitted cards
+- Use **"Copy JSON"** to copy the card in the correct format for `flashcards.json`
+- Delete individual cards or clear all when done
+
+*Note: Submitted cards are stored in your browser's localStorage and persist until cleared.*
 
 ## 🚀 Deployment
 
