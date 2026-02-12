@@ -214,6 +214,181 @@
       transform: rotate(90deg);
     }
 
+    /* Subcategory expanded view with type filters */
+    .subcategory-item {
+      margin: 0.5rem 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .subcategory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      gap: 0.5rem;
+    }
+
+    .subcategory-header:hover {
+      background: #f8f9fa;
+    }
+
+    .subcategory-title {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .subcategory-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .subcategory-all-btn {
+      padding: 0.4rem 0.7rem;
+      font-size: 0.8rem;
+      font-weight: bold;
+      border: 1px solid rgb(43,59,116);
+      background: #fff;
+      color: rgb(43,59,116);
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .subcategory-all-btn:hover {
+      background: rgb(43,59,116);
+      color: #fff;
+    }
+
+    .type-filters {
+      display: none;
+      padding: 0.75rem 1rem;
+      background: #f8f9fa;
+      border-top: 1px solid #eee;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      flex-direction: column;
+    }
+
+    .type-filters.open {
+      display: flex;
+    }
+
+    .type-buttons {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Number type checkboxes for basics */
+    .number-type-section {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 0.5rem;
+    }
+
+    .number-type-label {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .number-type-checkboxes {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .number-type-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .number-type-checkbox input {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .number-type-checkbox span {
+      color: #444;
+    }
+
+    .type-btn {
+      padding: 0.5rem 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .type-btn:hover {
+      background: #e9ecef;
+    }
+
+    .type-btn.formula {
+      border-color: #007bff;
+      color: #007bff;
+    }
+
+    .type-btn.formula:hover {
+      background: #007bff;
+      color: #fff;
+    }
+
+    .type-btn.fact {
+      border-color: #28a745;
+      color: #28a745;
+    }
+
+    .type-btn.fact:hover {
+      background: #28a745;
+      color: #fff;
+    }
+
+    .type-btn.worked {
+      border-color: #fd7e14;
+      color: #fd7e14;
+    }
+
+    .type-btn.worked:hover {
+      background: #fd7e14;
+      color: #fff;
+    }
+
+    .type-btn .type-count {
+      font-size: 0.75rem;
+      opacity: 0.8;
+    }
+
+    .sub-toggle-icon {
+      font-size: 1rem;
+      transition: transform 0.2s;
+      color: #888;
+    }
+
+    .subcategory-item.open .sub-toggle-icon {
+      transform: rotate(90deg);
+    }
+
     /* Flashcard Styles */
     .flashcard-container {
       display: flex;
@@ -347,6 +522,48 @@
 
     .btn-next:hover {
       background: #218838;
+    }
+
+    /* Feedback buttons for generated cards */
+    .feedback-controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .btn-got-it {
+      padding: 0.8rem 2rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #28a745;
+      color: #fff;
+    }
+
+    .btn-got-it:hover {
+      background: #218838;
+      transform: scale(1.05);
+    }
+
+    .btn-missed-it {
+      padding: 0.8rem 2rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #dc3545;
+      color: #fff;
+    }
+
+    .btn-missed-it:hover {
+      background: #c82333;
+      transform: scale(1.05);
     }
 
     .card-counter {
@@ -989,6 +1206,11 @@
     let canGoBack = false;
     let currentMode = '';
     let pendingReviews = [];
+    
+    // Generator mode tracking (for infinite worked problems)
+    let generatorModeActive = false;
+    let currentGeneratorCatKey = null;
+    let currentGeneratorSubKey = null;
 
     // Quiz State
     let quizCorrect = 0;
@@ -998,9 +1220,894 @@
     let quizOptions = [];
     let quizAnswered = false;
 
+    // Wrong answer tracking (cards that need to come back)
+    let wrongAnswerQueue = [];
+    const WRONG_QUEUE_STORAGE_KEY = 'flashcard_wrong_queue';
+
     // Local Storage Keys
     const STORAGE_KEY = 'flashcard_pending_reviews';
     const QUIZ_STORAGE_KEY = 'flashcard_quiz_daily_stats';
+
+    // ========== SEEDED RANDOM NUMBER GENERATOR ==========
+    // Mulberry32 - fast, good quality PRNG
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    // Generate deterministic random int in range [min, max]
+    function seededRandInt(rng, min, max) {
+      return Math.floor(rng() * (max - min + 1)) + min;
+    }
+
+    // Pick random element from array using seeded RNG
+    function seededPick(rng, arr) {
+      return arr[Math.floor(rng() * arr.length)];
+    }
+
+    // ========== PROBLEM GENERATORS ==========
+    // Selected number types for basics (stored globally)
+    let selectedNumberTypes = ['integers', 'fractions', 'decimals', 'percentages'];
+    
+    // Helper functions
+    const gcd = (a, b) => b === 0 ? Math.abs(a) : gcd(b, a % b);
+    const simplifyFrac = (num, den) => {
+      if (den === 0) return [0, 1];
+      const g = gcd(Math.abs(num), Math.abs(den));
+      return [num/g, den/g];
+    };
+    const roundDec = (n, d) => Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
+    
+    const generators = {
+      // BASICS - ADDITION & SUBTRACTION
+      'basics.add_subtract': (seed, numberTypes) => {
+        const rng = mulberry32(seed);
+        const types = numberTypes || selectedNumberTypes;
+        if (types.length === 0) return { question: "Select number types", answer: "Please select at least one number type" };
+        
+        const numType = seededPick(rng, types);
+        const isAdd = rng() > 0.5;
+        const op = isAdd ? '+' : '-';
+        let q, a;
+        
+        switch(numType) {
+          case 'integers':
+            {
+              const a1 = seededRandInt(rng, -50, 50);
+              const a2 = seededRandInt(rng, -50, 50);
+              const result = isAdd ? a1 + a2 : a1 - a2;
+              const a1Str = a1 < 0 ? `(${a1})` : `${a1}`;
+              const a2Str = a2 < 0 ? `(${a2})` : `${a2}`;
+              q = `$${a1Str} ${op} ${a2Str} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 'fractions':
+            {
+              const d1 = seededPick(rng, [2,3,4,5,6,8]);
+              const d2 = seededPick(rng, [2,3,4,5,6,8]);
+              const n1 = seededRandInt(rng, 1, d1*2);
+              const n2 = seededRandInt(rng, 1, d2);
+              const lcd = (d1 * d2) / gcd(d1, d2);
+              const resNum = isAdd ? n1*(lcd/d1) + n2*(lcd/d2) : n1*(lcd/d1) - n2*(lcd/d2);
+              const [sn, sd] = simplifyFrac(resNum, lcd);
+              q = `$\\frac{${n1}}{${d1}} ${op} \\frac{${n2}}{${d2}} = ?$`;
+              a = sd === 1 ? `$$${sn}$$` : `$$\\frac{${sn}}{${sd}}$$`;
+            }
+            break;
+          case 'decimals':
+            {
+              const a1 = roundDec(rng() * 10 + 2, 2);
+              const a2 = roundDec(rng() * 5, 2);
+              const result = roundDec(isAdd ? a1 + a2 : a1 - a2, 2);
+              q = `$${a1} ${op} ${a2} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 'percentages':
+            {
+              const pct1 = seededPick(rng, [10,15,20,25,30,35,40,45,50]);
+              const pct2 = seededPick(rng, [5,10,15,20,25]);
+              const result = isAdd ? pct1 + pct2 : pct1 - pct2;
+              q = `$${pct1}\\% ${op} ${pct2}\\% = ?$`;
+              a = `$$${result}\\%$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // BASICS - MULTIPLICATION & DIVISION
+      'basics.multiply_divide': (seed, numberTypes) => {
+        const rng = mulberry32(seed);
+        const types = numberTypes || selectedNumberTypes;
+        if (types.length === 0) return { question: "Select number types", answer: "Please select at least one number type" };
+        
+        const numType = seededPick(rng, types);
+        const isMult = rng() > 0.5;
+        const op = isMult ? '\\times' : '\\div';
+        let q, a;
+        
+        switch(numType) {
+          case 'integers':
+            {
+              if (isMult) {
+                const a1 = seededRandInt(rng, -12, 12);
+                const a2 = seededRandInt(rng, -12, 12);
+                const result = a1 * a2;
+                const a1Str = a1 < 0 ? `(${a1})` : `${a1}`;
+                const a2Str = a2 < 0 ? `(${a2})` : `${a2}`;
+                q = `$${a1Str} ${op} ${a2Str} = ?$`;
+                a = `$$${result}$$`;
+              } else {
+                const divisor = seededRandInt(rng, 2, 12) * (rng() > 0.5 ? 1 : -1);
+                const result = seededRandInt(rng, -12, 12);
+                const dividend = divisor * result;
+                const divStr = dividend < 0 ? `(${dividend})` : `${dividend}`;
+                const dvrStr = divisor < 0 ? `(${divisor})` : `${divisor}`;
+                q = `$${divStr} ${op} ${dvrStr} = ?$`;
+                a = `$$${result}$$`;
+              }
+            }
+            break;
+          case 'fractions':
+            {
+              const d1 = seededPick(rng, [2,3,4,5,6,8]);
+              const d2 = seededPick(rng, [2,3,4,5,6,8]);
+              const n1 = seededRandInt(rng, 1, d1-1);
+              const n2 = seededRandInt(rng, 1, d2-1);
+              let sn, sd;
+              if (isMult) {
+                [sn, sd] = simplifyFrac(n1*n2, d1*d2);
+                q = `$\\frac{${n1}}{${d1}} ${op} \\frac{${n2}}{${d2}} = ?$`;
+              } else {
+                [sn, sd] = simplifyFrac(n1*d2, d1*n2);
+                q = `$\\frac{${n1}}{${d1}} ${op} \\frac{${n2}}{${d2}} = ?$`;
+              }
+              a = sd === 1 ? `$$${sn}$$` : `$$\\frac{${sn}}{${sd}}$$`;
+            }
+            break;
+          case 'decimals':
+            {
+              if (isMult) {
+                const a1 = roundDec(rng() * 5 + 0.5, 1);
+                const a2 = roundDec(rng() * 5 + 0.5, 1);
+                const result = roundDec(a1 * a2, 2);
+                q = `$${a1} ${op} ${a2} = ?$`;
+                a = `$$${result}$$`;
+              } else {
+                const divisor = roundDec(rng() * 4 + 0.5, 1);
+                const result = roundDec(rng() * 10 + 1, 1);
+                const dividend = roundDec(divisor * result, 2);
+                q = `$${dividend} ${op} ${divisor} = ?$`;
+                a = `$$${result}$$`;
+              }
+            }
+            break;
+          case 'percentages':
+            {
+              // Find percent of a number
+              const pct = seededPick(rng, [5,10,15,20,25,30,40,50,75]);
+              const num = seededPick(rng, [20,40,50,60,80,100,120,200]);
+              const result = (pct/100) * num;
+              q = `What is $${pct}\\%$ of $${num}$?`;
+              a = `$$${result}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // BASICS - EXPONENTS & ROOTS
+      'basics.exponents_roots': (seed, numberTypes) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 5);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Power calculation
+            {
+              const base = seededRandInt(rng, 2, 12);
+              const exp = seededRandInt(rng, 2, 4);
+              const result = Math.pow(base, exp);
+              q = `$${base}^{${exp}} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 1: // Square root
+            {
+              const roots = [4,9,16,25,36,49,64,81,100,121,144,169,196,225,256,289,324,400];
+              const num = seededPick(rng, roots);
+              const result = Math.sqrt(num);
+              q = `$\\sqrt{${num}} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 2: // Cube root
+            {
+              const cubes = [8,27,64,125,216,343,512,729,1000];
+              const num = seededPick(rng, cubes);
+              const result = Math.round(Math.cbrt(num));
+              q = `$\\sqrt[3]{${num}} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 3: // Negative exponent
+            {
+              const base = seededRandInt(rng, 2, 6);
+              const exp = seededRandInt(rng, 1, 3);
+              const denom = Math.pow(base, exp);
+              q = `$${base}^{-${exp}} = ?$`;
+              a = `$$\\frac{1}{${denom}}$$`;
+            }
+            break;
+          case 4: // Exponent multiplication rule
+            {
+              const base = seededRandInt(rng, 2, 5);
+              const e1 = seededRandInt(rng, 2, 5);
+              const e2 = seededRandInt(rng, 2, 5);
+              q = `$${base}^{${e1}} \\times ${base}^{${e2}} = ?$`;
+              a = `$$${base}^{${e1+e2}} = ${Math.pow(base,e1+e2)}$$`;
+            }
+            break;
+          case 5: // Exponent division rule
+            {
+              const base = seededRandInt(rng, 2, 5);
+              const e1 = seededRandInt(rng, 4, 7);
+              const e2 = seededRandInt(rng, 1, 3);
+              q = `$${base}^{${e1}} \\div ${base}^{${e2}} = ?$`;
+              a = `$$${base}^{${e1-e2}} = ${Math.pow(base,e1-e2)}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // BASICS - ORDER OF OPERATIONS
+      'basics.order_of_ops': (seed, numberTypes) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 4);
+        let q, a;
+        
+        switch(type) {
+          case 0: // a + b × c
+            {
+              const a1 = seededRandInt(rng, 1, 20);
+              const a2 = seededRandInt(rng, 2, 10);
+              const a3 = seededRandInt(rng, 2, 10);
+              const result = a1 + a2 * a3;
+              q = `$${a1} + ${a2} \\times ${a3} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 1: // (a + b) × c
+            {
+              const a1 = seededRandInt(rng, 1, 15);
+              const a2 = seededRandInt(rng, 1, 15);
+              const a3 = seededRandInt(rng, 2, 6);
+              const result = (a1 + a2) * a3;
+              q = `$(${a1} + ${a2}) \\times ${a3} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 2: // a^b + c × d
+            {
+              const base = seededRandInt(rng, 2, 5);
+              const exp = seededRandInt(rng, 2, 3);
+              const c = seededRandInt(rng, 2, 8);
+              const d = seededRandInt(rng, 2, 8);
+              const result = Math.pow(base, exp) + c * d;
+              q = `$${base}^{${exp}} + ${c} \\times ${d} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 3: // a - b × c
+            {
+              const a1 = seededRandInt(rng, 20, 50);
+              const a2 = seededRandInt(rng, 2, 8);
+              const a3 = seededRandInt(rng, 2, 5);
+              const result = a1 - a2 * a3;
+              q = `$${a1} - ${a2} \\times ${a3} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 4: // a ÷ b × c (left to right)
+            {
+              const b = seededRandInt(rng, 2, 6);
+              const c = seededRandInt(rng, 2, 6);
+              const quotient = seededRandInt(rng, 2, 8);
+              const a1 = b * quotient;
+              const result = quotient * c;
+              q = `$${a1} \\div ${b} \\times ${c} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // FOUNDATIONS - ALGEBRA
+      'foundations.algebra': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 4);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Solve linear equation
+            {
+              const x = seededRandInt(rng, -10, 10);
+              const coef = seededRandInt(rng, 2, 8);
+              const const1 = seededRandInt(rng, -20, 20);
+              const rhs = coef * x + const1;
+              q = `Solve for $x$: $${coef}x + ${const1 >= 0 ? const1 : `(${const1})`} = ${rhs}$`;
+              a = `$$x = ${x}$$`;
+            }
+            break;
+          case 1: // Factor quadratic
+            {
+              const r1 = seededRandInt(rng, -6, 6);
+              const r2 = seededRandInt(rng, -6, 6);
+              const b = -(r1 + r2);
+              const c = r1 * r2;
+              q = `Factor: $x^2 ${b >= 0 ? '+' : ''} ${b}x ${c >= 0 ? '+' : ''} ${c}$`;
+              a = `$$(x ${r1 >= 0 ? '-' : '+'} ${Math.abs(r1)})(x ${r2 >= 0 ? '-' : '+'} ${Math.abs(r2)})$$`;
+            }
+            break;
+          case 2: // Expand product
+            {
+              const a1 = seededRandInt(rng, -5, 5);
+              const a2 = seededRandInt(rng, -5, 5);
+              const b = a1 + a2;
+              const c = a1 * a2;
+              q = `Expand: $(x ${a1 >= 0 ? '+' : ''} ${a1})(x ${a2 >= 0 ? '+' : ''} ${a2})$`;
+              a = `$$x^2 ${b >= 0 ? '+' : ''} ${b}x ${c >= 0 ? '+' : ''} ${c}$$`;
+            }
+            break;
+          case 3: // Simplify expression
+            {
+              const base = seededRandInt(rng, 2, 5);
+              const exp = seededRandInt(rng, 2, 4);
+              const result = Math.pow(base, 2*exp);
+              q = `Simplify: $(${base}x^{${exp}})^2$`;
+              a = `$$${Math.pow(base,2)}x^{${2*exp}}$$`;
+            }
+            break;
+          case 4: // Solve quadratic
+            {
+              const r1 = seededRandInt(rng, -5, 5);
+              const r2 = seededRandInt(rng, -5, 5);
+              const b = -(r1 + r2);
+              const c = r1 * r2;
+              q = `Solve: $x^2 ${b >= 0 ? '+' : ''} ${b}x ${c >= 0 ? '+' : ''} ${c} = 0$`;
+              a = `$$x = ${r1} \\text{ or } x = ${r2}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // FOUNDATIONS - TRIGONOMETRY
+      'foundations.trigonometry': (seed) => {
+        const rng = mulberry32(seed);
+        const angles = ['0', '\\frac{\\pi}{6}', '\\frac{\\pi}{4}', '\\frac{\\pi}{3}', '\\frac{\\pi}{2}', '\\pi'];
+        const sinVals = ['0', '\\frac{1}{2}', '\\frac{\\sqrt{2}}{2}', '\\frac{\\sqrt{3}}{2}', '1', '0'];
+        const cosVals = ['1', '\\frac{\\sqrt{3}}{2}', '\\frac{\\sqrt{2}}{2}', '\\frac{1}{2}', '0', '-1'];
+        
+        const func = seededPick(rng, ['sin', 'cos', 'tan']);
+        const idx = seededRandInt(rng, 0, 5);
+        
+        if (func === 'tan' && (idx === 4)) {
+          // tan(pi/2) is undefined, pick different
+          return generators['foundations.trigonometry'](seed + 1);
+        }
+        
+        const angle = angles[idx];
+        let answer;
+        if (func === 'sin') answer = sinVals[idx];
+        else if (func === 'cos') answer = cosVals[idx];
+        else {
+          // tan = sin/cos
+          const tanVals = ['0', '\\frac{\\sqrt{3}}{3}', '1', '\\sqrt{3}', '\\text{undefined}', '0'];
+          answer = tanVals[idx];
+        }
+        
+        return {
+          question: `What is $\\${func}(${angle})$?`,
+          answer: `$$${answer}$$`
+        };
+      },
+
+      // FOUNDATIONS - VECTORS
+      'foundations.vectors': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 3);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Magnitude
+            {
+              const pairs = [[3,4,5],[5,12,13],[8,15,17],[6,8,10]];
+              const [x, y, mag] = seededPick(rng, pairs);
+              q = `What is the magnitude of $(${x}, ${y})$?`;
+              a = `$$${mag}$$`;
+            }
+            break;
+          case 1: // Addition
+            {
+              const x1 = seededRandInt(rng, -5, 5);
+              const y1 = seededRandInt(rng, -5, 5);
+              const x2 = seededRandInt(rng, -5, 5);
+              const y2 = seededRandInt(rng, -5, 5);
+              q = `$(${x1}, ${y1}) + (${x2}, ${y2}) = ?$`;
+              a = `$$(${x1+x2}, ${y1+y2})$$`;
+            }
+            break;
+          case 2: // Dot product
+            {
+              const x1 = seededRandInt(rng, -5, 5);
+              const y1 = seededRandInt(rng, -5, 5);
+              const x2 = seededRandInt(rng, -5, 5);
+              const y2 = seededRandInt(rng, -5, 5);
+              const dot = x1*x2 + y1*y2;
+              q = `$(${x1}, ${y1}) \\cdot (${x2}, ${y2}) = ?$`;
+              a = `$$${dot}$$`;
+            }
+            break;
+          case 3: // Scalar multiplication
+            {
+              const k = seededRandInt(rng, -5, 5);
+              const x = seededRandInt(rng, -5, 5);
+              const y = seededRandInt(rng, -5, 5);
+              q = `$${k} \\cdot (${x}, ${y}) = ?$`;
+              a = `$$(${k*x}, ${k*y})$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // FOUNDATIONS - LOGARITHMS
+      'foundations.logarithms': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 2);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Basic log
+            {
+              const base = seededPick(rng, [2, 3, 5, 10]);
+              const exp = seededRandInt(rng, 1, 4);
+              const num = Math.pow(base, exp);
+              q = `$\\log_{${base}}(${num}) = ?$`;
+              a = `$$${exp}$$`;
+            }
+            break;
+          case 1: // Natural log
+            {
+              const exp = seededRandInt(rng, 1, 5);
+              q = `$\\ln(e^{${exp}}) = ?$`;
+              a = `$$${exp}$$`;
+            }
+            break;
+          case 2: // Solve exponential
+            {
+              const base = seededPick(rng, [2, 3, 10]);
+              const exp = seededRandInt(rng, 2, 5);
+              const result = Math.pow(base, exp);
+              q = `Solve: $${base}^x = ${result}$`;
+              a = `$$x = ${exp}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // FOUNDATIONS - COMPLEX NUMBERS
+      'foundations.complex': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 3);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Addition
+            {
+              const a1 = seededRandInt(rng, -5, 5);
+              const b1 = seededRandInt(rng, -5, 5);
+              const a2 = seededRandInt(rng, -5, 5);
+              const b2 = seededRandInt(rng, -5, 5);
+              const ra = a1 + a2;
+              const rb = b1 + b2;
+              q = `$(${a1} ${b1>=0?'+':''}${b1}i) + (${a2} ${b2>=0?'+':''}${b2}i) = ?$`;
+              a = `$$${ra} ${rb>=0?'+':''}${rb}i$$`;
+            }
+            break;
+          case 1: // Powers of i
+            {
+              const exp = seededRandInt(rng, 1, 20);
+              const mod = exp % 4;
+              const vals = ['1', 'i', '-1', '-i'];
+              q = `$i^{${exp}} = ?$`;
+              a = `$$${vals[mod]}$$`;
+            }
+            break;
+          case 2: // Modulus
+            {
+              const pairs = [[3,4,5],[5,12,13],[6,8,10],[8,15,17]];
+              const [re, im, mod] = seededPick(rng, pairs);
+              q = `$|${re} + ${im}i| = ?$`;
+              a = `$$${mod}$$`;
+            }
+            break;
+          case 3: // Conjugate
+            {
+              const re = seededRandInt(rng, -10, 10);
+              const im = seededRandInt(rng, -10, 10);
+              q = `Conjugate of $${re} ${im>=0?'+':''}${im}i$?`;
+              a = `$$${re} ${(-im)>=0?'+':''}${-im}i$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // CALCULUS - LIMITS
+      'calculus.limits': (seed) => {
+        const rng = mulberry32(seed);
+        // Generate polynomial limit problems
+        const a = seededRandInt(rng, 1, 5);
+        const root = seededRandInt(rng, -3, 3);
+        const result = 2 * root + a;
+        
+        return {
+          question: `$\\displaystyle\\lim_{x \\to ${root}} (2x + ${a}) = ?$`,
+          answer: `$$${result}$$`
+        };
+      },
+
+      // CALCULUS - DERIVATIVES
+      'calculus.derivatives': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 4);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Power rule
+            {
+              const coef = seededRandInt(rng, 1, 8);
+              const exp = seededRandInt(rng, 2, 6);
+              const newCoef = coef * exp;
+              const newExp = exp - 1;
+              q = `$\\frac{d}{dx}[${coef}x^{${exp}}] = ?$`;
+              a = `$$${newCoef}x^{${newExp}}$$`;
+            }
+            break;
+          case 1: // Chain rule with power
+            {
+              const inner = seededRandInt(rng, 1, 5);
+              const exp = seededRandInt(rng, 2, 4);
+              q = `$\\frac{d}{dx}[(x + ${inner})^{${exp}}] = ?$`;
+              a = `$$${exp}(x + ${inner})^{${exp-1}}$$`;
+            }
+            break;
+          case 2: // Trig derivative
+            {
+              const func = seededPick(rng, ['sin', 'cos']);
+              const coef = seededRandInt(rng, 2, 5);
+              if (func === 'sin') {
+                q = `$\\frac{d}{dx}[\\sin(${coef}x)] = ?$`;
+                a = `$$${coef}\\cos(${coef}x)$$`;
+              } else {
+                q = `$\\frac{d}{dx}[\\cos(${coef}x)] = ?$`;
+                a = `$$-${coef}\\sin(${coef}x)$$`;
+              }
+            }
+            break;
+          case 3: // Exponential
+            {
+              const coef = seededRandInt(rng, 2, 5);
+              q = `$\\frac{d}{dx}[e^{${coef}x}] = ?$`;
+              a = `$$${coef}e^{${coef}x}$$`;
+            }
+            break;
+          case 4: // Log
+            {
+              const coef = seededRandInt(rng, 2, 5);
+              q = `$\\frac{d}{dx}[\\ln(${coef}x)] = ?$`;
+              a = `$$\\frac{1}{x}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // CALCULUS - INTEGRALS
+      'calculus.integrals': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 3);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Power rule
+            {
+              const coef = seededRandInt(rng, 1, 6);
+              const exp = seededRandInt(rng, 1, 5);
+              const newExp = exp + 1;
+              const newCoef = coef / newExp;
+              q = `$\\int ${coef}x^{${exp}} \\, dx = ?$`;
+              if (coef % newExp === 0) {
+                a = `$$${coef/newExp}x^{${newExp}} + C$$`;
+              } else {
+                a = `$$\\frac{${coef}}{${newExp}}x^{${newExp}} + C$$`;
+              }
+            }
+            break;
+          case 1: // Exponential
+            {
+              const coef = seededRandInt(rng, 2, 5);
+              q = `$\\int e^{${coef}x} \\, dx = ?$`;
+              a = `$$\\frac{1}{${coef}}e^{${coef}x} + C$$`;
+            }
+            break;
+          case 2: // Trig
+            {
+              const func = seededPick(rng, ['sin', 'cos']);
+              if (func === 'sin') {
+                q = `$\\int \\sin x \\, dx = ?$`;
+                a = `$$-\\cos x + C$$`;
+              } else {
+                q = `$\\int \\cos x \\, dx = ?$`;
+                a = `$$\\sin x + C$$`;
+              }
+            }
+            break;
+          case 3: // Definite integral
+            {
+              const exp = seededRandInt(rng, 1, 3);
+              const upper = seededRandInt(rng, 1, 3);
+              const result = Math.pow(upper, exp + 1) / (exp + 1);
+              q = `$\\int_0^{${upper}} x^{${exp}} \\, dx = ?$`;
+              a = Number.isInteger(result) 
+                ? `$$${result}$$` 
+                : `$$\\frac{${Math.pow(upper, exp+1)}}{${exp+1}}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // CALCULUS - SERIES
+      'calculus.series': (seed) => {
+        const rng = mulberry32(seed);
+        // Geometric series sum
+        const r = seededPick(rng, [0.5, 0.25, 0.2, 1/3]);
+        const a = seededRandInt(rng, 1, 4);
+        const sum = a / (1 - r);
+        
+        const rStr = r === 0.5 ? '\\frac{1}{2}' : r === 0.25 ? '\\frac{1}{4}' : r === 0.2 ? '\\frac{1}{5}' : '\\frac{1}{3}';
+        
+        return {
+          question: `$\\sum_{n=0}^{\\infty} ${a} \\cdot \\left(${rStr}\\right)^n = ?$`,
+          answer: `$$${sum}$$`
+        };
+      },
+
+      // CALCULUS - DIFFERENTIAL EQUATIONS
+      'calculus.diffeq': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 1);
+        
+        if (type === 0) {
+          // dy/dx = ky
+          const k = seededRandInt(rng, 1, 5);
+          return {
+            question: `Solve: $\\frac{dy}{dx} = ${k}y$`,
+            answer: `$$y = Ce^{${k}x}$$`
+          };
+        } else {
+          // dy/dx = f(x)
+          const exp = seededRandInt(rng, 1, 3);
+          const newExp = exp + 1;
+          return {
+            question: `Solve: $\\frac{dy}{dx} = x^{${exp}}$`,
+            answer: `$$y = \\frac{x^{${newExp}}}{${newExp}} + C$$`
+          };
+        }
+      },
+
+      // CALCULUS - MULTIVARIABLE
+      'calculus.multivariable': (seed) => {
+        const rng = mulberry32(seed);
+        // Partial derivatives
+        const type = seededRandInt(rng, 0, 1);
+        
+        if (type === 0) {
+          const a = seededRandInt(rng, 1, 5);
+          const b = seededRandInt(rng, 1, 5);
+          return {
+            question: `$\\frac{\\partial}{\\partial x}(${a}x^2 + ${b}xy) = ?$`,
+            answer: `$$${2*a}x + ${b}y$$`
+          };
+        } else {
+          const a = seededRandInt(rng, 1, 5);
+          const b = seededRandInt(rng, 1, 5);
+          return {
+            question: `$\\frac{\\partial}{\\partial y}(${a}xy + ${b}y^2) = ?$`,
+            answer: `$$${a}x + ${2*b}y$$`
+          };
+        }
+      },
+
+      // LINEAR ALGEBRA - MATRICES
+      'linearalgebra.matrices': (seed) => {
+        const rng = mulberry32(seed);
+        // 2x2 determinant
+        const a = seededRandInt(rng, -5, 5);
+        const b = seededRandInt(rng, -5, 5);
+        const c = seededRandInt(rng, -5, 5);
+        const d = seededRandInt(rng, -5, 5);
+        const det = a*d - b*c;
+        
+        return {
+          question: `$\\det\\begin{pmatrix} ${a} & ${b} \\\\ ${c} & ${d} \\end{pmatrix} = ?$`,
+          answer: `$$${det}$$`
+        };
+      },
+
+      // LINEAR ALGEBRA - EIGENVALUES
+      'linearalgebra.eigenvalues': (seed) => {
+        const rng = mulberry32(seed);
+        // Diagonal matrix eigenvalues
+        const e1 = seededRandInt(rng, -5, 5);
+        const e2 = seededRandInt(rng, -5, 5);
+        
+        return {
+          question: `Eigenvalues of $\\begin{pmatrix} ${e1} & 0 \\\\ 0 & ${e2} \\end{pmatrix}$?`,
+          answer: `$$\\lambda_1 = ${e1}, \\lambda_2 = ${e2}$$`
+        };
+      },
+
+      // LINEAR ALGEBRA - SYSTEMS
+      'linearalgebra.systems': (seed) => {
+        const rng = mulberry32(seed);
+        // 2x2 system with nice solution
+        const x = seededRandInt(rng, -5, 5);
+        const y = seededRandInt(rng, -5, 5);
+        const a1 = seededRandInt(rng, 1, 4);
+        const b1 = seededRandInt(rng, 1, 4);
+        const a2 = seededRandInt(rng, 1, 4);
+        const b2 = seededRandInt(rng, 1, 4);
+        const c1 = a1*x + b1*y;
+        const c2 = a2*x + b2*y;
+        
+        return {
+          question: `Solve: $${a1}x + ${b1}y = ${c1}$ and $${a2}x + ${b2}y = ${c2}$`,
+          answer: `$$x = ${x}, y = ${y}$$`
+        };
+      },
+
+      // LINEAR ALGEBRA - VECTOR SPACES
+      'linearalgebra.vectorspaces': (seed) => {
+        const rng = mulberry32(seed);
+        // Span and linear independence questions
+        const a = seededRandInt(rng, 1, 5);
+        const b = seededRandInt(rng, 1, 5);
+        const c = seededRandInt(rng, 1, 5);
+        const d = seededRandInt(rng, 1, 5);
+        
+        // Check if linearly independent (ad-bc != 0)
+        const det = a*d - b*c;
+        const indep = det !== 0;
+        
+        return {
+          question: `Are $(${a}, ${b})$ and $(${c}, ${d})$ linearly independent?`,
+          answer: indep ? "Yes (determinant ≠ 0)" : "No (determinant = 0)"
+        };
+      },
+
+      // LINEAR ALGEBRA - TRANSFORMATIONS
+      'linearalgebra.transformations': (seed) => {
+        const rng = mulberry32(seed);
+        // Apply transformation matrix
+        const type = seededRandInt(rng, 0, 1);
+        
+        if (type === 0) {
+          // Scaling
+          const k = seededRandInt(rng, 2, 4);
+          const x = seededRandInt(rng, -3, 3);
+          const y = seededRandInt(rng, -3, 3);
+          return {
+            question: `Apply $\\begin{pmatrix} ${k} & 0 \\\\ 0 & ${k} \\end{pmatrix}$ to $(${x}, ${y})$`,
+            answer: `$$(${k*x}, ${k*y})$$`
+          };
+        } else {
+          // Reflection over x-axis
+          const x = seededRandInt(rng, -5, 5);
+          const y = seededRandInt(rng, -5, 5);
+          return {
+            question: `Reflect $(${x}, ${y})$ over the x-axis`,
+            answer: `$$(${x}, ${-y})$$`
+          };
+        }
+      }
+    };
+
+    // Generate a worked problem card
+    function generateWorkedCard(catKey, subKey, seed, numberTypes = null) {
+      const generatorKey = `${catKey}.${subKey}`;
+      const generator = generators[generatorKey];
+      
+      if (!generator) {
+        console.warn(`No generator for ${generatorKey}`);
+        return null;
+      }
+      
+      // Pass numberTypes for basics generators
+      const { question, answer } = generator(seed, numberTypes);
+      
+      return {
+        question,
+        answer,
+        type: 'worked',
+        isGenerated: true,
+        seed: seed,
+        generatorKey: generatorKey
+      };
+    }
+
+    // Load wrong answer queue from localStorage
+    function loadWrongQueue() {
+      try {
+        const stored = localStorage.getItem(WRONG_QUEUE_STORAGE_KEY);
+        wrongAnswerQueue = stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        wrongAnswerQueue = [];
+      }
+    }
+
+    // Save wrong answer queue
+    function saveWrongQueue() {
+      localStorage.setItem(WRONG_QUEUE_STORAGE_KEY, JSON.stringify(wrongAnswerQueue));
+    }
+
+    // Add a card to wrong queue
+    function addToWrongQueue(card) {
+      if (card.isGenerated) {
+        // Store the seed so we can regenerate the exact same problem
+        wrongAnswerQueue.push({
+          generatorKey: card.generatorKey,
+          seed: card.seed,
+          addedAt: Date.now()
+        });
+        saveWrongQueue();
+      }
+    }
+
+    // Get cards from wrong queue for current practice session
+    function getWrongQueueCards() {
+      const cards = [];
+      wrongAnswerQueue.forEach(entry => {
+        const [catKey, subKey] = entry.generatorKey.split('.');
+        const card = generateWorkedCard(catKey, subKey, entry.seed);
+        if (card) {
+          cards.push(card);
+        }
+      });
+      return cards;
+    }
+
+    // Remove a card from wrong queue after it's answered correctly
+    function removeFromWrongQueue(card) {
+      if (card.isGenerated) {
+        wrongAnswerQueue = wrongAnswerQueue.filter(
+          entry => !(entry.generatorKey === card.generatorKey && entry.seed === card.seed)
+        );
+        saveWrongQueue();
+      }
+    }
 
     // Tab Management
     function showTab(tabName) {
@@ -1278,20 +2385,75 @@
       }
     }
 
-    // Get all cards from all categories
+    // Number of generated cards to add per subcategory
+    const GENERATED_CARDS_PER_SUB = 10;
+
+    // Generate worked cards for a subcategory
+    function generateWorkedCards(catKey, subKey, count = GENERATED_CARDS_PER_SUB) {
+      const generatorKey = `${catKey}.${subKey}`;
+      if (!generators[generatorKey]) return [];
+      
+      const cards = [];
+      const cat = data.categories[catKey];
+      const sub = cat.subcategories[subKey];
+      
+      // Use selectedNumberTypes for basics generators
+      const numberTypes = catKey === 'basics' ? selectedNumberTypes : null;
+      
+      // Generate new random seeds for this session
+      for (let i = 0; i < count; i++) {
+        const seed = Math.floor(Math.random() * 1000000000);
+        const generatedCard = generateWorkedCard(catKey, subKey, seed, numberTypes);
+        if (generatedCard) {
+          cards.push({
+            ...generatedCard,
+            category: cat.name,
+            subcategory: sub.name
+          });
+        }
+      }
+      
+      return cards;
+    }
+
+    // Get all cards from all categories (including generated worked problems)
     function getAllCards() {
       const cards = [];
+      
+      // First, add cards from wrong queue so they come back
+      const wrongCards = getWrongQueueCards();
+      wrongCards.forEach(card => {
+        const [catKey, subKey] = card.generatorKey.split('.');
+        const cat = data.categories[catKey];
+        const sub = cat?.subcategories?.[subKey];
+        if (cat && sub) {
+          cards.push({
+            ...card,
+            category: cat.name,
+            subcategory: sub.name
+          });
+        }
+      });
+      
       for (const catKey in data.categories) {
         const cat = data.categories[catKey];
         for (const subKey in cat.subcategories) {
           const sub = cat.subcategories[subKey];
+          
+          // Add static formula and fact cards
           sub.cards.forEach(card => {
-            cards.push({
-              ...card,
-              category: cat.name,
-              subcategory: sub.name
-            });
+            if (card.type !== 'worked') {
+              cards.push({
+                ...card,
+                category: cat.name,
+                subcategory: sub.name
+              });
+            }
           });
+          
+          // Generate fresh worked problems
+          const generatedCards = generateWorkedCards(catKey, subKey);
+          cards.push(...generatedCards);
         }
       }
       return cards;
@@ -1301,28 +2463,79 @@
     function getCategoryCards(catKey) {
       const cards = [];
       const cat = data.categories[catKey];
+      
+      // Add wrong queue cards for this category
+      const wrongCards = getWrongQueueCards();
+      wrongCards.forEach(card => {
+        if (card.generatorKey.startsWith(catKey + '.')) {
+          const [, subKey] = card.generatorKey.split('.');
+          const sub = cat.subcategories[subKey];
+          if (sub) {
+            cards.push({
+              ...card,
+              category: cat.name,
+              subcategory: sub.name
+            });
+          }
+        }
+      });
+      
       for (const subKey in cat.subcategories) {
         const sub = cat.subcategories[subKey];
+        
+        // Add static formula and fact cards
         sub.cards.forEach(card => {
-          cards.push({
-            ...card,
-            category: cat.name,
-            subcategory: sub.name
-          });
+          if (card.type !== 'worked') {
+            cards.push({
+              ...card,
+              category: cat.name,
+              subcategory: sub.name
+            });
+          }
         });
+        
+        // Generate fresh worked problems
+        const generatedCards = generateWorkedCards(catKey, subKey);
+        cards.push(...generatedCards);
       }
       return cards;
     }
 
     // Get cards from a specific subcategory
     function getSubcategoryCards(catKey, subKey) {
+      const cards = [];
       const cat = data.categories[catKey];
       const sub = cat.subcategories[subKey];
-      return sub.cards.map(card => ({
-        ...card,
-        category: cat.name,
-        subcategory: sub.name
-      }));
+      
+      // Add wrong queue cards for this subcategory
+      const generatorKey = `${catKey}.${subKey}`;
+      const wrongCards = getWrongQueueCards();
+      wrongCards.forEach(card => {
+        if (card.generatorKey === generatorKey) {
+          cards.push({
+            ...card,
+            category: cat.name,
+            subcategory: sub.name
+          });
+        }
+      });
+      
+      // Add static formula and fact cards
+      sub.cards.forEach(card => {
+        if (card.type !== 'worked') {
+          cards.push({
+            ...card,
+            category: cat.name,
+            subcategory: sub.name
+          });
+        }
+      });
+      
+      // Generate fresh worked problems
+      const generatedCards = generateWorkedCards(catKey, subKey);
+      cards.push(...generatedCards);
+      
+      return cards;
     }
 
     // Count cards in a category
@@ -1333,6 +2546,38 @@
         count += cat.subcategories[subKey].cards.length;
       }
       return count;
+    }
+
+    // Count cards by type in a subcategory
+    function countSubcategoryCardsByType(catKey, subKey, type) {
+      const sub = data.categories[catKey].subcategories[subKey];
+      if (!type) return sub.cards.length;
+      return sub.cards.filter(card => card.type === type).length;
+    }
+
+    // Check if a generator exists for this subcategory
+    function hasGenerator(catKey, subKey) {
+      return !!generators[`${catKey}.${subKey}`];
+    }
+
+    // Get type emoji
+    function getTypeEmoji(type) {
+      switch(type) {
+        case 'formula': return '📝';
+        case 'fact': return '💡';
+        case 'worked': return '✏️';
+        default: return '';
+      }
+    }
+
+    // Get type label
+    function getTypeLabel(type) {
+      switch(type) {
+        case 'formula': return 'Formulas';
+        case 'fact': return 'Facts';
+        case 'worked': return 'Worked Problems';
+        default: return 'All';
+      }
     }
 
     // Show topic selection UI
@@ -1358,6 +2603,7 @@
       for (const catKey in data.categories) {
         const cat = data.categories[catKey];
         const cardCount = countCategoryCards(catKey);
+        const hasTypeSupport = catKey === 'basics' || catKey === 'foundations' || catKey === 'calculus' || catKey === 'linearalgebra';
         
         html += `<div class="category" id="cat-${catKey}">`;
         html += `<div class="category-header" onclick="toggleCategory('${catKey}')">`;
@@ -1374,10 +2620,79 @@
         html += `<div class="subcategories" id="sub-${catKey}">`;
         for (const subKey in cat.subcategories) {
           const sub = cat.subcategories[subKey];
-          html += `<button class="subcategory-btn" onclick="startSubcategory('${catKey}','${subKey}')">
-            <span>${sub.name}</span>
-            <span class="card-count">${sub.cards.length} cards</span>
-          </button>`;
+          const totalCards = sub.cards.length;
+          
+          if (hasTypeSupport) {
+            // Render subcategory with expandable type filters
+            const formulaCount = countSubcategoryCardsByType(catKey, subKey, 'formula');
+            const factCount = countSubcategoryCardsByType(catKey, subKey, 'fact');
+            const workedCount = countSubcategoryCardsByType(catKey, subKey, 'worked');
+            
+            html += `<div class="subcategory-item" id="subitem-${catKey}-${subKey}">`;
+            html += `<div class="subcategory-header" onclick="toggleSubcategory('${catKey}','${subKey}')">`;
+            html += `<div class="subcategory-title">`;
+            html += `<span class="sub-toggle-icon">▶</span>`;
+            html += `<span>${sub.name}</span>`;
+            html += `<span class="card-count" style="color:#888;font-size:0.85rem">(${totalCards} cards)</span>`;
+            html += `</div>`;
+            html += `<div class="subcategory-actions">`;
+            html += `<button class="subcategory-all-btn" onclick="event.stopPropagation();startSubcategory('${catKey}','${subKey}')">All</button>`;
+            html += `</div>`;
+            html += `</div>`;
+            html += `<div class="type-filters" id="types-${catKey}-${subKey}">`;
+            
+            // Add number type checkboxes for basics subcategories (except order_of_ops)
+            const basicsWithNumberTypes = ['add_subtract', 'multiply_divide', 'exponents_roots'];
+            if (catKey === 'basics' && basicsWithNumberTypes.includes(subKey)) {
+              html += `<div class="number-type-section">`;
+              html += `<span class="number-type-label">Number Types:</span>`;
+              html += `<div class="number-type-checkboxes">`;
+              const numberTypeLabels = {
+                'integers': 'Integers',
+                'fractions': 'Fractions',
+                'decimals': 'Decimals',
+                'percentages': 'Percentages'
+              };
+              for (const nt in numberTypeLabels) {
+                const checked = selectedNumberTypes.includes(nt) ? 'checked' : '';
+                html += `<label class="number-type-checkbox">
+                  <input type="checkbox" value="${nt}" ${checked} onchange="toggleNumberType('${nt}')">
+                  ${numberTypeLabels[nt]}
+                </label>`;
+              }
+              html += `</div>`;
+              html += `</div>`;
+            }
+            
+            html += `<div class="type-buttons">`;
+            if (formulaCount > 0) {
+              html += `<button class="type-btn formula" onclick="startSubcategoryType('${catKey}','${subKey}','formula')">
+                ${getTypeEmoji('formula')} Formulas <span class="type-count">(${formulaCount})</span>
+              </button>`;
+            }
+            if (factCount > 0) {
+              html += `<button class="type-btn fact" onclick="startSubcategoryType('${catKey}','${subKey}','fact')">
+                ${getTypeEmoji('fact')} Facts <span class="type-count">(${factCount})</span>
+              </button>`;
+            }
+            // Show worked problems button if generator exists OR static worked cards exist
+            const hasGen = hasGenerator(catKey, subKey);
+            if (workedCount > 0 || hasGen) {
+              const workedLabel = hasGen ? '∞ Generated' : `(${workedCount})`;
+              html += `<button class="type-btn worked" onclick="startSubcategoryType('${catKey}','${subKey}','worked')">
+                ${getTypeEmoji('worked')} Worked Problems <span class="type-count">${workedLabel}</span>
+              </button>`;
+            }
+            html += `</div>`;
+            html += `</div>`;
+            html += `</div>`;
+          } else {
+            // Simple button for categories without type support
+            html += `<button class="subcategory-btn" onclick="startSubcategory('${catKey}','${subKey}')">
+              <span>${sub.name}</span>
+              <span class="card-count">${totalCards} cards</span>
+            </button>`;
+          }
         }
         html += '</div>';
         html += '</div>';
@@ -1398,8 +2713,36 @@
       sub.classList.toggle('open');
     }
 
+    // Toggle subcategory type filters
+    function toggleSubcategory(catKey, subKey) {
+      const item = document.getElementById(`subitem-${catKey}-${subKey}`);
+      const types = document.getElementById(`types-${catKey}-${subKey}`);
+      item.classList.toggle('open');
+      types.classList.toggle('open');
+    }
+
+    // Toggle number type selection for basics
+    function toggleNumberType(numberType) {
+      const idx = selectedNumberTypes.indexOf(numberType);
+      if (idx === -1) {
+        selectedNumberTypes.push(numberType);
+      } else {
+        // Don't allow removing all - keep at least one
+        if (selectedNumberTypes.length > 1) {
+          selectedNumberTypes.splice(idx, 1);
+        } else {
+          // Re-check the checkbox since we're not allowing removal
+          const checkbox = document.querySelector(`input[type="checkbox"][value="${numberType}"]`);
+          if (checkbox) checkbox.checked = true;
+        }
+      }
+    }
+
     // Start mixed mode
     function startMixed() {
+      generatorModeActive = false;
+      currentGeneratorCatKey = null;
+      currentGeneratorSubKey = null;
       activeCards = getAllCards();
       currentMode = '🔀 Mixed Mode';
       startPractice();
@@ -1407,6 +2750,9 @@
 
     // Start master mode for a category
     function startMaster(catKey) {
+      generatorModeActive = false;
+      currentGeneratorCatKey = null;
+      currentGeneratorSubKey = null;
       const cat = data.categories[catKey];
       activeCards = getCategoryCards(catKey);
       currentMode = `${cat.icon} Master: ${cat.name}`;
@@ -1415,10 +2761,65 @@
 
     // Start subcategory practice
     function startSubcategory(catKey, subKey) {
+      generatorModeActive = false;
+      currentGeneratorCatKey = null;
+      currentGeneratorSubKey = null;
       const cat = data.categories[catKey];
       const sub = cat.subcategories[subKey];
       activeCards = getSubcategoryCards(catKey, subKey);
       currentMode = `${cat.icon} ${cat.name} → ${sub.name}`;
+      startPractice();
+    }
+
+    // Start subcategory practice filtered by type
+    function startSubcategoryType(catKey, subKey, type) {
+      const cat = data.categories[catKey];
+      const sub = cat.subcategories[subKey];
+      
+      // Reset generator mode
+      generatorModeActive = false;
+      currentGeneratorCatKey = null;
+      currentGeneratorSubKey = null;
+      
+      if (type === 'worked') {
+        // Enable generator mode for infinite worked problems
+        const generatorKey = `${catKey}.${subKey}`;
+        if (generators[generatorKey]) {
+          generatorModeActive = true;
+          currentGeneratorCatKey = catKey;
+          currentGeneratorSubKey = subKey;
+        }
+        
+        // Get wrong queue cards first (these must come back)
+        activeCards = [];
+        const wrongCards = getWrongQueueCards();
+        wrongCards.forEach(card => {
+          if (card.generatorKey === generatorKey) {
+            activeCards.push({
+              ...card,
+              category: cat.name,
+              subcategory: sub.name
+            });
+          }
+        });
+        
+        // Generate initial batch (wrong cards are prioritized)
+        if (activeCards.length === 0) {
+          const generatedCards = generateWorkedCards(catKey, subKey, 5);
+          activeCards.push(...generatedCards);
+        }
+      } else {
+        // For formula/fact, filter from static cards
+        activeCards = sub.cards
+          .filter(card => card.type === type)
+          .map(card => ({
+            ...card,
+            category: cat.name,
+            subcategory: sub.name
+          }));
+      }
+      
+      currentMode = `${cat.icon} ${cat.name} → ${sub.name} (${getTypeLabel(type)})`;
       startPractice();
     }
 
@@ -1432,6 +2833,39 @@
 
     // Get a random card
     function getRandomCard() {
+      // In generator mode, generate a fresh card each time
+      if (generatorModeActive && currentGeneratorCatKey && currentGeneratorSubKey) {
+        // Check wrong queue first - these must come back
+        const generatorKey = `${currentGeneratorCatKey}.${currentGeneratorSubKey}`;
+        const wrongCards = getWrongQueueCards().filter(c => c.generatorKey === generatorKey);
+        
+        if (wrongCards.length > 0 && Math.random() < 0.4) {
+          // 40% chance to show a wrong card if any exist
+          const cat = data.categories[currentGeneratorCatKey];
+          const sub = cat.subcategories[currentGeneratorSubKey];
+          const wrongCard = wrongCards[Math.floor(Math.random() * wrongCards.length)];
+          return {
+            ...wrongCard,
+            category: cat.name,
+            subcategory: sub.name
+          };
+        }
+        
+        // Generate a fresh new card
+        const seed = Math.floor(Math.random() * 1000000000);
+        const generated = generateWorkedCard(currentGeneratorCatKey, currentGeneratorSubKey, seed);
+        if (generated) {
+          const cat = data.categories[currentGeneratorCatKey];
+          const sub = cat.subcategories[currentGeneratorSubKey];
+          return {
+            ...generated,
+            category: cat.name,
+            subcategory: sub.name
+          };
+        }
+      }
+      
+      // Standard mode: pick from active cards pool
       if (activeCards.length === 0) return null;
       if (activeCards.length === 1) return activeCards[0];
       
@@ -1464,15 +2898,27 @@
       const content = flipped ? card.answer : card.question;
       const label = flipped ? 'Answer' : 'Question';
       const topicLabel = card.subcategory || card.category;
+      const isGenerated = card.isGenerated;
+      const showFeedback = isGenerated && flipped;
       
       document.getElementById('app').innerHTML = `
         <div class="flashcard-container">
           <div class="flashcard ${flipped ? 'flipped' : ''}" onclick="flipCard()">
-            <div class="topic-badge">${topicLabel}</div>
+            <div class="topic-badge">${topicLabel}${isGenerated ? ' <span style="font-size:0.7em;opacity:0.7">✨</span>' : ''}</div>
             <div class="card-label">${label}</div>
             <div class="card-content">${content}</div>
             <div class="flip-hint">Tap to flip</div>
           </div>
+          ${showFeedback ? `
+          <div class="feedback-controls">
+            <button class="btn-got-it" onclick="markCorrect()">
+              ✓ Got it
+            </button>
+            <button class="btn-missed-it" onclick="markIncorrect()">
+              ✗ Missed it
+            </button>
+          </div>
+          ` : ''}
           <div class="controls">
             <button class="btn-back-topic" onclick="backToTopics()">
               ← Topics
@@ -1483,18 +2929,19 @@
             <button class="btn-flip" onclick="flipCard()">
               ↻ Flip
             </button>
-            <button class="btn-next" onclick="nextCard()">
+            <button class="btn-next" onclick="${showFeedback ? 'nextCard()' : 'nextCard()'}">
               Next →
             </button>
           </div>
           <div class="card-counter">
-            ${activeCards.length} cards in deck
+            ${activeCards.length} cards in deck${wrongAnswerQueue.length > 0 ? ` | ${wrongAnswerQueue.length} to review` : ''}
           </div>
           <div class="current-mode">${currentMode}</div>
           <div class="keyboard-hint">
             <kbd>Space</kbd> flip &nbsp;
             <kbd>→</kbd> next &nbsp;
             <kbd>←</kbd> back &nbsp;
+            ${showFeedback ? '<kbd>G</kbd> got it &nbsp; <kbd>M</kbd> missed &nbsp;' : ''}
             <kbd>Esc</kbd> topics
           </div>
         </div>
@@ -1502,6 +2949,22 @@
       
       // Render math after DOM update
       setTimeout(renderMath, 10);
+    }
+
+    // Mark current card as correct
+    function markCorrect() {
+      if (currentCard && currentCard.isGenerated) {
+        removeFromWrongQueue(currentCard);
+      }
+      nextCard();
+    }
+
+    // Mark current card as incorrect - will come back
+    function markIncorrect() {
+      if (currentCard && currentCard.isGenerated) {
+        addToWrongQueue(currentCard);
+      }
+      nextCard();
     }
 
     // Show a random card
@@ -1556,6 +3019,12 @@
       } else if (e.code === 'Escape') {
         e.preventDefault();
         backToTopics();
+      } else if (e.code === 'KeyG' && isFlipped && currentCard.isGenerated) {
+        e.preventDefault();
+        markCorrect();
+      } else if (e.code === 'KeyM' && isFlipped && currentCard.isGenerated) {
+        e.preventDefault();
+        markIncorrect();
       }
     });
 
@@ -1763,6 +3232,7 @@
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       loadPendingReviews();
+      loadWrongQueue();
       loadFlashcards();
     });
   </script>

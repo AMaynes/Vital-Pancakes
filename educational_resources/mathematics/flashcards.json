@@ -1,333 +1,253 @@
 {
   "categories": {
+    "basics": {
+      "name": "Basics",
+      "icon": "🔢",
+      "numberTypes": ["integers", "fractions", "decimals", "percentages"],
+      "subcategories": {
+        "add_subtract": {
+          "name": "Addition & Subtraction",
+          "cards": [
+            {"question": "What is the rule for adding a negative and a positive number?", "answer": "Subtract the smaller absolute value from the larger, and take the sign of the larger absolute value", "type": "fact"},
+            {"question": "What is the rule for subtracting a negative number?", "answer": "Subtracting a negative is the same as adding: $a - (-b) = a + b$", "type": "fact"},
+            {"question": "How do you add fractions with different denominators?", "answer": "Find a common denominator, convert both fractions, then add the numerators", "type": "fact"},
+            {"question": "How do you add/subtract decimals?", "answer": "Line up the decimal points, then add or subtract as with whole numbers", "type": "fact"},
+            {"question": "What is the LCD of $\\frac{1}{4}$ and $\\frac{1}{6}$?", "answer": "$$12$$", "type": "worked"}
+          ]
+        },
+        "multiply_divide": {
+          "name": "Multiplication & Division",
+          "cards": [
+            {"question": "What is the rule for multiplying two negative numbers?", "answer": "Negative × Negative = Positive", "type": "fact"},
+            {"question": "What is the rule for dividing a negative by a positive?", "answer": "Negative ÷ Positive = Negative", "type": "fact"},
+            {"question": "How do you divide fractions?", "answer": "Multiply by the reciprocal: $$\\frac{a}{b} \\div \\frac{c}{d} = \\frac{a}{b} \\times \\frac{d}{c}$$", "type": "formula"},
+            {"question": "How do you multiply decimals?", "answer": "Multiply as whole numbers, then count total decimal places in both factors and place the decimal point that many places from the right", "type": "fact"},
+            {"question": "How do you divide by a decimal?", "answer": "Move the decimal point in the divisor to make it a whole number, and move the decimal the same number of places in the dividend", "type": "fact"},
+            {"question": "What is the reciprocal of $\\frac{5}{7}$?", "answer": "$$\\frac{7}{5}$$", "type": "worked"},
+            {"question": "How do you find a percent of a number?", "answer": "Convert percent to decimal (divide by 100) and multiply by the number", "type": "fact"}
+          ]
+        },
+        "exponents_roots": {
+          "name": "Exponents & Roots",
+          "cards": [
+            {"question": "What is $a^m \\times a^n$?", "answer": "$$a^{m+n}$$", "type": "formula"},
+            {"question": "What is $a^m \\div a^n$?", "answer": "$$a^{m-n}$$", "type": "formula"},
+            {"question": "What is $(a^m)^n$?", "answer": "$$a^{mn}$$", "type": "formula"},
+            {"question": "What is $a^0$ (for $a \\neq 0$)?", "answer": "$$1$$", "type": "formula"},
+            {"question": "What is $a^{-n}$?", "answer": "$$\\frac{1}{a^n}$$", "type": "formula"},
+            {"question": "What is $(ab)^n$?", "answer": "$$a^n b^n$$", "type": "formula"},
+            {"question": "What is $\\sqrt[n]{a^m}$?", "answer": "$$a^{m/n}$$", "type": "formula"},
+            {"question": "What is $\\sqrt{a} \\times \\sqrt{b}$?", "answer": "$$\\sqrt{ab}$$", "type": "formula"},
+            {"question": "Is $\\sqrt{a+b} = \\sqrt{a} + \\sqrt{b}$?", "answer": "NO! This is a common error.", "type": "fact"}
+          ]
+        },
+        "order_of_ops": {
+          "name": "Order of Operations",
+          "cards": [
+            {"question": "What is PEMDAS?", "answer": "Parentheses, Exponents, Multiplication/Division (left to right), Addition/Subtraction (left to right)", "type": "fact"},
+            {"question": "Do you always do multiplication before division?", "answer": "No, multiplication and division are done left to right", "type": "fact"},
+            {"question": "What comes first: exponents or parentheses?", "answer": "Parentheses (simplify inside them first)", "type": "fact"},
+            {"question": "$3 + 4 \\times 2 = ?$", "answer": "$$11$$", "type": "worked"},
+            {"question": "$(3 + 4) \\times 2 = ?$", "answer": "$$14$$", "type": "worked"},
+            {"question": "$2^3 + 4 \\times 5 = ?$", "answer": "$$28$$", "type": "worked"},
+            {"question": "$18 \\div 3^2 = ?$", "answer": "$$2$$", "type": "worked"},
+            {"question": "$24 \\div 4 \\times 2 = ?$", "answer": "$$12$$", "type": "worked"},
+            {"question": "$6^2 - 4 \\times 3 + 2 = ?$", "answer": "$$26$$", "type": "worked"},
+            {"question": "$3[4 + 2(5 - 3)] = ?$", "answer": "$$24$$", "type": "worked"}
+          ]
+        }
+      }
+    },
     "foundations": {
       "name": "Foundations",
       "icon": "📐",
       "subcategories": {
-        "basics-integers": {
-          "name": "Basics: Integers",
-          "cards": [
-            {
-              "question": "$7 + 15 = ?$",
-              "answer": "$$22$$"
-            },
-            {
-              "question": "$-8 + 12 = ?$",
-              "answer": "$$4$$"
-            },
-            {
-              "question": "$-5 + (-9) = ?$",
-              "answer": "$$-14$$"
-            },
-            {
-              "question": "$23 + (-7) = ?$",
-              "answer": "$$16$$"
-            },
-            {
-              "question": "$18 - 25 = ?$",
-              "answer": "$$-7$$"
-            },
-            {
-              "question": "$-12 - 8 = ?$",
-              "answer": "$$-20$$"
-            },
-            {
-              "question": "$-15 - (-6) = ?$",
-              "answer": "$$-9$$"
-            },
-            {
-              "question": "$7 \\times 8 = ?$",
-              "answer": "$$56$$"
-            },
-            {
-              "question": "$(-6) \\times 9 = ?$",
-              "answer": "$$-54$$"
-            },
-            {
-              "question": "$(-7) \\times (-8) = ?$",
-              "answer": "$$56$$"
-            },
-            {
-              "question": "$12 \\times 15 = ?$",
-              "answer": "$$180$$"
-            },
-            {
-              "question": "$72 \\div 8 = ?$",
-              "answer": "$$9$$"
-            },
-            {
-              "question": "$(-48) \\div 6 = ?$",
-              "answer": "$$-8$$"
-            },
-            {
-              "question": "$(-63) \\div (-7) = ?$",
-              "answer": "$$9$$"
-            },
-            {
-              "question": "$144 \\div 12 = ?$",
-              "answer": "$$12$$"
-            }
-          ]
-        },
-        "basics-fractions": {
-          "name": "Basics: Fractions",
-          "cards": [
-            {
-              "question": "$\\frac{1}{2} + \\frac{1}{4} = ?$",
-              "answer": "$$\\frac{3}{4}$$"
-            },
-            {
-              "question": "$\\frac{2}{3} + \\frac{1}{6} = ?$",
-              "answer": "$$\\frac{5}{6}$$"
-            },
-            {
-              "question": "$\\frac{3}{5} + \\frac{2}{5} = ?$",
-              "answer": "$$1$$"
-            },
-            {
-              "question": "$\\frac{1}{3} + \\frac{1}{4} = ?$",
-              "answer": "$$\\frac{7}{12}$$"
-            },
-            {
-              "question": "$\\frac{3}{4} - \\frac{1}{2} = ?$",
-              "answer": "$$\\frac{1}{4}$$"
-            },
-            {
-              "question": "$\\frac{5}{6} - \\frac{1}{3} = ?$",
-              "answer": "$$\\frac{1}{2}$$"
-            },
-            {
-              "question": "$\\frac{7}{8} - \\frac{3}{8} = ?$",
-              "answer": "$$\\frac{1}{2}$$"
-            },
-            {
-              "question": "$\\frac{2}{3} \\times \\frac{3}{4} = ?$",
-              "answer": "$$\\frac{1}{2}$$"
-            },
-            {
-              "question": "$\\frac{5}{6} \\times \\frac{2}{5} = ?$",
-              "answer": "$$\\frac{1}{3}$$"
-            },
-            {
-              "question": "$\\frac{3}{7} \\times \\frac{7}{9} = ?$",
-              "answer": "$$\\frac{1}{3}$$"
-            },
-            {
-              "question": "$\\frac{1}{2} \\div \\frac{1}{4} = ?$",
-              "answer": "$$2$$"
-            },
-            {
-              "question": "$\\frac{3}{4} \\div \\frac{1}{2} = ?$",
-              "answer": "$$\\frac{3}{2}$$ or $$1\\frac{1}{2}$$"
-            },
-            {
-              "question": "$\\frac{2}{3} \\div \\frac{4}{5} = ?$",
-              "answer": "$$\\frac{5}{6}$$"
-            },
-            {
-              "question": "Convert $\\frac{7}{4}$ to a mixed number",
-              "answer": "$$1\\frac{3}{4}$$"
-            },
-            {
-              "question": "Simplify: $\\frac{18}{24}$",
-              "answer": "$$\\frac{3}{4}$$"
-            }
-          ]
-        },
-        "basics-decimals": {
-          "name": "Basics: Decimals",
-          "cards": [
-            {
-              "question": "$2.5 + 3.7 = ?$",
-              "answer": "$$6.2$$"
-            },
-            {
-              "question": "$0.75 + 0.25 = ?$",
-              "answer": "$$1$$"
-            },
-            {
-              "question": "$1.8 + 2.45 = ?$",
-              "answer": "$$4.25$$"
-            },
-            {
-              "question": "$5.6 + 0.04 = ?$",
-              "answer": "$$5.64$$"
-            },
-            {
-              "question": "$8.5 - 3.2 = ?$",
-              "answer": "$$5.3$$"
-            },
-            {
-              "question": "$4.0 - 1.75 = ?$",
-              "answer": "$$2.25$$"
-            },
-            {
-              "question": "$10.1 - 0.99 = ?$",
-              "answer": "$$9.11$$"
-            },
-            {
-              "question": "$0.6 \\times 0.4 = ?$",
-              "answer": "$$0.24$$"
-            },
-            {
-              "question": "$2.5 \\times 4 = ?$",
-              "answer": "$$10$$"
-            },
-            {
-              "question": "$1.2 \\times 0.5 = ?$",
-              "answer": "$$0.6$$"
-            },
-            {
-              "question": "$3.6 \\times 1.5 = ?$",
-              "answer": "$$5.4$$"
-            },
-            {
-              "question": "$4.8 \\div 0.8 = ?$",
-              "answer": "$$6$$"
-            },
-            {
-              "question": "$7.5 \\div 2.5 = ?$",
-              "answer": "$$3$$"
-            },
-            {
-              "question": "$1.44 \\div 1.2 = ?$",
-              "answer": "$$1.2$$"
-            },
-            {
-              "question": "Convert $0.75$ to a fraction",
-              "answer": "$$\\frac{3}{4}$$"
-            },
-            {
-              "question": "Convert $\\frac{3}{8}$ to a decimal",
-              "answer": "$$0.375$$"
-            }
-          ]
-        },
         "algebra": {
           "name": "Algebra",
           "cards": [
-            {
-              "question": "Simplify: $(x+2)(x-2)$",
-              "answer": "$$x^2 - 4$$"
-            },
-            {
-              "question": "Factor: $x^2 + 5x + 6$",
-              "answer": "$$(x+2)(x+3)$$"
-            },
-            {
-              "question": "Solve for $x$: $2x + 5 = 13$",
-              "answer": "$$x = 4$$"
-            },
-            {
-              "question": "What is the quadratic formula?",
-              "answer": "$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$"
-            },
-            {
-              "question": "Simplify: $\\frac{x^2 - 9}{x - 3}$",
-              "answer": "$$x + 3$$ (for $x \\neq 3$)"
-            },
-            {
-              "question": "Expand: $(a+b)^2$",
-              "answer": "$$a^2 + 2ab + b^2$$"
-            },
-            {
-              "question": "What is $\\sqrt{48}$ in simplest form?",
-              "answer": "$$4\\sqrt{3}$$"
-            },
-            {
-              "question": "Solve: $|x - 3| = 5$",
-              "answer": "$$x = 8 \\text{ or } x = -2$$"
-            }
+            {"question": "Simplify: $(x+2)(x-2)$", "answer": "$$x^2 - 4$$", "type": "worked"},
+            {"question": "Factor: $x^2 + 5x + 6$", "answer": "$$(x+2)(x+3)$$", "type": "worked"},
+            {"question": "Solve for $x$: $2x + 5 = 13$", "answer": "$$x = 4$$", "type": "worked"},
+            {"question": "What is the quadratic formula?", "answer": "$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$", "type": "formula"},
+            {"question": "Simplify: $\\frac{x^2 - 9}{x - 3}$", "answer": "$$x + 3$$ (for $x \\neq 3$)", "type": "worked"},
+            {"question": "What is the expansion of $(a+b)^2$?", "answer": "$$a^2 + 2ab + b^2$$", "type": "formula"},
+            {"question": "What is $\\sqrt{48}$ in simplest form?", "answer": "$$4\\sqrt{3}$$", "type": "worked"},
+            {"question": "Solve: $|x - 3| = 5$", "answer": "$$x = 8 \\text{ or } x = -2$$", "type": "worked"},
+            {"question": "What is the difference of squares formula?", "answer": "$$a^2 - b^2 = (a+b)(a-b)$$", "type": "formula"},
+            {"question": "What does it mean for an equation to have no solution?", "answer": "No value of the variable makes the equation true", "type": "fact"},
+            {"question": "Factor: $x^2 - 9$", "answer": "$$(x+3)(x-3)$$", "type": "worked"},
+            {"question": "Factor: $x^2 - 4x + 4$", "answer": "$$(x-2)^2$$", "type": "worked"},
+            {"question": "Factor: $2x^2 + 5x + 3$", "answer": "$$(2x+3)(x+1)$$", "type": "worked"},
+            {"question": "Solve: $x^2 - 5x + 6 = 0$", "answer": "$$x = 2 \\text{ or } x = 3$$", "type": "worked"},
+            {"question": "Solve: $x^2 + 4x - 5 = 0$", "answer": "$$x = 1 \\text{ or } x = -5$$", "type": "worked"},
+            {"question": "Solve: $3x - 7 = 2x + 5$", "answer": "$$x = 12$$", "type": "worked"},
+            {"question": "Solve: $\\frac{x}{3} + 4 = 10$", "answer": "$$x = 18$$", "type": "worked"},
+            {"question": "Simplify: $(2x^3)^2$", "answer": "$$4x^6$$", "type": "worked"},
+            {"question": "Simplify: $\\frac{12x^4}{4x^2}$", "answer": "$$3x^2$$", "type": "worked"},
+            {"question": "Expand: $(x+3)(x+5)$", "answer": "$$x^2 + 8x + 15$$", "type": "worked"},
+            {"question": "Expand: $(2x-1)(x+4)$", "answer": "$$2x^2 + 7x - 4$$", "type": "worked"},
+            {"question": "What is the expansion of $(a-b)^2$?", "answer": "$$a^2 - 2ab + b^2$$", "type": "formula"},
+            {"question": "What is the expansion of $(a+b)^3$?", "answer": "$$a^3 + 3a^2b + 3ab^2 + b^3$$", "type": "formula"},
+            {"question": "Solve: $2(x-3) = 4x + 2$", "answer": "$$x = -4$$", "type": "worked"},
+            {"question": "Solve for $x$: $5x - 2 = 3x + 8$", "answer": "$$x = 5$$", "type": "worked"},
+            {"question": "What is the discriminant of $ax^2+bx+c=0$?", "answer": "$$b^2 - 4ac$$", "type": "formula"},
+            {"question": "If the discriminant is negative, how many real solutions?", "answer": "Zero real solutions (two complex)", "type": "fact"},
+            {"question": "If the discriminant is zero, how many real solutions?", "answer": "Exactly one real solution (repeated root)", "type": "fact"},
+            {"question": "Solve: $x^2 = 49$", "answer": "$$x = 7 \\text{ or } x = -7$$", "type": "worked"},
+            {"question": "Solve: $x^2 + 1 = 0$ (real solutions)", "answer": "No real solutions", "type": "worked"},
+            {"question": "Solve: $|2x + 1| = 7$", "answer": "$$x = 3 \\text{ or } x = -4$$", "type": "worked"},
+            {"question": "What is the vertex form of a quadratic?", "answer": "$$y = a(x-h)^2 + k$$ where $(h,k)$ is the vertex", "type": "formula"},
+            {"question": "What is the axis of symmetry for $y=ax^2+bx+c$?", "answer": "$$x = -\\frac{b}{2a}$$", "type": "formula"},
+            {"question": "Simplify: $\\sqrt{x^2}$ for all real $x$", "answer": "$$|x|$$", "type": "worked"},
+            {"question": "Factor completely: $x^3 - 8$", "answer": "$$(x-2)(x^2+2x+4)$$", "type": "worked"},
+            {"question": "What is the sum of cubes formula?", "answer": "$$a^3 + b^3 = (a+b)(a^2-ab+b^2)$$", "type": "formula"},
+            {"question": "What is the difference of cubes formula?", "answer": "$$a^3 - b^3 = (a-b)(a^2+ab+b^2)$$", "type": "formula"}
           ]
         },
         "trigonometry": {
           "name": "Trigonometry",
           "cards": [
-            {
-              "question": "What is $\\sin(0)$?",
-              "answer": "$$0$$"
-            },
-            {
-              "question": "What is $\\cos(0)$?",
-              "answer": "$$1$$"
-            },
-            {
-              "question": "What is $\\sin(\\pi/2)$?",
-              "answer": "$$1$$"
-            },
-            {
-              "question": "What is $\\cos(\\pi)$?",
-              "answer": "$$-1$$"
-            },
-            {
-              "question": "What is $\\tan(\\pi/4)$?",
-              "answer": "$$1$$"
-            },
-            {
-              "question": "State the Pythagorean identity.",
-              "answer": "$$\\sin^2\\theta + \\cos^2\\theta = 1$$"
-            },
-            {
-              "question": "What is $\\sin(\\pi/6)$?",
-              "answer": "$$\\frac{1}{2}$$"
-            },
-            {
-              "question": "What is $\\cos(\\pi/3)$?",
-              "answer": "$$\\frac{1}{2}$$"
-            },
-            {
-              "question": "What is $\\sin(\\pi/4)$?",
-              "answer": "$$\\frac{\\sqrt{2}}{2}$$"
-            },
-            {
-              "question": "Express $\\tan\\theta$ in terms of sin and cos.",
-              "answer": "$$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$$"
-            },
-            {
-              "question": "What is $\\sin(2\\theta)$ in terms of $\\sin\\theta$ and $\\cos\\theta$?",
-              "answer": "$$\\sin(2\\theta) = 2\\sin\\theta\\cos\\theta$$"
-            },
-            {
-              "question": "What is $\\arctan(1)$?",
-              "answer": "$$\\frac{\\pi}{4}$$"
-            }
+            {"question": "What is $\\sin(0)$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\cos(0)$?", "answer": "$$1$$", "type": "worked"},
+            {"question": "What is $\\sin(\\pi/6)$?", "answer": "$$\\frac{1}{2}$$", "type": "worked"},
+            {"question": "What is $\\cos(\\pi/6)$?", "answer": "$$\\frac{\\sqrt{3}}{2}$$", "type": "worked"},
+            {"question": "What is $\\sin(\\pi/4)$?", "answer": "$$\\frac{\\sqrt{2}}{2}$$", "type": "worked"},
+            {"question": "What is $\\cos(\\pi/4)$?", "answer": "$$\\frac{\\sqrt{2}}{2}$$", "type": "worked"},
+            {"question": "What is $\\sin(\\pi/3)$?", "answer": "$$\\frac{\\sqrt{3}}{2}$$", "type": "worked"},
+            {"question": "What is $\\cos(\\pi/3)$?", "answer": "$$\\frac{1}{2}$$", "type": "worked"},
+            {"question": "What is $\\sin(\\pi/2)$?", "answer": "$$1$$", "type": "worked"},
+            {"question": "What is $\\cos(\\pi/2)$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\sin(\\pi)$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\cos(\\pi)$?", "answer": "$$-1$$", "type": "worked"},
+            {"question": "What is $\\sin(3\\pi/2)$?", "answer": "$$-1$$", "type": "worked"},
+            {"question": "What is $\\cos(3\\pi/2)$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\sin(2\\pi)$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\cos(2\\pi)$?", "answer": "$$1$$", "type": "worked"},
+            {"question": "What is $\\tan(0)$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\tan(\\pi/4)$?", "answer": "$$1$$", "type": "worked"},
+            {"question": "What is $\\tan(\\pi/3)$?", "answer": "$$\\sqrt{3}$$", "type": "worked"},
+            {"question": "What is $\\tan(\\pi/6)$?", "answer": "$$\\frac{\\sqrt{3}}{3}$$", "type": "worked"},
+            {"question": "State the Pythagorean identity.", "answer": "$$\\sin^2\\theta + \\cos^2\\theta = 1$$", "type": "formula"},
+            {"question": "Express $\\tan\\theta$ in terms of sin and cos.", "answer": "$$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$$", "type": "formula"},
+            {"question": "What is the double angle formula for sine?", "answer": "$$\\sin(2\\theta) = 2\\sin\\theta\\cos\\theta$$", "type": "formula"},
+            {"question": "What is the double angle formula for cosine?", "answer": "$$\\cos(2\\theta) = \\cos^2\\theta - \\sin^2\\theta = 2\\cos^2\\theta - 1 = 1 - 2\\sin^2\\theta$$", "type": "formula"},
+            {"question": "What is $\\arctan(1)$?", "answer": "$$\\frac{\\pi}{4}$$", "type": "worked"},
+            {"question": "What is $\\arcsin(1)$?", "answer": "$$\\frac{\\pi}{2}$$", "type": "worked"},
+            {"question": "What is $\\arccos(0)$?", "answer": "$$\\frac{\\pi}{2}$$", "type": "worked"},
+            {"question": "What is the period of $\\sin(x)$?", "answer": "$$2\\pi$$", "type": "fact"},
+            {"question": "What is the period of $\\tan(x)$?", "answer": "$$\\pi$$", "type": "fact"},
+            {"question": "In which quadrants is sine positive?", "answer": "Quadrants I and II", "type": "fact"},
+            {"question": "In which quadrants is cosine positive?", "answer": "Quadrants I and IV", "type": "fact"},
+            {"question": "In which quadrants is tangent positive?", "answer": "Quadrants I and III", "type": "fact"},
+            {"question": "What is Law of Sines?", "answer": "$$\\frac{a}{\\sin A} = \\frac{b}{\\sin B} = \\frac{c}{\\sin C}$$", "type": "formula"},
+            {"question": "What is Law of Cosines?", "answer": "$$c^2 = a^2 + b^2 - 2ab\\cos C$$", "type": "formula"},
+            {"question": "What is $\\sec\\theta$?", "answer": "$$\\frac{1}{\\cos\\theta}$$", "type": "formula"},
+            {"question": "What is $\\csc\\theta$?", "answer": "$$\\frac{1}{\\sin\\theta}$$", "type": "formula"},
+            {"question": "What is $\\cot\\theta$?", "answer": "$$\\frac{\\cos\\theta}{\\sin\\theta} = \\frac{1}{\\tan\\theta}$$", "type": "formula"},
+            {"question": "What is $1 + \\tan^2\\theta$?", "answer": "$$\\sec^2\\theta$$", "type": "formula"},
+            {"question": "What is $1 + \\cot^2\\theta$?", "answer": "$$\\csc^2\\theta$$", "type": "formula"},
+            {"question": "What is $\\sin(-\\theta)$?", "answer": "$$-\\sin\\theta$$ (sine is odd)", "type": "formula"},
+            {"question": "What is $\\cos(-\\theta)$?", "answer": "$$\\cos\\theta$$ (cosine is even)", "type": "formula"},
+            {"question": "What is $\\sin(\\pi - \\theta)$?", "answer": "$$\\sin\\theta$$", "type": "formula"},
+            {"question": "What is $\\cos(\\pi - \\theta)$?", "answer": "$$-\\cos\\theta$$", "type": "formula"},
+            {"question": "What is $\\sin(\\theta + \\pi/2)$?", "answer": "$$\\cos\\theta$$", "type": "formula"},
+            {"question": "Convert $180°$ to radians", "answer": "$$\\pi$$", "type": "worked"},
+            {"question": "Convert $45°$ to radians", "answer": "$$\\frac{\\pi}{4}$$", "type": "worked"},
+            {"question": "Convert $\\frac{2\\pi}{3}$ to degrees", "answer": "$$120°$$", "type": "worked"},
+            {"question": "What is the sum formula $\\sin(A+B)$?", "answer": "$$\\sin A \\cos B + \\cos A \\sin B$$", "type": "formula"},
+            {"question": "What is the sum formula $\\cos(A+B)$?", "answer": "$$\\cos A \\cos B - \\sin A \\sin B$$", "type": "formula"}
           ]
         },
         "vectors": {
           "name": "Vector Math",
           "cards": [
-            {
-              "question": "What is the magnitude of vector $\\vec{v} = (3, 4)$?",
-              "answer": "$$|\\vec{v}| = 5$$"
-            },
-            {
-              "question": "What is $(2,3) + (1,5)$?",
-              "answer": "$$(3, 8)$$"
-            },
-            {
-              "question": "What is $3 \\cdot (2, -1)$?",
-              "answer": "$$(6, -3)$$"
-            },
-            {
-              "question": "What is the dot product $(1,2) \\cdot (3,4)$?",
-              "answer": "$$1(3) + 2(4) = 11$$"
-            },
-            {
-              "question": "What is $\\vec{i} \\times \\vec{j}$?",
-              "answer": "$$\\vec{k}$$"
-            },
-            {
-              "question": "What is the unit vector in the direction of $(3,4)$?",
-              "answer": "$$\\left(\\frac{3}{5}, \\frac{4}{5}\\right)$$"
-            },
-            {
-              "question": "If $\\vec{a} \\cdot \\vec{b} = 0$, what does this tell us?",
-              "answer": "The vectors are perpendicular (orthogonal)"
-            },
-            {
-              "question": "What is the magnitude of $(1, 1, 1)$?",
-              "answer": "$$\\sqrt{3}$$"
-            }
+            {"question": "What is the magnitude of vector $\\vec{v} = (3, 4)$?", "answer": "$$|\\vec{v}| = 5$$", "type": "worked"},
+            {"question": "What is $(2,3) + (1,5)$?", "answer": "$$(3, 8)$$", "type": "worked"},
+            {"question": "What is $3 \\cdot (2, -1)$?", "answer": "$$(6, -3)$$", "type": "worked"},
+            {"question": "What is the dot product $(1,2) \\cdot (3,4)$?", "answer": "$$11$$", "type": "worked"},
+            {"question": "What is $\\vec{i} \\times \\vec{j}$?", "answer": "$$\\vec{k}$$", "type": "worked"},
+            {"question": "What is the unit vector in the direction of $(3,4)$?", "answer": "$$\\left(\\frac{3}{5}, \\frac{4}{5}\\right)$$", "type": "worked"},
+            {"question": "If $\\vec{a} \\cdot \\vec{b} = 0$, what does this tell us?", "answer": "The vectors are perpendicular (orthogonal)", "type": "fact"},
+            {"question": "What is the magnitude of $(1, 1, 1)$?", "answer": "$$\\sqrt{3}$$", "type": "worked"},
+            {"question": "What is the formula for vector magnitude in 2D?", "answer": "$$|\\vec{v}| = \\sqrt{x^2 + y^2}$$", "type": "formula"},
+            {"question": "What is the dot product formula?", "answer": "$$\\vec{a} \\cdot \\vec{b} = a_1 b_1 + a_2 b_2 + \\ldots + a_n b_n$$", "type": "formula"},
+            {"question": "What is $(4, -2) - (1, 3)$?", "answer": "$$(3, -5)$$", "type": "worked"},
+            {"question": "What is $-2 \\cdot (3, 5)$?", "answer": "$$(-6, -10)$$", "type": "worked"},
+            {"question": "What is $(2, 1, 3) \\cdot (1, -1, 2)$?", "answer": "$$2 - 1 + 6 = 7$$", "type": "worked"},
+            {"question": "What is the formula for projection of $\\vec{a}$ onto $\\vec{b}$?", "answer": "$$\\text{proj}_{\\vec{b}}\\vec{a} = \\frac{\\vec{a} \\cdot \\vec{b}}{|\\vec{b}|^2}\\vec{b}$$", "type": "formula"},
+            {"question": "What is $\\vec{a} \\cdot \\vec{a}$?", "answer": "$$|\\vec{a}|^2$$", "type": "formula"},
+            {"question": "What is $\\vec{j} \\times \\vec{i}$?", "answer": "$$-\\vec{k}$$", "type": "worked"},
+            {"question": "What is the magnitude of $(5, 12)$?", "answer": "$$13$$", "type": "worked"},
+            {"question": "What is the magnitude of $(8, 15)$?", "answer": "$$17$$", "type": "worked"},
+            {"question": "What is the zero vector in $\\mathbb{R}^3$?", "answer": "$$(0, 0, 0)$$", "type": "fact"},
+            {"question": "What is $\\vec{a} \\times \\vec{a}$?", "answer": "$$\\vec{0}$$ (zero vector)", "type": "formula"},
+            {"question": "Is $\\vec{a} \\times \\vec{b} = \\vec{b} \\times \\vec{a}$?", "answer": "No, $\\vec{a} \\times \\vec{b} = -\\vec{b} \\times \\vec{a}$", "type": "fact"},
+            {"question": "What is the angle formula using dot product?", "answer": "$$\\cos\\theta = \\frac{\\vec{a} \\cdot \\vec{b}}{|\\vec{a}||\\vec{b}|}$$", "type": "formula"},
+            {"question": "What does cross product give geometrically?", "answer": "A vector perpendicular to both input vectors, with magnitude equal to the parallelogram area", "type": "fact"},
+            {"question": "Find unit vector for $(1, 2, 2)$", "answer": "$$\\left(\\frac{1}{3}, \\frac{2}{3}, \\frac{2}{3}\\right)$$", "type": "worked"}
+          ]
+        },
+        "logarithms": {
+          "name": "Logarithms",
+          "cards": [
+            {"question": "What is $\\log_{10}(100)$?", "answer": "$$2$$", "type": "worked"},
+            {"question": "What is $\\log_{10}(1000)$?", "answer": "$$3$$", "type": "worked"},
+            {"question": "What is $\\log_2(8)$?", "answer": "$$3$$", "type": "worked"},
+            {"question": "What is $\\log_2(32)$?", "answer": "$$5$$", "type": "worked"},
+            {"question": "What is $\\log_3(81)$?", "answer": "$$4$$", "type": "worked"},
+            {"question": "What is $\\log_5(125)$?", "answer": "$$3$$", "type": "worked"},
+            {"question": "What is $\\ln(e)$?", "answer": "$$1$$", "type": "worked"},
+            {"question": "What is $\\ln(e^3)$?", "answer": "$$3$$", "type": "worked"},
+            {"question": "What is $\\ln(1)$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\log_a(1)$ for any base $a$?", "answer": "$$0$$", "type": "fact"},
+            {"question": "What is $\\log_a(a)$?", "answer": "$$1$$", "type": "fact"},
+            {"question": "What is $e^{\\ln x}$?", "answer": "$$x$$", "type": "formula"},
+            {"question": "What is $\\ln(e^x)$?", "answer": "$$x$$", "type": "formula"},
+            {"question": "What is $\\log_a(xy)$?", "answer": "$$\\log_a x + \\log_a y$$", "type": "formula"},
+            {"question": "What is $\\log_a(x/y)$?", "answer": "$$\\log_a x - \\log_a y$$", "type": "formula"},
+            {"question": "What is $\\log_a(x^n)$?", "answer": "$$n \\log_a x$$", "type": "formula"},
+            {"question": "Change of base formula?", "answer": "$$\\log_a x = \\frac{\\ln x}{\\ln a} = \\frac{\\log x}{\\log a}$$", "type": "formula"},
+            {"question": "Solve: $2^x = 16$", "answer": "$$x = 4$$", "type": "worked"},
+            {"question": "Solve: $10^x = 1000$", "answer": "$$x = 3$$", "type": "worked"},
+            {"question": "Solve: $e^x = 7$ (exact form)", "answer": "$$x = \\ln 7$$", "type": "worked"},
+            {"question": "Solve: $\\log_2(x) = 5$", "answer": "$$x = 32$$", "type": "worked"},
+            {"question": "Solve: $\\ln(x) = 3$", "answer": "$$x = e^3$$", "type": "worked"},
+            {"question": "Simplify: $\\log_2(8) + \\log_2(4)$", "answer": "$$3 + 2 = 5 = \\log_2(32)$$", "type": "worked"},
+            {"question": "Simplify: $\\ln(e^2 \\cdot e^5)$", "answer": "$$7$$", "type": "worked"},
+            {"question": "What is $\\log_{10}(0.01)$?", "answer": "$$-2$$", "type": "worked"},
+            {"question": "What is $\\log_4(2)$?", "answer": "$$\\frac{1}{2}$$", "type": "worked"},
+            {"question": "What is the domain of $\\ln(x)$?", "answer": "$$x > 0$$ (positive reals)", "type": "fact"},
+            {"question": "What is $a^{\\log_a x}$?", "answer": "$$x$$", "type": "formula"}
+          ]
+        },
+        "complex": {
+          "name": "Complex Numbers",
+          "cards": [
+            {"question": "What is $i^2$?", "answer": "$$-1$$", "type": "fact"},
+            {"question": "What is $i^3$?", "answer": "$$-i$$", "type": "worked"},
+            {"question": "What is $i^4$?", "answer": "$$1$$", "type": "worked"},
+            {"question": "What is $i^5$?", "answer": "$$i$$", "type": "worked"},
+            {"question": "What is $(3+2i) + (1-4i)$?", "answer": "$$4 - 2i$$", "type": "worked"},
+            {"question": "What is $(5+3i) - (2+7i)$?", "answer": "$$3 - 4i$$", "type": "worked"},
+            {"question": "What is $(2+3i)(1+i)$?", "answer": "$$2 + 2i + 3i + 3i^2 = -1 + 5i$$", "type": "worked"},
+            {"question": "What is $(1+i)(1-i)$?", "answer": "$$1 - i^2 = 2$$", "type": "worked"},
+            {"question": "What is the conjugate of $3 + 4i$?", "answer": "$$3 - 4i$$", "type": "worked"},
+            {"question": "What is the conjugate of $-2 - 5i$?", "answer": "$$-2 + 5i$$", "type": "worked"},
+            {"question": "What is $|3 + 4i|$ (modulus)?", "answer": "$$5$$", "type": "worked"},
+            {"question": "What is $|1 + i|$?", "answer": "$$\\sqrt{2}$$", "type": "worked"},
+            {"question": "What is $\\frac{1}{i}$?", "answer": "$$-i$$", "type": "worked"},
+            {"question": "What is $\\frac{2+i}{1-i}$?", "answer": "$$\\frac{(2+i)(1+i)}{(1-i)(1+i)} = \\frac{1+3i}{2}$$", "type": "worked"},
+            {"question": "What is $\\sqrt{-9}$?", "answer": "$$3i$$", "type": "worked"},
+            {"question": "What is $\\sqrt{-16}$?", "answer": "$$4i$$", "type": "worked"},
+            {"question": "Modulus formula for $a + bi$?", "answer": "$$|z| = \\sqrt{a^2 + b^2}$$", "type": "formula"},
+            {"question": "What is $z \\cdot \\bar{z}$ where $\\bar{z}$ is conjugate?", "answer": "$$|z|^2$$", "type": "formula"},
+            {"question": "What is Euler's formula?", "answer": "$$e^{i\\theta} = \\cos\\theta + i\\sin\\theta$$", "type": "formula"},
+            {"question": "What is $e^{i\\pi}$?", "answer": "$$-1$$ (Euler's identity: $e^{i\\pi} + 1 = 0$)", "type": "worked"},
+            {"question": "What is the polar form of a complex number?", "answer": "$$z = r(\\cos\\theta + i\\sin\\theta) = re^{i\\theta}$$", "type": "formula"},
+            {"question": "Solve: $x^2 + 1 = 0$", "answer": "$$x = i \\text{ or } x = -i$$", "type": "worked"},
+            {"question": "Solve: $x^2 + 4 = 0$", "answer": "$$x = 2i \\text{ or } x = -2i$$", "type": "worked"},
+            {"question": "What is ${\\rm Re}(3 - 7i)$?", "answer": "$$3$$", "type": "worked"},
+            {"question": "What is ${\\rm Im}(3 - 7i)$?", "answer": "$$-7$$", "type": "worked"}
           ]
         }
       }
@@ -339,308 +259,315 @@
         "limits": {
           "name": "Limits",
           "cards": [
-            {
-              "question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{\\sin x}{x}$?",
-              "answer": "$$1$$"
-            },
-            {
-              "question": "What is $\\displaystyle\\lim_{x \\to \\infty} \\frac{1}{x}$?",
-              "answer": "$$0$$"
-            },
-            {
-              "question": "What is $\\displaystyle\\lim_{n \\to \\infty} \\left(1 + \\frac{1}{n}\\right)^n$?",
-              "answer": "$$e$$"
-            },
-            {
-              "question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{e^x - 1}{x}$?",
-              "answer": "$$1$$"
-            },
-            {
-              "question": "What is $\\displaystyle\\lim_{x \\to 2} (x^2 - 4)/(x-2)$?",
-              "answer": "$$4$$"
-            },
-            {
-              "question": "What is $\\displaystyle\\lim_{x \\to 0^+} \\ln(x)$?",
-              "answer": "$$-\\infty$$"
-            },
-            {
-              "question": "What is $\\displaystyle\\lim_{x \\to \\infty} e^{-x}$?",
-              "answer": "$$0$$"
-            },
-            {
-              "question": "When does $\\displaystyle\\lim_{x \\to a} f(x)$ exist?",
-              "answer": "When left and right limits are equal: $$\\lim_{x \\to a^-} f(x) = \\lim_{x \\to a^+} f(x)$$"
-            }
+            {"question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{\\sin x}{x}$?", "answer": "$$1$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to \\infty} \\frac{1}{x}$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{n \\to \\infty} \\left(1 + \\frac{1}{n}\\right)^n$?", "answer": "$$e$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{e^x - 1}{x}$?", "answer": "$$1$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 2} \\frac{x^2 - 4}{x-2}$?", "answer": "$$4$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 0^+} \\ln(x)$?", "answer": "$$-\\infty$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to \\infty} e^{-x}$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "When does $\\displaystyle\\lim_{x \\to a} f(x)$ exist?", "answer": "When left and right limits are equal", "type": "fact"},
+            {"question": "What is L'Hôpital's rule?", "answer": "If $\\lim \\frac{f(x)}{g(x)}$ gives $\\frac{0}{0}$ or $\\frac{\\infty}{\\infty}$, then $\\lim \\frac{f(x)}{g(x)} = \\lim \\frac{f'(x)}{g'(x)}$", "type": "formula"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{1 - \\cos x}{x^2}$?", "answer": "$$\\frac{1}{2}$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to \\infty} \\frac{x^2}{e^x}$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{\\tan x}{x}$?", "answer": "$$1$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to \\infty} \\frac{3x^2 + 2x}{5x^2 - 1}$?", "answer": "$$\\frac{3}{5}$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to \\infty} \\frac{x^3}{x^2 + 1}$?", "answer": "$$\\infty$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to \\infty} \\frac{x}{x^2 + 1}$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 1} \\frac{x^3 - 1}{x - 1}$?", "answer": "$$3$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 0} x \\sin\\frac{1}{x}$?", "answer": "$$0$$ (by Squeeze Theorem)", "type": "worked"},
+            {"question": "What is the Squeeze Theorem?", "answer": "If $g(x) \\le f(x) \\le h(x)$ and $\\lim g = \\lim h = L$, then $\\lim f = L$", "type": "fact"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 0^+} x \\ln x$?", "answer": "$$0$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to \\infty} \\left(1 + \\frac{2}{x}\\right)^x$?", "answer": "$$e^2$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{\\sin(3x)}{x}$?", "answer": "$$3$$", "type": "worked"},
+            {"question": "What is $\\displaystyle\\lim_{x \\to 0} \\frac{\\arctan x}{x}$?", "answer": "$$1$$", "type": "worked"}
           ]
         },
         "derivatives": {
           "name": "Derivatives",
           "cards": [
-            {
-              "question": "What is $\\frac{d}{dx}[x^n]$?",
-              "answer": "$$nx^{n-1}$$"
-            },
-            {
-              "question": "What is $\\frac{d}{dx}[\\sin x]$?",
-              "answer": "$$\\cos x$$"
-            },
-            {
-              "question": "What is $\\frac{d}{dx}[\\cos x]$?",
-              "answer": "$$-\\sin x$$"
-            },
-            {
-              "question": "What is $\\frac{d}{dx}[e^x]$?",
-              "answer": "$$e^x$$"
-            },
-            {
-              "question": "What is $\\frac{d}{dx}[\\ln x]$?",
-              "answer": "$$\\frac{1}{x}$$"
-            },
-            {
-              "question": "State the chain rule.",
-              "answer": "$$\\frac{d}{dx}[f(g(x))] = f'(g(x)) \\cdot g'(x)$$"
-            },
-            {
-              "question": "State the product rule.",
-              "answer": "$$\\frac{d}{dx}[uv] = u'v + uv'$$"
-            },
-            {
-              "question": "What is $\\frac{d}{dx}[\\tan x]$?",
-              "answer": "$$\\sec^2 x$$"
-            },
-            {
-              "question": "What is $\\frac{d}{dx}[x^3]$ at $x=2$?",
-              "answer": "$$3(2)^2 = 12$$"
-            },
-            {
-              "question": "What is $\\frac{d}{dx}[e^{2x}]$?",
-              "answer": "$$2e^{2x}$$"
-            }
+            {"question": "What is the power rule?", "answer": "$$\\frac{d}{dx}[x^n] = nx^{n-1}$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\sin x]$?", "answer": "$$\\cos x$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\cos x]$?", "answer": "$$-\\sin x$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[e^x]$?", "answer": "$$e^x$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\ln x]$?", "answer": "$$\\frac{1}{x}$$", "type": "formula"},
+            {"question": "State the chain rule.", "answer": "$$\\frac{d}{dx}[f(g(x))] = f'(g(x)) \\cdot g'(x)$$", "type": "formula"},
+            {"question": "State the product rule.", "answer": "$$\\frac{d}{dx}[uv] = u'v + uv'$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\tan x]$?", "answer": "$$\\sec^2 x$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[x^3]$ at $x=2$?", "answer": "$$12$$", "type": "worked"},
+            {"question": "What is $\\frac{d}{dx}[e^{2x}]$?", "answer": "$$2e^{2x}$$", "type": "worked"},
+            {"question": "What does the derivative represent geometrically?", "answer": "The slope of the tangent line to the curve at a point", "type": "fact"},
+            {"question": "What is the quotient rule?", "answer": "$$\\frac{d}{dx}\\left[\\frac{u}{v}\\right] = \\frac{u'v - uv'}{v^2}$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\sec x]$?", "answer": "$$\\sec x \\tan x$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\csc x]$?", "answer": "$$-\\csc x \\cot x$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\cot x]$?", "answer": "$$-\\csc^2 x$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[a^x]$?", "answer": "$$a^x \\ln a$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\log_a x]$?", "answer": "$$\\frac{1}{x \\ln a}$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\arcsin x]$?", "answer": "$$\\frac{1}{\\sqrt{1-x^2}}$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\arccos x]$?", "answer": "$$-\\frac{1}{\\sqrt{1-x^2}}$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[\\arctan x]$?", "answer": "$$\\frac{1}{1+x^2}$$", "type": "formula"},
+            {"question": "What is $\\frac{d}{dx}[x^x]$?", "answer": "$$x^x(\\ln x + 1)$$", "type": "formula"},
+            {"question": "Find $\\frac{d}{dx}[\\sin(x^2)]$", "answer": "$$2x\\cos(x^2)$$", "type": "worked"},
+            {"question": "Find $\\frac{d}{dx}[e^{\\sin x}]$", "answer": "$$e^{\\sin x} \\cos x$$", "type": "worked"},
+            {"question": "Find $\\frac{d}{dx}[\\ln(x^2 + 1)]$", "answer": "$$\\frac{2x}{x^2+1}$$", "type": "worked"},
+            {"question": "Find $\\frac{d}{dx}[x^2 e^x]$", "answer": "$$2xe^x + x^2e^x = xe^x(2+x)$$", "type": "worked"},
+            {"question": "Find $\\frac{d}{dx}[\\frac{x}{x+1}]$", "answer": "$$\\frac{1}{(x+1)^2}$$", "type": "worked"},
+            {"question": "Find $\\frac{d}{dx}[\\sqrt{x^2+1}]$", "answer": "$$\\frac{x}{\\sqrt{x^2+1}}$$", "type": "worked"},
+            {"question": "Find $\\frac{d}{dx}[\\tan^{-1}(2x)]$", "answer": "$$\\frac{2}{1+4x^2}$$", "type": "worked"},
+            {"question": "Find $\\frac{d}{dx}[(\\ln x)^2]$", "answer": "$$\\frac{2\\ln x}{x}$$", "type": "worked"},
+            {"question": "Find $\\frac{dy}{dx}$ if $x^2 + y^2 = 25$", "answer": "$$-\\frac{x}{y}$$", "type": "worked"},
+            {"question": "Find $\\frac{dy}{dx}$ if $xy = 1$", "answer": "$$-\\frac{y}{x}$$", "type": "worked"},
+            {"question": "What is $\\frac{d}{dx}[|x|]$ for $x \\neq 0$?", "answer": "$$\\frac{x}{|x|} = \\text{sgn}(x)$$", "type": "formula"},
+            {"question": "What is a critical point?", "answer": "A point where $f'(x) = 0$ or $f'(x)$ is undefined", "type": "fact"},
+            {"question": "What is an inflection point?", "answer": "A point where concavity changes ($f''$ changes sign)", "type": "fact"},
+            {"question": "If $f'(x) > 0$, what does this mean?", "answer": "The function is increasing", "type": "fact"},
+            {"question": "If $f''(x) < 0$, what does this mean?", "answer": "The function is concave down", "type": "fact"}
           ]
         },
         "integrals": {
           "name": "Integrals",
           "cards": [
-            {
-              "question": "What is $\\int x^n \\, dx$?",
-              "answer": "$$\\frac{x^{n+1}}{n+1} + C$$ (for $n \\neq -1$)"
-            },
-            {
-              "question": "What is $\\int e^x \\, dx$?",
-              "answer": "$$e^x + C$$"
-            },
-            {
-              "question": "What is $\\int \\frac{1}{x} \\, dx$?",
-              "answer": "$$\\ln|x| + C$$"
-            },
-            {
-              "question": "What is $\\int \\cos x \\, dx$?",
-              "answer": "$$\\sin x + C$$"
-            },
-            {
-              "question": "What is $\\int \\sin x \\, dx$?",
-              "answer": "$$-\\cos x + C$$"
-            },
-            {
-              "question": "Evaluate $\\int_0^1 x^2 \\, dx$",
-              "answer": "$$\\frac{1}{3}$$"
-            },
-            {
-              "question": "What is the integration by parts formula?",
-              "answer": "$$\\int u \\, dv = uv - \\int v \\, du$$"
-            },
-            {
-              "question": "What is $\\int_0^{\\pi} \\sin x \\, dx$?",
-              "answer": "$$2$$"
-            },
-            {
-              "question": "What is $\\int 2x \\, dx$?",
-              "answer": "$$x^2 + C$$"
-            },
-            {
-              "question": "What is $\\int_0^1 e^x \\, dx$?",
-              "answer": "$$e - 1$$"
-            }
+            {"question": "What is the power rule for integrals?", "answer": "$$\\int x^n \\, dx = \\frac{x^{n+1}}{n+1} + C$$ (for $n \\neq -1$)", "type": "formula"},
+            {"question": "What is $\\int e^x \\, dx$?", "answer": "$$e^x + C$$", "type": "formula"},
+            {"question": "What is $\\int \\frac{1}{x} \\, dx$?", "answer": "$$\\ln|x| + C$$", "type": "formula"},
+            {"question": "What is $\\int \\cos x \\, dx$?", "answer": "$$\\sin x + C$$", "type": "formula"},
+            {"question": "What is $\\int \\sin x \\, dx$?", "answer": "$$-\\cos x + C$$", "type": "formula"},
+            {"question": "Evaluate $\\int_0^1 x^2 \\, dx$", "answer": "$$\\frac{1}{3}$$", "type": "worked"},
+            {"question": "What is the integration by parts formula?", "answer": "$$\\int u \\, dv = uv - \\int v \\, du$$", "type": "formula"},
+            {"question": "What is $\\int_0^{\\pi} \\sin x \\, dx$?", "answer": "$$2$$", "type": "worked"},
+            {"question": "What is $\\int 2x \\, dx$?", "answer": "$$x^2 + C$$", "type": "worked"},
+            {"question": "What is $\\int_0^1 e^x \\, dx$?", "answer": "$$e - 1$$", "type": "worked"},
+            {"question": "What does the definite integral represent geometrically?", "answer": "The signed area under the curve between the bounds", "type": "fact"},
+            {"question": "What is the Fundamental Theorem of Calculus (Part 1)?", "answer": "If $F(x) = \\int_a^x f(t)\\,dt$, then $F'(x) = f(x)$", "type": "fact"},
+            {"question": "What is $\\int \\sec^2 x \\, dx$?", "answer": "$$\\tan x + C$$", "type": "formula"},
+            {"question": "What is $\\int \\csc^2 x \\, dx$?", "answer": "$$-\\cot x + C$$", "type": "formula"},
+            {"question": "What is $\\int \\sec x \\tan x \\, dx$?", "answer": "$$\\sec x + C$$", "type": "formula"},
+            {"question": "What is $\\int \\csc x \\cot x \\, dx$?", "answer": "$$-\\csc x + C$$", "type": "formula"},
+            {"question": "What is $\\int \\tan x \\, dx$?", "answer": "$$-\\ln|\\cos x| + C = \\ln|\\sec x| + C$$", "type": "formula"},
+            {"question": "What is $\\int \\sec x \\, dx$?", "answer": "$$\\ln|\\sec x + \\tan x| + C$$", "type": "formula"},
+            {"question": "What is $\\int \\frac{1}{1+x^2} \\, dx$?", "answer": "$$\\arctan x + C$$", "type": "formula"},
+            {"question": "What is $\\int \\frac{1}{\\sqrt{1-x^2}} \\, dx$?", "answer": "$$\\arcsin x + C$$", "type": "formula"},
+            {"question": "What is $\\int a^x \\, dx$?", "answer": "$$\\frac{a^x}{\\ln a} + C$$", "type": "formula"},
+            {"question": "Evaluate $\\int x e^x \\, dx$", "answer": "$$xe^x - e^x + C = e^x(x-1) + C$$", "type": "worked"},
+            {"question": "Evaluate $\\int x \\cos x \\, dx$", "answer": "$$x\\sin x + \\cos x + C$$", "type": "worked"},
+            {"question": "Evaluate $\\int \\ln x \\, dx$", "answer": "$$x\\ln x - x + C$$", "type": "worked"},
+            {"question": "Evaluate $\\int x^2 e^x \\, dx$", "answer": "$$e^x(x^2 - 2x + 2) + C$$", "type": "worked"},
+            {"question": "Evaluate $\\int \\frac{1}{x^2+4} \\, dx$", "answer": "$$\\frac{1}{2}\\arctan\\frac{x}{2} + C$$", "type": "worked"},
+            {"question": "Evaluate $\\int \\sin^2 x \\, dx$", "answer": "$$\\frac{x}{2} - \\frac{\\sin 2x}{4} + C$$", "type": "worked"},
+            {"question": "Evaluate $\\int \\cos^2 x \\, dx$", "answer": "$$\\frac{x}{2} + \\frac{\\sin 2x}{4} + C$$", "type": "worked"},
+            {"question": "What is $\\int_a^a f(x) \\, dx$?", "answer": "$$0$$", "type": "fact"},
+            {"question": "What is $\\int_a^b f(x) \\, dx + \\int_b^c f(x) \\, dx$?", "answer": "$$\\int_a^c f(x) \\, dx$$", "type": "formula"},
+            {"question": "What is $\\int_a^b f(x) \\, dx$ if we swap limits?", "answer": "$$-\\int_b^a f(x) \\, dx$$", "type": "formula"},
+            {"question": "Evaluate $\\int_{-1}^{1} x^3 \\, dx$", "answer": "$$0$$ (odd function, symmetric interval)", "type": "worked"},
+            {"question": "What is trapezoidal rule?", "answer": "$$\\int_a^b f(x)\\,dx \\approx \\frac{\\Delta x}{2}[f(x_0) + 2f(x_1) + ... + 2f(x_{n-1}) + f(x_n)]$$", "type": "formula"}
           ]
         },
         "series": {
           "name": "Series",
           "cards": [
-            {
-              "question": "What is $\\sum_{n=0}^{\\infty} ar^n$ for $|r| < 1$?",
-              "answer": "$$\\frac{a}{1-r}$$"
-            },
-            {
-              "question": "What is $\\sum_{k=1}^{n} k$?",
-              "answer": "$$\\frac{n(n+1)}{2}$$"
-            },
-            {
-              "question": "First 3 terms of Taylor series for $e^x$ at $x=0$?",
-              "answer": "$$1 + x + \\frac{x^2}{2}$$"
-            },
-            {
-              "question": "What is $\\sum_{n=0}^{\\infty} \\frac{1}{2^n}$?",
-              "answer": "$$2$$"
-            },
-            {
-              "question": "Does $\\sum_{n=1}^{\\infty} \\frac{1}{n}$ converge?",
-              "answer": "No, the harmonic series diverges"
-            },
-            {
-              "question": "Does $\\sum_{n=1}^{\\infty} \\frac{1}{n^2}$ converge?",
-              "answer": "Yes, it converges to $\\frac{\\pi^2}{6}$"
-            }
+            {"question": "What is the formula for geometric series sum?", "answer": "$$\\sum_{n=0}^{\\infty} ar^n = \\frac{a}{1-r}$$ for $|r| < 1$", "type": "formula"},
+            {"question": "What is the formula for $\\sum_{k=1}^{n} k$?", "answer": "$$\\frac{n(n+1)}{2}$$", "type": "formula"},
+            {"question": "First 3 terms of Taylor series for $e^x$ at $x=0$?", "answer": "$$1 + x + \\frac{x^2}{2}$$", "type": "worked"},
+            {"question": "What is $\\sum_{n=0}^{\\infty} \\frac{1}{2^n}$?", "answer": "$$2$$", "type": "worked"},
+            {"question": "Does $\\sum_{n=1}^{\\infty} \\frac{1}{n}$ converge?", "answer": "No, the harmonic series diverges", "type": "fact"},
+            {"question": "Does $\\sum_{n=1}^{\\infty} \\frac{1}{n^2}$ converge?", "answer": "Yes, it converges to $\\frac{\\pi^2}{6}$", "type": "fact"},
+            {"question": "What is the Taylor series formula?", "answer": "$$f(x) = \\sum_{n=0}^{\\infty} \\frac{f^{(n)}(a)}{n!}(x-a)^n$$", "type": "formula"},
+            {"question": "What is the Maclaurin series for $e^x$?", "answer": "$$\\sum_{n=0}^{\\infty} \\frac{x^n}{n!} = 1 + x + \\frac{x^2}{2!} + \\frac{x^3}{3!} + ...$$", "type": "formula"},
+            {"question": "What is the Maclaurin series for $\\sin x$?", "answer": "$$\\sum_{n=0}^{\\infty} \\frac{(-1)^n x^{2n+1}}{(2n+1)!} = x - \\frac{x^3}{3!} + \\frac{x^5}{5!} - ...$$", "type": "formula"},
+            {"question": "What is the Maclaurin series for $\\cos x$?", "answer": "$$\\sum_{n=0}^{\\infty} \\frac{(-1)^n x^{2n}}{(2n)!} = 1 - \\frac{x^2}{2!} + \\frac{x^4}{4!} - ...$$", "type": "formula"},
+            {"question": "What is the Maclaurin series for $\\frac{1}{1-x}$?", "answer": "$$\\sum_{n=0}^{\\infty} x^n = 1 + x + x^2 + x^3 + ...$$ for $|x| < 1$", "type": "formula"},
+            {"question": "What is the Maclaurin series for $\\ln(1+x)$?", "answer": "$$\\sum_{n=1}^{\\infty} \\frac{(-1)^{n+1} x^n}{n} = x - \\frac{x^2}{2} + \\frac{x^3}{3} - ...$$ for $|x| \\le 1$", "type": "formula"},
+            {"question": "What is the ratio test?", "answer": "If $\\lim_{n\\to\\infty}|\\frac{a_{n+1}}{a_n}| = L$: converges if $L<1$, diverges if $L>1$", "type": "formula"},
+            {"question": "What is the root test?", "answer": "If $\\lim_{n\\to\\infty}\\sqrt[n]{|a_n|} = L$: converges if $L<1$, diverges if $L>1$", "type": "formula"},
+            {"question": "What is the integral test?", "answer": "If $f(n) = a_n$ is positive, continuous, decreasing, then $\\sum a_n$ converges iff $\\int_1^\\infty f(x)\\,dx$ converges", "type": "formula"},
+            {"question": "What is the comparison test?", "answer": "If $0 \\le a_n \\le b_n$ and $\\sum b_n$ converges, then $\\sum a_n$ converges", "type": "formula"},
+            {"question": "What is the alternating series test?", "answer": "If $a_n$ is decreasing and $\\lim a_n = 0$, then $\\sum(-1)^n a_n$ converges", "type": "formula"},
+            {"question": "What is $\\sum_{k=1}^{n} k^2$?", "answer": "$$\\frac{n(n+1)(2n+1)}{6}$$", "type": "formula"},
+            {"question": "What is the radius of convergence for $e^x$ series?", "answer": "$$R = \\infty$$", "type": "fact"},
+            {"question": "Does $\\sum_{n=1}^{\\infty} \\frac{1}{n^p}$ converge?", "answer": "Yes if $p > 1$, no if $p \\le 1$ (p-series)", "type": "fact"},
+            {"question": "What is the partial sum $S_n$ of a geometric series?", "answer": "$$S_n = a\\frac{1-r^n}{1-r}$$", "type": "formula"}
           ]
         },
         "diffeq": {
           "name": "Differential Equations",
           "cards": [
-            {
-              "question": "Solve: $\\frac{dy}{dx} = y$",
-              "answer": "$$y = Ce^x$$"
-            },
-            {
-              "question": "Solve: $\\frac{dy}{dx} = ky$",
-              "answer": "$$y = Ce^{kx}$$"
-            },
-            {
-              "question": "What type of DE is $y'' + y = 0$?",
-              "answer": "Second-order linear homogeneous ODE"
-            },
-            {
-              "question": "Solution to $y'' + y = 0$?",
-              "answer": "$$y = A\\cos x + B\\sin x$$"
-            },
-            {
-              "question": "Solve: $\\frac{dy}{dx} = 2x$",
-              "answer": "$$y = x^2 + C$$"
-            },
-            {
-              "question": "What is a separable differential equation?",
-              "answer": "One that can be written as $\\frac{dy}{dx} = f(x)g(y)$"
-            }
+            {"question": "Solve: $\\frac{dy}{dx} = y$", "answer": "$$y = Ce^x$$", "type": "worked"},
+            {"question": "Solve: $\\frac{dy}{dx} = ky$", "answer": "$$y = Ce^{kx}$$", "type": "worked"},
+            {"question": "What type of DE is $y'' + y = 0$?", "answer": "Second-order linear homogeneous ODE", "type": "fact"},
+            {"question": "Solution to $y'' + y = 0$?", "answer": "$$y = A\\cos x + B\\sin x$$", "type": "worked"},
+            {"question": "Solve: $\\frac{dy}{dx} = 2x$", "answer": "$$y = x^2 + C$$", "type": "worked"},
+            {"question": "What is a separable differential equation?", "answer": "One that can be written as $\\frac{dy}{dx} = f(x)g(y)$", "type": "fact"},
+            {"question": "What is the integrating factor formula?", "answer": "For $y' + P(x)y = Q(x)$, use $\\mu(x) = e^{\\int P(x)\\,dx}$", "type": "formula"},
+            {"question": "Solution to $y'' - y = 0$?", "answer": "$$y = Ae^x + Be^{-x}$$", "type": "worked"},
+            {"question": "Solution to $y'' + 4y = 0$?", "answer": "$$y = A\\cos 2x + B\\sin 2x$$", "type": "worked"},
+            {"question": "Solution to $y'' - 4y = 0$?", "answer": "$$y = Ae^{2x} + Be^{-2x}$$", "type": "worked"},
+            {"question": "Solve: $\\frac{dy}{dx} = xy$", "answer": "$$y = Ce^{x^2/2}$$", "type": "worked"},
+            {"question": "Solve: $\\frac{dy}{dx} = \\frac{y}{x}$", "answer": "$$y = Cx$$", "type": "worked"},
+            {"question": "Solve: $\\frac{dy}{dx} = y^2$", "answer": "$$y = \\frac{-1}{x+C}$$", "type": "worked"},
+            {"question": "Solve: $y' + 2y = 0$", "answer": "$$y = Ce^{-2x}$$", "type": "worked"},
+            {"question": "Solve: $y' + y = e^x$", "answer": "$$y = \\frac{e^x}{2} + Ce^{-x}$$", "type": "worked"},
+            {"question": "What is the characteristic equation for $ay'' + by' + cy = 0$?", "answer": "$$ar^2 + br + c = 0$$", "type": "formula"},
+            {"question": "If characteristic equation has roots $r_1 \\neq r_2$?", "answer": "$$y = C_1 e^{r_1 x} + C_2 e^{r_2 x}$$", "type": "formula"},
+            {"question": "If characteristic equation has repeated root $r$?", "answer": "$$y = (C_1 + C_2 x)e^{rx}$$", "type": "formula"},
+            {"question": "If characteristic equation has complex roots $\\alpha \\pm \\beta i$?", "answer": "$$y = e^{\\alpha x}(C_1 \\cos \\beta x + C_2 \\sin \\beta x)$$", "type": "formula"},
+            {"question": "What is a first-order linear DE?", "answer": "$$\\frac{dy}{dx} + P(x)y = Q(x)$$", "type": "formula"},
+            {"question": "Population growth model $\\frac{dP}{dt} = kP$ solution?", "answer": "$$P(t) = P_0 e^{kt}$$", "type": "formula"},
+            {"question": "What is logistic equation?", "answer": "$$\\frac{dP}{dt} = kP(1 - P/M)$$", "type": "formula"},
+            {"question": "Solution to logistic equation?", "answer": "$$P(t) = \\frac{M}{1 + Ae^{-kt}}$$", "type": "formula"}
           ]
         },
         "multivariable": {
           "name": "Multivariable",
           "cards": [
-            {
-              "question": "What is $\\nabla f$ for $f(x,y,z)$?",
-              "answer": "$$\\left(\\frac{\\partial f}{\\partial x}, \\frac{\\partial f}{\\partial y}, \\frac{\\partial f}{\\partial z}\\right)$$"
-            },
-            {
-              "question": "What is $\\frac{\\partial}{\\partial x}(x^2y)$?",
-              "answer": "$$2xy$$"
-            },
-            {
-              "question": "What is $\\frac{\\partial}{\\partial y}(x^2y)$?",
-              "answer": "$$x^2$$"
-            },
-            {
-              "question": "What is $\\nabla \\cdot \\vec{F}$ called?",
-              "answer": "Divergence"
-            },
-            {
-              "question": "What is $\\nabla \\times \\vec{F}$ called?",
-              "answer": "Curl"
-            },
-            {
-              "question": "What does it mean if $\\nabla \\cdot \\vec{F} = 0$?",
-              "answer": "The field is incompressible (divergence-free)"
-            }
+            {"question": "What is the gradient formula for $f(x,y,z)$?", "answer": "$$\\nabla f = \\left(\\frac{\\partial f}{\\partial x}, \\frac{\\partial f}{\\partial y}, \\frac{\\partial f}{\\partial z}\\right)$$", "type": "formula"},
+            {"question": "What is $\\frac{\\partial}{\\partial x}(x^2y)$?", "answer": "$$2xy$$", "type": "worked"},
+            {"question": "What is $\\frac{\\partial}{\\partial y}(x^2y)$?", "answer": "$$x^2$$", "type": "worked"},
+            {"question": "What is $\\nabla \\cdot \\vec{F}$ called?", "answer": "Divergence", "type": "fact"},
+            {"question": "What is $\\nabla \\times \\vec{F}$ called?", "answer": "Curl", "type": "fact"},
+            {"question": "What does it mean if $\\nabla \\cdot \\vec{F} = 0$?", "answer": "The field is incompressible (divergence-free)", "type": "fact"},
+            {"question": "What is the divergence formula in 3D?", "answer": "$$\\nabla \\cdot \\vec{F} = \\frac{\\partial F_x}{\\partial x} + \\frac{\\partial F_y}{\\partial y} + \\frac{\\partial F_z}{\\partial z}$$", "type": "formula"},
+            {"question": "What is $\\frac{\\partial}{\\partial x}(x^2 + y^2)$?", "answer": "$$2x$$", "type": "worked"},
+            {"question": "What is $\\frac{\\partial}{\\partial y}(x^2 + y^2)$?", "answer": "$$2y$$", "type": "worked"},
+            {"question": "What is $\\frac{\\partial}{\\partial x}(e^{xy})$?", "answer": "$$ye^{xy}$$", "type": "worked"},
+            {"question": "What is $\\nabla(x^2 + y^2 + z^2)$?", "answer": "$$(2x, 2y, 2z)$$", "type": "worked"},
+            {"question": "What does gradient point toward?", "answer": "Direction of steepest increase", "type": "fact"},
+            {"question": "What is the directional derivative formula?", "answer": "$$D_{\\vec{u}}f = \\nabla f \\cdot \\vec{u}$$", "type": "formula"},
+            {"question": "What is Clairaut's theorem?", "answer": "$$\\frac{\\partial^2 f}{\\partial x \\partial y} = \\frac{\\partial^2 f}{\\partial y \\partial x}$$ (if continuous)", "type": "formula"},
+            {"question": "What is the Jacobian matrix for $\\vec{F}: \\mathbb{R}^2 \\to \\mathbb{R}^2$?", "answer": "$$J = \\begin{pmatrix} \\frac{\\partial F_1}{\\partial x} & \\frac{\\partial F_1}{\\partial y} \\\\ \\frac{\\partial F_2}{\\partial x} & \\frac{\\partial F_2}{\\partial y} \\end{pmatrix}$$", "type": "formula"},
+            {"question": "What is the Laplacian $\\nabla^2 f$?", "answer": "$$\\frac{\\partial^2 f}{\\partial x^2} + \\frac{\\partial^2 f}{\\partial y^2} + \\frac{\\partial^2 f}{\\partial z^2}$$", "type": "formula"},
+            {"question": "For critical points in 2D, solve?", "answer": "$$\\frac{\\partial f}{\\partial x} = 0 \\text{ and } \\frac{\\partial f}{\\partial y} = 0$$", "type": "formula"},
+            {"question": "What is the second derivative test (2D)?", "answer": "$$D = f_{xx}f_{yy} - f_{xy}^2$$. If $D>0$ and $f_{xx}>0$: min; $D>0$ and $f_{xx}<0$: max; $D<0$: saddle", "type": "formula"},
+            {"question": "What is Green's Theorem?", "answer": "$$\\oint_C (P\\,dx + Q\\,dy) = \\iint_D \\left(\\frac{\\partial Q}{\\partial x} - \\frac{\\partial P}{\\partial y}\\right) dA$$", "type": "formula"},
+            {"question": "What is Stokes' Theorem?", "answer": "$$\\oint_C \\vec{F} \\cdot d\\vec{r} = \\iint_S (\\nabla \\times \\vec{F}) \\cdot d\\vec{S}$$", "type": "formula"},
+            {"question": "What is Divergence Theorem?", "answer": "$$\\iint_S \\vec{F} \\cdot d\\vec{S} = \\iiint_V (\\nabla \\cdot \\vec{F})\\, dV$$", "type": "formula"},
+            {"question": "Evaluate $\\int_0^1 \\int_0^2 xy\\, dy\\, dx$", "answer": "$$\\int_0^1 x \\cdot 2\\, dx = 1$$", "type": "worked"},
+            {"question": "What does $\\nabla \\times \\vec{F} = 0$ mean?", "answer": "The field is irrotational (conservative)", "type": "fact"}
           ]
         }
       }
     },
     "linearalgebra": {
       "name": "Linear Algebra",
-      "icon": "🔢",
+      "icon": "🔷",
       "subcategories": {
         "matrices": {
           "name": "Matrices",
           "cards": [
-            {
-              "question": "Determinant of $\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$?",
-              "answer": "$$ad - bc$$"
-            },
-            {
-              "question": "What is $I_2$?",
-              "answer": "$$\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}$$"
-            },
-            {
-              "question": "Determinant of $\\begin{pmatrix} 3 & 2 \\\\ 1 & 4 \\end{pmatrix}$?",
-              "answer": "$$3(4) - 2(1) = 10$$"
-            },
-            {
-              "question": "What is $A \\cdot I$?",
-              "answer": "$$A$$"
-            },
-            {
-              "question": "If $\\det(A) = 0$, is $A$ invertible?",
-              "answer": "No, the matrix is singular"
-            },
-            {
-              "question": "What is $(AB)^T$?",
-              "answer": "$$B^T A^T$$"
-            },
-            {
-              "question": "$\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix} + \\begin{pmatrix} 5 & 6 \\\\ 7 & 8 \\end{pmatrix} = ?$",
-              "answer": "$$\\begin{pmatrix} 6 & 8 \\\\ 10 & 12 \\end{pmatrix}$$"
-            },
-            {
-              "question": "What does \"rank\" of a matrix mean?",
-              "answer": "The number of linearly independent rows (or columns)"
-            }
+            {"question": "What is the formula for 2x2 determinant?", "answer": "$$\\det\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix} = ad - bc$$", "type": "formula"},
+            {"question": "What is $I_2$?", "answer": "$$\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}$$", "type": "fact"},
+            {"question": "Determinant of $\\begin{pmatrix} 3 & 2 \\\\ 1 & 4 \\end{pmatrix}$?", "answer": "$$10$$", "type": "worked"},
+            {"question": "What is $A \\cdot I$?", "answer": "$$A$$", "type": "fact"},
+            {"question": "If $\\det(A) = 0$, is $A$ invertible?", "answer": "No, the matrix is singular", "type": "fact"},
+            {"question": "What is $(AB)^T$?", "answer": "$$B^T A^T$$", "type": "formula"},
+            {"question": "$\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix} + \\begin{pmatrix} 5 & 6 \\\\ 7 & 8 \\end{pmatrix} = ?$", "answer": "$$\\begin{pmatrix} 6 & 8 \\\\ 10 & 12 \\end{pmatrix}$$", "type": "worked"},
+            {"question": "What does \"rank\" of a matrix mean?", "answer": "The number of linearly independent rows (or columns)", "type": "fact"},
+            {"question": "What is $(AB)^{-1}$?", "answer": "$$B^{-1}A^{-1}$$", "type": "formula"},
+            {"question": "What is $(A^T)^T$?", "answer": "$$A$$", "type": "formula"},
+            {"question": "What is inverse formula for 2x2 matrix?", "answer": "$$\\frac{1}{ad-bc}\\begin{pmatrix} d & -b \\\\ -c & a \\end{pmatrix}$$", "type": "formula"},
+            {"question": "Inverse of $\\begin{pmatrix} 2 & 1 \\\\ 1 & 1 \\end{pmatrix}$?", "answer": "$$\\begin{pmatrix} 1 & -1 \\\\ -1 & 2 \\end{pmatrix}$$", "type": "worked"},
+            {"question": "$\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix} \\begin{pmatrix} 2 \\\\ 1 \\end{pmatrix} = ?$", "answer": "$$\\begin{pmatrix} 4 \\\\ 10 \\end{pmatrix}$$", "type": "worked"},
+            {"question": "$\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix} \\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix} = ?$", "answer": "$$\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}$$", "type": "worked"},
+            {"question": "What is a symmetric matrix?", "answer": "A matrix where $A = A^T$", "type": "fact"},
+            {"question": "What is an orthogonal matrix?", "answer": "A matrix where $A^T = A^{-1}$ (columns are orthonormal)", "type": "fact"},
+            {"question": "What is a diagonal matrix?", "answer": "A matrix with non-zero entries only on the main diagonal", "type": "fact"},
+            {"question": "What is the trace of a matrix?", "answer": "Sum of diagonal elements: $\\text{tr}(A) = \\sum a_{ii}$", "type": "formula"},
+            {"question": "What is $\\det(AB)$?", "answer": "$$\\det(A) \\det(B)$$", "type": "formula"},
+            {"question": "What is $\\det(A^T)$?", "answer": "$$\\det(A)$$", "type": "formula"},
+            {"question": "What is $\\det(cA)$ for $n \\times n$ matrix?", "answer": "$$c^n \\det(A)$$", "type": "formula"},
+            {"question": "What is $\\det(A^{-1})$?", "answer": "$$\\frac{1}{\\det(A)}$$", "type": "formula"},
+            {"question": "Determinant of $\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}$?", "answer": "$$-2$$", "type": "worked"},
+            {"question": "Determinant of $\\begin{pmatrix} 5 & 3 \\\\ 2 & 4 \\end{pmatrix}$?", "answer": "$$14$$", "type": "worked"},
+            {"question": "What is a skew-symmetric matrix?", "answer": "A matrix where $A^T = -A$", "type": "fact"},
+            {"question": "For orthogonal matrix, what is $|\\det(A)|$?", "answer": "$$1$$", "type": "fact"}
           ]
         },
         "eigenvalues": {
           "name": "Eigenvalues",
           "cards": [
-            {
-              "question": "How to find eigenvalues of $A$?",
-              "answer": "Solve $\\det(A - \\lambda I) = 0$"
-            },
-            {
-              "question": "If $A\\vec{v} = \\lambda\\vec{v}$, what is $\\vec{v}$?",
-              "answer": "An eigenvector of $A$ with eigenvalue $\\lambda$"
-            },
-            {
-              "question": "Eigenvalues of $\\begin{pmatrix} 2 & 0 \\\\ 0 & 3 \\end{pmatrix}$?",
-              "answer": "$$\\lambda = 2, \\lambda = 3$$"
-            },
-            {
-              "question": "Sum of eigenvalues equals what?",
-              "answer": "The trace of the matrix (sum of diagonal)"
-            },
-            {
-              "question": "Product of eigenvalues equals what?",
-              "answer": "The determinant of the matrix"
-            }
+            {"question": "How to find eigenvalues of $A$?", "answer": "Solve $\\det(A - \\lambda I) = 0$", "type": "formula"},
+            {"question": "If $A\\vec{v} = \\lambda\\vec{v}$, what is $\\vec{v}$?", "answer": "An eigenvector of $A$ with eigenvalue $\\lambda$", "type": "fact"},
+            {"question": "Eigenvalues of $\\begin{pmatrix} 2 & 0 \\\\ 0 & 3 \\end{pmatrix}$?", "answer": "$$\\lambda = 2, \\lambda = 3$$", "type": "worked"},
+            {"question": "Sum of eigenvalues equals?", "answer": "The trace of the matrix", "type": "fact"},
+            {"question": "Product of eigenvalues equals?", "answer": "The determinant of the matrix", "type": "fact"},
+            {"question": "Eigenvalues of $\\begin{pmatrix} 1 & 2 \\\\ 0 & 3 \\end{pmatrix}$?", "answer": "$$\\lambda = 1, \\lambda = 3$$", "type": "worked"},
+            {"question": "Eigenvalues of $\\begin{pmatrix} 4 & 1 \\\\ 0 & 4 \\end{pmatrix}$?", "answer": "$$\\lambda = 4$$ (repeated)", "type": "worked"},
+            {"question": "What is the eigenspace?", "answer": "Set of all eigenvectors for a given eigenvalue, plus zero vector", "type": "fact"},
+            {"question": "What is algebraic multiplicity?", "answer": "Number of times eigenvalue appears as root of characteristic polynomial", "type": "fact"},
+            {"question": "What is geometric multiplicity?", "answer": "Dimension of the eigenspace", "type": "fact"},
+            {"question": "When is a matrix diagonalizable?", "answer": "When it has $n$ linearly independent eigenvectors (geometric = algebraic multiplicity for all eigenvalues)", "type": "fact"},
+            {"question": "How to diagonalize $A$?", "answer": "$$A = PDP^{-1}$$ where $P$ has eigenvectors as columns, $D$ has eigenvalues on diagonal", "type": "formula"},
+            {"question": "What is $A^n$ using diagonalization?", "answer": "$$A^n = PD^nP^{-1}$$", "type": "formula"},
+            {"question": "Eigenvalues of $A^{-1}$?", "answer": "$$\\frac{1}{\\lambda}$$ for each eigenvalue $\\lambda$ of $A$", "type": "formula"},
+            {"question": "Eigenvalues of $A^2$?", "answer": "$$\\lambda^2$$ for each eigenvalue $\\lambda$ of $A$", "type": "formula"},
+            {"question": "Eigenvalues of $A + cI$?", "answer": "$$\\lambda + c$$ for each eigenvalue $\\lambda$ of $A$", "type": "formula"},
+            {"question": "If $\\lambda = 0$ is an eigenvalue, what does this mean?", "answer": "$A$ is singular (not invertible)", "type": "fact"}
           ]
         },
         "systems": {
           "name": "Linear Systems",
           "cards": [
-            {
-              "question": "How many solutions if $\\det(A) \\neq 0$?",
-              "answer": "Exactly one unique solution"
-            },
-            {
-              "question": "What is row echelon form?",
-              "answer": "Leading 1s with zeros below, staircase pattern"
-            },
-            {
-              "question": "What does RREF stand for?",
-              "answer": "Reduced Row Echelon Form"
-            },
-            {
-              "question": "Solve: $x + y = 5$ and $x - y = 1$",
-              "answer": "$$x = 3, y = 2$$"
-            },
-            {
-              "question": "What is Cramer's rule for?",
-              "answer": "Solving systems of linear equations using determinants"
-            }
+            {"question": "How many solutions if $\\det(A) \\neq 0$?", "answer": "Exactly one unique solution", "type": "fact"},
+            {"question": "What is row echelon form?", "answer": "Leading 1s with zeros below, staircase pattern", "type": "fact"},
+            {"question": "What does RREF stand for?", "answer": "Reduced Row Echelon Form", "type": "fact"},
+            {"question": "Solve: $x + y = 5$ and $x - y = 1$", "answer": "$$x = 3, y = 2$$", "type": "worked"},
+            {"question": "What is Cramer's rule for?", "answer": "Solving systems of linear equations using determinants", "type": "fact"},
+            {"question": "Solve: $2x + y = 5$ and $x + y = 3$", "answer": "$$x = 2, y = 1$$", "type": "worked"},
+            {"question": "Solve: $x + 2y = 7$ and $3x - y = 7$", "answer": "$$x = 3, y = 2$$", "type": "worked"},
+            {"question": "What is a consistent system?", "answer": "A system that has at least one solution", "type": "fact"},
+            {"question": "What is an inconsistent system?", "answer": "A system that has no solutions", "type": "fact"},
+            {"question": "When does a system have infinitely many solutions?", "answer": "When the equations are dependent (one is multiple of another)", "type": "fact"},
+            {"question": "What is the augmented matrix?", "answer": "$[A | \\vec{b}]$ - coefficient matrix with constants appended", "type": "fact"},
+            {"question": "What are the three row operations?", "answer": "1) Swap rows 2) Multiply row by nonzero constant 3) Add multiple of one row to another", "type": "fact"},
+            {"question": "What is a pivot position?", "answer": "The position of a leading 1 in row echelon form", "type": "fact"},
+            {"question": "What is a free variable?", "answer": "A variable corresponding to a non-pivot column", "type": "fact"},
+            {"question": "If rank($A$) < rank($[A|b]$), what happens?", "answer": "No solution (inconsistent)", "type": "fact"},
+            {"question": "If rank($A$) = rank($[A|b]$) = $n$, what happens?", "answer": "Unique solution", "type": "fact"},
+            {"question": "If rank($A$) = rank($[A|b]$) < $n$, what happens?", "answer": "Infinitely many solutions", "type": "fact"},
+            {"question": "Solve using Cramer: $2x + 3y = 8$, $x - y = 1$", "answer": "$$x = \\frac{11}{5}, y = \\frac{6}{5}$$", "type": "worked"}
+          ]
+        },
+        "vectorspaces": {
+          "name": "Vector Spaces",
+          "cards": [
+            {"question": "What are the two operations in a vector space?", "answer": "Vector addition and scalar multiplication", "type": "fact"},
+            {"question": "What is the zero vector property?", "answer": "There exists $\\vec{0}$ such that $\\vec{v} + \\vec{0} = \\vec{v}$", "type": "fact"},
+            {"question": "What is a subspace?", "answer": "A subset that is closed under addition and scalar multiplication (and contains $\\vec{0}$)", "type": "fact"},
+            {"question": "What is linear independence?", "answer": "Vectors where $c_1\\vec{v}_1 + ... + c_n\\vec{v}_n = \\vec{0}$ only when all $c_i = 0$", "type": "fact"},
+            {"question": "What is the span of vectors?", "answer": "All possible linear combinations of those vectors", "type": "fact"},
+            {"question": "What is a basis?", "answer": "A linearly independent set that spans the space", "type": "fact"},
+            {"question": "What is dimension?", "answer": "The number of vectors in any basis", "type": "fact"},
+            {"question": "What is the dimension of $\\mathbb{R}^n$?", "answer": "$$n$$", "type": "fact"},
+            {"question": "What is the column space of $A$?", "answer": "Span of the columns of $A$, denoted Col($A$)", "type": "fact"},
+            {"question": "What is the null space of $A$?", "answer": "All $\\vec{x}$ such that $A\\vec{x} = \\vec{0}$, denoted Null($A$)", "type": "fact"},
+            {"question": "What is the row space of $A$?", "answer": "Span of the rows of $A$", "type": "fact"},
+            {"question": "Rank-Nullity Theorem?", "answer": "rank($A$) + nullity($A$) = number of columns", "type": "formula"},
+            {"question": "Are $(1,0)$ and $(0,1)$ linearly independent?", "answer": "Yes", "type": "worked"},
+            {"question": "Are $(1,2)$ and $(2,4)$ linearly independent?", "answer": "No (one is a scalar multiple)", "type": "worked"},
+            {"question": "What is an orthonormal basis?", "answer": "A basis where all vectors are unit vectors and mutually orthogonal", "type": "fact"},
+            {"question": "What is the standard basis for $\\mathbb{R}^3$?", "answer": "$$\\{(1,0,0), (0,1,0), (0,0,1)\\}$$", "type": "fact"},
+            {"question": "What is Gram-Schmidt for?", "answer": "Orthogonalizing a set of vectors", "type": "fact"}
+          ]
+        },
+        "transformations": {
+          "name": "Linear Transformations",
+          "cards": [
+            {"question": "What makes a function $T$ linear?", "answer": "$T(\\vec{u}+\\vec{v}) = T(\\vec{u}) + T(\\vec{v})$ and $T(c\\vec{v}) = cT(\\vec{v})$", "type": "fact"},
+            {"question": "What is the matrix of a linear transformation?", "answer": "Columns are $T(\\vec{e}_1), T(\\vec{e}_2), ..., T(\\vec{e}_n)$", "type": "fact"},
+            {"question": "What is the kernel of $T$?", "answer": "All $\\vec{v}$ such that $T(\\vec{v}) = \\vec{0}$", "type": "fact"},
+            {"question": "What is the range (image) of $T$?", "answer": "All possible outputs $T(\\vec{v})$", "type": "fact"},
+            {"question": "Rotation by $\\theta$ matrix (2D)?", "answer": "$$\\begin{pmatrix} \\cos\\theta & -\\sin\\theta \\\\ \\sin\\theta & \\cos\\theta \\end{pmatrix}$$", "type": "formula"},
+            {"question": "Reflection over x-axis matrix?", "answer": "$$\\begin{pmatrix} 1 & 0 \\\\ 0 & -1 \\end{pmatrix}$$", "type": "formula"},
+            {"question": "Reflection over y-axis matrix?", "answer": "$$\\begin{pmatrix} -1 & 0 \\\\ 0 & 1 \\end{pmatrix}$$", "type": "formula"},
+            {"question": "Reflection over $y = x$ matrix?", "answer": "$$\\begin{pmatrix} 0 & 1 \\\\ 1 & 0 \\end{pmatrix}$$", "type": "formula"},
+            {"question": "Scaling by factor $k$ matrix?", "answer": "$$\\begin{pmatrix} k & 0 \\\\ 0 & k \\end{pmatrix}$$", "type": "formula"},
+            {"question": "Projection onto x-axis matrix?", "answer": "$$\\begin{pmatrix} 1 & 0 \\\\ 0 & 0 \\end{pmatrix}$$", "type": "formula"},
+            {"question": "Shear parallel to x-axis matrix?", "answer": "$$\\begin{pmatrix} 1 & k \\\\ 0 & 1 \\end{pmatrix}$$", "type": "formula"},
+            {"question": "What is the composition of transformations?", "answer": "Matrix multiplication: $T_2 \\circ T_1 = A_2 A_1$", "type": "fact"},
+            {"question": "When is $T$ one-to-one (injective)?", "answer": "When kernel($T$) = {$\\vec{0}$}", "type": "fact"},
+            {"question": "When is $T$ onto (surjective)?", "answer": "When range($T$) = codomain", "type": "fact"},
+            {"question": "When is $T$ invertible?", "answer": "When it is both one-to-one and onto (bijective)", "type": "fact"},
+            {"question": "Rotation by $90°$ counterclockwise matrix?", "answer": "$$\\begin{pmatrix} 0 & -1 \\\\ 1 & 0 \\end{pmatrix}$$", "type": "formula"},
+            {"question": "Rotation by $180°$ matrix?", "answer": "$$\\begin{pmatrix} -1 & 0 \\\\ 0 & -1 \\end{pmatrix}$$", "type": "formula"}
           ]
         }
       }
