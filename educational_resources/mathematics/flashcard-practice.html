@@ -1093,6 +1093,190 @@
         font-size: 0.95rem;
       }
     }
+
+    /* Info explanation panel - slides in from right */
+    .info-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .info-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .info-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(480px, 90vw);
+      height: 100%;
+      background: #1a1d23;
+      color: #e0e0e0;
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+    }
+
+    .info-panel.open {
+      transform: translateX(0);
+    }
+
+    .info-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #333;
+      flex-shrink: 0;
+    }
+
+    .info-panel-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #7eb8ff;
+    }
+
+    .info-close-btn {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 1.6rem;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+      line-height: 1;
+    }
+
+    .info-close-btn:hover {
+      background: #333;
+      color: #fff;
+    }
+
+    .info-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 1.25rem;
+      line-height: 1.7;
+      font-size: 0.98rem;
+    }
+
+    .info-panel-body h4 {
+      color: #7eb8ff;
+      margin: 1.25rem 0 0.5rem 0;
+      font-size: 1.05rem;
+    }
+
+    .info-panel-body h4:first-child {
+      margin-top: 0;
+    }
+
+    .info-panel-body p {
+      margin: 0.5rem 0;
+    }
+
+    .info-panel-body ul, .info-panel-body ol {
+      margin: 0.5rem 0;
+      padding-left: 1.5rem;
+    }
+
+    .info-panel-body li {
+      margin: 0.4rem 0;
+    }
+
+    .info-panel-body .info-formula {
+      background: #252830;
+      border-left: 3px solid #7eb8ff;
+      padding: 0.75rem 1rem;
+      margin: 0.75rem 0;
+      border-radius: 0 6px 6px 0;
+      overflow-x: auto;
+    }
+
+    .info-panel-body .info-example {
+      background: #1e2a1e;
+      border-left: 3px solid #5cb85c;
+      padding: 0.75rem 1rem;
+      margin: 0.75rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .info-panel-body .info-note {
+      background: #2a2520;
+      border-left: 3px solid #f0ad4e;
+      padding: 0.75rem 1rem;
+      margin: 0.75rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .info-panel-body .info-diagram {
+      background: #252830;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 0.75rem 0;
+      text-align: center;
+    }
+
+    .info-panel-body .info-diagram pre {
+      color: #7eb8ff;
+      font-family: monospace;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      margin: 0;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .btn-info {
+      background: #3a3f4b;
+      color: #7eb8ff;
+      border: 1px solid #555;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .btn-info:hover {
+      background: #4a5060;
+      border-color: #7eb8ff;
+      color: #fff;
+    }
+
+    /* Scrollbar styling for info panel */
+    .info-panel-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .info-panel-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .info-panel-body::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 3px;
+    }
+
+    .info-panel-body::-webkit-scrollbar-thumb:hover {
+      background: #666;
+    }
   </style>
 </head>
 <body>
@@ -2440,9 +2624,11 @@
         for (const subKey in cat.subcategories) {
           const sub = cat.subcategories[subKey];
           
-          // Add static formula and fact cards
+          const hasGenerator = !!generators[`${catKey}.${subKey}`];
+          
+          // Add static cards (skip worked cards only if a generator exists)
           sub.cards.forEach(card => {
-            if (card.type !== 'worked') {
+            if (card.type !== 'worked' || !hasGenerator) {
               cards.push({
                 ...card,
                 category: cat.name,
@@ -2451,9 +2637,11 @@
             }
           });
           
-          // Generate fresh worked problems
-          const generatedCards = generateWorkedCards(catKey, subKey);
-          cards.push(...generatedCards);
+          // Generate fresh worked problems if generator exists
+          if (hasGenerator) {
+            const generatedCards = generateWorkedCards(catKey, subKey);
+            cards.push(...generatedCards);
+          }
         }
       }
       return cards;
@@ -2483,9 +2671,11 @@
       for (const subKey in cat.subcategories) {
         const sub = cat.subcategories[subKey];
         
-        // Add static formula and fact cards
+        const hasGenerator = !!generators[`${catKey}.${subKey}`];
+        
+        // Add static cards (skip worked cards only if a generator exists)
         sub.cards.forEach(card => {
-          if (card.type !== 'worked') {
+          if (card.type !== 'worked' || !hasGenerator) {
             cards.push({
               ...card,
               category: cat.name,
@@ -2494,9 +2684,11 @@
           }
         });
         
-        // Generate fresh worked problems
-        const generatedCards = generateWorkedCards(catKey, subKey);
-        cards.push(...generatedCards);
+        // Generate fresh worked problems if generator exists
+        if (hasGenerator) {
+          const generatedCards = generateWorkedCards(catKey, subKey);
+          cards.push(...generatedCards);
+        }
       }
       return cards;
     }
@@ -2520,9 +2712,11 @@
         }
       });
       
-      // Add static formula and fact cards
+      const hasGenerator = !!generators[`${catKey}.${subKey}`];
+      
+      // Add static cards (skip worked cards only if a generator exists)
       sub.cards.forEach(card => {
-        if (card.type !== 'worked') {
+        if (card.type !== 'worked' || !hasGenerator) {
           cards.push({
             ...card,
             category: cat.name,
@@ -2531,9 +2725,11 @@
         }
       });
       
-      // Generate fresh worked problems
-      const generatedCards = generateWorkedCards(catKey, subKey);
-      cards.push(...generatedCards);
+      // Generate fresh worked problems if generator exists
+      if (hasGenerator) {
+        const generatedCards = generateWorkedCards(catKey, subKey);
+        cards.push(...generatedCards);
+      }
       
       return cards;
     }
@@ -2784,7 +2980,8 @@
       if (type === 'worked') {
         // Enable generator mode for infinite worked problems
         const generatorKey = `${catKey}.${subKey}`;
-        if (generators[generatorKey]) {
+        const hasGen = !!generators[generatorKey];
+        if (hasGen) {
           generatorModeActive = true;
           currentGeneratorCatKey = catKey;
           currentGeneratorSubKey = subKey;
@@ -2803,10 +3000,22 @@
           }
         });
         
-        // Generate initial batch (wrong cards are prioritized)
-        if (activeCards.length === 0) {
-          const generatedCards = generateWorkedCards(catKey, subKey, 5);
-          activeCards.push(...generatedCards);
+        if (hasGen) {
+          // Generate initial batch (wrong cards are prioritized)
+          if (activeCards.length === 0) {
+            const generatedCards = generateWorkedCards(catKey, subKey, 5);
+            activeCards.push(...generatedCards);
+          }
+        } else {
+          // No generator — use static worked cards from JSON
+          const staticWorked = sub.cards
+            .filter(card => card.type === 'worked')
+            .map(card => ({
+              ...card,
+              category: cat.name,
+              subcategory: sub.name
+            }));
+          activeCards.push(...staticWorked);
         }
       } else {
         // For formula/fact, filter from static cards
@@ -2929,6 +3138,7 @@
             <button class="btn-flip" onclick="flipCard()">
               ↻ Flip
             </button>
+            ${card.explanation ? `<button class="btn-info" onclick="openInfoPanel()">ℹ Info</button>` : ''}
             <button class="btn-next" onclick="${showFeedback ? 'nextCard()' : 'nextCard()'}">
               Next →
             </button>
@@ -2942,13 +3152,39 @@
             <kbd>→</kbd> next &nbsp;
             <kbd>←</kbd> back &nbsp;
             ${showFeedback ? '<kbd>G</kbd> got it &nbsp; <kbd>M</kbd> missed &nbsp;' : ''}
+            ${card.explanation ? '<kbd>I</kbd> info &nbsp;' : ''}
             <kbd>Esc</kbd> topics
           </div>
         </div>
+        ${card.explanation ? `
+        <div class="info-overlay" id="infoOverlay" onclick="closeInfoPanel()"></div>
+        <div class="info-panel" id="infoPanel">
+          <div class="info-panel-header">
+            <h3>ℹ️ Detailed Explanation</h3>
+            <button class="info-close-btn" onclick="closeInfoPanel()">✕</button>
+          </div>
+          <div class="info-panel-body" id="infoPanelBody">
+            ${card.explanation}
+          </div>
+        </div>
+        ` : ''}
       `;
       
       // Render math after DOM update
-      setTimeout(renderMath, 10);
+      setTimeout(() => {
+        renderMath();
+        // Also render math inside info panel
+        const infoBody = document.getElementById('infoPanelBody');
+        if (infoBody && window.renderMathInElement) {
+          renderMathInElement(infoBody, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+          });
+        }
+      }, 10);
     }
 
     // Mark current card as correct
@@ -2980,6 +3216,35 @@
       if (currentCard) {
         showCard(currentCard, !isFlipped);
       }
+    }
+
+    // Open info explanation panel
+    function openInfoPanel() {
+      const overlay = document.getElementById('infoOverlay');
+      const panel = document.getElementById('infoPanel');
+      if (overlay && panel) {
+        overlay.classList.add('open');
+        panel.classList.add('open');
+        // Re-render math in panel
+        const infoBody = document.getElementById('infoPanelBody');
+        if (infoBody && window.renderMathInElement) {
+          renderMathInElement(infoBody, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+          });
+        }
+      }
+    }
+
+    // Close info explanation panel
+    function closeInfoPanel() {
+      const overlay = document.getElementById('infoOverlay');
+      const panel = document.getElementById('infoPanel');
+      if (overlay) overlay.classList.remove('open');
+      if (panel) panel.classList.remove('open');
     }
 
     // Go to next random card
@@ -3025,6 +3290,14 @@
       } else if (e.code === 'KeyM' && isFlipped && currentCard.isGenerated) {
         e.preventDefault();
         markIncorrect();
+      } else if (e.code === 'KeyI' && currentCard.explanation) {
+        e.preventDefault();
+        const panel = document.getElementById('infoPanel');
+        if (panel && panel.classList.contains('open')) {
+          closeInfoPanel();
+        } else {
+          openInfoPanel();
+        }
       }
     });
 
