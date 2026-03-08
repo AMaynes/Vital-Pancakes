@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arts Database</title>
+  <link rel="stylesheet" href="../../style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>Artificially Neuroscience</h1>
+    <nav>
+      <a href="../../index.html">Home</a>
+      <a href="../../research_publications/index.html">Research Publications</a>
+      <a href="../../literature_analysis/index.html">Literature Analysis</a>
+      <a href="../../educational_resources/index.html">Educational Resources</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="arts-section">
+      <h2>Arts Resources</h2>
+      <ul id="pub-list"></ul>
+    </section>
+
+    <section id="interactive-tools">
+      <h2>Interactive Tools</h2>
+      <ul id="tools-list">
+        <li><a href="flashcard-practice.html">🎴 Arts Flash Card Practice</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="/genericListLoader.js"></script>
+  <script>
+    loadList("educational_resources/arts/arts_notes_list.txt", "pub-list");
+  </script>
+</body>
+</html>

@@ -2214,10 +2214,45 @@
               "explanation": "<h4>Argument of the Complex Exponential</h4><div class=\"info-formula\"><p><strong>Identity:</strong> $$\\arg(e^z) = b \\pmod{2\\pi}, \\quad z = a + bi$$</p></div><p>Since $e^z = e^{a+bi} = e^a \\cdot e^{bi}$, the modulus is $e^a$ (always positive) and the argument is $b$.</p><div class=\"info-example\"><p><strong>Why?</strong> By Euler's formula, $e^{bi} = \\cos b + i\\sin b$, which lies on the unit circle at angle $b$. Multiplying by $e^a > 0$ scales the modulus but doesn't change the angle.</p></div><div class=\"info-example\"><p><strong>Example:</strong> $z = 2 + \\frac{\\pi}{3}i$. Then $e^z = e^2 \\cdot e^{i\\pi/3}$, so $\\arg(e^z) = \\frac{\\pi}{3}$.</p></div><div class=\"info-note\"><p><strong>Note:</strong> If $b \\notin (-\\pi, \\pi]$, adjust by adding/subtracting $2\\pi$ to get the principal argument.</p></div>"
             },
             {
+              "question": "What is $|e^z|$ for $z = a + bi$?",
+              "answer": "$$|e^z| = e^{\\operatorname{Re}(z)} = e^a$$",
+              "type": "identity"
+            },
+            {
+              "question": "What is $\\operatorname{Arg}(e^z)$ in terms of $\\operatorname{Im}(z)$?",
+              "answer": "$$\\operatorname{Arg}(e^z) = \\operatorname{Im}(z)$$ reduced to the principal range $(-\\pi,\\pi]$",
+              "type": "identity"
+            },
+            {
               "question": "What is $\\log(e^z)$?",
               "answer": "$\\log(e^z) = z + 2\\pi ki$, where $k$ is any integer",
               "type": "identity",
               "explanation": "<h4>Logarithm of the Complex Exponential</h4><div class=\"info-formula\"><p><strong>Identity:</strong> $$\\log(e^z) = z + 2\\pi ki, \\quad k \\in \\mathbb{Z}$$</p></div><p>The complex logarithm is multi-valued. Unlike the real case where $\\ln(e^x) = x$, the complex log picks up an extra $2\\pi ki$ due to the periodicity of $e^{i\\theta}$.</p><div class=\"info-example\"><p><strong>Why?</strong> $\\log w = \\ln|w| + i\\arg(w) + 2\\pi ki$. For $w = e^z = e^{a+bi}$:<br>$\\ln|e^z| = \\ln(e^a) = a$<br>$\\arg(e^z) = b$<br>So $\\log(e^z) = a + bi + 2\\pi ki = z + 2\\pi ki$.</p></div><div class=\"info-example\"><p><strong>Example:</strong> $\\log(e^{1+i\\pi}) = (1+i\\pi) + 2\\pi ki$.<br>The principal value ($k=0$) gives $1 + i\\pi$.</p></div><div class=\"info-note\"><p><strong>Note:</strong> The principal logarithm $\\text{Log}(e^z)$ restricts the imaginary part to $(-\\pi, \\pi]$, which may not equal $z$ if $\\text{Im}(z) \\notin (-\\pi, \\pi]$.</p></div>"
+            },
+            {
+              "question": "What is $f(0)$ for $f(z)=2xy+i(4x-y)$ with $z=x+iy$?",
+              "answer": "At $z=0$, $x=0$ and $y=0$, so $$f(0)=0$$",
+              "type": "worked"
+            },
+            {
+              "question": "For $f(z)=2xy+i(4x-y)$, what is $f'(x)$ (interpreted as $\\partial f/\\partial x$)?",
+              "answer": "$$\\frac{\\partial f}{\\partial x}=2y+4i$$",
+              "type": "worked"
+            },
+            {
+              "question": "For $f(z)=2xy+i(4x-y)$, what is $f'(y)$ (interpreted as $\\partial f/\\partial y$)?",
+              "answer": "$$\\frac{\\partial f}{\\partial y}=2x-i$$",
+              "type": "worked"
+            },
+            {
+              "question": "For $f(z)=2xy+i(4x-y)$, what is $f'(i)$ as a complex derivative?",
+              "answer": "It does not exist. At $i$ ($x=0,y=1$), CR fails since $u_x=2y=2$ while $v_y=-1$.",
+              "type": "worked"
+            },
+            {
+              "question": "Find $v$ given $u$ if $f=u+iv$ is entire.",
+              "answer": "Use Cauchy-Riemann: $$v_y=u_x,\\quad v_x=-u_y$$. Integrate and match both equations to determine $v$ (up to a constant).",
+              "type": "formula"
             }
           ]
         }

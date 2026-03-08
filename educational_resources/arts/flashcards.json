@@ -1,0 +1,751 @@
+{
+  "categories": {
+    "color_theory": {
+      "name": "Color Theory",
+      "icon": "🎨",
+      "subcategories": {
+        "color_wheel": {
+          "name": "Color Wheel Basics",
+          "cards": [
+            {
+              "question": "What are the three primary colors in traditional (RYB) art theory?",
+              "answer": "Red, Yellow, and Blue.",
+              "type": "fact"
+            },
+            {
+              "question": "What are secondary colors in traditional color theory?",
+              "answer": "Colors made by mixing two primaries: Orange, Green, and Purple.",
+              "type": "fact"
+            },
+            {
+              "question": "What are tertiary colors?",
+              "answer": "Colors made by mixing a primary with a neighboring secondary (for example, red-orange or blue-green).",
+              "type": "fact"
+            },
+            {
+              "question": "What does \"hue\" mean?",
+              "answer": "Hue is the pure color family (like red, blue, or green) before tint, tone, or shade changes.",
+              "type": "fact"
+            },
+            {
+              "question": "What are complementary colors?",
+              "answer": "Two colors opposite each other on the color wheel (for example, red and green).",
+              "type": "fact"
+            },
+            {
+              "question": "What is an analogous color scheme?",
+              "answer": "A palette made from neighboring colors on the wheel, often creating harmony.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a triadic color scheme?",
+              "answer": "Three colors spaced evenly around the color wheel, often high-contrast but balanced.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a split-complementary color scheme?",
+              "answer": "One base color plus the two colors adjacent to its complement.",
+              "type": "formula"
+            },
+            {
+              "question": "What is a tetradic (double complementary) color scheme?",
+              "answer": "Two complementary pairs used together.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a monochromatic scheme?",
+              "answer": "A single hue varied with tints, tones, and shades.",
+              "type": "fact"
+            },
+            {
+              "question": "What is the complement of blue on a standard wheel?",
+              "answer": "Orange.",
+              "type": "worked"
+            },
+            {
+              "question": "What is the complement of red on a standard wheel?",
+              "answer": "Green.",
+              "type": "worked"
+            }
+          ]
+        },
+        "value_and_saturation": {
+          "name": "Value, Saturation, and Temperature",
+          "cards": [
+            {
+              "question": "What is \"value\" in color theory?",
+              "answer": "Value is how light or dark a color is.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a \"tint\"?",
+              "answer": "A tint is made by adding white to a hue.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a \"shade\"?",
+              "answer": "A shade is made by adding black to a hue.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a \"tone\"?",
+              "answer": "A tone is made by adding gray to a hue.",
+              "type": "fact"
+            },
+            {
+              "question": "What does \"saturation\" describe?",
+              "answer": "How intense or muted a color appears.",
+              "type": "fact"
+            },
+            {
+              "question": "Which colors are usually considered \"warm\"?",
+              "answer": "Reds, oranges, and yellows are generally warm colors.",
+              "type": "fact"
+            },
+            {
+              "question": "Which colors are usually considered \"cool\"?",
+              "answer": "Blues, greens, and violets are generally cool colors.",
+              "type": "fact"
+            },
+            {
+              "question": "How can strong value contrast help a painting?",
+              "answer": "It improves readability, creates focal points, and adds depth.",
+              "type": "fact"
+            },
+            {
+              "question": "What usually happens when saturation is reduced while value stays similar?",
+              "answer": "Colors feel more subdued, atmospheric, or realistic.",
+              "type": "fact"
+            },
+            {
+              "question": "Why do artists often do a value study first?",
+              "answer": "Because clear value structure keeps the image readable even before full color decisions.",
+              "type": "fact"
+            },
+            {
+              "question": "What creates higher edge contrast: light value against dark value, or two similar values?",
+              "answer": "Light against dark values creates higher edge contrast.",
+              "type": "worked"
+            },
+            {
+              "question": "If two colors have equal value but different hue, what contrast is strongest?",
+              "answer": "Hue contrast is strongest, while value contrast is weak.",
+              "type": "fact"
+            }
+          ]
+        },
+        "harmonies_and_palettes": {
+          "name": "Harmonies and Palette Design",
+          "cards": [
+            {
+              "question": "What is a dominant color in a palette?",
+              "answer": "The main color family that appears most and sets the overall mood.",
+              "type": "fact"
+            },
+            {
+              "question": "What is an accent color?",
+              "answer": "A limited-use color that draws attention to focal areas.",
+              "type": "fact"
+            },
+            {
+              "question": "What does limiting your palette usually improve?",
+              "answer": "Color harmony and visual unity.",
+              "type": "fact"
+            },
+            {
+              "question": "Why is overusing pure saturated complements risky?",
+              "answer": "It can make work look noisy or harsh unless value balance and proportion are controlled.",
+              "type": "fact"
+            },
+            {
+              "question": "What is simultaneous contrast?",
+              "answer": "A color appears different depending on the surrounding colors.",
+              "type": "fact"
+            },
+            {
+              "question": "How can you make one color appear brighter without increasing saturation?",
+              "answer": "Place it next to a darker or more neutral surrounding color for contrast.",
+              "type": "worked"
+            },
+            {
+              "question": "What is color dominance by proportion?",
+              "answer": "Using large, medium, and small areas of color so one leads and others support.",
+              "type": "fact"
+            },
+            {
+              "question": "In a balanced complementary palette, should both complements be equal in area?",
+              "answer": "Usually no; one is dominant and the other is supporting/accent.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a high-key palette?",
+              "answer": "A palette with mostly light values.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a low-key palette?",
+              "answer": "A palette with mostly dark values.",
+              "type": "fact"
+            },
+            {
+              "question": "What is local color?",
+              "answer": "The perceived base color of an object under neutral lighting.",
+              "type": "fact"
+            },
+            {
+              "question": "What is atmospheric color?",
+              "answer": "Color shift caused by distance, light scattering, and ambient environment.",
+              "type": "fact"
+            }
+          ]
+        },
+        "mixing_and_pigment_behavior": {
+          "name": "Color Mixing and Pigment Behavior",
+          "cards": [
+            {
+              "question": "What is the difference between additive and subtractive color mixing?",
+              "answer": "Additive mixes light (RGB); subtractive mixes pigments/inks (CMY or CMYK).",
+              "type": "fact"
+            },
+            {
+              "question": "In additive color (light), what do red + green make?",
+              "answer": "Yellow light.",
+              "type": "worked"
+            },
+            {
+              "question": "In additive color (light), what do red + blue make?",
+              "answer": "Magenta light.",
+              "type": "worked"
+            },
+            {
+              "question": "In additive color (light), what do blue + green make?",
+              "answer": "Cyan light.",
+              "type": "worked"
+            },
+            {
+              "question": "In additive color, what do red + green + blue make?",
+              "answer": "White light.",
+              "type": "worked"
+            },
+            {
+              "question": "In subtractive pigment mixing, why do mixes often get duller?",
+              "answer": "Each pigment absorbs parts of the spectrum; combining pigments increases absorption and reduces reflected light.",
+              "type": "fact"
+            },
+            {
+              "question": "What is chroma in pigment terms?",
+              "answer": "The intensity or purity of a color relative to a neutral gray of the same value.",
+              "type": "fact"
+            },
+            {
+              "question": "How can you neutralize a color without using black?",
+              "answer": "Mix in a small amount of its complement.",
+              "type": "worked"
+            },
+            {
+              "question": "What often happens if you add too much black to darken a color?",
+              "answer": "It can become muddy or dead compared with darkening using related darker hues.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a color bias in pigments?",
+              "answer": "A warm or cool lean within a hue family that affects mixing results.",
+              "type": "fact"
+            },
+            {
+              "question": "Why can two different blue paints mix very differently with yellow?",
+              "answer": "Different pigment chemistry and hue bias shift the resulting greens.",
+              "type": "fact"
+            },
+            {
+              "question": "What is optical mixing?",
+              "answer": "Perceived mixing that happens in the viewer's eye when small color marks are placed close together.",
+              "type": "fact"
+            }
+          ]
+        },
+        "digital_color_models": {
+          "name": "Digital Color Models",
+          "cards": [
+            {
+              "question": "What does RGB stand for?",
+              "answer": "Red, Green, Blue.",
+              "type": "fact"
+            },
+            {
+              "question": "What does CMYK stand for?",
+              "answer": "Cyan, Magenta, Yellow, Key (Black).",
+              "type": "fact"
+            },
+            {
+              "question": "Which model is typically used for screens: RGB or CMYK?",
+              "answer": "RGB.",
+              "type": "worked"
+            },
+            {
+              "question": "Which model is typically used for print: RGB or CMYK?",
+              "answer": "CMYK.",
+              "type": "worked"
+            },
+            {
+              "question": "In HSL/HSV tools, what does \"H\" represent?",
+              "answer": "Hue angle on the color wheel.",
+              "type": "fact"
+            },
+            {
+              "question": "In HSL, what does \"L\" represent?",
+              "answer": "Lightness.",
+              "type": "fact"
+            },
+            {
+              "question": "In HSV, what does \"V\" represent?",
+              "answer": "Value (brightness).",
+              "type": "fact"
+            },
+            {
+              "question": "What does a hexadecimal color like #FF0000 represent?",
+              "answer": "An RGB color code; #FF0000 is pure red in 8-bit channels.",
+              "type": "fact"
+            },
+            {
+              "question": "Why can colors shift when moving from RGB to CMYK?",
+              "answer": "CMYK has a smaller gamut than RGB, so some vivid screen colors are not printable exactly.",
+              "type": "fact"
+            },
+            {
+              "question": "What is gamma correction in digital imaging?",
+              "answer": "A nonlinear mapping that better matches display behavior and human brightness perception.",
+              "type": "fact"
+            }
+          ]
+        },
+        "color_emotion_and_context": {
+          "name": "Color Emotion and Context",
+          "cards": [
+            {
+              "question": "Are color-emotion associations universal and fixed?",
+              "answer": "No. They are influenced by culture, context, story, and personal experience.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion is red often linked to in visual design?",
+              "answer": "Energy, urgency, passion, or danger depending on context.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion is blue often linked to in visual design?",
+              "answer": "Calm, trust, distance, or sadness depending on context.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion is yellow often linked to in visual design?",
+              "answer": "Optimism, warmth, attention, or warning depending on context.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion is green often linked to in visual design?",
+              "answer": "Growth, nature, health, or unease depending on hue/value context.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion is purple often linked to in visual design?",
+              "answer": "Luxury, spirituality, mystery, or fantasy depending on context.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion is a low-saturation blue-gray palette often associated with?",
+              "answer": "Quiet, reflective, somber, or professional tones.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might a high-saturation warm palette suggest?",
+              "answer": "Excitement, heat, energy, and immediacy.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotional effect can a sudden complementary accent create in a muted scene?",
+              "answer": "It can create surprise, tension, and a strong focal pull.",
+              "type": "fact"
+            },
+            {
+              "question": "Why should emotional color choices be tested in grayscale too?",
+              "answer": "If value structure fails, emotional intent may collapse despite good hue choices.",
+              "type": "fact"
+            }
+          ]
+        },
+        "composition_and_lighting": {
+          "name": "Composition, Light, and Depth",
+          "cards": [
+            {
+              "question": "How does warm-vs-cool contrast help depth?",
+              "answer": "Warm colors tend to advance and cool colors tend to recede.",
+              "type": "fact"
+            },
+            {
+              "question": "What is color perspective (aerial perspective)?",
+              "answer": "Distant objects shift cooler, lighter, and less saturated due to atmosphere.",
+              "type": "fact"
+            },
+            {
+              "question": "What happens to cast shadows under warm sunlight in many outdoor scenes?",
+              "answer": "Shadows often appear relatively cooler than lit areas.",
+              "type": "fact"
+            },
+            {
+              "question": "How can a limited warm accent guide composition?",
+              "answer": "A small warm accent in a cool field can create a strong focal point.",
+              "type": "worked"
+            },
+            {
+              "question": "What is color scripting in visual storytelling?",
+              "answer": "Planning scene-by-scene color shifts to support narrative emotion and pacing.",
+              "type": "fact"
+            },
+            {
+              "question": "Why keep background saturation lower than subject saturation?",
+              "answer": "It helps separate focal subject from background clutter.",
+              "type": "fact"
+            },
+            {
+              "question": "What is local shadow color vs ambient bounce color?",
+              "answer": "Local shadow reflects object/material influence; bounce color reflects nearby surfaces and environment light.",
+              "type": "fact"
+            },
+            {
+              "question": "How can repeating one hue family across foreground/midground/background help design?",
+              "answer": "It creates cohesion while value and saturation shifts still preserve depth.",
+              "type": "fact"
+            },
+            {
+              "question": "What role does neutral gray play in composition?",
+              "answer": "Neutrals provide rest areas that make saturated focal colors feel stronger.",
+              "type": "fact"
+            },
+            {
+              "question": "What is a practical check for color readability?",
+              "answer": "Zoom out or blur the image; if focal grouping still reads, color/value hierarchy is working.",
+              "type": "worked"
+            }
+          ]
+        }
+      }
+    },
+    "music_theory": {
+      "name": "Music Theory",
+      "icon": "🎼",
+      "subcategories": {
+        "notation_and_rhythm": {
+          "name": "Notation and Rhythm",
+          "cards": [
+            {
+              "question": "How many beats does a whole note get in 4/4 time?",
+              "answer": "4 beats.",
+              "type": "worked"
+            },
+            {
+              "question": "How many beats does a half note get in 4/4 time?",
+              "answer": "2 beats.",
+              "type": "worked"
+            },
+            {
+              "question": "How many beats does a quarter note get in 4/4 time?",
+              "answer": "1 beat.",
+              "type": "worked"
+            },
+            {
+              "question": "What does a time signature tell you?",
+              "answer": "The top number shows beats per measure; the bottom number shows which note value gets one beat.",
+              "type": "fact"
+            },
+            {
+              "question": "In 3/4 time, how many beats are in each measure?",
+              "answer": "3 beats per measure.",
+              "type": "worked"
+            },
+            {
+              "question": "What is tempo in music?",
+              "answer": "Tempo is the speed of the beat, often measured in BPM (beats per minute).",
+              "type": "fact"
+            }
+          ]
+        },
+        "scales_and_chords": {
+          "name": "Scale and Chord Formulas",
+          "cards": [
+            {
+              "question": "Are chord/scale emotions always fixed?",
+              "answer": "No. Emotional color is context-dependent (tempo, rhythm, voicing, instrumentation, dynamics, lyrics, and listener background).",
+              "type": "fact"
+            },
+            {
+              "question": "What is the interval pattern of a major scale?",
+              "answer": "Whole, Whole, Half, Whole, Whole, Whole, Half.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the interval pattern of a natural minor scale?",
+              "answer": "Whole, Half, Whole, Whole, Half, Whole, Whole.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the interval pattern of a harmonic minor scale?",
+              "answer": "Whole, Half, Whole, Whole, Half, Augmented 2nd, Half.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the interval pattern of melodic minor (ascending)?",
+              "answer": "Whole, Half, Whole, Whole, Whole, Whole, Half.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the major pentatonic formula?",
+              "answer": "Scale degrees: 1, 2, 3, 5, 6.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the minor pentatonic formula?",
+              "answer": "Scale degrees: 1, b3, 4, 5, b7.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the blues scale formula (minor blues)?",
+              "answer": "Scale degrees: 1, b3, 4, b5, 5, b7.",
+              "type": "formula"
+            },
+            {
+              "question": "What are the notes in the C major scale?",
+              "answer": "C, D, E, F, G, A, B, C.",
+              "type": "worked"
+            },
+            {
+              "question": "What is a triad?",
+              "answer": "A three-note chord built from a root, third, and fifth.",
+              "type": "fact"
+            },
+            {
+              "question": "What intervals make a major triad?",
+              "answer": "Root, major third, perfect fifth.",
+              "type": "formula"
+            },
+            {
+              "question": "What intervals make a minor triad?",
+              "answer": "Root, minor third, perfect fifth.",
+              "type": "formula"
+            },
+            {
+              "question": "What intervals make a diminished triad?",
+              "answer": "Root, minor third, diminished fifth.",
+              "type": "formula"
+            },
+            {
+              "question": "What intervals make an augmented triad?",
+              "answer": "Root, major third, augmented fifth.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the dominant 7th chord formula?",
+              "answer": "1, 3, 5, b7.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the major 7th chord formula?",
+              "answer": "1, 3, 5, 7.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the minor 7th chord formula?",
+              "answer": "1, b3, 5, b7.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the minor-major 7th chord formula?",
+              "answer": "1, b3, 5, 7.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the sus2 chord formula?",
+              "answer": "1, 2, 5.",
+              "type": "formula"
+            },
+            {
+              "question": "What is the sus4 chord formula?",
+              "answer": "1, 4, 5.",
+              "type": "formula"
+            },
+            {
+              "question": "Build a C major triad.",
+              "answer": "C - E - G.",
+              "type": "worked"
+            },
+            {
+              "question": "Build an A minor triad.",
+              "answer": "A - C - E.",
+              "type": "worked"
+            },
+            {
+              "question": "What is an interval in music?",
+              "answer": "The distance in pitch between two notes.",
+              "type": "fact"
+            }
+          ]
+        },
+        "modes_and_emotion": {
+          "name": "Modes and Emotional Color",
+          "cards": [
+            {
+              "question": "What is Ionian mode formula, and what emotion is it often linked to?",
+              "answer": "Formula: 1, 2, 3, 4, 5, 6, 7. Often heard as bright, stable, and resolved (major sound).",
+              "type": "formula"
+            },
+            {
+              "question": "What is Dorian mode formula, and what emotion is it often linked to?",
+              "answer": "Formula: 1, 2, b3, 4, 5, 6, b7. Often soulful, cool, or hopeful minor.",
+              "type": "formula"
+            },
+            {
+              "question": "What is Phrygian mode formula, and what emotion is it often linked to?",
+              "answer": "Formula: 1, b2, b3, 4, 5, b6, b7. Often tense, dark, or dramatic.",
+              "type": "formula"
+            },
+            {
+              "question": "What is Lydian mode formula, and what emotion is it often linked to?",
+              "answer": "Formula: 1, 2, 3, #4, 5, 6, 7. Often floating, dreamy, or cinematic.",
+              "type": "formula"
+            },
+            {
+              "question": "What is Mixolydian mode formula, and what emotion is it often linked to?",
+              "answer": "Formula: 1, 2, 3, 4, 5, 6, b7. Often bluesy, relaxed, or rootsy.",
+              "type": "formula"
+            },
+            {
+              "question": "What is Aeolian mode formula, and what emotion is it often linked to?",
+              "answer": "Formula: 1, 2, b3, 4, 5, b6, b7. Often melancholic or introspective (natural minor).",
+              "type": "formula"
+            },
+            {
+              "question": "What is Locrian mode formula, and what emotion is it often linked to?",
+              "answer": "Formula: 1, b2, b3, 4, b5, b6, b7. Often unstable, anxious, or unresolved.",
+              "type": "formula"
+            },
+            {
+              "question": "Why can one scale sound different emotionally in different songs?",
+              "answer": "Because harmony, rhythm, tempo, register, timbre, and lyrical context can shift emotional perception.",
+              "type": "fact"
+            }
+          ]
+        },
+        "chord_emotion": {
+          "name": "Chord Qualities and Feel",
+          "cards": [
+            {
+              "question": "What emotion might these chords form: major triad (1-3-5)?",
+              "answer": "Often bright, confident, or uplifting.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: minor triad (1-b3-5)?",
+              "answer": "Often sad, reflective, or intimate.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: diminished triad (1-b3-b5)?",
+              "answer": "Often tense, uneasy, or suspenseful.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: augmented triad (1-3-#5)?",
+              "answer": "Often mysterious, unstable, or surreal.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: major 7th (1-3-5-7)?",
+              "answer": "Often warm, dreamy, romantic, or sophisticated.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: dominant 7th (1-3-5-b7)?",
+              "answer": "Often bluesy tension that wants to resolve.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: minor 7th (1-b3-5-b7)?",
+              "answer": "Often mellow, cool, and contemplative.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: minor-major 7th (1-b3-5-7)?",
+              "answer": "Often dramatic, noir, or emotionally conflicted.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: sus2 and sus4 chords?",
+              "answer": "Often open, suspended, and expectant (less final than major/minor triads).",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: power chords (1-5)?",
+              "answer": "Often strong, direct, and aggressive depending on tone/tempo.",
+              "type": "fact"
+            }
+          ]
+        },
+        "progressions_and_emotion": {
+          "name": "Progressions and Emotional Direction",
+          "cards": [
+            {
+              "question": "What emotion might these chords form: I - V - vi - IV?",
+              "answer": "Often uplifting and nostalgic; common in pop anthems.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: vi - IV - I - V?",
+              "answer": "Often yearning or bittersweet with a hopeful pull.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: ii - V - I?",
+              "answer": "Strong sense of forward motion and resolution (classic jazz cadence).",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: I - IV - V?",
+              "answer": "Simple, energetic, and straightforward; common in folk/rock/blues.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: i - bVII - bVI - bVII?",
+              "answer": "Often dark, cinematic, or rebellious (common in modal minor writing).",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: i - iv - v (minor key)?",
+              "answer": "Often somber, intimate, and unresolved compared to major-key cadences.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: 12-bar blues (I / IV / V framework)?",
+              "answer": "Often gritty, expressive tension and release, with storytelling character.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: i - bVII - bVI - V (Andalusian cadence)?",
+              "answer": "Often dramatic and urgent, with a strong pull back to i.",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: I - iii - IV - iv?",
+              "answer": "Often bittersweet or nostalgic due to modal mixture (major to borrowed minor iv).",
+              "type": "fact"
+            },
+            {
+              "question": "What emotion might these chords form: i - VI - III - VII?",
+              "answer": "Often epic, expansive, and cinematic in minor-key contexts.",
+              "type": "fact"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

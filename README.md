@@ -2,7 +2,7 @@
 
 🌐 **Live Site**: [https://amaynes.github.io/artificially-neuroscience/](https://amaynes.github.io/artificially-neuroscience/)
 
-A personal academic website hosting research publications, literature analysis, and educational resources spanning Computer Science, Neuroscience, and Mathematics.
+A personal academic website hosting research publications, literature analysis, and educational resources spanning Computer Science, Neuroscience, Mathematics, and Arts.
 
 ## 📋 Overview
 
@@ -36,6 +36,11 @@ artificially-neuroscience/
     │   ├── mathematics_notes_list.txt
     │   ├── flashcard-practice.html  # Interactive flashcard app
     │   └── flashcards.json          # Flashcard data with LaTeX
+    ├── arts/
+    │   ├── index.html
+    │   ├── arts_notes_list.txt
+    │   ├── flashcard-practice.html  # Interactive arts flashcard app
+    │   └── flashcards.json          # Arts flashcard data
     └── neurosci/
         ├── index.html
         └── neurosci_notes_list.txt
@@ -46,7 +51,7 @@ artificially-neuroscience/
 - **Dynamic Content Loading**: Uses a custom JavaScript loader to parse and display content from text files
 - **Responsive Navigation**: Consistent header navigation across all pages
 - **Mobile Friendly**: Fully responsive design optimized for phones, tablets, and desktops
-- **Organized by Discipline**: Educational resources separated into CS, Neuroscience, and Mathematics
+- **Organized by Discipline**: Educational resources separated into CS, Neuroscience, Mathematics, and Arts
 - **Alphabetical Sorting**: All lists are automatically sorted alphabetically
 - **Clean Design**: Minimalist CSS with professional styling
 - **Interactive Flashcards**: Mathematics flashcard practice with:

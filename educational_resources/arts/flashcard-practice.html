@@ -1,0 +1,3513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flash Card Practice - Arts</title>
+  <link rel="stylesheet" href="../../style.css" />
+  <!-- KaTeX for LaTeX rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    /* Tab Navigation */
+    .tab-nav {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 0.7rem 1.2rem;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      background: #e9ecef;
+      color: #495057;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: #dee2e6;
+    }
+
+    .tab-btn.active {
+      background: rgb(43,59,116);
+      color: #fff;
+    }
+
+    .tab-btn .badge {
+      background: #dc3545;
+      color: #fff;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      margin-left: 0.5rem;
+    }
+
+    /* Topic Selection Styles */
+    .topic-selection {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .mode-section {
+      margin-bottom: 2rem;
+    }
+
+    .mode-section h3 {
+      margin-bottom: 1rem;
+      color: rgb(43,59,116);
+      border-bottom: 2px solid rgb(43,59,116);
+      padding-bottom: 0.5rem;
+    }
+
+    .special-modes {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .mode-btn {
+      padding: 1rem 1.5rem;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn.mixed {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+
+    .mode-btn.mixed:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .category-tree {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .category {
+      border-bottom: 1px solid #eee;
+    }
+
+    .category:last-child {
+      border-bottom: none;
+    }
+
+    .category-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: #f8f9fa;
+      cursor: pointer;
+      transition: background 0.2s;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .category-header:hover {
+      background: #e9ecef;
+    }
+
+    .category-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .category-icon {
+      font-size: 1.3rem;
+    }
+
+    .category-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .master-btn {
+      padding: 0.5rem 0.8rem;
+      font-size: 0.85rem;
+      font-weight: bold;
+      border: 2px solid rgb(43,59,116);
+      background: #fff;
+      color: rgb(43,59,116);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .master-btn:hover {
+      background: rgb(43,59,116);
+      color: #fff;
+    }
+
+    .subcategories {
+      padding: 0.5rem 1rem 1rem 1.5rem;
+      display: none;
+    }
+
+    .subcategories.open {
+      display: block;
+    }
+
+    .subcategory-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      margin: 0.3rem 0;
+      font-size: 1rem;
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .subcategory-btn:hover {
+      background: rgb(43,59,116);
+      color: #fff;
+      border-color: rgb(43,59,116);
+    }
+
+    .subcategory-btn .card-count {
+      color: #888;
+      font-size: 0.85rem;
+    }
+
+    .subcategory-btn:hover .card-count {
+      color: rgba(255,255,255,0.8);
+    }
+
+    .toggle-icon {
+      font-size: 1.2rem;
+      transition: transform 0.2s;
+    }
+
+    .category.open .toggle-icon {
+      transform: rotate(90deg);
+    }
+
+    /* Subcategory expanded view with type filters */
+    .subcategory-item {
+      margin: 0.5rem 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .subcategory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      gap: 0.5rem;
+    }
+
+    .subcategory-header:hover {
+      background: #f8f9fa;
+    }
+
+    .subcategory-title {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .subcategory-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .subcategory-all-btn {
+      padding: 0.4rem 0.7rem;
+      font-size: 0.8rem;
+      font-weight: bold;
+      border: 1px solid rgb(43,59,116);
+      background: #fff;
+      color: rgb(43,59,116);
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .subcategory-all-btn:hover {
+      background: rgb(43,59,116);
+      color: #fff;
+    }
+
+    .type-filters {
+      display: none;
+      padding: 0.75rem 1rem;
+      background: #f8f9fa;
+      border-top: 1px solid #eee;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      flex-direction: column;
+    }
+
+    .type-filters.open {
+      display: flex;
+    }
+
+    .type-buttons {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Number type checkboxes for basics */
+    .number-type-section {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 0.5rem;
+    }
+
+    .number-type-label {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .number-type-checkboxes {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .number-type-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .number-type-checkbox input {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .number-type-checkbox span {
+      color: #444;
+    }
+
+    .type-btn {
+      padding: 0.5rem 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .type-btn:hover {
+      background: #e9ecef;
+    }
+
+    .type-btn.formula {
+      border-color: #007bff;
+      color: #007bff;
+    }
+
+    .type-btn.formula:hover {
+      background: #007bff;
+      color: #fff;
+    }
+
+    .type-btn.fact {
+      border-color: #28a745;
+      color: #28a745;
+    }
+
+    .type-btn.fact:hover {
+      background: #28a745;
+      color: #fff;
+    }
+
+    .type-btn.worked {
+      border-color: #fd7e14;
+      color: #fd7e14;
+    }
+
+    .type-btn.worked:hover {
+      background: #fd7e14;
+      color: #fff;
+    }
+
+    .type-btn .type-count {
+      font-size: 0.75rem;
+      opacity: 0.8;
+    }
+
+    .sub-toggle-icon {
+      font-size: 1rem;
+      transition: transform 0.2s;
+      color: #888;
+    }
+
+    .subcategory-item.open .sub-toggle-icon {
+      transform: rotate(90deg);
+    }
+
+    /* Flashcard Styles */
+    .flashcard-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 1rem;
+    }
+
+    .flashcard {
+      width: 100%;
+      max-width: 600px;
+      min-height: 250px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+    }
+
+    .flashcard:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+    }
+
+    .flashcard.flipped {
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+    }
+
+    .topic-badge {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      background: rgb(43,59,116);
+      color: #fff;
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      max-width: 45%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .card-label {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      color: #888;
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    .card-content {
+      font-size: 1.2rem;
+      text-align: center;
+      line-height: 1.8;
+      margin-top: 1.5rem;
+      padding: 0 0.5rem;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .flip-hint {
+      position: absolute;
+      bottom: 0.75rem;
+      color: #aaa;
+      font-size: 0.8rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .controls button {
+      padding: 0.7rem 1rem;
+      font-size: 0.95rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-back-topic {
+      background: #6c757d;
+      color: #fff;
+    }
+
+    .btn-back-topic:hover {
+      background: #5a6268;
+    }
+
+    .btn-back {
+      background: #495057;
+      color: #fff;
+    }
+
+    .btn-back:hover:not(:disabled) {
+      background: #343a40;
+    }
+
+    .btn-back:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-flip {
+      background: rgb(43,59,116);
+      color: #fff;
+    }
+
+    .btn-flip:hover {
+      background: rgb(33,49,106);
+    }
+
+    .btn-next {
+      background: #28a745;
+      color: #fff;
+    }
+
+    .btn-next:hover {
+      background: #218838;
+    }
+
+    /* Feedback buttons for generated cards */
+    .feedback-controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .btn-got-it {
+      padding: 0.8rem 2rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #28a745;
+      color: #fff;
+    }
+
+    .btn-got-it:hover {
+      background: #218838;
+      transform: scale(1.05);
+    }
+
+    .btn-missed-it {
+      padding: 0.8rem 2rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #dc3545;
+      color: #fff;
+    }
+
+    .btn-missed-it:hover {
+      background: #c82333;
+      transform: scale(1.05);
+    }
+
+    .card-counter {
+      margin-top: 1rem;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .current-mode {
+      margin-top: 0.4rem;
+      color: #888;
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    .keyboard-hint {
+      margin-top: 0.75rem;
+      color: #999;
+      font-size: 0.75rem;
+      text-align: center;
+    }
+
+    .keyboard-hint kbd {
+      background: #eee;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: monospace;
+      border: 1px solid #ddd;
+      font-size: 0.7rem;
+    }
+
+    /* Hide keyboard hints on mobile */
+    @media (max-width: 768px) {
+      .keyboard-hint {
+        display: none;
+      }
+    }
+
+    /* Submit Form Styles */
+    .submit-section {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .submit-form {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+
+    .form-group select,
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: rgb(43,59,116);
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-group .hint {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 0.4rem;
+    }
+
+    .form-group .hint code {
+      background: #f0f0f0;
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+      font-size: 0.8rem;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .submit-btn:hover {
+      background: #218838;
+    }
+
+    .submit-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    /* Pending Reviews Styles */
+    .reviews-section {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .reviews-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .clear-all-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      background: #dc3545;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .clear-all-btn:hover {
+      background: #c82333;
+    }
+
+    .review-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .review-card-header {
+      background: rgb(43,59,116);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .review-card-topic {
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    .review-card-date {
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+
+    .review-card-body {
+      padding: 1rem;
+    }
+
+    .review-card-field {
+      margin-bottom: 0.75rem;
+    }
+
+    .review-card-field:last-child {
+      margin-bottom: 0;
+    }
+
+    .review-card-label {
+      font-weight: bold;
+      color: #555;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .review-card-content {
+      background: #f8f9fa;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .review-card-actions {
+      padding: 0.75rem 1rem;
+      background: #f8f9fa;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .delete-btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      background: #dc3545;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .delete-btn:hover {
+      background: #c82333;
+    }
+
+    .copy-btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      background: #17a2b8;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: #138496;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #888;
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: #666;
+    }
+
+    .error {
+      text-align: center;
+      padding: 3rem;
+      color: #dc3545;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .tab-nav {
+        justify-content: center;
+      }
+
+      .tab-btn {
+        padding: 0.6rem 0.9rem;
+        font-size: 0.9rem;
+      }
+
+      .mode-btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .category-header {
+        padding: 0.75rem;
+      }
+
+      .category-title {
+        font-size: 1rem;
+      }
+
+      .master-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+      }
+
+      .flashcard {
+        min-height: 220px;
+        padding: 1rem;
+      }
+
+      .card-content {
+        font-size: 1.1rem;
+        margin-top: 2rem;
+      }
+
+      .topic-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+      }
+
+      .controls button {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.9rem;
+      }
+
+      .submit-form {
+        padding: 1rem;
+      }
+
+      .form-group select,
+      .form-group input,
+      .form-group textarea {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+      }
+    }
+
+    @media (max-width: 480px) {
+      .category-actions {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+      }
+
+      .controls {
+        width: 100%;
+      }
+
+      .controls button {
+        flex: 1;
+        min-width: 0;
+        padding: 0.6rem 0.5rem;
+        font-size: 0.85rem;
+      }
+    }
+
+    /* Quiz Mode Styles */
+    .quiz-stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      flex-wrap: wrap;
+    }
+
+    .stat-box {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .stat-value.correct {
+      color: #28a745;
+    }
+
+    .stat-value.incorrect {
+      color: #dc3545;
+    }
+
+    .stat-value.streak {
+      color: #fd7e14;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .quiz-card {
+      width: 100%;
+      max-width: 600px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      padding: 1.5rem;
+      margin: 0 auto;
+    }
+
+    .quiz-question {
+      font-size: 1.2rem;
+      text-align: center;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      line-height: 1.8;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .quiz-option {
+      padding: 1rem;
+      font-size: 1rem;
+      border: 2px solid #ddd;
+      background: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      line-height: 1.6;
+    }
+
+    .quiz-option:hover:not(:disabled) {
+      border-color: rgb(43,59,116);
+      background: #f0f4ff;
+    }
+
+    .quiz-option.selected {
+      border-color: rgb(43,59,116);
+      background: #e8f0fe;
+    }
+
+    .quiz-option.correct {
+      border-color: #28a745;
+      background: #d4edda;
+    }
+
+    .quiz-option.incorrect {
+      border-color: #dc3545;
+      background: #f8d7da;
+    }
+
+    .quiz-option:disabled {
+      cursor: default;
+    }
+
+    .quiz-feedback {
+      text-align: center;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .quiz-feedback.correct {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .quiz-feedback.incorrect {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .quiz-next-btn {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .quiz-next-btn:hover {
+      background: #218838;
+    }
+
+    .quiz-topic-badge {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .today-date {
+      text-align: center;
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .quiz-stats {
+        gap: 1rem;
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+      }
+
+      .quiz-question {
+        font-size: 1.1rem;
+        padding: 1rem;
+      }
+
+      .quiz-option {
+        padding: 0.75rem;
+        font-size: 0.95rem;
+      }
+    }
+
+    /* Info explanation panel - slides in from right */
+    .info-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .info-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .info-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(480px, 90vw);
+      height: 100%;
+      background: #1a1d23;
+      color: #e0e0e0;
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+    }
+
+    .info-panel.open {
+      transform: translateX(0);
+    }
+
+    .info-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #333;
+      flex-shrink: 0;
+    }
+
+    .info-panel-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #7eb8ff;
+    }
+
+    .info-close-btn {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 1.6rem;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+      line-height: 1;
+    }
+
+    .info-close-btn:hover {
+      background: #333;
+      color: #fff;
+    }
+
+    .info-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 1.25rem;
+      line-height: 1.7;
+      font-size: 0.98rem;
+    }
+
+    .info-panel-body h4 {
+      color: #7eb8ff;
+      margin: 1.25rem 0 0.5rem 0;
+      font-size: 1.05rem;
+    }
+
+    .info-panel-body h4:first-child {
+      margin-top: 0;
+    }
+
+    .info-panel-body p {
+      margin: 0.5rem 0;
+    }
+
+    .info-panel-body ul, .info-panel-body ol {
+      margin: 0.5rem 0;
+      padding-left: 1.5rem;
+    }
+
+    .info-panel-body li {
+      margin: 0.4rem 0;
+    }
+
+    .info-panel-body .info-formula {
+      background: #252830;
+      border-left: 3px solid #7eb8ff;
+      padding: 0.75rem 1rem;
+      margin: 0.75rem 0;
+      border-radius: 0 6px 6px 0;
+      overflow-x: auto;
+    }
+
+    .info-panel-body .info-example {
+      background: #1e2a1e;
+      border-left: 3px solid #5cb85c;
+      padding: 0.75rem 1rem;
+      margin: 0.75rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .info-panel-body .info-note {
+      background: #2a2520;
+      border-left: 3px solid #f0ad4e;
+      padding: 0.75rem 1rem;
+      margin: 0.75rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .info-panel-body .info-diagram {
+      background: #252830;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 0.75rem 0;
+      text-align: center;
+    }
+
+    .info-panel-body .info-diagram pre {
+      color: #7eb8ff;
+      font-family: monospace;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      margin: 0;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .btn-info {
+      background: #3a3f4b;
+      color: #7eb8ff;
+      border: 1px solid #555;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .btn-info:hover {
+      background: #4a5060;
+      border-color: #7eb8ff;
+      color: #fff;
+    }
+
+    /* Scrollbar styling for info panel */
+    .info-panel-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .info-panel-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .info-panel-body::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 3px;
+    }
+
+    .info-panel-body::-webkit-scrollbar-thumb:hover {
+      background: #666;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Artificially Neuroscience</h1>
+    <nav>
+      <a href="../../index.html">Home</a>
+      <a href="../../research_publications/index.html">Research Publications</a>
+      <a href="../../literature_analysis/index.html">Literature Analysis</a>
+      <a href="../../educational_resources/index.html">Educational Resources</a>
+    </nav>
+  </header>
+
+  <main>
+    <section>
+      <h2>Arts Flash Card Practice</h2>
+      <p><a href="index.html">&larr; Back to Arts Resources</a></p>
+      
+      <!-- Tab Navigation -->
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="showTab('practice')" id="tab-practice">
+          🎴 Practice
+        </button>
+        <button class="tab-btn" onclick="showTab('quiz')" id="tab-quiz">
+          🧠 Test Your Knowledge
+        </button>
+        <button class="tab-btn" onclick="showTab('submit')" id="tab-submit">
+          ➕ Submit Card
+        </button>
+        <button class="tab-btn" onclick="showTab('reviews')" id="tab-reviews">
+          📋 Pending Reviews <span class="badge" id="review-count" style="display:none">0</span>
+        </button>
+      </div>
+
+      <!-- Practice Tab -->
+      <div id="practice-tab" class="tab-content">
+        <div id="app">
+          <div class="loading">Loading flashcards...</div>
+        </div>
+      </div>
+
+      <!-- Quiz Tab -->
+      <div id="quiz-tab" class="tab-content" style="display:none">
+        <div id="quiz-app">
+          <div class="loading">Loading quiz...</div>
+        </div>
+      </div>
+
+      <!-- Submit Tab -->
+      <div id="submit-tab" class="tab-content" style="display:none">
+        <div class="submit-section">
+          <div class="submit-form">
+            <div id="submit-success" class="success-message" style="display:none">
+              ✅ Flashcard submitted for review!
+            </div>
+
+            <div class="form-group">
+              <label for="topic-select">Topic *</label>
+              <select id="topic-select" required>
+                <option value="">-- Select a topic --</option>
+              </select>
+              <p class="hint">Choose an existing topic or "Unrelated Topics" if none fit.</p>
+            </div>
+
+            <div class="form-group">
+              <label for="question-input">Question *</label>
+              <textarea id="question-input" placeholder="Enter the question..." required></textarea>
+              <p class="hint">Use LaTeX for math: <code>$inline$</code> or <code>$$display$$</code></p>
+            </div>
+
+            <div class="form-group">
+              <label for="answer-input">Answer *</label>
+              <textarea id="answer-input" placeholder="Enter the answer..." required></textarea>
+              <p class="hint">Example: <code>$$\int x^2 \, dx = \frac{x^3}{3} + C$$</code></p>
+            </div>
+
+            <button class="submit-btn" onclick="submitFlashcard()">
+              Submit for Review
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reviews Tab -->
+      <div id="reviews-tab" class="tab-content" style="display:none">
+        <div class="reviews-section">
+          <div class="reviews-header">
+            <h3>📋 Pending Reviews</h3>
+            <button class="clear-all-btn" onclick="clearAllReviews()" id="clear-all-btn" style="display:none">
+              🗑️ Clear All
+            </button>
+          </div>
+          <div id="reviews-list">
+            <div class="empty-state">
+              <div class="empty-state-icon">📭</div>
+              <p>No pending flashcards for review.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // State
+    let data = null;
+    let activeCards = [];
+    let currentCard = null;
+    let previousCard = null;
+    let isFlipped = false;
+    let canGoBack = false;
+    let currentMode = '';
+    let pendingReviews = [];
+    
+    // Generator mode tracking (for infinite worked problems)
+    let generatorModeActive = false;
+    let currentGeneratorCatKey = null;
+    let currentGeneratorSubKey = null;
+
+    // Quiz State
+    let quizCorrect = 0;
+    let quizIncorrect = 0;
+    let quizStreak = 0;
+    let quizCurrentCard = null;
+    let quizOptions = [];
+    let quizAnswered = false;
+
+    // Wrong answer tracking (cards that need to come back)
+    let wrongAnswerQueue = [];
+    const WRONG_QUEUE_STORAGE_KEY = 'flashcard_wrong_queue';
+
+    // Local Storage Keys
+    const STORAGE_KEY = 'flashcard_pending_reviews';
+    const QUIZ_STORAGE_KEY = 'flashcard_quiz_daily_stats';
+
+    // ========== SEEDED RANDOM NUMBER GENERATOR ==========
+    // Mulberry32 - fast, good quality PRNG
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    // Generate deterministic random int in range [min, max]
+    function seededRandInt(rng, min, max) {
+      return Math.floor(rng() * (max - min + 1)) + min;
+    }
+
+    // Pick random element from array using seeded RNG
+    function seededPick(rng, arr) {
+      return arr[Math.floor(rng() * arr.length)];
+    }
+
+    // ========== PROBLEM GENERATORS ==========
+    // Selected number types for basics (stored globally)
+    let selectedNumberTypes = ['integers', 'fractions', 'decimals', 'percentages'];
+    
+    // Helper functions
+    const gcd = (a, b) => b === 0 ? Math.abs(a) : gcd(b, a % b);
+    const simplifyFrac = (num, den) => {
+      if (den === 0) return [0, 1];
+      const g = gcd(Math.abs(num), Math.abs(den));
+      return [num/g, den/g];
+    };
+    const roundDec = (n, d) => Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
+    
+    const generators = {
+      // BASICS - ADDITION & SUBTRACTION
+      'basics.add_subtract': (seed, numberTypes) => {
+        const rng = mulberry32(seed);
+        const types = numberTypes || selectedNumberTypes;
+        if (types.length === 0) return { question: "Select number types", answer: "Please select at least one number type" };
+        
+        const numType = seededPick(rng, types);
+        const isAdd = rng() > 0.5;
+        const op = isAdd ? '+' : '-';
+        let q, a;
+        
+        switch(numType) {
+          case 'integers':
+            {
+              const a1 = seededRandInt(rng, -50, 50);
+              const a2 = seededRandInt(rng, -50, 50);
+              const result = isAdd ? a1 + a2 : a1 - a2;
+              const a1Str = a1 < 0 ? `(${a1})` : `${a1}`;
+              const a2Str = a2 < 0 ? `(${a2})` : `${a2}`;
+              q = `$${a1Str} ${op} ${a2Str} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 'fractions':
+            {
+              const d1 = seededPick(rng, [2,3,4,5,6,8]);
+              const d2 = seededPick(rng, [2,3,4,5,6,8]);
+              const n1 = seededRandInt(rng, 1, d1*2);
+              const n2 = seededRandInt(rng, 1, d2);
+              const lcd = (d1 * d2) / gcd(d1, d2);
+              const resNum = isAdd ? n1*(lcd/d1) + n2*(lcd/d2) : n1*(lcd/d1) - n2*(lcd/d2);
+              const [sn, sd] = simplifyFrac(resNum, lcd);
+              q = `$\\frac{${n1}}{${d1}} ${op} \\frac{${n2}}{${d2}} = ?$`;
+              a = sd === 1 ? `$$${sn}$$` : `$$\\frac{${sn}}{${sd}}$$`;
+            }
+            break;
+          case 'decimals':
+            {
+              const a1 = roundDec(rng() * 10 + 2, 2);
+              const a2 = roundDec(rng() * 5, 2);
+              const result = roundDec(isAdd ? a1 + a2 : a1 - a2, 2);
+              q = `$${a1} ${op} ${a2} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 'percentages':
+            {
+              const pct1 = seededPick(rng, [10,15,20,25,30,35,40,45,50]);
+              const pct2 = seededPick(rng, [5,10,15,20,25]);
+              const result = isAdd ? pct1 + pct2 : pct1 - pct2;
+              q = `$${pct1}\\% ${op} ${pct2}\\% = ?$`;
+              a = `$$${result}\\%$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // BASICS - MULTIPLICATION & DIVISION
+      'basics.multiply_divide': (seed, numberTypes) => {
+        const rng = mulberry32(seed);
+        const types = numberTypes || selectedNumberTypes;
+        if (types.length === 0) return { question: "Select number types", answer: "Please select at least one number type" };
+        
+        const numType = seededPick(rng, types);
+        const isMult = rng() > 0.5;
+        const op = isMult ? '\\times' : '\\div';
+        let q, a;
+        
+        switch(numType) {
+          case 'integers':
+            {
+              if (isMult) {
+                const a1 = seededRandInt(rng, -12, 12);
+                const a2 = seededRandInt(rng, -12, 12);
+                const result = a1 * a2;
+                const a1Str = a1 < 0 ? `(${a1})` : `${a1}`;
+                const a2Str = a2 < 0 ? `(${a2})` : `${a2}`;
+                q = `$${a1Str} ${op} ${a2Str} = ?$`;
+                a = `$$${result}$$`;
+              } else {
+                const divisor = seededRandInt(rng, 2, 12) * (rng() > 0.5 ? 1 : -1);
+                const result = seededRandInt(rng, -12, 12);
+                const dividend = divisor * result;
+                const divStr = dividend < 0 ? `(${dividend})` : `${dividend}`;
+                const dvrStr = divisor < 0 ? `(${divisor})` : `${divisor}`;
+                q = `$${divStr} ${op} ${dvrStr} = ?$`;
+                a = `$$${result}$$`;
+              }
+            }
+            break;
+          case 'fractions':
+            {
+              const d1 = seededPick(rng, [2,3,4,5,6,8]);
+              const d2 = seededPick(rng, [2,3,4,5,6,8]);
+              const n1 = seededRandInt(rng, 1, d1-1);
+              const n2 = seededRandInt(rng, 1, d2-1);
+              let sn, sd;
+              if (isMult) {
+                [sn, sd] = simplifyFrac(n1*n2, d1*d2);
+                q = `$\\frac{${n1}}{${d1}} ${op} \\frac{${n2}}{${d2}} = ?$`;
+              } else {
+                [sn, sd] = simplifyFrac(n1*d2, d1*n2);
+                q = `$\\frac{${n1}}{${d1}} ${op} \\frac{${n2}}{${d2}} = ?$`;
+              }
+              a = sd === 1 ? `$$${sn}$$` : `$$\\frac{${sn}}{${sd}}$$`;
+            }
+            break;
+          case 'decimals':
+            {
+              if (isMult) {
+                const a1 = roundDec(rng() * 5 + 0.5, 1);
+                const a2 = roundDec(rng() * 5 + 0.5, 1);
+                const result = roundDec(a1 * a2, 2);
+                q = `$${a1} ${op} ${a2} = ?$`;
+                a = `$$${result}$$`;
+              } else {
+                const divisor = roundDec(rng() * 4 + 0.5, 1);
+                const result = roundDec(rng() * 10 + 1, 1);
+                const dividend = roundDec(divisor * result, 2);
+                q = `$${dividend} ${op} ${divisor} = ?$`;
+                a = `$$${result}$$`;
+              }
+            }
+            break;
+          case 'percentages':
+            {
+              // Find percent of a number
+              const pct = seededPick(rng, [5,10,15,20,25,30,40,50,75]);
+              const num = seededPick(rng, [20,40,50,60,80,100,120,200]);
+              const result = (pct/100) * num;
+              q = `What is $${pct}\\%$ of $${num}$?`;
+              a = `$$${result}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // BASICS - EXPONENTS & ROOTS
+      'basics.exponents_roots': (seed, numberTypes) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 5);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Power calculation
+            {
+              const base = seededRandInt(rng, 2, 12);
+              const exp = seededRandInt(rng, 2, 4);
+              const result = Math.pow(base, exp);
+              q = `$${base}^{${exp}} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 1: // Square root
+            {
+              const roots = [4,9,16,25,36,49,64,81,100,121,144,169,196,225,256,289,324,400];
+              const num = seededPick(rng, roots);
+              const result = Math.sqrt(num);
+              q = `$\\sqrt{${num}} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 2: // Cube root
+            {
+              const cubes = [8,27,64,125,216,343,512,729,1000];
+              const num = seededPick(rng, cubes);
+              const result = Math.round(Math.cbrt(num));
+              q = `$\\sqrt[3]{${num}} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 3: // Negative exponent
+            {
+              const base = seededRandInt(rng, 2, 6);
+              const exp = seededRandInt(rng, 1, 3);
+              const denom = Math.pow(base, exp);
+              q = `$${base}^{-${exp}} = ?$`;
+              a = `$$\\frac{1}{${denom}}$$`;
+            }
+            break;
+          case 4: // Exponent multiplication rule
+            {
+              const base = seededRandInt(rng, 2, 5);
+              const e1 = seededRandInt(rng, 2, 5);
+              const e2 = seededRandInt(rng, 2, 5);
+              q = `$${base}^{${e1}} \\times ${base}^{${e2}} = ?$`;
+              a = `$$${base}^{${e1+e2}} = ${Math.pow(base,e1+e2)}$$`;
+            }
+            break;
+          case 5: // Exponent division rule
+            {
+              const base = seededRandInt(rng, 2, 5);
+              const e1 = seededRandInt(rng, 4, 7);
+              const e2 = seededRandInt(rng, 1, 3);
+              q = `$${base}^{${e1}} \\div ${base}^{${e2}} = ?$`;
+              a = `$$${base}^{${e1-e2}} = ${Math.pow(base,e1-e2)}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // BASICS - ORDER OF OPERATIONS
+      'basics.order_of_ops': (seed, numberTypes) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 4);
+        let q, a;
+        
+        switch(type) {
+          case 0: // a + b × c
+            {
+              const a1 = seededRandInt(rng, 1, 20);
+              const a2 = seededRandInt(rng, 2, 10);
+              const a3 = seededRandInt(rng, 2, 10);
+              const result = a1 + a2 * a3;
+              q = `$${a1} + ${a2} \\times ${a3} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 1: // (a + b) × c
+            {
+              const a1 = seededRandInt(rng, 1, 15);
+              const a2 = seededRandInt(rng, 1, 15);
+              const a3 = seededRandInt(rng, 2, 6);
+              const result = (a1 + a2) * a3;
+              q = `$(${a1} + ${a2}) \\times ${a3} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 2: // a^b + c × d
+            {
+              const base = seededRandInt(rng, 2, 5);
+              const exp = seededRandInt(rng, 2, 3);
+              const c = seededRandInt(rng, 2, 8);
+              const d = seededRandInt(rng, 2, 8);
+              const result = Math.pow(base, exp) + c * d;
+              q = `$${base}^{${exp}} + ${c} \\times ${d} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 3: // a - b × c
+            {
+              const a1 = seededRandInt(rng, 20, 50);
+              const a2 = seededRandInt(rng, 2, 8);
+              const a3 = seededRandInt(rng, 2, 5);
+              const result = a1 - a2 * a3;
+              q = `$${a1} - ${a2} \\times ${a3} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+          case 4: // a ÷ b × c (left to right)
+            {
+              const b = seededRandInt(rng, 2, 6);
+              const c = seededRandInt(rng, 2, 6);
+              const quotient = seededRandInt(rng, 2, 8);
+              const a1 = b * quotient;
+              const result = quotient * c;
+              q = `$${a1} \\div ${b} \\times ${c} = ?$`;
+              a = `$$${result}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // FOUNDATIONS - ALGEBRA
+      'foundations.algebra': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 4);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Solve linear equation
+            {
+              const x = seededRandInt(rng, -10, 10);
+              const coef = seededRandInt(rng, 2, 8);
+              const const1 = seededRandInt(rng, -20, 20);
+              const rhs = coef * x + const1;
+              q = `Solve for $x$: $${coef}x + ${const1 >= 0 ? const1 : `(${const1})`} = ${rhs}$`;
+              a = `$$x = ${x}$$`;
+            }
+            break;
+          case 1: // Factor quadratic
+            {
+              const r1 = seededRandInt(rng, -6, 6);
+              const r2 = seededRandInt(rng, -6, 6);
+              const b = -(r1 + r2);
+              const c = r1 * r2;
+              q = `Factor: $x^2 ${b >= 0 ? '+' : ''} ${b}x ${c >= 0 ? '+' : ''} ${c}$`;
+              a = `$$(x ${r1 >= 0 ? '-' : '+'} ${Math.abs(r1)})(x ${r2 >= 0 ? '-' : '+'} ${Math.abs(r2)})$$`;
+            }
+            break;
+          case 2: // Expand product
+            {
+              const a1 = seededRandInt(rng, -5, 5);
+              const a2 = seededRandInt(rng, -5, 5);
+              const b = a1 + a2;
+              const c = a1 * a2;
+              q = `Expand: $(x ${a1 >= 0 ? '+' : ''} ${a1})(x ${a2 >= 0 ? '+' : ''} ${a2})$`;
+              a = `$$x^2 ${b >= 0 ? '+' : ''} ${b}x ${c >= 0 ? '+' : ''} ${c}$$`;
+            }
+            break;
+          case 3: // Simplify expression
+            {
+              const base = seededRandInt(rng, 2, 5);
+              const exp = seededRandInt(rng, 2, 4);
+              const result = Math.pow(base, 2*exp);
+              q = `Simplify: $(${base}x^{${exp}})^2$`;
+              a = `$$${Math.pow(base,2)}x^{${2*exp}}$$`;
+            }
+            break;
+          case 4: // Solve quadratic
+            {
+              const r1 = seededRandInt(rng, -5, 5);
+              const r2 = seededRandInt(rng, -5, 5);
+              const b = -(r1 + r2);
+              const c = r1 * r2;
+              q = `Solve: $x^2 ${b >= 0 ? '+' : ''} ${b}x ${c >= 0 ? '+' : ''} ${c} = 0$`;
+              a = `$$x = ${r1} \\text{ or } x = ${r2}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // FOUNDATIONS - TRIGONOMETRY
+      'foundations.trigonometry': (seed) => {
+        const rng = mulberry32(seed);
+        const angles = ['0', '\\frac{\\pi}{6}', '\\frac{\\pi}{4}', '\\frac{\\pi}{3}', '\\frac{\\pi}{2}', '\\pi'];
+        const sinVals = ['0', '\\frac{1}{2}', '\\frac{\\sqrt{2}}{2}', '\\frac{\\sqrt{3}}{2}', '1', '0'];
+        const cosVals = ['1', '\\frac{\\sqrt{3}}{2}', '\\frac{\\sqrt{2}}{2}', '\\frac{1}{2}', '0', '-1'];
+        
+        const func = seededPick(rng, ['sin', 'cos', 'tan']);
+        const idx = seededRandInt(rng, 0, 5);
+        
+        if (func === 'tan' && (idx === 4)) {
+          // tan(pi/2) is undefined, pick different
+          return generators['foundations.trigonometry'](seed + 1);
+        }
+        
+        const angle = angles[idx];
+        let answer;
+        if (func === 'sin') answer = sinVals[idx];
+        else if (func === 'cos') answer = cosVals[idx];
+        else {
+          // tan = sin/cos
+          const tanVals = ['0', '\\frac{\\sqrt{3}}{3}', '1', '\\sqrt{3}', '\\text{undefined}', '0'];
+          answer = tanVals[idx];
+        }
+        
+        return {
+          question: `What is $\\${func}(${angle})$?`,
+          answer: `$$${answer}$$`
+        };
+      },
+
+      // FOUNDATIONS - VECTORS
+      'foundations.vectors': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 3);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Magnitude
+            {
+              const pairs = [[3,4,5],[5,12,13],[8,15,17],[6,8,10]];
+              const [x, y, mag] = seededPick(rng, pairs);
+              q = `What is the magnitude of $(${x}, ${y})$?`;
+              a = `$$${mag}$$`;
+            }
+            break;
+          case 1: // Addition
+            {
+              const x1 = seededRandInt(rng, -5, 5);
+              const y1 = seededRandInt(rng, -5, 5);
+              const x2 = seededRandInt(rng, -5, 5);
+              const y2 = seededRandInt(rng, -5, 5);
+              q = `$(${x1}, ${y1}) + (${x2}, ${y2}) = ?$`;
+              a = `$$(${x1+x2}, ${y1+y2})$$`;
+            }
+            break;
+          case 2: // Dot product
+            {
+              const x1 = seededRandInt(rng, -5, 5);
+              const y1 = seededRandInt(rng, -5, 5);
+              const x2 = seededRandInt(rng, -5, 5);
+              const y2 = seededRandInt(rng, -5, 5);
+              const dot = x1*x2 + y1*y2;
+              q = `$(${x1}, ${y1}) \\cdot (${x2}, ${y2}) = ?$`;
+              a = `$$${dot}$$`;
+            }
+            break;
+          case 3: // Scalar multiplication
+            {
+              const k = seededRandInt(rng, -5, 5);
+              const x = seededRandInt(rng, -5, 5);
+              const y = seededRandInt(rng, -5, 5);
+              q = `$${k} \\cdot (${x}, ${y}) = ?$`;
+              a = `$$(${k*x}, ${k*y})$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // FOUNDATIONS - LOGARITHMS
+      'foundations.logarithms': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 2);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Basic log
+            {
+              const base = seededPick(rng, [2, 3, 5, 10]);
+              const exp = seededRandInt(rng, 1, 4);
+              const num = Math.pow(base, exp);
+              q = `$\\log_{${base}}(${num}) = ?$`;
+              a = `$$${exp}$$`;
+            }
+            break;
+          case 1: // Natural log
+            {
+              const exp = seededRandInt(rng, 1, 5);
+              q = `$\\ln(e^{${exp}}) = ?$`;
+              a = `$$${exp}$$`;
+            }
+            break;
+          case 2: // Solve exponential
+            {
+              const base = seededPick(rng, [2, 3, 10]);
+              const exp = seededRandInt(rng, 2, 5);
+              const result = Math.pow(base, exp);
+              q = `Solve: $${base}^x = ${result}$`;
+              a = `$$x = ${exp}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // FOUNDATIONS - COMPLEX NUMBERS
+      'foundations.complex': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 3);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Addition
+            {
+              const a1 = seededRandInt(rng, -5, 5);
+              const b1 = seededRandInt(rng, -5, 5);
+              const a2 = seededRandInt(rng, -5, 5);
+              const b2 = seededRandInt(rng, -5, 5);
+              const ra = a1 + a2;
+              const rb = b1 + b2;
+              q = `$(${a1} ${b1>=0?'+':''}${b1}i) + (${a2} ${b2>=0?'+':''}${b2}i) = ?$`;
+              a = `$$${ra} ${rb>=0?'+':''}${rb}i$$`;
+            }
+            break;
+          case 1: // Powers of i
+            {
+              const exp = seededRandInt(rng, 1, 20);
+              const mod = exp % 4;
+              const vals = ['1', 'i', '-1', '-i'];
+              q = `$i^{${exp}} = ?$`;
+              a = `$$${vals[mod]}$$`;
+            }
+            break;
+          case 2: // Modulus
+            {
+              const pairs = [[3,4,5],[5,12,13],[6,8,10],[8,15,17]];
+              const [re, im, mod] = seededPick(rng, pairs);
+              q = `$|${re} + ${im}i| = ?$`;
+              a = `$$${mod}$$`;
+            }
+            break;
+          case 3: // Conjugate
+            {
+              const re = seededRandInt(rng, -10, 10);
+              const im = seededRandInt(rng, -10, 10);
+              q = `Conjugate of $${re} ${im>=0?'+':''}${im}i$?`;
+              a = `$$${re} ${(-im)>=0?'+':''}${-im}i$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // CALCULUS - LIMITS
+      'calculus.limits': (seed) => {
+        const rng = mulberry32(seed);
+        // Generate polynomial limit problems
+        const a = seededRandInt(rng, 1, 5);
+        const root = seededRandInt(rng, -3, 3);
+        const result = 2 * root + a;
+        
+        return {
+          question: `$\\displaystyle\\lim_{x \\to ${root}} (2x + ${a}) = ?$`,
+          answer: `$$${result}$$`
+        };
+      },
+
+      // CALCULUS - DERIVATIVES
+      'calculus.derivatives': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 4);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Power rule
+            {
+              const coef = seededRandInt(rng, 1, 8);
+              const exp = seededRandInt(rng, 2, 6);
+              const newCoef = coef * exp;
+              const newExp = exp - 1;
+              q = `$\\frac{d}{dx}[${coef}x^{${exp}}] = ?$`;
+              a = `$$${newCoef}x^{${newExp}}$$`;
+            }
+            break;
+          case 1: // Chain rule with power
+            {
+              const inner = seededRandInt(rng, 1, 5);
+              const exp = seededRandInt(rng, 2, 4);
+              q = `$\\frac{d}{dx}[(x + ${inner})^{${exp}}] = ?$`;
+              a = `$$${exp}(x + ${inner})^{${exp-1}}$$`;
+            }
+            break;
+          case 2: // Trig derivative
+            {
+              const func = seededPick(rng, ['sin', 'cos']);
+              const coef = seededRandInt(rng, 2, 5);
+              if (func === 'sin') {
+                q = `$\\frac{d}{dx}[\\sin(${coef}x)] = ?$`;
+                a = `$$${coef}\\cos(${coef}x)$$`;
+              } else {
+                q = `$\\frac{d}{dx}[\\cos(${coef}x)] = ?$`;
+                a = `$$-${coef}\\sin(${coef}x)$$`;
+              }
+            }
+            break;
+          case 3: // Exponential
+            {
+              const coef = seededRandInt(rng, 2, 5);
+              q = `$\\frac{d}{dx}[e^{${coef}x}] = ?$`;
+              a = `$$${coef}e^{${coef}x}$$`;
+            }
+            break;
+          case 4: // Log
+            {
+              const coef = seededRandInt(rng, 2, 5);
+              q = `$\\frac{d}{dx}[\\ln(${coef}x)] = ?$`;
+              a = `$$\\frac{1}{x}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // CALCULUS - INTEGRALS
+      'calculus.integrals': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 3);
+        let q, a;
+        
+        switch(type) {
+          case 0: // Power rule
+            {
+              const coef = seededRandInt(rng, 1, 6);
+              const exp = seededRandInt(rng, 1, 5);
+              const newExp = exp + 1;
+              const newCoef = coef / newExp;
+              q = `$\\int ${coef}x^{${exp}} \\, dx = ?$`;
+              if (coef % newExp === 0) {
+                a = `$$${coef/newExp}x^{${newExp}} + C$$`;
+              } else {
+                a = `$$\\frac{${coef}}{${newExp}}x^{${newExp}} + C$$`;
+              }
+            }
+            break;
+          case 1: // Exponential
+            {
+              const coef = seededRandInt(rng, 2, 5);
+              q = `$\\int e^{${coef}x} \\, dx = ?$`;
+              a = `$$\\frac{1}{${coef}}e^{${coef}x} + C$$`;
+            }
+            break;
+          case 2: // Trig
+            {
+              const func = seededPick(rng, ['sin', 'cos']);
+              if (func === 'sin') {
+                q = `$\\int \\sin x \\, dx = ?$`;
+                a = `$$-\\cos x + C$$`;
+              } else {
+                q = `$\\int \\cos x \\, dx = ?$`;
+                a = `$$\\sin x + C$$`;
+              }
+            }
+            break;
+          case 3: // Definite integral
+            {
+              const exp = seededRandInt(rng, 1, 3);
+              const upper = seededRandInt(rng, 1, 3);
+              const result = Math.pow(upper, exp + 1) / (exp + 1);
+              q = `$\\int_0^{${upper}} x^{${exp}} \\, dx = ?$`;
+              a = Number.isInteger(result) 
+                ? `$$${result}$$` 
+                : `$$\\frac{${Math.pow(upper, exp+1)}}{${exp+1}}$$`;
+            }
+            break;
+        }
+        return { question: q, answer: a };
+      },
+
+      // CALCULUS - SERIES
+      'calculus.series': (seed) => {
+        const rng = mulberry32(seed);
+        // Geometric series sum
+        const r = seededPick(rng, [0.5, 0.25, 0.2, 1/3]);
+        const a = seededRandInt(rng, 1, 4);
+        const sum = a / (1 - r);
+        
+        const rStr = r === 0.5 ? '\\frac{1}{2}' : r === 0.25 ? '\\frac{1}{4}' : r === 0.2 ? '\\frac{1}{5}' : '\\frac{1}{3}';
+        
+        return {
+          question: `$\\sum_{n=0}^{\\infty} ${a} \\cdot \\left(${rStr}\\right)^n = ?$`,
+          answer: `$$${sum}$$`
+        };
+      },
+
+      // CALCULUS - DIFFERENTIAL EQUATIONS
+      'calculus.diffeq': (seed) => {
+        const rng = mulberry32(seed);
+        const type = seededRandInt(rng, 0, 1);
+        
+        if (type === 0) {
+          // dy/dx = ky
+          const k = seededRandInt(rng, 1, 5);
+          return {
+            question: `Solve: $\\frac{dy}{dx} = ${k}y$`,
+            answer: `$$y = Ce^{${k}x}$$`
+          };
+        } else {
+          // dy/dx = f(x)
+          const exp = seededRandInt(rng, 1, 3);
+          const newExp = exp + 1;
+          return {
+            question: `Solve: $\\frac{dy}{dx} = x^{${exp}}$`,
+            answer: `$$y = \\frac{x^{${newExp}}}{${newExp}} + C$$`
+          };
+        }
+      },
+
+      // CALCULUS - MULTIVARIABLE
+      'calculus.multivariable': (seed) => {
+        const rng = mulberry32(seed);
+        // Partial derivatives
+        const type = seededRandInt(rng, 0, 1);
+        
+        if (type === 0) {
+          const a = seededRandInt(rng, 1, 5);
+          const b = seededRandInt(rng, 1, 5);
+          return {
+            question: `$\\frac{\\partial}{\\partial x}(${a}x^2 + ${b}xy) = ?$`,
+            answer: `$$${2*a}x + ${b}y$$`
+          };
+        } else {
+          const a = seededRandInt(rng, 1, 5);
+          const b = seededRandInt(rng, 1, 5);
+          return {
+            question: `$\\frac{\\partial}{\\partial y}(${a}xy + ${b}y^2) = ?$`,
+            answer: `$$${a}x + ${2*b}y$$`
+          };
+        }
+      },
+
+      // LINEAR ALGEBRA - MATRICES
+      'linearalgebra.matrices': (seed) => {
+        const rng = mulberry32(seed);
+        // 2x2 determinant
+        const a = seededRandInt(rng, -5, 5);
+        const b = seededRandInt(rng, -5, 5);
+        const c = seededRandInt(rng, -5, 5);
+        const d = seededRandInt(rng, -5, 5);
+        const det = a*d - b*c;
+        
+        return {
+          question: `$\\det\\begin{pmatrix} ${a} & ${b} \\\\ ${c} & ${d} \\end{pmatrix} = ?$`,
+          answer: `$$${det}$$`
+        };
+      },
+
+      // LINEAR ALGEBRA - EIGENVALUES
+      'linearalgebra.eigenvalues': (seed) => {
+        const rng = mulberry32(seed);
+        // Diagonal matrix eigenvalues
+        const e1 = seededRandInt(rng, -5, 5);
+        const e2 = seededRandInt(rng, -5, 5);
+        
+        return {
+          question: `Eigenvalues of $\\begin{pmatrix} ${e1} & 0 \\\\ 0 & ${e2} \\end{pmatrix}$?`,
+          answer: `$$\\lambda_1 = ${e1}, \\lambda_2 = ${e2}$$`
+        };
+      },
+
+      // LINEAR ALGEBRA - SYSTEMS
+      'linearalgebra.systems': (seed) => {
+        const rng = mulberry32(seed);
+        // 2x2 system with nice solution
+        const x = seededRandInt(rng, -5, 5);
+        const y = seededRandInt(rng, -5, 5);
+        const a1 = seededRandInt(rng, 1, 4);
+        const b1 = seededRandInt(rng, 1, 4);
+        const a2 = seededRandInt(rng, 1, 4);
+        const b2 = seededRandInt(rng, 1, 4);
+        const c1 = a1*x + b1*y;
+        const c2 = a2*x + b2*y;
+        
+        return {
+          question: `Solve: $${a1}x + ${b1}y = ${c1}$ and $${a2}x + ${b2}y = ${c2}$`,
+          answer: `$$x = ${x}, y = ${y}$$`
+        };
+      },
+
+      // LINEAR ALGEBRA - VECTOR SPACES
+      'linearalgebra.vectorspaces': (seed) => {
+        const rng = mulberry32(seed);
+        // Span and linear independence questions
+        const a = seededRandInt(rng, 1, 5);
+        const b = seededRandInt(rng, 1, 5);
+        const c = seededRandInt(rng, 1, 5);
+        const d = seededRandInt(rng, 1, 5);
+        
+        // Check if linearly independent (ad-bc != 0)
+        const det = a*d - b*c;
+        const indep = det !== 0;
+        
+        return {
+          question: `Are $(${a}, ${b})$ and $(${c}, ${d})$ linearly independent?`,
+          answer: indep ? "Yes (determinant ≠ 0)" : "No (determinant = 0)"
+        };
+      },
+
+      // LINEAR ALGEBRA - TRANSFORMATIONS
+      'linearalgebra.transformations': (seed) => {
+        const rng = mulberry32(seed);
+        // Apply transformation matrix
+        const type = seededRandInt(rng, 0, 1);
+        
+        if (type === 0) {
+          // Scaling
+          const k = seededRandInt(rng, 2, 4);
+          const x = seededRandInt(rng, -3, 3);
+          const y = seededRandInt(rng, -3, 3);
+          return {
+            question: `Apply $\\begin{pmatrix} ${k} & 0 \\\\ 0 & ${k} \\end{pmatrix}$ to $(${x}, ${y})$`,
+            answer: `$$(${k*x}, ${k*y})$$`
+          };
+        } else {
+          // Reflection over x-axis
+          const x = seededRandInt(rng, -5, 5);
+          const y = seededRandInt(rng, -5, 5);
+          return {
+            question: `Reflect $(${x}, ${y})$ over the x-axis`,
+            answer: `$$(${x}, ${-y})$$`
+          };
+        }
+      }
+    };
+
+    // Generate a worked problem card
+    function generateWorkedCard(catKey, subKey, seed, numberTypes = null) {
+      const generatorKey = `${catKey}.${subKey}`;
+      const generator = generators[generatorKey];
+      
+      if (!generator) {
+        console.warn(`No generator for ${generatorKey}`);
+        return null;
+      }
+      
+      // Pass numberTypes for basics generators
+      const { question, answer } = generator(seed, numberTypes);
+      
+      return {
+        question,
+        answer,
+        type: 'worked',
+        isGenerated: true,
+        seed: seed,
+        generatorKey: generatorKey
+      };
+    }
+
+    // Load wrong answer queue from localStorage
+    function loadWrongQueue() {
+      try {
+        const stored = localStorage.getItem(WRONG_QUEUE_STORAGE_KEY);
+        wrongAnswerQueue = stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        wrongAnswerQueue = [];
+      }
+    }
+
+    // Save wrong answer queue
+    function saveWrongQueue() {
+      localStorage.setItem(WRONG_QUEUE_STORAGE_KEY, JSON.stringify(wrongAnswerQueue));
+    }
+
+    // Add a card to wrong queue
+    function addToWrongQueue(card) {
+      if (card.isGenerated) {
+        // Store the seed so we can regenerate the exact same problem
+        wrongAnswerQueue.push({
+          generatorKey: card.generatorKey,
+          seed: card.seed,
+          addedAt: Date.now()
+        });
+        saveWrongQueue();
+      }
+    }
+
+    // Get cards from wrong queue for current practice session
+    function getWrongQueueCards() {
+      const cards = [];
+      wrongAnswerQueue.forEach(entry => {
+        const [catKey, subKey] = entry.generatorKey.split('.');
+        const card = generateWorkedCard(catKey, subKey, entry.seed);
+        if (card) {
+          cards.push(card);
+        }
+      });
+      return cards;
+    }
+
+    // Remove a card from wrong queue after it's answered correctly
+    function removeFromWrongQueue(card) {
+      if (card.isGenerated) {
+        wrongAnswerQueue = wrongAnswerQueue.filter(
+          entry => !(entry.generatorKey === card.generatorKey && entry.seed === card.seed)
+        );
+        saveWrongQueue();
+      }
+    }
+
+    // Tab Management
+    function showTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      // Show selected tab
+      document.getElementById(`${tabName}-tab`).style.display = 'block';
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      
+      // Render reviews if switching to that tab
+      if (tabName === 'reviews') {
+        renderReviews();
+      }
+      
+      // Initialize quiz if switching to quiz tab
+      if (tabName === 'quiz' && data) {
+        initQuiz();
+      }
+    }
+
+    // Load pending reviews from localStorage
+    function loadPendingReviews() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        pendingReviews = stored ? JSON.parse(stored) : [];
+        
+        // Auto-delete reviews older than 6 months
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const originalLength = pendingReviews.length;
+        pendingReviews = pendingReviews.filter(review => {
+          const submittedDate = new Date(review.submittedAt);
+          return submittedDate > sixMonthsAgo;
+        });
+        
+        // Save if any were removed
+        if (pendingReviews.length < originalLength) {
+          savePendingReviews();
+        }
+      } catch (e) {
+        pendingReviews = [];
+      }
+      updateReviewBadge();
+    }
+
+    // Save pending reviews to localStorage
+    function savePendingReviews() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingReviews));
+      updateReviewBadge();
+    }
+
+    // Update review count badge
+    function updateReviewBadge() {
+      const badge = document.getElementById('review-count');
+      const clearBtn = document.getElementById('clear-all-btn');
+      if (pendingReviews.length > 0) {
+        badge.textContent = pendingReviews.length;
+        badge.style.display = 'inline';
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+      }
+    }
+
+    // Get all available topics from data
+    function getAllTopics() {
+      const topics = [];
+      if (!data) return topics;
+      
+      for (const catKey in data.categories) {
+        const cat = data.categories[catKey];
+        for (const subKey in cat.subcategories) {
+          const sub = cat.subcategories[subKey];
+          topics.push({
+            value: `${catKey}|${subKey}`,
+            label: `${cat.name} → ${sub.name}`
+          });
+        }
+      }
+      return topics;
+    }
+
+    // Populate topic dropdown
+    function populateTopicDropdown() {
+      const select = document.getElementById('topic-select');
+      const topics = getAllTopics();
+      
+      // Clear existing options except first
+      select.innerHTML = '<option value="">-- Select a topic --</option>';
+      
+      // Add topic options grouped by category
+      let currentCat = '';
+      topics.forEach(topic => {
+        const option = document.createElement('option');
+        option.value = topic.value;
+        option.textContent = topic.label;
+        select.appendChild(option);
+      });
+      
+      // Add "Unrelated Topics" option
+      const unrelatedOption = document.createElement('option');
+      unrelatedOption.value = 'unrelated';
+      unrelatedOption.textContent = '⚠️ Unrelated Topics';
+      select.appendChild(unrelatedOption);
+    }
+
+    // Submit a flashcard for review
+    function submitFlashcard() {
+      const topicSelect = document.getElementById('topic-select');
+      const questionInput = document.getElementById('question-input');
+      const answerInput = document.getElementById('answer-input');
+      
+      const topic = topicSelect.value;
+      const question = questionInput.value.trim();
+      const answer = answerInput.value.trim();
+      
+      if (!topic || !question || !answer) {
+        alert('Please fill in all fields.');
+        return;
+      }
+      
+      // Get topic label
+      let topicLabel = 'Unrelated Topics';
+      if (topic !== 'unrelated') {
+        const selectedOption = topicSelect.options[topicSelect.selectedIndex];
+        topicLabel = selectedOption.textContent;
+      }
+      
+      // Create review entry
+      const review = {
+        id: Date.now(),
+        topicKey: topic,
+        topicLabel: topicLabel,
+        question: question,
+        answer: answer,
+        submittedAt: new Date().toISOString()
+      };
+      
+      // Add to pending reviews
+      pendingReviews.push(review);
+      savePendingReviews();
+      
+      // Clear form
+      topicSelect.value = '';
+      questionInput.value = '';
+      answerInput.value = '';
+      
+      // Show success message
+      const successMsg = document.getElementById('submit-success');
+      successMsg.style.display = 'block';
+      setTimeout(() => {
+        successMsg.style.display = 'none';
+      }, 3000);
+    }
+
+    // Render pending reviews list
+    function renderReviews() {
+      const container = document.getElementById('reviews-list');
+      
+      if (pendingReviews.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <p>No pending flashcards for review.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      let html = '';
+      pendingReviews.forEach((review, index) => {
+        const date = new Date(review.submittedAt).toLocaleDateString();
+        html += `
+          <div class="review-card">
+            <div class="review-card-header">
+              <span class="review-card-topic">${review.topicLabel}</span>
+              <span class="review-card-date">${date}</span>
+            </div>
+            <div class="review-card-body">
+              <div class="review-card-field">
+                <div class="review-card-label">Question:</div>
+                <div class="review-card-content">${escapeHtml(review.question)}</div>
+              </div>
+              <div class="review-card-field">
+                <div class="review-card-label">Answer:</div>
+                <div class="review-card-content">${escapeHtml(review.answer)}</div>
+              </div>
+            </div>
+            <div class="review-card-actions">
+              <button class="copy-btn" onclick="copyReview(${index})">📋 Copy JSON</button>
+              <button class="delete-btn" onclick="deleteReview(${index})">🗑️ Delete</button>
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+      
+      // Render math in reviews
+      setTimeout(renderMath, 10);
+    }
+
+    // Escape HTML for display
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Password for deletion
+    const DELETE_PASSWORD = 'Pfm314159265!';
+
+    // Check password for deletion
+    function checkDeletePassword() {
+      const entered = prompt('Enter password to delete:');
+      return entered === DELETE_PASSWORD;
+    }
+
+    // Delete a single review
+    function deleteReview(index) {
+      if (!checkDeletePassword()) {
+        alert('Incorrect password.');
+        return;
+      }
+      pendingReviews.splice(index, 1);
+      savePendingReviews();
+      renderReviews();
+    }
+
+    // Clear all reviews
+    function clearAllReviews() {
+      if (!checkDeletePassword()) {
+        alert('Incorrect password.');
+        return;
+      }
+      if (confirm('Delete all pending flashcard submissions?')) {
+        pendingReviews = [];
+        savePendingReviews();
+        renderReviews();
+      }
+    }
+
+    // Copy review as JSON
+    function copyReview(index) {
+      const review = pendingReviews[index];
+      const jsonEntry = {
+        question: review.question,
+        answer: review.answer
+      };
+      const jsonStr = JSON.stringify(jsonEntry, null, 2);
+      
+      navigator.clipboard.writeText(jsonStr).then(() => {
+        alert('Copied to clipboard!');
+      }).catch(() => {
+        // Fallback for older browsers
+        prompt('Copy this JSON:', jsonStr);
+      });
+    }
+
+    // Load flashcards from JSON
+    async function loadFlashcards() {
+      try {
+        const response = await fetch('flashcards.json');
+        if (!response.ok) throw new Error('Failed to load flashcards');
+        data = await response.json();
+        populateTopicDropdown();
+        showTopicSelection();
+      } catch (error) {
+        document.getElementById('app').innerHTML = 
+          '<div class="error">Error loading flashcards. Please try again later.</div>';
+        console.error('Error:', error);
+      }
+    }
+
+    // Number of generated cards to add per subcategory
+    const GENERATED_CARDS_PER_SUB = 10;
+
+    // Generate worked cards for a subcategory
+    function generateWorkedCards(catKey, subKey, count = GENERATED_CARDS_PER_SUB) {
+      const generatorKey = `${catKey}.${subKey}`;
+      if (!generators[generatorKey]) return [];
+      
+      const cards = [];
+      const cat = data.categories[catKey];
+      const sub = cat.subcategories[subKey];
+      
+      // Use selectedNumberTypes for basics generators
+      const numberTypes = catKey === 'basics' ? selectedNumberTypes : null;
+      
+      // Generate new random seeds for this session
+      for (let i = 0; i < count; i++) {
+        const seed = Math.floor(Math.random() * 1000000000);
+        const generatedCard = generateWorkedCard(catKey, subKey, seed, numberTypes);
+        if (generatedCard) {
+          cards.push({
+            ...generatedCard,
+            category: cat.name,
+            subcategory: sub.name
+          });
+        }
+      }
+      
+      return cards;
+    }
+
+    // Get all cards from all categories (including generated worked problems)
+    function getAllCards() {
+      const cards = [];
+      
+      // First, add cards from wrong queue so they come back
+      const wrongCards = getWrongQueueCards();
+      wrongCards.forEach(card => {
+        const [catKey, subKey] = card.generatorKey.split('.');
+        const cat = data.categories[catKey];
+        const sub = cat?.subcategories?.[subKey];
+        if (cat && sub) {
+          cards.push({
+            ...card,
+            category: cat.name,
+            subcategory: sub.name
+          });
+        }
+      });
+      
+      for (const catKey in data.categories) {
+        const cat = data.categories[catKey];
+        for (const subKey in cat.subcategories) {
+          const sub = cat.subcategories[subKey];
+          
+          const hasGenerator = !!generators[`${catKey}.${subKey}`];
+          
+          // Add static cards (skip worked cards only if a generator exists)
+          sub.cards.forEach(card => {
+            if (card.type !== 'worked' || !hasGenerator) {
+              cards.push({
+                ...card,
+                category: cat.name,
+                subcategory: sub.name
+              });
+            }
+          });
+          
+          // Generate fresh worked problems if generator exists
+          if (hasGenerator) {
+            const generatedCards = generateWorkedCards(catKey, subKey);
+            cards.push(...generatedCards);
+          }
+        }
+      }
+      return cards;
+    }
+
+    // Get cards from a specific category (master mode)
+    function getCategoryCards(catKey) {
+      const cards = [];
+      const cat = data.categories[catKey];
+      
+      // Add wrong queue cards for this category
+      const wrongCards = getWrongQueueCards();
+      wrongCards.forEach(card => {
+        if (card.generatorKey.startsWith(catKey + '.')) {
+          const [, subKey] = card.generatorKey.split('.');
+          const sub = cat.subcategories[subKey];
+          if (sub) {
+            cards.push({
+              ...card,
+              category: cat.name,
+              subcategory: sub.name
+            });
+          }
+        }
+      });
+      
+      for (const subKey in cat.subcategories) {
+        const sub = cat.subcategories[subKey];
+        
+        const hasGenerator = !!generators[`${catKey}.${subKey}`];
+        
+        // Add static cards (skip worked cards only if a generator exists)
+        sub.cards.forEach(card => {
+          if (card.type !== 'worked' || !hasGenerator) {
+            cards.push({
+              ...card,
+              category: cat.name,
+              subcategory: sub.name
+            });
+          }
+        });
+        
+        // Generate fresh worked problems if generator exists
+        if (hasGenerator) {
+          const generatedCards = generateWorkedCards(catKey, subKey);
+          cards.push(...generatedCards);
+        }
+      }
+      return cards;
+    }
+
+    // Get cards from a specific subcategory
+    function getSubcategoryCards(catKey, subKey) {
+      const cards = [];
+      const cat = data.categories[catKey];
+      const sub = cat.subcategories[subKey];
+      
+      // Add wrong queue cards for this subcategory
+      const generatorKey = `${catKey}.${subKey}`;
+      const wrongCards = getWrongQueueCards();
+      wrongCards.forEach(card => {
+        if (card.generatorKey === generatorKey) {
+          cards.push({
+            ...card,
+            category: cat.name,
+            subcategory: sub.name
+          });
+        }
+      });
+      
+      const hasGenerator = !!generators[`${catKey}.${subKey}`];
+      
+      // Add static cards (skip worked cards only if a generator exists)
+      sub.cards.forEach(card => {
+        if (card.type !== 'worked' || !hasGenerator) {
+          cards.push({
+            ...card,
+            category: cat.name,
+            subcategory: sub.name
+          });
+        }
+      });
+      
+      // Generate fresh worked problems if generator exists
+      if (hasGenerator) {
+        const generatedCards = generateWorkedCards(catKey, subKey);
+        cards.push(...generatedCards);
+      }
+      
+      return cards;
+    }
+
+    // Count cards in a category
+    function countCategoryCards(catKey) {
+      let count = 0;
+      const cat = data.categories[catKey];
+      for (const subKey in cat.subcategories) {
+        count += cat.subcategories[subKey].cards.length;
+      }
+      return count;
+    }
+
+    // Count cards by type in a subcategory
+    function countSubcategoryCardsByType(catKey, subKey, type) {
+      const sub = data.categories[catKey].subcategories[subKey];
+      if (!type) return sub.cards.length;
+      return sub.cards.filter(card => card.type === type).length;
+    }
+
+    // Check if a generator exists for this subcategory
+    function hasGenerator(catKey, subKey) {
+      return !!generators[`${catKey}.${subKey}`];
+    }
+
+    // Get type emoji
+    function getTypeEmoji(type) {
+      switch(type) {
+        case 'formula': return '📝';
+        case 'fact': return '💡';
+        case 'worked': return '✏️';
+        default: return '';
+      }
+    }
+
+    // Get type label
+    function getTypeLabel(type) {
+      switch(type) {
+        case 'formula': return 'Formulas';
+        case 'fact': return 'Facts';
+        case 'worked': return 'Worked Problems';
+        default: return 'All';
+      }
+    }
+
+    // Show topic selection UI
+    function showTopicSelection() {
+      let html = '<div class="topic-selection">';
+      
+      // Mixed mode
+      html += '<div class="mode-section">';
+      html += '<h3>🎲 Special Modes</h3>';
+      html += '<div class="special-modes">';
+      html += `<button class="mode-btn mixed" onclick="startMixed()">
+        🔀 Mixed Mode
+        <span style="font-size:0.8em;opacity:0.8">(${getAllCards().length} cards)</span>
+      </button>`;
+      html += '</div>';
+      html += '</div>';
+
+      // Category tree
+      html += '<div class="mode-section">';
+      html += '<h3>📚 Browse by Topic</h3>';
+      html += '<div class="category-tree">';
+
+      for (const catKey in data.categories) {
+        const cat = data.categories[catKey];
+        const cardCount = countCategoryCards(catKey);
+        const hasTypeSupport = catKey === 'basics' || catKey === 'foundations' || catKey === 'calculus' || catKey === 'linearalgebra';
+        
+        html += `<div class="category" id="cat-${catKey}">`;
+        html += `<div class="category-header" onclick="toggleCategory('${catKey}')">`;
+        html += `<div class="category-title">`;
+        html += `<span class="category-icon">${cat.icon}</span>`;
+        html += `<span>${cat.name}</span>`;
+        html += `</div>`;
+        html += `<div class="category-actions">`;
+        html += `<button class="master-btn" onclick="event.stopPropagation();startMaster('${catKey}')">Master All (${cardCount})</button>`;
+        html += `<span class="toggle-icon">▶</span>`;
+        html += `</div>`;
+        html += `</div>`;
+        
+        html += `<div class="subcategories" id="sub-${catKey}">`;
+        for (const subKey in cat.subcategories) {
+          const sub = cat.subcategories[subKey];
+          const totalCards = sub.cards.length;
+          
+          if (hasTypeSupport) {
+            // Render subcategory with expandable type filters
+            const formulaCount = countSubcategoryCardsByType(catKey, subKey, 'formula');
+            const factCount = countSubcategoryCardsByType(catKey, subKey, 'fact');
+            const workedCount = countSubcategoryCardsByType(catKey, subKey, 'worked');
+            
+            html += `<div class="subcategory-item" id="subitem-${catKey}-${subKey}">`;
+            html += `<div class="subcategory-header" onclick="toggleSubcategory('${catKey}','${subKey}')">`;
+            html += `<div class="subcategory-title">`;
+            html += `<span class="sub-toggle-icon">▶</span>`;
+            html += `<span>${sub.name}</span>`;
+            html += `<span class="card-count" style="color:#888;font-size:0.85rem">(${totalCards} cards)</span>`;
+            html += `</div>`;
+            html += `<div class="subcategory-actions">`;
+            html += `<button class="subcategory-all-btn" onclick="event.stopPropagation();startSubcategory('${catKey}','${subKey}')">All</button>`;
+            html += `</div>`;
+            html += `</div>`;
+            html += `<div class="type-filters" id="types-${catKey}-${subKey}">`;
+            
+            // Add number type checkboxes for basics subcategories (except order_of_ops)
+            const basicsWithNumberTypes = ['add_subtract', 'multiply_divide', 'exponents_roots'];
+            if (catKey === 'basics' && basicsWithNumberTypes.includes(subKey)) {
+              html += `<div class="number-type-section">`;
+              html += `<span class="number-type-label">Number Types:</span>`;
+              html += `<div class="number-type-checkboxes">`;
+              const numberTypeLabels = {
+                'integers': 'Integers',
+                'fractions': 'Fractions',
+                'decimals': 'Decimals',
+                'percentages': 'Percentages'
+              };
+              for (const nt in numberTypeLabels) {
+                const checked = selectedNumberTypes.includes(nt) ? 'checked' : '';
+                html += `<label class="number-type-checkbox">
+                  <input type="checkbox" value="${nt}" ${checked} onchange="toggleNumberType('${nt}')">
+                  ${numberTypeLabels[nt]}
+                </label>`;
+              }
+              html += `</div>`;
+              html += `</div>`;
+            }
+            
+            html += `<div class="type-buttons">`;
+            if (formulaCount > 0) {
+              html += `<button class="type-btn formula" onclick="startSubcategoryType('${catKey}','${subKey}','formula')">
+                ${getTypeEmoji('formula')} Formulas <span class="type-count">(${formulaCount})</span>
+              </button>`;
+            }
+            if (factCount > 0) {
+              html += `<button class="type-btn fact" onclick="startSubcategoryType('${catKey}','${subKey}','fact')">
+                ${getTypeEmoji('fact')} Facts <span class="type-count">(${factCount})</span>
+              </button>`;
+            }
+            // Show worked problems button if generator exists OR static worked cards exist
+            const hasGen = hasGenerator(catKey, subKey);
+            if (workedCount > 0 || hasGen) {
+              const workedLabel = hasGen ? '∞ Generated' : `(${workedCount})`;
+              html += `<button class="type-btn worked" onclick="startSubcategoryType('${catKey}','${subKey}','worked')">
+                ${getTypeEmoji('worked')} Worked Problems <span class="type-count">${workedLabel}</span>
+              </button>`;
+            }
+            html += `</div>`;
+            html += `</div>`;
+            html += `</div>`;
+          } else {
+            // Simple button for categories without type support
+            html += `<button class="subcategory-btn" onclick="startSubcategory('${catKey}','${subKey}')">
+              <span>${sub.name}</span>
+              <span class="card-count">${totalCards} cards</span>
+            </button>`;
+          }
+        }
+        html += '</div>';
+        html += '</div>';
+      }
+
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+
+      document.getElementById('app').innerHTML = html;
+    }
+
+    // Toggle category open/closed
+    function toggleCategory(catKey) {
+      const cat = document.getElementById(`cat-${catKey}`);
+      const sub = document.getElementById(`sub-${catKey}`);
+      cat.classList.toggle('open');
+      sub.classList.toggle('open');
+    }
+
+    // Toggle subcategory type filters
+    function toggleSubcategory(catKey, subKey) {
+      const item = document.getElementById(`subitem-${catKey}-${subKey}`);
+      const types = document.getElementById(`types-${catKey}-${subKey}`);
+      item.classList.toggle('open');
+      types.classList.toggle('open');
+    }
+
+    // Toggle number type selection for basics
+    function toggleNumberType(numberType) {
+      const idx = selectedNumberTypes.indexOf(numberType);
+      if (idx === -1) {
+        selectedNumberTypes.push(numberType);
+      } else {
+        // Don't allow removing all - keep at least one
+        if (selectedNumberTypes.length > 1) {
+          selectedNumberTypes.splice(idx, 1);
+        } else {
+          // Re-check the checkbox since we're not allowing removal
+          const checkbox = document.querySelector(`input[type="checkbox"][value="${numberType}"]`);
+          if (checkbox) checkbox.checked = true;
+        }
+      }
+    }
+
+    // Start mixed mode
+    function startMixed() {
+      generatorModeActive = false;
+      currentGeneratorCatKey = null;
+      currentGeneratorSubKey = null;
+      activeCards = getAllCards();
+      currentMode = '🔀 Mixed Mode';
+      startPractice();
+    }
+
+    // Start master mode for a category
+    function startMaster(catKey) {
+      generatorModeActive = false;
+      currentGeneratorCatKey = null;
+      currentGeneratorSubKey = null;
+      const cat = data.categories[catKey];
+      activeCards = getCategoryCards(catKey);
+      currentMode = `${cat.icon} Master: ${cat.name}`;
+      startPractice();
+    }
+
+    // Start subcategory practice
+    function startSubcategory(catKey, subKey) {
+      generatorModeActive = false;
+      currentGeneratorCatKey = null;
+      currentGeneratorSubKey = null;
+      const cat = data.categories[catKey];
+      const sub = cat.subcategories[subKey];
+      activeCards = getSubcategoryCards(catKey, subKey);
+      currentMode = `${cat.icon} ${cat.name} → ${sub.name}`;
+      startPractice();
+    }
+
+    // Start subcategory practice filtered by type
+    function startSubcategoryType(catKey, subKey, type) {
+      const cat = data.categories[catKey];
+      const sub = cat.subcategories[subKey];
+      
+      // Reset generator mode
+      generatorModeActive = false;
+      currentGeneratorCatKey = null;
+      currentGeneratorSubKey = null;
+      
+      if (type === 'worked') {
+        // Enable generator mode for infinite worked problems
+        const generatorKey = `${catKey}.${subKey}`;
+        const hasGen = !!generators[generatorKey];
+        if (hasGen) {
+          generatorModeActive = true;
+          currentGeneratorCatKey = catKey;
+          currentGeneratorSubKey = subKey;
+        }
+        
+        // Get wrong queue cards first (these must come back)
+        activeCards = [];
+        const wrongCards = getWrongQueueCards();
+        wrongCards.forEach(card => {
+          if (card.generatorKey === generatorKey) {
+            activeCards.push({
+              ...card,
+              category: cat.name,
+              subcategory: sub.name
+            });
+          }
+        });
+        
+        if (hasGen) {
+          // Generate initial batch (wrong cards are prioritized)
+          if (activeCards.length === 0) {
+            const generatedCards = generateWorkedCards(catKey, subKey, 5);
+            activeCards.push(...generatedCards);
+          }
+        } else {
+          // No generator — use static worked cards from JSON
+          const staticWorked = sub.cards
+            .filter(card => card.type === 'worked')
+            .map(card => ({
+              ...card,
+              category: cat.name,
+              subcategory: sub.name
+            }));
+          activeCards.push(...staticWorked);
+        }
+      } else {
+        // For formula/fact, filter from static cards
+        activeCards = sub.cards
+          .filter(card => card.type === type)
+          .map(card => ({
+            ...card,
+            category: cat.name,
+            subcategory: sub.name
+          }));
+      }
+      
+      currentMode = `${cat.icon} ${cat.name} → ${sub.name} (${getTypeLabel(type)})`;
+      startPractice();
+    }
+
+    // Start practice session
+    function startPractice() {
+      currentCard = null;
+      previousCard = null;
+      canGoBack = false;
+      showRandomCard();
+    }
+
+    // Get a random card
+    function getRandomCard() {
+      // In generator mode, generate a fresh card each time
+      if (generatorModeActive && currentGeneratorCatKey && currentGeneratorSubKey) {
+        // Check wrong queue first - these must come back
+        const generatorKey = `${currentGeneratorCatKey}.${currentGeneratorSubKey}`;
+        const wrongCards = getWrongQueueCards().filter(c => c.generatorKey === generatorKey);
+        
+        if (wrongCards.length > 0 && Math.random() < 0.4) {
+          // 40% chance to show a wrong card if any exist
+          const cat = data.categories[currentGeneratorCatKey];
+          const sub = cat.subcategories[currentGeneratorSubKey];
+          const wrongCard = wrongCards[Math.floor(Math.random() * wrongCards.length)];
+          return {
+            ...wrongCard,
+            category: cat.name,
+            subcategory: sub.name
+          };
+        }
+        
+        // Generate a fresh new card
+        const seed = Math.floor(Math.random() * 1000000000);
+        const generated = generateWorkedCard(currentGeneratorCatKey, currentGeneratorSubKey, seed);
+        if (generated) {
+          const cat = data.categories[currentGeneratorCatKey];
+          const sub = cat.subcategories[currentGeneratorSubKey];
+          return {
+            ...generated,
+            category: cat.name,
+            subcategory: sub.name
+          };
+        }
+      }
+      
+      // Standard mode: pick from active cards pool
+      if (activeCards.length === 0) return null;
+      if (activeCards.length === 1) return activeCards[0];
+      
+      let newCard;
+      do {
+        const randomIndex = Math.floor(Math.random() * activeCards.length);
+        newCard = activeCards[randomIndex];
+      } while (newCard === currentCard && activeCards.length > 1);
+      
+      return newCard;
+    }
+
+    // Render KaTeX
+    function renderMath() {
+      if (typeof renderMathInElement !== 'undefined') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    // Show a card
+    function showCard(card, flipped = false) {
+      isFlipped = flipped;
+      
+      const content = flipped ? card.answer : card.question;
+      const label = flipped ? 'Answer' : 'Question';
+      const topicLabel = card.subcategory || card.category;
+      const isGenerated = card.isGenerated;
+      const showFeedback = isGenerated && flipped;
+      
+      document.getElementById('app').innerHTML = `
+        <div class="flashcard-container">
+          <div class="flashcard ${flipped ? 'flipped' : ''}" onclick="flipCard()">
+            <div class="topic-badge">${topicLabel}${isGenerated ? ' <span style="font-size:0.7em;opacity:0.7">✨</span>' : ''}</div>
+            <div class="card-label">${label}</div>
+            <div class="card-content">${content}</div>
+            <div class="flip-hint">Tap to flip</div>
+          </div>
+          ${showFeedback ? `
+          <div class="feedback-controls">
+            <button class="btn-got-it" onclick="markCorrect()">
+              ✓ Got it
+            </button>
+            <button class="btn-missed-it" onclick="markIncorrect()">
+              ✗ Missed it
+            </button>
+          </div>
+          ` : ''}
+          <div class="controls">
+            <button class="btn-back-topic" onclick="backToTopics()">
+              ← Topics
+            </button>
+            <button class="btn-back" onclick="goBack()" ${!canGoBack ? 'disabled' : ''}>
+              ↩ Back
+            </button>
+            <button class="btn-flip" onclick="flipCard()">
+              ↻ Flip
+            </button>
+            ${card.explanation ? `<button class="btn-info" onclick="openInfoPanel()">ℹ Info</button>` : ''}
+            <button class="btn-next" onclick="${showFeedback ? 'nextCard()' : 'nextCard()'}">
+              Next →
+            </button>
+          </div>
+          <div class="card-counter">
+            ${activeCards.length} cards in deck${wrongAnswerQueue.length > 0 ? ` | ${wrongAnswerQueue.length} to review` : ''}
+          </div>
+          <div class="current-mode">${currentMode}</div>
+          <div class="keyboard-hint">
+            <kbd>Space</kbd> flip &nbsp;
+            <kbd>→</kbd> next &nbsp;
+            <kbd>←</kbd> back &nbsp;
+            ${showFeedback ? '<kbd>G</kbd> got it &nbsp; <kbd>M</kbd> missed &nbsp;' : ''}
+            ${card.explanation ? '<kbd>I</kbd> info &nbsp;' : ''}
+            <kbd>Esc</kbd> topics
+          </div>
+        </div>
+        ${card.explanation ? `
+        <div class="info-overlay" id="infoOverlay" onclick="closeInfoPanel()"></div>
+        <div class="info-panel" id="infoPanel">
+          <div class="info-panel-header">
+            <h3>ℹ️ Detailed Explanation</h3>
+            <button class="info-close-btn" onclick="closeInfoPanel()">✕</button>
+          </div>
+          <div class="info-panel-body" id="infoPanelBody">
+            ${card.explanation}
+          </div>
+        </div>
+        ` : ''}
+      `;
+      
+      // Render math after DOM update
+      setTimeout(() => {
+        renderMath();
+        // Also render math inside info panel
+        const infoBody = document.getElementById('infoPanelBody');
+        if (infoBody && window.renderMathInElement) {
+          renderMathInElement(infoBody, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+          });
+        }
+      }, 10);
+    }
+
+    // Mark current card as correct
+    function markCorrect() {
+      if (currentCard && currentCard.isGenerated) {
+        removeFromWrongQueue(currentCard);
+      }
+      nextCard();
+    }
+
+    // Mark current card as incorrect - will come back
+    function markIncorrect() {
+      if (currentCard && currentCard.isGenerated) {
+        addToWrongQueue(currentCard);
+      }
+      nextCard();
+    }
+
+    // Show a random card
+    function showRandomCard() {
+      previousCard = currentCard;
+      currentCard = getRandomCard();
+      canGoBack = previousCard !== null;
+      showCard(currentCard, false);
+    }
+
+    // Flip the current card
+    function flipCard() {
+      if (currentCard) {
+        showCard(currentCard, !isFlipped);
+      }
+    }
+
+    // Open info explanation panel
+    function openInfoPanel() {
+      const overlay = document.getElementById('infoOverlay');
+      const panel = document.getElementById('infoPanel');
+      if (overlay && panel) {
+        overlay.classList.add('open');
+        panel.classList.add('open');
+        // Re-render math in panel
+        const infoBody = document.getElementById('infoPanelBody');
+        if (infoBody && window.renderMathInElement) {
+          renderMathInElement(infoBody, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+          });
+        }
+      }
+    }
+
+    // Close info explanation panel
+    function closeInfoPanel() {
+      const overlay = document.getElementById('infoOverlay');
+      const panel = document.getElementById('infoPanel');
+      if (overlay) overlay.classList.remove('open');
+      if (panel) panel.classList.remove('open');
+    }
+
+    // Go to next random card
+    function nextCard() {
+      showRandomCard();
+    }
+
+    // Go back to previous card
+    function goBack() {
+      if (previousCard && canGoBack) {
+        currentCard = previousCard;
+        previousCard = null;
+        canGoBack = false;
+        showCard(currentCard, false);
+      }
+    }
+
+    // Back to topic selection
+    function backToTopics() {
+      showTopicSelection();
+    }
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      // Only handle keys during practice
+      if (!currentCard) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        flipCard();
+      } else if (e.code === 'ArrowRight' || e.code === 'Enter') {
+        e.preventDefault();
+        nextCard();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        goBack();
+      } else if (e.code === 'Escape') {
+        e.preventDefault();
+        backToTopics();
+      } else if (e.code === 'KeyG' && isFlipped && currentCard.isGenerated) {
+        e.preventDefault();
+        markCorrect();
+      } else if (e.code === 'KeyM' && isFlipped && currentCard.isGenerated) {
+        e.preventDefault();
+        markIncorrect();
+      } else if (e.code === 'KeyI' && currentCard.explanation) {
+        e.preventDefault();
+        const panel = document.getElementById('infoPanel');
+        if (panel && panel.classList.contains('open')) {
+          closeInfoPanel();
+        } else {
+          openInfoPanel();
+        }
+      }
+    });
+
+    // ========== QUIZ MODE FUNCTIONS ==========
+
+    // Get today's date as a string
+    function getTodayString() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    // Load quiz stats from localStorage
+    function loadQuizStats() {
+      try {
+        const stored = localStorage.getItem(QUIZ_STORAGE_KEY);
+        if (stored) {
+          const stats = JSON.parse(stored);
+          if (stats.date === getTodayString()) {
+            quizCorrect = stats.correct || 0;
+            quizIncorrect = stats.incorrect || 0;
+            quizStreak = stats.streak || 0;
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Error loading quiz stats:', e);
+      }
+      // Reset for new day
+      quizCorrect = 0;
+      quizIncorrect = 0;
+      quizStreak = 0;
+    }
+
+    // Save quiz stats to localStorage
+    function saveQuizStats() {
+      const stats = {
+        date: getTodayString(),
+        correct: quizCorrect,
+        incorrect: quizIncorrect,
+        streak: quizStreak
+      };
+      localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(stats));
+    }
+
+    // Initialize the quiz
+    function initQuiz() {
+      loadQuizStats();
+      quizAnswered = false;
+      showQuizQuestion();
+    }
+
+    // Get random wrong answers for quiz
+    function getWrongAnswers(correctCard, count) {
+      const allCards = getAllCards();
+      const wrongAnswers = [];
+      const usedIndices = new Set();
+      const correctAnswer = correctCard.answer;
+
+      // Find the index of the correct card to exclude it
+      const correctIndex = allCards.findIndex(c => c.answer === correctAnswer);
+      if (correctIndex >= 0) usedIndices.add(correctIndex);
+
+      let attempts = 0;
+      while (wrongAnswers.length < count && attempts < 100) {
+        const idx = Math.floor(Math.random() * allCards.length);
+        if (!usedIndices.has(idx) && allCards[idx].answer !== correctAnswer) {
+          usedIndices.add(idx);
+          wrongAnswers.push(allCards[idx].answer);
+        }
+        attempts++;
+      }
+
+      return wrongAnswers;
+    }
+
+    // Shuffle array
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    // Show a quiz question
+    function showQuizQuestion() {
+      const allCards = getAllCards();
+      if (allCards.length < 4) {
+        document.getElementById('quiz-app').innerHTML = `
+          <div class="error">Need at least 4 flashcards for quiz mode.</div>
+        `;
+        return;
+      }
+
+      // Pick a random card
+      quizCurrentCard = allCards[Math.floor(Math.random() * allCards.length)];
+      quizAnswered = false;
+
+      // Get wrong answers
+      const wrongAnswers = getWrongAnswers(quizCurrentCard, 3);
+      
+      // Create options with correct answer and shuffle
+      quizOptions = shuffleArray([quizCurrentCard.answer, ...wrongAnswers]);
+
+      renderQuiz();
+    }
+
+    // Render the quiz UI
+    function renderQuiz() {
+      const todayFormatted = new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+
+      let html = `
+        <div class="today-date">${todayFormatted}</div>
+        <div class="quiz-stats">
+          <div class="stat-box">
+            <div class="stat-value correct">${quizCorrect}</div>
+            <div class="stat-label">Correct</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value incorrect">${quizIncorrect}</div>
+            <div class="stat-label">Incorrect</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value streak">🔥 ${quizStreak}</div>
+            <div class="stat-label">Streak</div>
+          </div>
+        </div>
+        <div class="quiz-card">
+          <div class="quiz-topic-badge">${quizCurrentCard.subcategory || quizCurrentCard.category}</div>
+          <div class="quiz-question">${quizCurrentCard.question}</div>
+          <div class="quiz-options" id="quiz-options">
+      `;
+
+      quizOptions.forEach((option, idx) => {
+        html += `
+          <button class="quiz-option" onclick="selectQuizAnswer(${idx})" id="quiz-opt-${idx}">
+            ${option}
+          </button>
+        `;
+      });
+
+      html += `
+          </div>
+          <div id="quiz-feedback"></div>
+          <button class="quiz-next-btn" id="quiz-next-btn" style="display:none" onclick="showQuizQuestion()">
+            Next Question →
+          </button>
+        </div>
+      `;
+
+      document.getElementById('quiz-app').innerHTML = html;
+      setTimeout(renderMath, 10);
+    }
+
+    // Handle answer selection
+    function selectQuizAnswer(idx) {
+      if (quizAnswered) return;
+      quizAnswered = true;
+
+      const selectedAnswer = quizOptions[idx];
+      const isCorrect = selectedAnswer === quizCurrentCard.answer;
+      const correctIdx = quizOptions.indexOf(quizCurrentCard.answer);
+
+      // Disable all options and show colors
+      quizOptions.forEach((_, i) => {
+        const btn = document.getElementById(`quiz-opt-${i}`);
+        btn.disabled = true;
+        if (i === correctIdx) {
+          btn.classList.add('correct');
+        } else if (i === idx) {
+          btn.classList.add('incorrect');
+        }
+      });
+
+      // Update stats
+      if (isCorrect) {
+        quizCorrect++;
+        quizStreak++;
+      } else {
+        quizIncorrect++;
+        quizStreak = 0;
+      }
+      saveQuizStats();
+
+      // Show feedback
+      const feedbackDiv = document.getElementById('quiz-feedback');
+      feedbackDiv.innerHTML = isCorrect 
+        ? '<div class="quiz-feedback correct">✅ Correct!</div>'
+        : '<div class="quiz-feedback incorrect">❌ Incorrect!</div>';
+
+      // Show next button
+      document.getElementById('quiz-next-btn').style.display = 'block';
+
+      // Update stats display
+      document.querySelector('.stat-value.correct').textContent = quizCorrect;
+      document.querySelector('.stat-value.incorrect').textContent = quizIncorrect;
+      document.querySelector('.stat-value.streak').textContent = '🔥 ' + quizStreak;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPendingReviews();
+      loadWrongQueue();
+      loadFlashcards();
+    });
+  </script>
+</body>
+</html>
