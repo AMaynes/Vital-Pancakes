@@ -2253,6 +2253,138 @@
               "question": "Find $v$ given $u$ if $f=u+iv$ is entire.",
               "answer": "Use Cauchy-Riemann: $$v_y=u_x,\\quad v_x=-u_y$$. Integrate and match both equations to determine $v$ (up to a constant).",
               "type": "formula"
+            },
+            {
+              "question": "What is a complex line integral (contour integral)?",
+              "answer": "$$\\int_C f(z)\\,dz = \\int_a^b f(z(t))\\,z'(t)\\,dt$$ where $z(t)$ is a parametrization of the curve $C$ for $t \\in [a,b]$",
+              "type": "formula",
+              "explanation": "<h4>Complex Line Integral</h4><div class=\"info-formula\">$$\\int_C f(z)\\,dz = \\int_a^b f(z(t))\\,z'(t)\\,dt$$</div><p>To evaluate, parametrize the contour $C$ as $z(t)$ for $t \\in [a,b]$, then substitute $dz = z'(t)\\,dt$ and integrate as a standard real integral.</p><div class=\"info-note\"><p><strong>Key difference from real integrals:</strong> The value depends on the <em>path</em> taken (unless the function is analytic in the region).</p></div>"
+            },
+            {
+              "question": "What is Cauchy's Integral Theorem?",
+              "answer": "If $f(z)$ is analytic on and inside a simple closed contour $C$, then $$\\oint_C f(z)\\,dz = 0$$",
+              "type": "formula",
+              "explanation": "<h4>Cauchy's Integral Theorem</h4><div class=\"info-formula\">$$\\oint_C f(z)\\,dz = 0$$</div><p>This is one of the most important theorems in complex analysis. It says that the integral of an analytic function around any closed loop is zero, provided the function is analytic everywhere inside.</p><div class=\"info-note\"><p><strong>Requirement:</strong> $f$ must be analytic on and inside $C$. If there are singularities inside, use the Residue Theorem instead.</p></div>"
+            },
+            {
+              "question": "What is Cauchy's Integral Formula?",
+              "answer": "If $f$ is analytic inside and on $C$, and $a$ is inside $C$: $$f(a) = \\frac{1}{2\\pi i}\\oint_C \\frac{f(z)}{z-a}\\,dz$$",
+              "type": "formula",
+              "explanation": "<h4>Cauchy's Integral Formula</h4><div class=\"info-formula\">$$f(a) = \\frac{1}{2\\pi i}\\oint_C \\frac{f(z)}{z-a}\\,dz$$</div><p>The value of an analytic function at any interior point is completely determined by its values on the boundary. This is remarkable — you can recover the function everywhere inside from boundary data alone.</p>"
+            },
+            {
+              "question": "What is the generalized Cauchy Integral Formula for derivatives?",
+              "answer": "$$f^{(n)}(a) = \\frac{n!}{2\\pi i}\\oint_C \\frac{f(z)}{(z-a)^{n+1}}\\,dz$$",
+              "type": "formula",
+              "explanation": "<h4>Generalized Cauchy Integral Formula</h4><div class=\"info-formula\">$$f^{(n)}(a) = \\frac{n!}{2\\pi i}\\oint_C \\frac{f(z)}{(z-a)^{n+1}}\\,dz$$</div><p>All derivatives of an analytic function can be expressed as contour integrals. This proves that analytic functions are infinitely differentiable.</p>"
+            },
+            {
+              "question": "What is $\\oint_C \\frac{1}{z-a}\\,dz$ where $C$ is a circle centered at $a$?",
+              "answer": "$$2\\pi i$$",
+              "type": "formula",
+              "explanation": "<h4>Fundamental Contour Integral</h4><div class=\"info-formula\">$$\\oint_{|z-a|=r} \\frac{dz}{z-a} = 2\\pi i$$</div><p>Parametrize: $z = a + re^{it}$, $dz = ire^{it}\\,dt$. Then $\\int_0^{2\\pi} \\frac{ire^{it}}{re^{it}}\\,dt = i\\int_0^{2\\pi} dt = 2\\pi i$.</p>"
+            },
+            {
+              "question": "What is $\\oint_C \\frac{1}{(z-a)^n}\\,dz$ for integer $n \\neq 1$, where $C$ circles $a$?",
+              "answer": "$$0$$",
+              "type": "formula",
+              "explanation": "<h4>Key Contour Integral</h4><div class=\"info-formula\">$$\\oint_{|z-a|=r} \\frac{dz}{(z-a)^n} = 0 \\quad \\text{for } n \\neq 1$$</div><p>Only the $n=1$ case ($1/(z-a)$) gives a nonzero result. This is why the residue — the coefficient of $1/(z-a)$ in the Laurent series — is the only term that contributes to contour integrals.</p>"
+            },
+            {
+              "question": "What is a Laurent series?",
+              "answer": "$$f(z) = \\sum_{n=-\\infty}^{\\infty} a_n(z-a)^n = \\cdots + \\frac{a_{-2}}{(z-a)^2} + \\frac{a_{-1}}{z-a} + a_0 + a_1(z-a) + \\cdots$$",
+              "type": "formula",
+              "explanation": "<h4>Laurent Series</h4><div class=\"info-formula\">$$f(z) = \\sum_{n=-\\infty}^{\\infty} a_n(z-a)^n$$</div><p>A Laurent series generalizes the Taylor series by allowing <strong>negative powers</strong>. The negative-power part is called the <strong>principal part</strong>. The coefficient $a_{-1}$ is the <strong>residue</strong>.</p>"
+            },
+            {
+              "question": "What is a residue?",
+              "answer": "The coefficient $a_{-1}$ in the Laurent series of $f$ about a singularity $a$: $$\\text{Res}(f, a) = a_{-1}$$",
+              "type": "fact",
+              "explanation": "<h4>Residue</h4><div class=\"info-formula\">$$\\text{Res}(f, a) = a_{-1}$$</div><p>The residue is the coefficient of $\\frac{1}{z-a}$ in the Laurent expansion around $z = a$. It is the only term that contributes to contour integrals, which is why it is so important.</p>"
+            },
+            {
+              "question": "What is the Residue Theorem?",
+              "answer": "If $f$ is analytic inside $C$ except at isolated singularities $a_1, \\ldots, a_n$: $$\\oint_C f(z)\\,dz = 2\\pi i \\sum_{k=1}^{n} \\text{Res}(f, a_k)$$",
+              "type": "formula",
+              "explanation": "<h4>Residue Theorem</h4><div class=\"info-formula\">$$\\oint_C f(z)\\,dz = 2\\pi i \\sum_{k=1}^{n} \\text{Res}(f, a_k)$$</div><p>This generalizes Cauchy's theorem. The contour integral equals $2\\pi i$ times the sum of residues at all singularities enclosed by $C$. This is the most powerful tool for evaluating contour integrals.</p>"
+            },
+            {
+              "question": "How do you find the residue at a simple pole $z = a$?",
+              "answer": "$$\\text{Res}(f, a) = \\lim_{z \\to a}(z-a)f(z)$$",
+              "type": "formula",
+              "explanation": "<h4>Residue at a Simple Pole</h4><div class=\"info-formula\">$$\\text{Res}(f, a) = \\lim_{z \\to a}(z-a)f(z)$$</div><p>For a simple pole (order 1), multiply by $(z-a)$ to cancel the pole, then take the limit.</p>"
+            },
+            {
+              "question": "How do you find the residue at a pole of order $m$?",
+              "answer": "$$\\text{Res}(f, a) = \\frac{1}{(m-1)!}\\lim_{z \\to a} \\frac{d^{m-1}}{dz^{m-1}}\\left[(z-a)^m f(z)\\right]$$",
+              "type": "formula",
+              "explanation": "<h4>Residue at a Pole of Order $m$</h4><div class=\"info-formula\">$$\\text{Res}(f, a) = \\frac{1}{(m-1)!}\\lim_{z \\to a} \\frac{d^{m-1}}{dz^{m-1}}\\left[(z-a)^m f(z)\\right]$$</div><p>Multiply by $(z-a)^m$ to cancel the pole, differentiate $m-1$ times, divide by $(m-1)!$, then take the limit.</p>"
+            },
+            {
+              "question": "What are the three types of isolated singularities?",
+              "answer": "1. **Removable**: no negative powers in Laurent series\n2. **Pole of order $m$**: finitely many negative powers (down to $(z-a)^{-m}$)\n3. **Essential**: infinitely many negative powers",
+              "type": "fact",
+              "explanation": "<h4>Types of Isolated Singularities</h4><ul><li><strong>Removable singularity:</strong> $f$ can be redefined to be analytic (e.g., $\\frac{\\sin z}{z}$ at $z=0$)</li><li><strong>Pole of order $m$:</strong> Laurent series has a finite principal part ending at $(z-a)^{-m}$</li><li><strong>Essential singularity:</strong> Laurent series has infinitely many negative powers (e.g., $e^{1/z}$ at $z=0$)</li></ul>"
+            },
+            {
+              "question": "What is the ML inequality (estimation lemma)?",
+              "answer": "If $|f(z)| \\leq M$ on contour $C$ of length $L$: $$\\left|\\oint_C f(z)\\,dz\\right| \\leq ML$$",
+              "type": "formula",
+              "explanation": "<h4>ML Inequality</h4><div class=\"info-formula\">$$\\left|\\oint_C f(z)\\,dz\\right| \\leq ML$$</div><p>$M$ is the maximum of $|f|$ on $C$, and $L$ is the arc length. This is used to bound integrals and show that certain integrals vanish (e.g., on large semicircular arcs).</p>"
+            },
+            {
+              "question": "Evaluate $\\oint_{|z|=2} \\frac{1}{z-1}\\,dz$",
+              "answer": "$f(z) = 1$ is entire, $a = 1$ is inside $|z|=2$. By Cauchy's formula: $$\\oint \\frac{1}{z-1}\\,dz = 2\\pi i \\cdot f(1) = 2\\pi i$$",
+              "type": "worked",
+              "explanation": "<h4>Worked Example</h4><p>The integrand $\\frac{1}{z-1}$ has a simple pole at $z=1$, which is inside $|z|=2$. By the Residue Theorem, $\\text{Res} = 1$, so the integral is $2\\pi i$.</p>"
+            },
+            {
+              "question": "Evaluate $\\oint_{|z|=1} \\frac{e^z}{z}\\,dz$",
+              "answer": "By Cauchy's integral formula with $f(z) = e^z$, $a = 0$: $$\\frac{1}{2\\pi i}\\oint \\frac{e^z}{z}\\,dz = e^0 = 1 \\implies \\oint = 2\\pi i$$",
+              "type": "worked",
+              "explanation": "<h4>Worked Example</h4><p>Write the integrand as $\\frac{f(z)}{z-0}$ with $f(z) = e^z$. Cauchy's formula gives $f(0) = 1$, so the integral is $2\\pi i$.</p>"
+            },
+            {
+              "question": "Find $\\text{Res}\\left(\\frac{1}{z^2+1},\\, i\\right)$",
+              "answer": "Simple pole at $z = i$. Factor: $z^2+1 = (z-i)(z+i)$. $$\\text{Res} = \\lim_{z \\to i}\\frac{z-i}{(z-i)(z+i)} = \\frac{1}{2i} = -\\frac{i}{2}$$",
+              "type": "worked",
+              "explanation": "<h4>Worked Example</h4><p>$\\frac{1}{z^2+1}$ has simple poles at $z = \\pm i$. At $z = i$: multiply by $(z-i)$ and take the limit to get $\\frac{1}{i+i} = \\frac{1}{2i}$.</p>"
+            },
+            {
+              "question": "Evaluate $\\oint_{|z|=2} \\frac{1}{z^2+1}\\,dz$",
+              "answer": "Poles at $z = \\pm i$ (both inside $|z|=2$). $\\text{Res}(i) = \\frac{1}{2i}$, $\\text{Res}(-i) = \\frac{-1}{2i}$. Sum $= 0$. $$\\oint = 2\\pi i \\cdot 0 = 0$$",
+              "type": "worked",
+              "explanation": "<h4>Worked Example</h4><p>Both poles are inside the contour. The residues cancel out, so the integral is zero. This also follows from the fact that $\\frac{1}{z^2+1} = \\frac{d}{dz}[\\arctan z]$ has no net winding.</p>"
+            },
+            {
+              "question": "Find $\\text{Res}\\left(\\frac{e^z}{z^2},\\, 0\\right)$",
+              "answer": "Pole of order 2. $$\\text{Res} = \\lim_{z \\to 0} \\frac{d}{dz}\\left[z^2 \\cdot \\frac{e^z}{z^2}\\right] = \\lim_{z \\to 0} e^z = 1$$",
+              "type": "worked",
+              "explanation": "<h4>Worked Example</h4><p>$\\frac{e^z}{z^2}$ has a pole of order 2 at $z = 0$. Use the order-$m$ residue formula with $m = 2$: multiply by $z^2$, differentiate once, take the limit.</p>"
+            },
+            {
+              "question": "Evaluate $\\oint_{|z|=1} \\frac{e^z}{z^2}\\,dz$",
+              "answer": "By the generalized Cauchy formula with $f(z)=e^z$, $n=1$, $a=0$: $$\\oint = 2\\pi i \\cdot f'(0) = 2\\pi i \\cdot 1 = 2\\pi i$$",
+              "type": "worked",
+              "explanation": "<h4>Worked Example</h4><p>This is $\\oint \\frac{f(z)}{(z-0)^2}\\,dz$ with $f(z)=e^z$. The generalized formula gives $\\frac{2\\pi i}{1!}f'(0) = 2\\pi i$.</p>"
+            },
+            {
+              "question": "Evaluate $\\oint_{|z|=3} \\frac{z}{(z-1)(z-2)}\\,dz$",
+              "answer": "Simple poles at $z=1,2$ (both inside). $\\text{Res}(1) = \\frac{1}{1-2} = -1$. $\\text{Res}(2) = \\frac{2}{2-1} = 2$. $$\\oint = 2\\pi i(-1+2) = 2\\pi i$$",
+              "type": "worked",
+              "explanation": "<h4>Worked Example</h4><p>Use partial fractions or the simple pole residue formula at each pole. Sum the residues and multiply by $2\\pi i$.</p>"
+            },
+            {
+              "question": "Evaluate $\\oint_{|z|=1} z^n\\,dz$ for integer $n$",
+              "answer": "$$\\oint_{|z|=1} z^n\\,dz = \\begin{cases} 2\\pi i & \\text{if } n = -1 \\\\ 0 & \\text{otherwise} \\end{cases}$$",
+              "type": "formula",
+              "explanation": "<h4>Key Contour Integral</h4><p>Only $z^{-1}$ has a nonzero integral around a closed contour. For all other integer powers, the antiderivative $\\frac{z^{n+1}}{n+1}$ is single-valued and the integral vanishes.</p>"
+            },
+            {
+              "question": "What is the winding number of a closed curve $C$ around point $a$?",
+              "answer": "$$n(C, a) = \\frac{1}{2\\pi i}\\oint_C \\frac{dz}{z-a}$$",
+              "type": "formula",
+              "explanation": "<h4>Winding Number</h4><div class=\"info-formula\">$$n(C, a) = \\frac{1}{2\\pi i}\\oint_C \\frac{dz}{z-a}$$</div><p>The winding number counts how many times $C$ wraps counterclockwise around $a$. For a simple closed curve traversed once counterclockwise, $n = 1$ for points inside and $n = 0$ for points outside.</p>"
             }
           ]
         }
@@ -2729,6 +2861,111 @@
               "question": "What is trapezoidal rule?",
               "answer": "$$\\int_a^b f(x)\\,dx \\approx \\frac{\\Delta x}{2}[f(x_0) + 2f(x_1) + ... + 2f(x_{n-1}) + f(x_n)]$$",
               "type": "formula"
+            },
+            {
+              "question": "What is $u$-substitution?",
+              "answer": "If $u = g(x)$, then $du = g'(x)\\,dx$ and $$\\int f(g(x))g'(x)\\,dx = \\int f(u)\\,du$$",
+              "type": "formula"
+            },
+            {
+              "question": "Evaluate $\\int 2x\\cos(x^2)\\,dx$ using substitution",
+              "answer": "Let $u = x^2$, $du = 2x\\,dx$: $$\\int \\cos(u)\\,du = \\sin(x^2) + C$$",
+              "type": "worked"
+            },
+            {
+              "question": "Evaluate $\\int \\frac{2x}{1+x^2}\\,dx$ using substitution",
+              "answer": "Let $u = 1+x^2$, $du = 2x\\,dx$: $$\\int \\frac{du}{u} = \\ln|1+x^2| + C$$",
+              "type": "worked"
+            },
+            {
+              "question": "What is the integration by parts formula and when do you use it?",
+              "answer": "$$\\int u\\,dv = uv - \\int v\\,du$$ Use when the integrand is a product of two functions. Choose $u$ using LIATE: Logs, Inverse trig, Algebraic, Trig, Exponential.",
+              "type": "formula"
+            },
+            {
+              "question": "Evaluate $\\int x\\sin x\\,dx$ using integration by parts",
+              "answer": "$u = x$, $dv = \\sin x\\,dx$, $du = dx$, $v = -\\cos x$: $$-x\\cos x + \\int \\cos x\\,dx = -x\\cos x + \\sin x + C$$",
+              "type": "worked"
+            },
+            {
+              "question": "Evaluate $\\int x^2 \\ln x\\,dx$ using integration by parts",
+              "answer": "$u = \\ln x$, $dv = x^2\\,dx$: $$\\frac{x^3}{3}\\ln x - \\int \\frac{x^3}{3}\\cdot\\frac{1}{x}\\,dx = \\frac{x^3}{3}\\ln x - \\frac{x^3}{9} + C$$",
+              "type": "worked"
+            },
+            {
+              "question": "What is partial fraction decomposition?",
+              "answer": "A technique to break a rational function $\\frac{P(x)}{Q(x)}$ into simpler fractions. Factor $Q(x)$, then write a sum of fractions with unknown coefficients and solve.",
+              "type": "fact"
+            },
+            {
+              "question": "Decompose $\\frac{1}{(x-1)(x+2)}$ into partial fractions",
+              "answer": "$$\\frac{1}{(x-1)(x+2)} = \\frac{A}{x-1} + \\frac{B}{x+2}$$ Solving: $A = \\frac{1}{3}$, $B = -\\frac{1}{3}$, so $$\\frac{1}{3}\\cdot\\frac{1}{x-1} - \\frac{1}{3}\\cdot\\frac{1}{x+2}$$",
+              "type": "worked"
+            },
+            {
+              "question": "Evaluate $\\int \\frac{1}{(x-1)(x+2)}\\,dx$",
+              "answer": "Using partial fractions: $$\\frac{1}{3}\\ln|x-1| - \\frac{1}{3}\\ln|x+2| + C = \\frac{1}{3}\\ln\\left|\\frac{x-1}{x+2}\\right| + C$$",
+              "type": "worked"
+            },
+            {
+              "question": "How do you handle a repeated linear factor in partial fractions?",
+              "answer": "For $(x-a)^n$, use: $$\\frac{A_1}{x-a} + \\frac{A_2}{(x-a)^2} + \\cdots + \\frac{A_n}{(x-a)^n}$$",
+              "type": "formula"
+            },
+            {
+              "question": "How do you handle an irreducible quadratic factor in partial fractions?",
+              "answer": "For $(ax^2+bx+c)$, use: $$\\frac{Ax+B}{ax^2+bx+c}$$",
+              "type": "formula"
+            },
+            {
+              "question": "Evaluate $\\int \\frac{3x+5}{(x+1)(x+3)}\\,dx$",
+              "answer": "$\\frac{3x+5}{(x+1)(x+3)} = \\frac{1}{x+1} + \\frac{2}{x+3}$: $$\\ln|x+1| + 2\\ln|x+3| + C$$",
+              "type": "worked"
+            },
+            {
+              "question": "What is trigonometric substitution and when do you use it?",
+              "answer": "A technique for integrands with $\\sqrt{a^2-x^2}$, $\\sqrt{a^2+x^2}$, or $\\sqrt{x^2-a^2}$. Substitute $x = a\\sin\\theta$, $x = a\\tan\\theta$, or $x = a\\sec\\theta$ respectively.",
+              "type": "fact"
+            },
+            {
+              "question": "For $\\sqrt{a^2 - x^2}$, what trig substitution do you use?",
+              "answer": "$x = a\\sin\\theta$, $dx = a\\cos\\theta\\,d\\theta$, and $\\sqrt{a^2-x^2} = a\\cos\\theta$",
+              "type": "formula"
+            },
+            {
+              "question": "For $\\sqrt{a^2 + x^2}$, what trig substitution do you use?",
+              "answer": "$x = a\\tan\\theta$, $dx = a\\sec^2\\theta\\,d\\theta$, and $\\sqrt{a^2+x^2} = a\\sec\\theta$",
+              "type": "formula"
+            },
+            {
+              "question": "For $\\sqrt{x^2 - a^2}$, what trig substitution do you use?",
+              "answer": "$x = a\\sec\\theta$, $dx = a\\sec\\theta\\tan\\theta\\,d\\theta$, and $\\sqrt{x^2-a^2} = a\\tan\\theta$",
+              "type": "formula"
+            },
+            {
+              "question": "Evaluate $\\int \\frac{dx}{\\sqrt{4-x^2}}$",
+              "answer": "Let $x = 2\\sin\\theta$: $$\\int \\frac{2\\cos\\theta\\,d\\theta}{2\\cos\\theta} = \\theta + C = \\arcsin\\frac{x}{2} + C$$",
+              "type": "worked"
+            },
+            {
+              "question": "What is Simpson's Rule?",
+              "answer": "$$\\int_a^b f(x)\\,dx \\approx \\frac{\\Delta x}{3}[f(x_0) + 4f(x_1) + 2f(x_2) + 4f(x_3) + \\cdots + f(x_n)]$$ where $n$ is even",
+              "type": "formula"
+            },
+            {
+              "question": "What is the formula for improper integrals with infinite upper limit?",
+              "answer": "$$\\int_a^{\\infty} f(x)\\,dx = \\lim_{b \\to \\infty} \\int_a^b f(x)\\,dx$$",
+              "type": "formula"
+            },
+            {
+              "question": "Evaluate $\\int_1^{\\infty} \\frac{1}{x^2}\\,dx$",
+              "answer": "$$\\lim_{b \\to \\infty}\\left[-\\frac{1}{x}\\right]_1^b = 0 - (-1) = 1$$",
+              "type": "worked"
+            },
+            {
+              "question": "What is tabular integration (repeated integration by parts)?",
+              "answer": "For $\\int p(x)e^{ax}\\,dx$ or similar, create a table of successive derivatives of one function and antiderivatives of the other, alternating signs: $+, -, +, \\ldots$",
+              "type": "fact"
             }
           ]
         },
@@ -2958,6 +3195,96 @@
             {
               "question": "Solution to logistic equation?",
               "answer": "$$P(t) = \\frac{M}{1 + Ae^{-kt}}$$",
+              "type": "formula"
+            }
+          ]
+        },
+        "laplace_transforms": {
+          "name": "Laplace Transforms",
+          "cards": [
+            {
+              "question": "What is the definition of the Laplace Transform?",
+              "answer": "$$\\mathcal{L}\\{f(t)\\} = F(s) = \\int_0^{\\infty} e^{-st} f(t)\\,dt$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{1\\}$?",
+              "answer": "$$\\frac{1}{s}, \\quad s > 0$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{t\\}$?",
+              "answer": "$$\\frac{1}{s^2}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{t^n\\}$?",
+              "answer": "$$\\frac{n!}{s^{n+1}}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{e^{at}\\}$?",
+              "answer": "$$\\frac{1}{s-a}, \\quad s > a$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{\\sin(at)\\}$?",
+              "answer": "$$\\frac{a}{s^2 + a^2}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{\\cos(at)\\}$?",
+              "answer": "$$\\frac{s}{s^2 + a^2}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{e^{at}\\sin(bt)\\}$?",
+              "answer": "$$\\frac{b}{(s-a)^2 + b^2}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{e^{at}\\cos(bt)\\}$?",
+              "answer": "$$\\frac{s-a}{(s-a)^2 + b^2}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{t e^{at}\\}$?",
+              "answer": "$$\\frac{1}{(s-a)^2}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{\\sinh(at)\\}$?",
+              "answer": "$$\\frac{a}{s^2 - a^2}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{\\cosh(at)\\}$?",
+              "answer": "$$\\frac{s}{s^2 - a^2}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{\\delta(t)\\}$ (Dirac delta)?",
+              "answer": "$$1$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{u(t-a)\\}$ (unit step function)?",
+              "answer": "$$\\frac{e^{-as}}{s}$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is the Laplace Transform of a derivative $\\mathcal{L}\\{f'(t)\\}$?",
+              "answer": "$$sF(s) - f(0)$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is $\\mathcal{L}\\{f''(t)\\}$?",
+              "answer": "$$s^2 F(s) - sf(0) - f'(0)$$",
+              "type": "formula"
+            },
+            {
+              "question": "What is the linearity property of the Laplace Transform?",
+              "answer": "$$\\mathcal{L}\\{af(t) + bg(t)\\} = aF(s) + bG(s)$$",
               "type": "formula"
             }
           ]
