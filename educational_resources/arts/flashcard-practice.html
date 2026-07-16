@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!--
+Overview & Purpose
+Provide an interactive arts flashcard workspace for guided practice, knowledge
+checks, card submission, and local review.
+
+What other scripts call it
+Linked from the Arts educational resources page.
+
+What scripts this script calls
+KaTeX and its automatic rendering extension.
+
+Other files it relies on
+../../style.css and flashcards.json.
+
+Notes
+Practice progress and review queues are stored locally in the browser.
+-->
+
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -389,210 +408,312 @@
       transform: rotate(90deg);
     }
 
-    /* Flashcard Styles */
+    /* Flashcard study view */
     .flashcard-container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 1rem;
+      width: min(100%, 760px);
+      margin: 1.5rem auto 0;
+    }
+
+    .study-context {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 0.75rem;
+      color: #657084;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .study-context-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .study-context-side {
+      flex: 0 0 auto;
+      margin-left: 1rem;
+      color: #8992a3;
     }
 
     .flashcard {
       width: 100%;
-      max-width: 600px;
-      min-height: 250px;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      min-height: 340px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 249, 246, 0.98));
+      border: 1px solid rgba(20, 38, 74, 0.14);
+      border-radius: 18px;
+      box-shadow:
+        0 24px 55px rgba(20, 38, 74, 0.09),
+        0 4px 12px rgba(20, 38, 74, 0.05);
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 1.5rem;
+      padding: 1.25rem 1.5rem 1.1rem;
       cursor: pointer;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
       position: relative;
+      overflow: hidden;
+      transition:
+        transform 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease;
+    }
+
+    .flashcard::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 3px;
+      background: linear-gradient(90deg, #2a6f97, #62a8a0);
     }
 
     .flashcard:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+      transform: translateY(-3px);
+      border-color: rgba(42, 111, 151, 0.3);
+      box-shadow:
+        0 28px 60px rgba(20, 38, 74, 0.12),
+        0 6px 16px rgba(20, 38, 74, 0.06);
     }
 
     .flashcard.flipped {
-      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+      background:
+        linear-gradient(180deg, rgba(246, 250, 249, 0.99), rgba(239, 247, 245, 0.99));
+    }
+
+    .flashcard.flipped::before {
+      background: linear-gradient(90deg, #3f7d73, #86b8a9);
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      min-height: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(20, 38, 74, 0.09);
     }
 
     .topic-badge {
-      position: absolute;
-      top: 0.75rem;
-      left: 0.75rem;
-      background: rgb(43,59,116);
-      color: #fff;
-      padding: 0.25rem 0.6rem;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      max-width: 45%;
+      color: #31566f;
+      font-size: 0.76rem;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      max-width: 70%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     .card-label {
-      position: absolute;
-      top: 0.75rem;
-      right: 0.75rem;
-      color: #888;
-      font-size: 0.85rem;
-      font-style: italic;
+      color: #7a8494;
+      font-size: 0.72rem;
+      font-weight: 750;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .generated-label {
+      margin-left: 0.4rem;
+      color: #607f78;
+      font-size: 0.67rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
 
     .card-content {
-      font-size: 1.2rem;
+      display: flex;
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 2rem clamp(0.25rem, 4vw, 2.5rem);
+      color: #18253d;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.2rem, 2.2vw, 1.55rem);
       text-align: center;
-      line-height: 1.8;
-      margin-top: 1.5rem;
-      padding: 0 0.5rem;
+      line-height: 1.65;
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
 
     .flip-hint {
-      position: absolute;
-      bottom: 0.75rem;
-      color: #aaa;
-      font-size: 0.8rem;
+      width: 100%;
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(20, 38, 74, 0.09);
+      color: #8b93a0;
+      font-size: 0.72rem;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      text-align: center;
     }
 
     .controls {
       display: flex;
-      gap: 0.5rem;
-      margin-top: 1.5rem;
+      gap: 0.6rem;
+      width: 100%;
+      margin-top: 1rem;
       flex-wrap: wrap;
       justify-content: center;
     }
 
     .controls button {
-      padding: 0.7rem 1rem;
-      font-size: 0.95rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 8px;
+      min-height: 42px;
+      padding: 0.65rem 1rem;
+      border: 1px solid #d5dae2;
+      border-radius: 9px;
+      background: #fff;
+      color: #344054;
+      font-size: 0.88rem;
+      font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition:
+        background 160ms ease,
+        border-color 160ms ease,
+        color 160ms ease,
+        transform 160ms ease;
+    }
+
+    .controls button:hover:not(:disabled) {
+      transform: translateY(-1px);
     }
 
     .btn-back-topic {
-      background: #6c757d;
-      color: #fff;
+      margin-right: auto;
     }
 
     .btn-back-topic:hover {
-      background: #5a6268;
-    }
-
-    .btn-back {
-      background: #495057;
-      color: #fff;
+      background: #f5f7fa;
+      border-color: #b9c1cd;
     }
 
     .btn-back:hover:not(:disabled) {
-      background: #343a40;
+      background: #f5f7fa;
+      border-color: #b9c1cd;
     }
 
     .btn-back:disabled {
-      background: #ccc;
+      background: #f3f4f6;
+      color: #b3b8c2;
       cursor: not-allowed;
     }
 
     .btn-flip {
-      background: rgb(43,59,116);
-      color: #fff;
+      border-color: #234d6a !important;
+      background: #234d6a !important;
+      color: #fff !important;
     }
 
     .btn-flip:hover {
-      background: rgb(33,49,106);
+      border-color: #193b53 !important;
+      background: #193b53 !important;
     }
 
     .btn-next {
-      background: #28a745;
-      color: #fff;
+      border-color: #315f59 !important;
+      background: #315f59 !important;
+      color: #fff !important;
     }
 
     .btn-next:hover {
-      background: #218838;
+      border-color: #254d48 !important;
+      background: #254d48 !important;
     }
 
     /* Feedback buttons for generated cards */
     .feedback-controls {
       display: flex;
-      gap: 1rem;
+      gap: 0.65rem;
       justify-content: center;
-      margin-bottom: 1rem;
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    .btn-got-it,
+    .btn-missed-it {
+      flex: 1;
+      max-width: 220px;
+      padding: 0.75rem 1.25rem;
+      border-radius: 9px;
+      font-size: 0.92rem;
+      font-weight: 750;
+      cursor: pointer;
+      transition:
+        background 160ms ease,
+        border-color 160ms ease,
+        transform 160ms ease;
     }
 
     .btn-got-it {
-      padding: 0.8rem 2rem;
-      font-size: 1.1rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: #28a745;
-      color: #fff;
+      border: 1px solid #93b6aa;
+      background: #eef6f3;
+      color: #28584f;
     }
 
     .btn-got-it:hover {
-      background: #218838;
-      transform: scale(1.05);
+      background: #e1f0eb;
+      border-color: #6f9f91;
+      transform: translateY(-1px);
     }
 
     .btn-missed-it {
-      padding: 0.8rem 2rem;
-      font-size: 1.1rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: #dc3545;
-      color: #fff;
+      border: 1px solid #d7aaa4;
+      background: #fbf1ef;
+      color: #83483f;
     }
 
     .btn-missed-it:hover {
-      background: #c82333;
-      transform: scale(1.05);
+      background: #f7e5e2;
+      border-color: #c98d84;
+      transform: translateY(-1px);
+    }
+
+    .session-details {
+      display: flex;
+      justify-content: center;
+      gap: 0.55rem;
+      margin-top: 0.9rem;
+      color: #747d8c;
+      font-size: 0.8rem;
+    }
+
+    .session-details span + span::before {
+      content: "·";
+      margin-right: 0.55rem;
+      color: #adb3bd;
     }
 
     .card-counter {
-      margin-top: 1rem;
-      color: #666;
-      font-size: 0.9rem;
+      color: inherit;
     }
 
     .current-mode {
-      margin-top: 0.4rem;
-      color: #888;
-      font-size: 0.85rem;
-      font-style: italic;
+      color: inherit;
     }
 
     .keyboard-hint {
-      margin-top: 0.75rem;
-      color: #999;
-      font-size: 0.75rem;
+      margin-top: 0.65rem;
+      color: #9299a5;
+      font-size: 0.7rem;
       text-align: center;
     }
 
     .keyboard-hint kbd {
-      background: #eee;
-      padding: 0.15rem 0.4rem;
+      padding: 0.12rem 0.35rem;
+      border: 1px solid #d9dde4;
       border-radius: 4px;
-      font-family: monospace;
-      border: 1px solid #ddd;
-      font-size: 0.7rem;
+      background: #f7f8fa;
+      color: #586174;
+      font-family: inherit;
+      font-size: 0.66rem;
+      box-shadow: 0 1px 0 #d2d6dd;
     }
 
     /* Hide keyboard hints on mobile */
@@ -873,23 +994,27 @@
       }
 
       .flashcard {
-        min-height: 220px;
-        padding: 1rem;
+        min-height: 300px;
+        padding: 1rem 1rem 0.9rem;
       }
 
       .card-content {
-        font-size: 1.1rem;
-        margin-top: 2rem;
+        padding: 1.5rem 0.25rem;
+        font-size: 1.16rem;
       }
 
       .topic-badge {
         font-size: 0.7rem;
-        padding: 0.2rem 0.5rem;
       }
 
       .controls button {
         padding: 0.6rem 0.8rem;
         font-size: 0.9rem;
+      }
+
+      .btn-back-topic {
+        width: 100%;
+        margin-right: 0;
       }
 
       .submit-form {
@@ -919,6 +1044,14 @@
         min-width: 0;
         padding: 0.6rem 0.5rem;
         font-size: 0.85rem;
+      }
+
+      .study-context-side {
+        display: none;
+      }
+
+      .session-details {
+        flex-wrap: wrap;
       }
     }
 
@@ -3109,50 +3242,60 @@
       const topicLabel = card.subcategory || card.category;
       const isGenerated = card.isGenerated;
       const showFeedback = isGenerated && flipped;
+      const reviewCount = wrongAnswerQueue.length;
       
       document.getElementById('app').innerHTML = `
         <div class="flashcard-container">
+          <div class="study-context">
+            <span class="study-context-label">${currentMode}</span>
+            <span class="study-context-side">${flipped ? 'Reviewing answer' : 'Active recall'}</span>
+          </div>
           <div class="flashcard ${flipped ? 'flipped' : ''}" onclick="flipCard()">
-            <div class="topic-badge">${topicLabel}${isGenerated ? ' <span style="font-size:0.7em;opacity:0.7">✨</span>' : ''}</div>
-            <div class="card-label">${label}</div>
+            <div class="card-meta">
+              <div class="topic-badge">
+                ${topicLabel}
+                ${isGenerated ? '<span class="generated-label">Generated</span>' : ''}
+              </div>
+              <div class="card-label">${label}</div>
+            </div>
             <div class="card-content">${content}</div>
-            <div class="flip-hint">Tap to flip</div>
+            <div class="flip-hint">${flipped ? 'Select your result below or tap to return to the question' : 'Tap the card or press Space to reveal the answer'}</div>
           </div>
           ${showFeedback ? `
           <div class="feedback-controls">
             <button class="btn-got-it" onclick="markCorrect()">
-              ✓ Got it
+              I knew this
             </button>
             <button class="btn-missed-it" onclick="markIncorrect()">
-              ✗ Missed it
+              Review again
             </button>
           </div>
           ` : ''}
           <div class="controls">
             <button class="btn-back-topic" onclick="backToTopics()">
-              ← Topics
+              Topics
             </button>
             <button class="btn-back" onclick="goBack()" ${!canGoBack ? 'disabled' : ''}>
-              ↩ Back
+              Previous
             </button>
             <button class="btn-flip" onclick="flipCard()">
-              ↻ Flip
+              ${flipped ? 'Show question' : 'Reveal answer'}
             </button>
-            ${card.explanation ? `<button class="btn-info" onclick="openInfoPanel()">ℹ Info</button>` : ''}
+            ${card.explanation ? `<button class="btn-info" onclick="openInfoPanel()">Explanation</button>` : ''}
             <button class="btn-next" onclick="${showFeedback ? 'nextCard()' : 'nextCard()'}">
-              Next →
+              Next
             </button>
           </div>
-          <div class="card-counter">
-            ${activeCards.length} cards in deck${wrongAnswerQueue.length > 0 ? ` | ${wrongAnswerQueue.length} to review` : ''}
+          <div class="session-details">
+            <span class="card-counter">${activeCards.length} cards in this deck</span>
+            ${reviewCount > 0 ? `<span>${reviewCount} queued for review</span>` : ''}
           </div>
-          <div class="current-mode">${currentMode}</div>
           <div class="keyboard-hint">
-            <kbd>Space</kbd> flip &nbsp;
+            <kbd>Space</kbd> reveal &nbsp;
             <kbd>→</kbd> next &nbsp;
-            <kbd>←</kbd> back &nbsp;
-            ${showFeedback ? '<kbd>G</kbd> got it &nbsp; <kbd>M</kbd> missed &nbsp;' : ''}
-            ${card.explanation ? '<kbd>I</kbd> info &nbsp;' : ''}
+            <kbd>←</kbd> previous &nbsp;
+            ${showFeedback ? '<kbd>G</kbd> knew it &nbsp; <kbd>M</kbd> review &nbsp;' : ''}
+            ${card.explanation ? '<kbd>I</kbd> explanation &nbsp;' : ''}
             <kbd>Esc</kbd> topics
           </div>
         </div>
