@@ -1,39 +1,80 @@
 <!DOCTYPE html>
+<!--
+Overview & Purpose
+Present arts references and interactive study tools.
+
+Architectural Relationships
+Called by: Educational Resources.
+Calls: genericListLoader.js and the arts flashcard application.
+
+External Resources
+../../style.css, ../../genericListLoader.js, arts_notes_list.txt
+
+Notes
+Arts remains part of the site because visual understanding complements technical study.
+-->
+
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Arts Database</title>
-  <link rel="stylesheet" href="../../style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Arts notes, references, and interactive flashcard practice from Artificially Neuroscience.">
+  <title>Arts | Artificially Neuroscience</title>
+  <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
   <header class="site-header">
-    <h1>Artificially Neuroscience</h1>
-    <nav>
-      <a href="../../index.html">Home</a>
-      <a href="../../research_publications/index.html">Research Publications</a>
-      <a href="../../literature_analysis/index.html">Literature Analysis</a>
-      <a href="../../educational_resources/index.html">Educational Resources</a>
+    <a class="brand" href="../../index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../../research_publications/">Research</a>
+      <a href="../../literature_analysis/">Analysis</a>
+      <a href="../" aria-current="page">Learn</a>
     </nav>
   </header>
 
-  <main>
-    <section id="arts-section">
-      <h2>Arts Resources</h2>
-      <ul id="pub-list"></ul>
+  <main id="main-content">
+    <section class="page-intro">
+      <p class="breadcrumb"><a href="../">Educational Resources</a> / Arts</p>
+      <p class="eyebrow">Arts</p>
+      <h1>Train observation as deliberately as calculation.</h1>
+      <p>
+        Creative practice develops visual language, composition, historical
+        understanding, and the ability to communicate complex ideas clearly.
+      </p>
     </section>
 
-    <section id="interactive-tools">
-      <h2>Interactive Tools</h2>
-      <ul id="tools-list">
-        <li><a href="flashcard-practice.html">🎴 Arts Flash Card Practice</a></li>
-      </ul>
-    </section>
+    <div class="content-layout">
+      <section class="content-panel">
+        <p class="eyebrow">Reference library</p>
+        <h2>Notes and resources</h2>
+        <p>Arts notes and external references will appear here as they are added.</p>
+        <ul
+          class="content-list"
+          data-list-source="arts_notes_list.txt"
+          data-empty-message="No long-form arts notes have been listed yet. Interactive practice is available now."
+        ></ul>
+      </section>
+
+      <aside class="content-panel tool-card">
+        <p class="eyebrow">Interactive tool</p>
+        <h2>Arts flashcards</h2>
+        <p>Practice visual concepts, movements, terminology, and historical context.</p>
+        <a class="button" href="flashcard-practice.html">Begin arts practice</a>
+      </aside>
+    </div>
   </main>
 
-  <script src="/genericListLoader.js"></script>
-  <script>
-    loadList("educational_resources/arts/arts_notes_list.txt", "pub-list");
-  </script>
+  <footer class="site-footer">
+    <p>Artificially Neuroscience</p>
+    <a href="../">All learning disciplines</a>
+  </footer>
+
+  <script src="../../genericListLoader.js"></script>
 </body>
 </html>

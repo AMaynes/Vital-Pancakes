@@ -1,201 +1,105 @@
 # Artificially Neuroscience
 
-🌐 **Live Site**: [https://amaynes.github.io/artificially-neuroscience/](https://amaynes.github.io/artificially-neuroscience/)
+[View the live website](https://amaynes.github.io/artificially-neuroscience/)
 
-A personal academic website hosting research publications, literature analysis, and educational resources spanning Computer Science, Neuroscience, Mathematics, and Arts.
+Artificially Neuroscience is Alex Maynes's public interdisciplinary learning laboratory. It preserves research, critical reading notes, academic reference material, and interactive study tools across neuroscience, artificial intelligence, mathematics, computer science, and art.
 
-## 📋 Overview
+The project is intentionally built as a small static website. Its purpose is to make accumulated learning durable, navigable, and useful without requiring a server, database, account, or paid hosting platform.
 
-This static website serves as a centralized repository for:
-- **Research Publications**: Original research papers and curated publications
-- **Literature Analysis**: Critical analyses and reflections on academic works
-- **Educational Resources**: Notes, models, and learning materials organized by discipline
+## Running the Project
 
-## 🗂️ Structure
+The site runs on Windows, macOS, and Linux in any modern browser.
 
-```
-artificially-neuroscience/
-├── index.html                 # Homepage
-├── style.css                  # Global styles
-├── genericListLoader.js       # Dynamic content loader
-├── research_publications/
-│   ├── index.html
-│   ├── publications.txt       # Personal publications
-│   ├── extra-publications.txt # Curated publications
-│   └── pdfs/                  # PDF storage
-├── literature_analysis/
-│   ├── index.html
-│   └── lit_analysis_list.txt  # Analysis documents
-└── educational_resources/
-    ├── index.html
-    ├── compsci/
-    │   ├── index.html
-    │   └── compsci_notes_list.txt
-    ├── mathematics/
-    │   ├── index.html
-    │   ├── mathematics_notes_list.txt
-    │   ├── flashcard-practice.html  # Interactive flashcard app
-    │   └── flashcards.json          # Flashcard data with LaTeX
-    ├── arts/
-    │   ├── index.html
-    │   ├── arts_notes_list.txt
-    │   ├── flashcard-practice.html  # Interactive arts flashcard app
-    │   └── flashcards.json          # Arts flashcard data
-    └── neurosci/
-        ├── index.html
-        └── neurosci_notes_list.txt
+From the repository root, start a local web server:
+
+```bash
+python3 -m http.server 8000
 ```
 
-## ✨ Features
+Then open [http://localhost:8000](http://localhost:8000).
 
-- **Dynamic Content Loading**: Uses a custom JavaScript loader to parse and display content from text files
-- **Responsive Navigation**: Consistent header navigation across all pages
-- **Mobile Friendly**: Fully responsive design optimized for phones, tablets, and desktops
-- **Organized by Discipline**: Educational resources separated into CS, Neuroscience, Mathematics, and Arts
-- **Alphabetical Sorting**: All lists are automatically sorted alphabetically
-- **Clean Design**: Minimalist CSS with professional styling
-- **Interactive Flashcards**: Mathematics flashcard practice with:
-  - **Topic Tree Selection**: Browse by category (Foundations, Calculus, Linear Algebra)
-  - **Subcategory Practice**: Focus on specific topics (Limits, Derivatives, Matrices, etc.)
-  - **Master Mode**: Practice all cards within a category branch
-  - **Mixed Mode**: Random cards from all topics
-  - **Test Your Knowledge**: Multiple-choice quiz mode with daily score tracking
-  - **LaTeX Rendering**: Full support for equations, integrals, matrices, and vectors
-  - **Submit Cards**: Submit new flashcard ideas for review (stored locally)
-  - **Pending Reviews**: View and manage submitted cards before adding to the deck
+Opening files directly from disk is not supported because browser security rules prevent the content loader from fetching local text and JSON files.
 
-## 🔧 Technical Implementation
+## System Overview
 
-### Content Format
+GitHub Pages serves the repository as a static website. Each major section has its own HTML entry page, while `style.css` provides the shared visual system.
 
-The site uses a custom `<Entry>` block format for listing documents:
+Repository-managed lists use small text files containing `<Entry>` blocks. `genericListLoader.js` fetches those files, parses their metadata, sorts entries alphabetically, and renders safe links into the page.
 
-```
+The mathematics and arts flashcard applications load their subject-specific `flashcards.json` files. Quiz scores, missed-answer queues, and drafted submissions remain in the visitor's browser through `localStorage`.
+
+See [STRUCTURE.md](STRUCTURE.md) for the complete annotated repository map.
+
+## Homepage
+
+`index.html` introduces the project's purpose and directs visitors toward research, analysis, and active learning. It highlights the connection between the site's disciplines and surfaces the mathematics flashcard laboratory as a major feature.
+
+## Research Publications
+
+`research_publications/` separates original work from selected external publications. Metadata lives in text files so a paper can be added without editing page markup.
+
+## Literature Analysis
+
+`literature_analysis/` is the future home of durable critical-reading notes. It is designed to preserve arguments, methods, limitations, and open questions after a paper or book has been read.
+
+## Educational Resources
+
+`educational_resources/` organizes learning materials into mathematics, neuroscience, computer science, and arts. Each discipline can contain long-form notes, external references, downloadable material, and interactive tools.
+
+## Flashcard Laboratories
+
+Mathematics and arts each include a browser-based flashcard application. Features include topic selection, mixed practice, master modes, knowledge tests, daily statistics, missed-answer review, LaTeX rendering, and locally drafted card submissions.
+
+The applications currently share duplicated implementation code. Consolidating them into one reusable engine is tracked in [TODO.md](TODO.md).
+
+## Adding List Content
+
+Content lists use this format:
+
+```text
 <Entry>
-Name: "Document Title - Author Name"
-PDF-Path: "path/to/document.pdf"
+Name: "Document Title"
+PDF-Path: "relative/path/to/document.pdf"
+Description: "Optional short explanation."
 <Entry-End>
 ```
 
-### Generic List Loader
+Add entries to the appropriate text file:
 
-The `genericListLoader.js` script:
-1. Fetches content from specified text files
-2. Parses `<Entry>` blocks to extract names and paths
-3. Sorts entries alphabetically by name
-4. Dynamically generates HTML lists with links
+- `research_publications/publications.txt`
+- `research_publications/extra-publications.txt`
+- `literature_analysis/lit_analysis_list.txt`
+- A discipline's `*_notes_list.txt`
 
-### Usage Example
+Paths are resolved relative to the page that loads the list.
 
-```javascript
-loadList("publications.txt", "research-pub-list");
+## Adding Flashcards
+
+Flashcards live in each discipline's `flashcards.json`. Cards are grouped into categories and subcategories:
+
+```json
+{
+  "question": "What is the derivative of $x^2$?",
+  "answer": "$2x$"
+}
 ```
 
-## 📝 Adding Content
+Mathematics cards support KaTeX using `$...$` for inline expressions and `$$...$$` for display expressions.
 
-### Adding a Publication
+## Deployment
 
-1. Navigate to `research_publications/publications.txt` (or `extra-publications.txt`)
-2. Add a new entry:
-   ```
-   <Entry>
-   Name: "Your Paper Title - Your Name"
-   PDF-Path: "pdfs/your-paper.pdf"
-   <Entry-End>
-   ```
-3. Place the PDF in `research_publications/pdfs/`
+The production site is hosted from the `main` branch with GitHub Pages. Publishing an update requires committing and pushing the verified static files; no separate build step is required.
 
-### Adding Educational Resources
+## Additional Information
 
-1. Navigate to the appropriate category folder (e.g., `educational_resources/compsci/`)
-2. Add an entry to the category's text file (e.g., `compsci_notes_list.txt`)
-3. Follow the same `<Entry>` block format
+- `TODO.md` tracks immediate and eventual work.
+- `STRUCTURE.md` documents the responsibility of every maintained folder and file.
+- Content submitted through the flashcard interface remains on the current device until manually copied into the repository.
+- The repository intentionally avoids analytics, accounts, and remote persistence.
 
-### Adding Literature Analysis
+## Dependencies
 
-1. Edit `literature_analysis/lit_analysis_list.txt`
-2. Add your analysis document following the entry format
-
-### Adding Math Flashcards
-
-The flashcards use a hierarchical JSON structure with categories and subcategories.
-
-1. Edit `educational_resources/mathematics/flashcards.json`
-2. Find the appropriate category and subcategory, then add a card:
-   ```json
-   {
-     "question": "Your question (supports $inline$ and $$display$$ math)",
-     "answer": "The answer (also supports LaTeX)"
-   }
-   ```
-3. To add a new subcategory under an existing category:
-   ```json
-   "newsubcategory": {
-     "name": "Display Name",
-     "cards": [ ... ]
-   }
-   ```
-
-**Current Categories:**
-- **Foundations**: Basics (Integers, Fractions, Decimals), Algebra, Trigonometry, Vector Math
-- **Calculus**: Limits, Derivatives, Integrals, Series, Differential Equations, Multivariable
-- **Linear Algebra**: Matrices, Eigenvalues, Linear Systems
-
-**LaTeX Tips:**
-- Use `$...$` for inline math
-- Use `$$...$$` for display math
-- Supports integrals, limits, matrices, vectors, and all standard LaTeX notation
-
-### Submitting Flashcards from Mobile
-
-The flashcard practice page includes a submission system for drafting new cards on the go:
-
-1. Navigate to the Flash Card Practice page
-2. Click the **"➕ Submit Card"** tab
-3. Select a topic from the dropdown (or "Unrelated Topics" if none fit)
-4. Enter the question and answer using LaTeX for equations
-5. Submit - the card is saved to your browser's local storage
-
-**Reviewing Submissions:**
-- Click **"📋 Pending Reviews"** to see all submitted cards
-- Use **"Copy JSON"** to copy the card in the correct format for `flashcards.json`
-- Delete individual cards or clear all when done
-
-*Note: Submitted cards are stored in your browser's localStorage and persist until cleared.*
-
-## 🚀 Deployment
-
-This is a static website that can be deployed to any web hosting service:
-
-- **GitHub Pages**: Push to a repository and enable GitHub Pages
-- **Netlify**: Drag and drop the folder or connect to a Git repository
-- **Vercel**: Import the project from Git
-- **Traditional Hosting**: Upload files via FTP to any web server
-
-No build process or server-side rendering required.
-
-## 🎨 Customization
-
-### Styling
-
-Edit `style.css` to customize:
-- Color scheme (currently uses `rgb(43,59,116)` for links)
-- Layout and spacing
-- Typography and fonts
-- Header and navigation appearance
-
-### Navigation
-
-Update the navigation links in each `index.html` file's `<nav>` section to add or remove pages.
-
-## 📄 License
-
-This is a personal academic website. Content and code structure are available for reference.
-
-## 👤 Author
-
-Alex Maynes
-
----
-
-*Last updated: February 2026*
+- A modern web browser
+- Python 3 for the documented local server command
+- GitHub Pages for production hosting
+- KaTeX 0.16.9 from jsDelivr for mathematical expression rendering

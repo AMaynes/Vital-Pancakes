@@ -1,0 +1,10 @@
+# macOS metadata
+.DS_Store
+
+# Local server and editor artifacts
+*.log
+.idea/
+
+# Temporary output
+tmp/
+dist/

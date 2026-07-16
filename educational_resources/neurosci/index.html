@@ -1,32 +1,71 @@
 <!DOCTYPE html>
+<!--
+Overview & Purpose
+Present neuroscience learning resources and establish the site's central subject area.
+
+Architectural Relationships
+Called by: Educational Resources.
+Calls: genericListLoader.js.
+
+External Resources
+../../style.css, ../../genericListLoader.js, neurosci_notes_list.txt
+
+Notes
+Future interactive neuroscience models should be linked from this page.
+-->
+
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neuroscience Database</title>
-  <link rel="stylesheet" href="../../style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Neuroscience notes and learning resources from Artificially Neuroscience.">
+  <title>Neuroscience | Artificially Neuroscience</title>
+  <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
   <header class="site-header">
-    <h1>Artificially Neuroscience</h1>
-    <nav>
-      <a href="../../index.html">Home</a>
-      <a href="../../research_publications/index.html">Research Publications</a>
-      <a href="../../literature_analysis/index.html">Literature Analysis</a>
-      <a href="../../educational_resources/index.html">Educational Resources</a>
+    <a class="brand" href="../../index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../../research_publications/">Research</a>
+      <a href="../../literature_analysis/">Analysis</a>
+      <a href="../" aria-current="page">Learn</a>
     </nav>
   </header>
 
-  <main>
-    <section id="neurosci-section">
-      <h2>Neuroscience Resources</h2>
-      <ul id="pub-list"></ul>
+  <main id="main-content">
+    <section class="page-intro">
+      <p class="breadcrumb"><a href="../">Educational Resources</a> / Neuroscience</p>
+      <p class="eyebrow">Neuroscience</p>
+      <h1>Study intelligence in the system that produced it.</h1>
+      <p>
+        Neural computation, information storage, cognition, learning, and the
+        biological mechanisms that inspire artificial models.
+      </p>
+    </section>
+
+    <section class="content-panel">
+      <p class="eyebrow">Reference library</p>
+      <h2>Notes and resources</h2>
+      <p>Neuroscience notes, models, and curated references will appear alphabetically.</p>
+      <ul
+        class="content-list"
+        data-list-source="neurosci_notes_list.txt"
+        data-empty-message="The neuroscience library is being established. The first resource will appear here."
+      ></ul>
     </section>
   </main>
 
-  <script src="/genericListLoader.js"></script>
-  <script>
-    loadList("educational_resources/neurosci/neurosci_notes_list.txt", "pub-list");
-  </script>
+  <footer class="site-footer">
+    <p>Artificially Neuroscience</p>
+    <a href="../">All learning disciplines</a>
+  </footer>
+
+  <script src="../../genericListLoader.js"></script>
 </body>
 </html>

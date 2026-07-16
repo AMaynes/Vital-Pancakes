@@ -1,4 +1,5 @@
 <Entry>
 Name: "Synaptic Information Storage Capacity Measured With Information Theory - T. Bartol et al."
 PDF-Path: "pdfs/synaptic-info-storage-pub.pdf"
+Description: "A quantitative investigation of synaptic information capacity and the precision of neural information storage."
 <Entry-End>

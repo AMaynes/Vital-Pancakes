@@ -1,39 +1,83 @@
 <!DOCTYPE html>
+<!--
+Overview & Purpose
+Present mathematics notes, references, and interactive study tools.
+
+Architectural Relationships
+Called by: Educational Resources.
+Calls: genericListLoader.js and the mathematics flashcard application.
+
+External Resources
+../../style.css, ../../genericListLoader.js, mathematics_notes_list.txt
+
+Notes
+The flashcard application remains the primary active mathematics resource.
+-->
+
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mathematics Database</title>
-  <link rel="stylesheet" href="../../style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Mathematics notes, references, and interactive flashcard practice from Artificially Neuroscience.">
+  <title>Mathematics | Artificially Neuroscience</title>
+  <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
   <header class="site-header">
-    <h1>Artificially Neuroscience</h1>
-    <nav>
-      <a href="../../index.html">Home</a>
-      <a href="../../research_publications/index.html">Research Publications</a>
-      <a href="../../literature_analysis/index.html">Literature Analysis</a>
-      <a href="../../educational_resources/index.html">Educational Resources</a>
+    <a class="brand" href="../../index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../../research_publications/">Research</a>
+      <a href="../../literature_analysis/">Analysis</a>
+      <a href="../" aria-current="page">Learn</a>
     </nav>
   </header>
 
-  <main>
-    <section id="mathematics-section">
-      <h2>Mathematics Resources</h2>
-      <ul id="pub-list"></ul>
+  <main id="main-content">
+    <section class="page-intro">
+      <p class="breadcrumb"><a href="../">Educational Resources</a> / Mathematics</p>
+      <p class="eyebrow">Mathematics</p>
+      <h1>The language beneath models and systems.</h1>
+      <p>
+        Build durable foundations in algebra, trigonometry, calculus, linear
+        algebra, differential equations, and related tools.
+      </p>
     </section>
 
-    <section id="interactive-tools">
-      <h2>Interactive Tools</h2>
-      <ul id="tools-list">
-        <li><a href="flashcard-practice.html">🎴 Flash Card Practice</a></li>
-      </ul>
-    </section>
+    <div class="content-layout">
+      <section class="content-panel">
+        <p class="eyebrow">Reference library</p>
+        <h2>Notes and resources</h2>
+        <p>Long-form mathematics resources will appear here as they are added.</p>
+        <ul
+          class="content-list"
+          data-list-source="mathematics_notes_list.txt"
+          data-empty-message="No long-form mathematics notes have been listed yet. Interactive practice is available now."
+        ></ul>
+      </section>
+
+      <aside class="content-panel tool-card">
+        <p class="eyebrow">Interactive tool</p>
+        <h2>Flashcard laboratory</h2>
+        <p>
+          Practice by topic, generate worked problems, mix subjects, test
+          knowledge, and revisit missed answers.
+        </p>
+        <a class="button" href="flashcard-practice.html">Begin mathematics practice</a>
+      </aside>
+    </div>
   </main>
 
-  <script src="/genericListLoader.js"></script>
-  <script>
-    loadList("educational_resources/neurosci/neurosci_notes_list.txt", "pub-list");
-  </script>
+  <footer class="site-footer">
+    <p>Artificially Neuroscience</p>
+    <a href="../">All learning disciplines</a>
+  </footer>
+
+  <script src="../../genericListLoader.js"></script>
 </body>
 </html>

@@ -1,32 +1,71 @@
 <!DOCTYPE html>
+<!--
+Overview & Purpose
+Present computer-science and artificial-intelligence learning resources.
+
+Architectural Relationships
+Called by: Educational Resources.
+Calls: genericListLoader.js.
+
+External Resources
+../../style.css, ../../genericListLoader.js, compsci_notes_list.txt
+
+Notes
+Use this section for durable technical notes rather than project-specific documentation.
+-->
+
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Computer Science Database</title>
-  <link rel="stylesheet" href="../../style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Computer science and artificial-intelligence learning resources from Artificially Neuroscience.">
+  <title>Computer Science | Artificially Neuroscience</title>
+  <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
   <header class="site-header">
-    <h1>Artificially Neuroscience</h1>
-    <nav>
-      <a href="../../index.html">Home</a>
-      <a href="../../research_publications/index.html">Research Publications</a>
-      <a href="../../literature_analysis/index.html">Literature Analysis</a>
-      <a href="../../educational_resources/index.html">Educational Resources</a>
+    <a class="brand" href="../../index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../../research_publications/">Research</a>
+      <a href="../../literature_analysis/">Analysis</a>
+      <a href="../" aria-current="page">Learn</a>
     </nav>
   </header>
 
-  <main>
-    <section id="compsci-section">
-      <h2>Computer Science Resources</h2>
-      <ul id="pub-list"></ul>
+  <main id="main-content">
+    <section class="page-intro">
+      <p class="breadcrumb"><a href="../">Educational Resources</a> / Computer Science</p>
+      <p class="eyebrow">Computer Science</p>
+      <h1>Understand computation well enough to build with it.</h1>
+      <p>
+        Programming, algorithms, artificial intelligence, software architecture,
+        and the computational ideas connecting models to working systems.
+      </p>
+    </section>
+
+    <section class="content-panel">
+      <p class="eyebrow">Reference library</p>
+      <h2>Notes and resources</h2>
+      <p>Technical notes and curated resources will appear alphabetically.</p>
+      <ul
+        class="content-list"
+        data-list-source="compsci_notes_list.txt"
+        data-empty-message="The computer-science library is being established. The first resource will appear here."
+      ></ul>
     </section>
   </main>
 
-  <script src="/genericListLoader.js"></script>
-  <script>
-    loadList("educational_resources/neurosci/neurosci_notes_list.txt", "pub-list");
-  </script>
+  <footer class="site-footer">
+    <p>Artificially Neuroscience</p>
+    <a href="../">All learning disciplines</a>
+  </footer>
+
+  <script src="../../genericListLoader.js"></script>
 </body>
 </html>

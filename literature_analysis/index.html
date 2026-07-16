@@ -1,32 +1,71 @@
 <!DOCTYPE html>
+<!--
+Overview & Purpose
+Collect critical analyses and durable reflections on academic literature.
+
+Architectural Relationships
+Called by: Homepage and global navigation.
+Calls: genericListLoader.js and documents listed in lit_analysis_list.txt.
+
+External Resources
+../style.css, ../genericListLoader.js, lit_analysis_list.txt
+
+Notes
+The visible empty state communicates that this section is intentionally growing.
+-->
+
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Literature Analysis</title>
-  <link rel="stylesheet" href="../style.css" />
+  <meta name="description" content="Critical reading notes and literature analysis from Artificially Neuroscience.">
+  <title>Literature Analysis | Artificially Neuroscience</title>
+  <link rel="stylesheet" href="../style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
   <header class="site-header">
-    <h1>Artificially Neuroscience</h1>
-    <nav>
-      <a href="../index.html">Home</a>
-      <a href="../research_publications/">Research Publications</a>
-      <a href="../educational_resources/">Educational Resources</a>
+    <a class="brand" href="../index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../research_publications/">Research</a>
+      <a href="./" aria-current="page">Analysis</a>
+      <a href="../educational_resources/">Learn</a>
     </nav>
   </header>
 
-  <main>
-    <h2>Literature Analysis</h2>
-    <p>This is a list of works I have read, analyzed, and documented for myself 
-      and others should they be interested or find useful.<p>
-    <ul id="pub-list"></ul>
+  <main id="main-content">
+    <section class="page-intro">
+      <p class="breadcrumb"><a href="../index.html">Home</a> / Literature Analysis</p>
+      <p class="eyebrow">Read, question, connect</p>
+      <h1>Notes that make reading cumulative.</h1>
+      <p>
+        This section preserves analyses of important papers and books so useful
+        arguments, methods, limitations, and open questions remain available after reading.
+      </p>
+    </section>
+
+    <section class="content-panel">
+      <p class="eyebrow">Analysis library</p>
+      <h2>Documented readings</h2>
+      <p>Entries will appear alphabetically as analyses are added.</p>
+      <ul
+        class="content-list"
+        data-list-source="lit_analysis_list.txt"
+        data-empty-message="The analysis library is being established. The first documented reading will appear here."
+      ></ul>
+    </section>
   </main>
 
-  <!-- Load the generic loader and call it -->
+  <footer class="site-footer">
+    <p>Artificially Neuroscience</p>
+    <a href="../index.html">Return home</a>
+  </footer>
+
   <script src="../genericListLoader.js"></script>
-  <script>
-    loadList("lit_analysis_list.txt", "pub-list");
-  </script>
 </body>
 </html>

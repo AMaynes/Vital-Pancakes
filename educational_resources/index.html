@@ -1,36 +1,106 @@
 <!DOCTYPE html>
+<!--
+Overview & Purpose
+Present the site's learning disciplines and direct visitors to their resources.
+
+Architectural Relationships
+Called by: Homepage and global navigation.
+Calls: Computer Science, Neuroscience, Mathematics, and Arts resource pages.
+
+External Resources
+../style.css
+
+Notes
+Keep discipline descriptions broad enough to support future notes and tools.
+-->
+
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Educational Resources</title>
-  <link rel="stylesheet" href="../style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Explore notes, reference material, and interactive study tools across mathematics, neuroscience, computer science, and art.">
+  <title>Educational Resources | Artificially Neuroscience</title>
+  <link rel="stylesheet" href="../style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
   <header class="site-header">
-    <h1>Artificially Neuroscience</h1>
-    <nav>
-      <a href="../index.html">Home</a>
-      <a href="../literature_analysis/">Literature Analysis</a>
-      <a href="../research_publications/">Research Publications</a>
+    <a class="brand" href="../index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../research_publications/">Research</a>
+      <a href="../literature_analysis/">Analysis</a>
+      <a href="./" aria-current="page">Learn</a>
     </nav>
   </header>
 
-  <main>
-    <section id="educational_resources-section">
-      <h2>Educational Resources</h2>
-      <ul id="resources-list"></ul>
+  <main id="main-content">
+    <section class="page-intro">
+      <p class="breadcrumb"><a href="../index.html">Home</a> / Educational Resources</p>
+      <p class="eyebrow">Learn across disciplines</p>
+      <h1>Build understanding from multiple directions.</h1>
+      <p>
+        Notes, reference material, and interactive tools connect the mathematics
+        of intelligence to its biological, computational, and creative expressions.
+      </p>
+    </section>
+
+    <section class="discipline-grid" aria-label="Learning disciplines">
+      <article class="discipline-card">
+        <span class="discipline-icon" aria-hidden="true">∑</span>
+        <h2>Mathematics</h2>
+        <p>Foundations, algebra, calculus, linear algebra, and structured problem practice.</p>
+        <a class="text-link" href="mathematics/">Explore mathematics <span aria-hidden="true">→</span></a>
+      </article>
+
+      <article class="discipline-card">
+        <span class="discipline-icon" aria-hidden="true">◎</span>
+        <h2>Neuroscience</h2>
+        <p>Notes and resources about neural systems, information, cognition, and the biological basis of intelligence.</p>
+        <a class="text-link" href="neurosci/">Explore neuroscience <span aria-hidden="true">→</span></a>
+      </article>
+
+      <article class="discipline-card">
+        <span class="discipline-icon" aria-hidden="true">&lt;/&gt;</span>
+        <h2>Computer Science</h2>
+        <p>Computational ideas, programming concepts, artificial intelligence, and technical learning resources.</p>
+        <a class="text-link" href="compsci/">Explore computer science <span aria-hidden="true">→</span></a>
+      </article>
+
+      <article class="discipline-card">
+        <span class="discipline-icon" aria-hidden="true">◇</span>
+        <h2>Arts</h2>
+        <p>Practice and reference material for visual language, creative analysis, and artistic understanding.</p>
+        <a class="text-link" href="arts/">Explore arts <span aria-hidden="true">→</span></a>
+      </article>
+    </section>
+
+    <section class="spotlight">
+      <div>
+        <p class="eyebrow">Interactive learning</p>
+        <h2>Study actively instead of only collecting notes.</h2>
+        <p>
+          The flashcard laboratories support focused topics, mixed practice,
+          knowledge testing, missed-answer review, and locally drafted additions.
+        </p>
+        <a class="button button-primary" href="mathematics/flashcard-practice.html">Open mathematics practice</a>
+      </div>
+      <div class="spotlight-details" aria-label="Available study collections">
+        <span>Mathematics<br>700+ cards</span>
+        <span>Arts<br>100+ cards</span>
+        <span>Daily quiz tracking</span>
+        <span>Mobile-friendly review</span>
+      </div>
     </section>
   </main>
 
-  <main>
-    <p>Select a category below to view a database I've created of my notes, models, and external links relating to that topic.</p>
-    <ul id="resources-list">
-      <li id="compsci"><a href="compsci/index.html">💻 Computer Science</a></li>
-      <li id="neurosci"><a href="neurosci/index.html">🧠 Neuroscience</a></li>
-      <li id="mathematics"><a href="mathematics/index.html">📐 Mathematics</a></li>
-      <li id="arts"><a href="arts/index.html">🎨 Arts</a></li>
-    </ul>
-  </main>
+  <footer class="site-footer">
+    <p>Artificially Neuroscience</p>
+    <a href="https://github.com/AMaynes/artificially-neuroscience">View on GitHub</a>
+  </footer>
 </body>
 </html>

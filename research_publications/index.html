@@ -1,41 +1,84 @@
 <!DOCTYPE html>
+<!--
+Overview & Purpose
+Present original research and selected external publications.
+
+Architectural Relationships
+Called by: Homepage and global navigation.
+Calls: genericListLoader.js and publication PDF files.
+
+External Resources
+../style.css, ../genericListLoader.js, publications.txt, extra-publications.txt
+
+Notes
+Publication metadata remains in text files so new papers do not require HTML edits.
+-->
+
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Research Publications</title>
-  <link rel="stylesheet" href="../style.css" />
+  <meta name="description" content="Original research and selected publications from Artificially Neuroscience.">
+  <title>Research Publications | Artificially Neuroscience</title>
+  <link rel="stylesheet" href="../style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
   <header class="site-header">
-    <h1>Artificially Neuroscience</h1>
-    <nav>
-      <a href="../index.html">Home</a>
-      <a href="../literature_analysis/index.html">Literature Analysis</a>
-      <a href="../educational_resources/index.html">Educational Resources</a>
+    <a class="brand" href="../index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="./" aria-current="page">Research</a>
+      <a href="../literature_analysis/">Analysis</a>
+      <a href="../educational_resources/">Learn</a>
     </nav>
   </header>
 
-  <main>
-    <h2>Research Publications</h2>
-    <!-- Section: My Publications -->
-    <section id="my-publications">
-      <h3>My Publications</h3>
-      <ul id="research-pub-list" class="indented-list"></ul></ul>
+  <main id="main-content">
+    <section class="page-intro">
+      <p class="breadcrumb"><a href="../index.html">Home</a> / Research Publications</p>
+      <p class="eyebrow">Research archive</p>
+      <h1>Work that turns questions into evidence.</h1>
+      <p>
+        Original publications sit alongside carefully selected papers that
+        influence current thinking across neuroscience, robotics, and education.
+      </p>
     </section>
 
-    <!-- Section: Other Useful Publications -->
-    <section id="useful-publications">
-      <h3>Other Great Publications</h3>
-      <ul id="more-pubs-list" class="indented-list"></ul></ul>
-    </section>
+    <div class="content-layout">
+      <section class="content-panel">
+        <p class="eyebrow">Original work</p>
+        <h2>My publications</h2>
+        <p>Research written or co-authored by Alex Maynes.</p>
+        <ul
+          class="content-list"
+          data-list-source="publications.txt"
+          data-empty-message="No original publications have been listed yet."
+        ></ul>
+      </section>
+
+      <section class="content-panel">
+        <p class="eyebrow">Reading shelf</p>
+        <h2>Selected publications</h2>
+        <p>External work worth preserving and revisiting.</p>
+        <ul
+          class="content-list"
+          data-list-source="extra-publications.txt"
+          data-empty-message="No selected publications have been listed yet."
+        ></ul>
+      </section>
+    </div>
   </main>
 
-  <!-- Load the generic loader and call it for each list -->
+  <footer class="site-footer">
+    <p>Artificially Neuroscience</p>
+    <a href="../index.html">Return home</a>
+  </footer>
+
   <script src="../genericListLoader.js"></script>
-  <script>
-    loadList("publications.txt", "research-pub-list");
-    loadList("extra-publications.txt", "more-pubs-list");
-  </script>
 </body>
 </html>

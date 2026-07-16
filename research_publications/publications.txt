@@ -1,4 +1,5 @@
 <Entry>
 Name: "AI-Enhanced DOBOT Magician for Classroom Education: Hand Gesture Control for Hazardous Material Handling Simulation - A. Maynes et al."
 PDF-Path: "pdfs/dobotpub.pdf"
+Description: "An education-focused robotics project combining hand-gesture control with a hazardous-material handling simulation."
 <Entry-End>

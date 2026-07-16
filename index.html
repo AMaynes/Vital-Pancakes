@@ -1,24 +1,162 @@
 <!DOCTYPE html>
+<!--
+Overview & Purpose
+Introduce Artificially Neuroscience as an interdisciplinary learning laboratory
+and direct visitors toward its research, analysis, and study tools.
+
+Architectural Relationships
+Called by: GitHub Pages as the site entry point.
+Calls: Research Publications, Literature Analysis, and Educational Resources.
+
+External Resources
+style.css
+
+Notes
+Keep the homepage concise and use deeper pages for detailed material.
+-->
+
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Artificially Neuroscience</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Artificially Neuroscience is Alex Maynes's public laboratory for neuroscience, artificial intelligence, mathematics, research, and interactive learning.">
+  <meta name="theme-color" content="#14264a">
+  <title>Artificially Neuroscience | A Laboratory for Learning</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
   <header class="site-header">
-    <h1>Artificially Neuroscience</h1>
-    <nav>
-      <a href="research_publications/">Research Publications</a>
-      <a href="literature_analysis/">Literature Analysis</a>
-      <a href="educational_resources/">Educational Resources</a>
+    <a class="brand" href="index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="research_publications/">Research</a>
+      <a href="literature_analysis/">Analysis</a>
+      <a href="educational_resources/">Learn</a>
     </nav>
   </header>
 
-  <main>
-    <p>Welcome! This site hosts my notes, reflections, and published work on Computer Science, Neuroscience, and Mathematics.</p>
-    <!-- Add your content here -->
+  <main id="main-content">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">A personal laboratory for intelligence</p>
+        <h1>Learning how minds work—and building tools to understand them.</h1>
+        <p class="hero-summary">
+          Artificially Neuroscience connects neuroscience, artificial intelligence,
+          mathematics, computer science, and art through research, notes, and
+          interactive study tools.
+        </p>
+        <div class="button-row">
+          <a class="button button-primary" href="educational_resources/">Explore learning tools</a>
+          <a class="button button-secondary" href="research_publications/">Read publications</a>
+        </div>
+      </div>
+
+      <div class="knowledge-map" aria-label="The site's disciplines connect neuroscience, artificial intelligence, mathematics, computer science, and art.">
+        <p class="knowledge-map-label">Fields in conversation</p>
+        <div class="knowledge-node knowledge-node-primary">Neuroscience</div>
+        <div class="knowledge-row">
+          <span class="knowledge-node">Artificial Intelligence</span>
+          <span class="knowledge-connector" aria-hidden="true">↔</span>
+          <span class="knowledge-node">Mathematics</span>
+        </div>
+        <div class="knowledge-row">
+          <span class="knowledge-node">Computer Science</span>
+          <span class="knowledge-connector" aria-hidden="true">↔</span>
+          <span class="knowledge-node">Art</span>
+        </div>
+        <p class="knowledge-map-note">Different languages for studying structure, learning, and intelligence.</p>
+      </div>
+    </section>
+
+    <section class="site-stats" aria-label="Site highlights">
+      <div>
+        <strong>850+</strong>
+        <span>interactive study cards</span>
+      </div>
+      <div>
+        <strong>4</strong>
+        <span>learning disciplines</span>
+      </div>
+      <div>
+        <strong>Open</strong>
+        <span>research and learning notes</span>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-heading">
+        <p class="eyebrow">Explore the laboratory</p>
+        <h2>One place to learn, investigate, and build</h2>
+        <p>The site is organized around three complementary kinds of work.</p>
+      </div>
+
+      <div class="feature-grid">
+        <article class="feature-card">
+          <span class="card-number">01</span>
+          <p class="card-kicker">Research</p>
+          <h3>Publications</h3>
+          <p>Original work and carefully selected papers that inform ongoing questions.</p>
+          <a class="text-link" href="research_publications/">Browse publications <span aria-hidden="true">→</span></a>
+        </article>
+
+        <article class="feature-card">
+          <span class="card-number">02</span>
+          <p class="card-kicker">Interpretation</p>
+          <h3>Literature analysis</h3>
+          <p>Critical notes and reflections intended to turn reading into durable understanding.</p>
+          <a class="text-link" href="literature_analysis/">View analyses <span aria-hidden="true">→</span></a>
+        </article>
+
+        <article class="feature-card feature-card-accent">
+          <span class="card-number">03</span>
+          <p class="card-kicker">Practice</p>
+          <h3>Educational resources</h3>
+          <p>Notes, reference sheets, and interactive flashcards across technical and creative fields.</p>
+          <a class="text-link" href="educational_resources/">Start learning <span aria-hidden="true">→</span></a>
+        </article>
+      </div>
+    </section>
+
+    <section class="spotlight">
+      <div>
+        <p class="eyebrow">Featured tool</p>
+        <h2>Mathematics practice that goes beyond memorization</h2>
+        <p>
+          Study hundreds of cards by topic, mix subjects together, generate worked
+          problems, test recall, and revisit missed answers—all directly in the browser.
+        </p>
+        <a class="button button-primary" href="educational_resources/mathematics/flashcard-practice.html">Open mathematics practice</a>
+      </div>
+      <div class="spotlight-details" aria-label="Mathematics practice features">
+        <span>Topic trees</span>
+        <span>Mixed practice</span>
+        <span>Knowledge tests</span>
+        <span>Worked explanations</span>
+        <span>Local review queue</span>
+        <span>LaTeX equations</span>
+      </div>
+    </section>
+
+    <section class="closing-note">
+      <p class="eyebrow">Why this exists</p>
+      <blockquote>
+        “Knowledge becomes more useful when it is connected, practiced, and made visible.”
+      </blockquote>
+      <p>
+        This site is a public record of that process: learning across disciplines,
+        preserving useful work, and creating tools that make difficult ideas easier to explore.
+      </p>
+    </section>
   </main>
+
+  <footer class="site-footer">
+    <p>Built and maintained by Alex Maynes.</p>
+    <a href="https://github.com/AMaynes/artificially-neuroscience">View the project on GitHub</a>
+  </footer>
 </body>
 </html>

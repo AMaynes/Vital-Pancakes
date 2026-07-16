@@ -1,0 +1,17 @@
+<Entry>
+Name: "Algebra Master Sheet"
+PDF-Path: "../../CheatSheets/Algebra-MasterSheet.pdf"
+Description: "A compact reference for foundational algebraic rules, forms, and operations."
+<Entry-End>
+
+<Entry>
+Name: "Calculus Master Sheet"
+PDF-Path: "../../CheatSheets/Calculus-MasterSheet.pdf"
+Description: "A consolidated reference covering core differential and integral calculus concepts."
+<Entry-End>
+
+<Entry>
+Name: "Trigonometry Master Sheet"
+PDF-Path: "../../CheatSheets/Trigonometry-MasterSheet.pdf"
+Description: "A quick reference for identities, functions, triangles, and common trigonometric relationships."
+<Entry-End>
