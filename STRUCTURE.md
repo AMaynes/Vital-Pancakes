@@ -122,7 +122,7 @@ The accessible application shell for three hash-routed areas. Protocols owns per
 
 ### `workspace.css`
 
-The public-site-aligned geometric workspace design tokens, responsive shell, contextual sidebar, angular cards, editors, dialogs, toasts, and tool-compatible styles.
+The public-site-aligned geometric workspace design tokens, full-width responsive shell, angular cards, editors, dialogs, toasts, and tool-compatible styles.
 
 ### `manifest.webmanifest`
 
@@ -140,7 +140,7 @@ Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sor
 
 ### `app/main.js`
 
-Renders the Protocols, Studies & Projects, and Workspace routes; filters the contextual sidebar; owns editable libraries, relationships, dialogs, search, installation controls, and local notices.
+Renders the Protocols, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns editable libraries, relationships, dialogs, search, installation controls, and local notices.
 
 ### `app/store.js`
 

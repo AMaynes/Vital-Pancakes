@@ -27,10 +27,7 @@ import {
 } from "./store.js";
 
 const appMain = document.querySelector("#app-main");
-const sectionNavigation = document.querySelector("#section-navigation");
 const searchInput = document.querySelector("#global-search");
-const sidebar = document.querySelector("#app-sidebar");
-const scrim = document.querySelector("#app-scrim");
 const sectionDialog = document.querySelector("#section-dialog");
 const sectionForm = document.querySelector("#section-form");
 const itemDialog = document.querySelector("#item-dialog");
@@ -38,13 +35,6 @@ const itemForm = document.querySelector("#item-form");
 const passwordDialog = document.querySelector("#password-dialog");
 const passwordForm = document.querySelector("#password-form");
 const manageDialog = document.querySelector("#manage-dialog");
-const sectionNavigationGroup = document.querySelector("#section-navigation-group");
-const toolNavigationGroup = document.querySelector("#tool-navigation-group");
-const sidebarOverviewLink = document.querySelector('[data-route="home"]');
-const sidebarOverviewLabel = document.querySelector("#sidebar-overview-label");
-const sidebarTitle = document.querySelector("#workspace-sidebar-title");
-const sidebarSubtitle = document.querySelector("#workspace-sidebar-subtitle");
-const sidebarFooter = document.querySelector(".sidebar-footer");
 const animationTimers = new Set();
 
 let activeSectionId = null;
@@ -155,14 +145,13 @@ function getRouteItemId() {
 }
 
 /**
- * Clears timers and renders navigation plus the active workspace route.
+ * Clears timers and renders the active full-width workspace route.
  */
 function renderWorkspace() {
   animationTimers.forEach((timer) => window.clearInterval(timer));
   animationTimers.clear();
   const area = getRouteArea();
   renderTopNavigation(area);
-  renderNavigation(area);
 
   const routeSectionId = getRouteSectionId();
   const section = routeSectionId ? getSection(routeSectionId) : null;
@@ -178,8 +167,6 @@ function renderWorkspace() {
   } else {
     renderDashboard(area, searchInput.value.trim());
   }
-
-  closeMobileNavigation();
 }
 
 /**
@@ -195,56 +182,6 @@ function renderTopNavigation(area) {
       link.removeAttribute("aria-current");
     }
   });
-}
-
-/**
- * Rebuilds the area-specific sidebar from the modular section model.
- *
- * @param {"protocols"|"studies"|"tools"} area Active area.
- */
-function renderNavigation(area = getRouteArea()) {
-  sectionNavigation.replaceChildren();
-  const workspace = getWorkspace();
-  const routeSectionId = getRouteSectionId();
-  const areaSections = getSectionsForArea(workspace, area);
-  const isToolsArea = area === AREA_TOOLS;
-
-  sectionNavigationGroup.hidden = isToolsArea;
-  toolNavigationGroup.hidden = !isToolsArea;
-  sidebarFooter.hidden = isToolsArea;
-  sidebarOverviewLink.href = `#area=${area}`;
-  sidebarOverviewLabel.textContent = {
-    [AREA_PROTOCOLS]: "Protocols",
-    [AREA_STUDIES]: "Studies overview",
-    [AREA_TOOLS]: "Tools overview",
-  }[area];
-  sidebarTitle.textContent = {
-    [AREA_PROTOCOLS]: "Protocols",
-    [AREA_STUDIES]: "Studies & Projects",
-    [AREA_TOOLS]: "Workspace",
-  }[area];
-  sidebarSubtitle.textContent = {
-    [AREA_PROTOCOLS]: "PERSONAL PLAYBOOKS",
-    [AREA_STUDIES]: "KNOWLEDGE LIBRARY",
-    [AREA_TOOLS]: "TOOLS",
-  }[area];
-
-  const navigableSections =
-    area === AREA_PROTOCOLS && areaSections.length === 1 ? [] : areaSections;
-
-  navigableSections.forEach((section) => {
-    const link = createElement("a", "nav-item");
-    link.href = `#section=${encodeURIComponent(section.id)}`;
-    link.dataset.sectionId = section.id;
-    if (routeSectionId === section.id) {
-      link.classList.add("is-active");
-    }
-    const icon = createElement("span", "nav-icon", section.icon);
-    link.append(icon, document.createTextNode(section.title));
-    sectionNavigation.append(link);
-  });
-
-  sidebarOverviewLink.classList.toggle("is-active", !routeSectionId);
 }
 
 /**
@@ -314,7 +251,11 @@ function renderStudiesDashboard(workspace) {
     "Develop ideas and preserve what you learn.",
     "Keep concept studies, programming refreshers, algorithms, projects, and notecards together.",
   );
-  const sectionHeading = createSectionHeading("Studies and project libraries", "Add knowledge when it becomes useful. Nothing is prefilled.");
+  const sectionHeading = createSectionHeading(
+    "Studies and project libraries",
+    "Add knowledge when it becomes useful. Nothing is prefilled.",
+    createLibraryActions(),
+  );
   const libraryGrid = createElement("div", "library-grid");
   getSectionsForArea(workspace, AREA_STUDIES).forEach((section) => libraryGrid.append(createLibraryCard(section)));
 
@@ -358,7 +299,11 @@ function renderProtocolsDashboard(workspace) {
     "Reduce the overhead of recurring life.",
     "Turn daily routines and tedious tasks into personal playbooks so your attention stays on what matters.",
   );
-  const sectionHeading = createSectionHeading("Your protocol libraries", "Keep related playbooks together and add only what reduces friction.");
+  const sectionHeading = createSectionHeading(
+    "Your protocol libraries",
+    "Keep related playbooks together and add only what reduces friction.",
+    createLibraryActions(),
+  );
   const libraryGrid = createElement("div", "library-grid");
   const sections = getSectionsForArea(workspace, AREA_PROTOCOLS);
   sections.forEach((section) => libraryGrid.append(createLibraryCard(section)));
@@ -418,14 +363,33 @@ function renderToolsDashboard() {
  *
  * @param {string} title Heading text.
  * @param {string} description Supporting copy.
+ * @param {HTMLElement|null} actions Optional management controls.
  * @returns {HTMLElement} Heading row.
  */
-function createSectionHeading(title, description) {
+function createSectionHeading(title, description, actions = null) {
   const row = createElement("div", "content-heading-row");
   const copy = createElement("div");
   copy.append(createElement("h2", "", title), createElement("p", "", description));
   row.append(copy);
+  if (actions) row.append(actions);
   return row;
+}
+
+/**
+ * Creates in-page controls for adding and deleting modular sections.
+ *
+ * @returns {HTMLElement} Section management controls.
+ */
+function createLibraryActions() {
+  const actions = createElement("div", "content-heading-actions");
+  const addButton = createElement("button", "button button-primary", "+ Add section");
+  addButton.type = "button";
+  addButton.addEventListener("click", openSectionDialog);
+  const manageButton = createElement("button", "button button-quiet", "Manage sections");
+  manageButton.type = "button";
+  manageButton.addEventListener("click", openManageDialog);
+  actions.append(addButton, manageButton);
+  return actions;
 }
 
 /**
@@ -525,10 +489,13 @@ function renderSection(section) {
   const addButton = createElement("button", "button button-primary", `+ Add ${getSingularLabel(section)}`);
   addButton.type = "button";
   addButton.addEventListener("click", () => openItemDialog(section));
+  const addSectionButton = createElement("button", "button button-quiet", "+ Add section");
+  addSectionButton.type = "button";
+  addSectionButton.addEventListener("click", openSectionDialog);
   const menuButton = createElement("button", "button button-quiet", "Delete section");
   menuButton.type = "button";
   menuButton.addEventListener("click", () => confirmSectionDelete(section));
-  actions.append(addButton, menuButton);
+  actions.append(addButton, addSectionButton, menuButton);
   heading.append(headingCopy, actions);
 
   const meta = createElement("div", "section-meta");
@@ -1156,22 +1123,6 @@ function showToast(message) {
   }, 2600);
 }
 
-/**
- * Opens the mobile sidebar.
- */
-function openMobileNavigation() {
-  sidebar.classList.add("is-open");
-  scrim.classList.add("is-visible");
-}
-
-/**
- * Closes the mobile sidebar and overlay.
- */
-function closeMobileNavigation() {
-  sidebar.classList.remove("is-open");
-  scrim.classList.remove("is-visible");
-}
-
 sectionForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const formData = new FormData(sectionForm);
@@ -1229,16 +1180,11 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-document.querySelector("#add-section-shortcut").addEventListener("click", openSectionDialog);
-document.querySelector("#manage-sections-button").addEventListener("click", openManageDialog);
 document.querySelector("#manage-add-section").addEventListener("click", openSectionDialog);
-document.querySelector("#mobile-menu-button").addEventListener("click", openMobileNavigation);
-scrim.addEventListener("click", closeMobileNavigation);
 document.querySelectorAll("[data-dialog-close]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog")?.close());
 });
 window.addEventListener("hashchange", renderWorkspace);
-window.addEventListener("workspace:changed", renderNavigation);
 
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
