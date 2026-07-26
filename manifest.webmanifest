@@ -1,13 +1,13 @@
 {
-  "name": "Artificially Neuroscience",
-  "short_name": "AN",
-  "description": "A local-first app for protocols, studies, projects, notecards, diagrams, architecture, and signed PDFs.",
+  "name": "Pinakes Vitae",
+  "short_name": "Pinakes",
+  "description": "A living, local-first index for preserving studies, research, protocols, projects, and practical tools.",
   "start_url": "./workspace.html#area=tools",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f5f3ee",
-  "theme_color": "#14264a",
+  "background_color": "#f1eee6",
+  "theme_color": "#1b1a17",
   "icons": [
     {
       "src": "assets/app-icon-192.png",

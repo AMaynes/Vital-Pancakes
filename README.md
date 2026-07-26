@@ -1,8 +1,8 @@
-# Artificially Neuroscience
+# Pinakes Vitae — In Perpetuum
 
-[View the live website](https://amaynes.github.io/artificially-neuroscience/) · [Open the workspace](https://amaynes.github.io/artificially-neuroscience/workspace.html#area=tools) · [Download the app](https://amaynes.github.io/artificially-neuroscience/download-app.html)
+[View the live website](https://amaynes.github.io/pinakes-vitae/) · [Open the workspace](https://amaynes.github.io/pinakes-vitae/workspace.html#area=tools) · [Download the app](https://amaynes.github.io/pinakes-vitae/download-app.html)
 
-Artificially Neuroscience is Alex Maynes's public interdisciplinary learning laboratory and personal, local-first knowledge workspace. It preserves research, critical reading notes, reference material, and interactive study tools across neuroscience, artificial intelligence, mathematics, computer science, and art.
+Pinakes Vitae—*in perpetuum*—is Alex Maynes's living, local-first index of knowledge. It preserves research, critical reading notes, reference material, protocols, projects, and interactive study tools so that what was learned can be found and used again. The name evokes the *Pinakes* of the Library of Alexandria while giving the idea a new purpose: recovering knowledge that study, time, and disuse would otherwise erase.
 
 The project remains a static website: it needs no server-side application, database, account, or paid hosting platform.
 
@@ -36,7 +36,18 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Workspace** — The Visual Board, PDF Signer, and Architecture Designer without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
-The interface uses a compact geometric visual system based on one-screen desktop layouts, dense grids, interface-scale titles, angular cards, clipped corners, structured lines, and navy, teal, blue, and gold accents.
+The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the anatomical Pinakes Vitae emblem.
+
+## Brand Identity
+
+The complete project name is **Pinakes Vitae — In Perpetuum**. Use **Pinakes Vitae** as the compact navigation and app name, and *In Perpetuum* as the motto.
+
+The canonical logo files are:
+
+- `assets/pinakes-vitae-logo-final-light.png` — Primary website mark, drawn in black on white.
+- `assets/pinakes-vitae-logo-final.png` — Inverted companion mark, drawn in white on charcoal.
+
+The logo combines an anatomical skull and brain with a neural chip and circuitry, representing biological memory joined to a durable external index. The light version is the default throughout the website and is the source for the install icons.
 
 ## Personal Libraries
 
@@ -51,6 +62,8 @@ The editable areas use five empty, permanent core libraries:
 These five core libraries cannot be added, renamed, or deleted. Their entries remain editable and can be deleted using the requested password `password`. Because this is a static local-first site, the password is a convenience guard and not secure access control.
 
 User-created entries, boards, and architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
+
+Existing `localStorage` namespaces retain their original `artificially-neuroscience-*` identifiers. They are implementation-level compatibility keys, not public branding, and must remain unchanged unless a migration preserves previously saved user data.
 
 ## Workspace Tools
 

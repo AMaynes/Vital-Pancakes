@@ -1,6 +1,6 @@
 /**
  * Overview & Purpose
- * Keeps the Artificially Neuroscience brand and primary navigation visually
+ * Keeps the Pinakes Vitae brand and primary navigation visually
  * and behaviorally consistent across the public site, workspace, and tools.
  *
  * Architectural Relationships
@@ -22,8 +22,8 @@
   z-index: 200;
   padding: 0.75rem 1rem;
   color: #fff;
-  background: var(--navy, #14264a);
-  border-radius: 0.5rem;
+  background: var(--navy, #1b1a17);
+  border-radius: 0;
 }
 
 .skip-link:focus {
@@ -42,10 +42,10 @@
   width: min(calc(100% - 2rem), var(--max-width, 1180px));
   margin: 0.5rem auto;
   padding: 0.35rem 0.55rem;
-  background: rgb(255 255 255 / 90%);
-  border: 1px solid rgb(216 224 234 / 92%);
-  border-radius: 2px;
-  box-shadow: 0 8px 30px rgb(20 38 74 / 8%);
+  background: rgb(251 250 246 / 94%);
+  border: 1px solid var(--ink, #171613);
+  border-radius: 0;
+  box-shadow: 5px 5px 0 rgb(23 22 19 / 10%);
   backdrop-filter: blur(14px);
 }
 
@@ -53,25 +53,25 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--ink, #12213f);
+  color: var(--ink, #171613);
+  font-family: var(--font-blackletter, "Old English Text MT", Georgia, serif);
   font-weight: 750;
   text-decoration: none;
-  font-size: 0.8rem;
-  letter-spacing: -0.02em;
+  font-size: 0.98rem;
+  letter-spacing: 0;
 }
 
 .site-header .brand-mark {
-  display: grid;
-  width: 1.75rem;
-  height: 1.75rem;
-  place-items: center;
+  display: block;
+  width: 2.1rem;
+  height: 2.1rem;
   flex: 0 0 auto;
-  color: #fff;
-  background: var(--navy, #14264a);
+  overflow: hidden;
+  color: transparent;
+  background: #fff url("assets/pinakes-vitae-logo-final-light.png") center / 142% auto no-repeat;
+  border: 1px solid var(--ink, #171613);
   border-radius: 0;
-  clip-path: polygon(0 0, calc(100% - 0.55rem) 0, 100% 0.55rem, 100% 100%, 0.55rem 100%, 0 calc(100% - 0.55rem));
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
+  font-size: 0;
 }
 
 .site-header nav {
@@ -83,19 +83,20 @@
 
 .site-header nav a {
   padding: 0.3rem 0.42rem;
-  color: var(--ink-soft, #40506d);
+  color: var(--ink-soft, #5a554c);
   border-bottom: 2px solid transparent;
   border-radius: 0;
   font-size: 0.72rem;
-  font-weight: 650;
+  font-weight: 750;
+  letter-spacing: 0.025em;
   text-decoration: none;
 }
 
 .site-header nav a:hover,
 .site-header nav a[aria-current="page"] {
-  color: var(--navy, #14264a);
-  background: var(--surface-soft, #edf2f7);
-  border-bottom-color: var(--teal, #267774);
+  color: var(--navy, #1b1a17);
+  background: var(--surface-soft, #e8e3d8);
+  border-bottom-color: var(--teal, #7b211a);
 }
 
 @media (max-width: 640px) {

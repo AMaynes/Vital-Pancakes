@@ -58,9 +58,9 @@ main:has(> .download-hero) {
   width: min(6rem, 38vw);
   padding: 0.4rem;
   background: var(--navy);
-  border: 1px solid #4e6288;
-  box-shadow: 2rem 2rem 0 rgb(49 95 168 / 10%);
-  clip-path: polygon(0 1.2rem, 1.2rem 0, calc(100% - 1.2rem) 0, 100% 1.2rem, 100% calc(100% - 1.2rem), calc(100% - 1.2rem) 100%, 1.2rem 100%, 0 calc(100% - 1.2rem));
+  border: 1px solid var(--ink);
+  box-shadow: 1rem 1rem 0 rgb(123 33 26 / 16%);
+  clip-path: none;
   animation: phone-float 5s ease-in-out infinite;
 }
 
@@ -72,7 +72,7 @@ main:has(> .download-hero) {
 
 .geometry-orbit {
   position: absolute;
-  border: 1px solid rgb(49 95 168 / 24%);
+  border: 1px solid rgb(23 22 19 / 24%);
   transform: rotate(45deg);
   animation: orbit-turn 16s linear infinite;
 }
@@ -85,7 +85,7 @@ main:has(> .download-hero) {
 .geometry-orbit-two {
   width: 10rem;
   height: 10rem;
-  border-color: rgb(38 119 116 / 18%);
+  border-color: rgb(123 33 26 / 20%);
   animation-direction: reverse;
   animation-duration: 22s;
 }
@@ -105,7 +105,7 @@ main:has(> .download-hero) {
   padding: 0.65rem;
   background: rgb(255 255 255 / 84%);
   border: 1px solid var(--border);
-  clip-path: polygon(0 0, calc(100% - 1.2rem) 0, 100% 1.2rem, 100% 100%, 1.2rem 100%, 0 calc(100% - 1.2rem));
+  clip-path: none;
 }
 
 .app-screenshot-grid img {
@@ -143,7 +143,8 @@ main:has(> .download-hero) {
   padding: 0.75rem;
   color: #fff;
   background: var(--navy);
-  clip-path: polygon(0 0, calc(100% - 2rem) 0, 100% 2rem, 100% 100%, 2rem 100%, 0 calc(100% - 2rem));
+  clip-path: none;
+  box-shadow: 8px 8px 0 rgb(123 33 26 / 20%);
 }
 
 .motion-section h2,

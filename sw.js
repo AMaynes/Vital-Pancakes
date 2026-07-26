@@ -14,19 +14,19 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "artificially-neuroscience-app-v16";
+const CACHE_NAME = "pinakes-vitae-app-v17";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=15",
-  "./site-navigation.css?v=15",
+  "./style.css?v=16",
+  "./site-navigation.css?v=16",
   "./research-literature.html",
   "./download-app.html",
-  "./download-app.css?v=15",
+  "./download-app.css?v=16",
   "./workspace.html",
-  "./workspace.css?v=15",
+  "./workspace.css?v=16",
   "./manifest.webmanifest",
-  "./assets/app-icon.svg",
+  "./assets/pinakes-vitae-logo-final-light.png",
   "./assets/app-icon-192.png",
   "./assets/app-icon-512.png",
   "./assets/app-preview-workspace.svg",
@@ -34,7 +34,7 @@ const APP_SHELL = [
   "./app/main.js",
   "./app/store.js",
   "./app/download-app.js",
-  "./tools/tool.css?v=15",
+  "./tools/tool.css?v=16",
   "./tools/visual-board.html",
   "./tools/visual-board.js",
   "./tools/pdf-signer.html",

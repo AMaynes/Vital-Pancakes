@@ -1,6 +1,6 @@
 /*
 Overview & Purpose
-Define the shared visual system and responsive layout for Artificially Neuroscience.
+Define the shared visual system and responsive layout for Pinakes Vitae.
 
 Architectural Relationships
 Called by: Every public HTML page.
@@ -10,24 +10,27 @@ External Resources
 None.
 
 Notes
-The palette is intentionally academic and calm, with restrained accents that
-keep dense learning material readable.
+The palette treats the interface as a contemporary archival folio: warm paper,
+black ink, oxblood annotations, and restrained brass details.
 */
 
 
 :root {
-  --ink: #12213f;
-  --ink-soft: #40506d;
-  --navy: #14264a;
-  --navy-light: #233d70;
-  --blue: #315fa8;
-  --teal: #267774;
-  --gold: #b88024;
-  --paper: #f5f3ee;
-  --surface: #ffffff;
-  --surface-soft: #edf2f7;
-  --border: #d8e0ea;
-  --shadow: 0 18px 50px rgba(20, 38, 74, 0.1);
+  --ink: #171613;
+  --ink-soft: #5a554c;
+  --navy: #1b1a17;
+  --navy-light: #35312b;
+  --blue: #3f3b34;
+  --teal: #7b211a;
+  --gold: #967538;
+  --paper: #f1eee6;
+  --surface: #fbfaf6;
+  --surface-soft: #e8e3d8;
+  --border: #c6beb0;
+  --border-strong: #81796d;
+  --shadow: 0 18px 50px rgba(23, 22, 19, 0.13);
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-blackletter: "Old English Text MT", "Lucida Blackletter", "UnifrakturCook", Georgia, serif;
   --max-width: 1180px;
 }
 
@@ -45,12 +48,11 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background:
-    linear-gradient(rgb(49 95 168 / 5%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(49 95 168 / 5%) 1px, transparent 1px),
-    radial-gradient(circle at 10% 0%, rgba(49, 95, 168, 0.11), transparent 34rem),
-    radial-gradient(circle at 100% 24%, rgba(38, 119, 116, 0.08), transparent 30rem),
+    linear-gradient(rgb(23 22 19 / 4%) 1px, transparent 1px),
+    radial-gradient(circle at 12% 0%, rgb(123 33 26 / 7%), transparent 30rem),
+    radial-gradient(circle at 100% 28%, rgb(150 117 56 / 8%), transparent 28rem),
     var(--paper);
-  background-size: 40px 40px, 40px 40px, auto, auto, auto;
+  background-size: 100% 32px, auto, auto, auto;
 }
 
 a {
@@ -62,7 +64,7 @@ button:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 input:focus-visible {
-  outline: 3px solid rgba(49, 95, 168, 0.35);
+  outline: 3px solid rgb(123 33 26 / 34%);
   outline-offset: 3px;
 }
 
@@ -74,11 +76,11 @@ main {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+  grid-template-columns: minmax(0, 1fr) minmax(21rem, 0.78fr);
   align-items: center;
   gap: clamp(1rem, 3vw, 1.75rem);
   min-height: 0;
-  padding: 0.4rem 0 0.8rem;
+  padding: 1.1rem 0 1.25rem;
 }
 
 .eyebrow,
@@ -92,28 +94,29 @@ main {
 }
 
 .hero h1 {
-  max-width: 24ch;
+  max-width: 17ch;
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.8rem, 2.7vw, 2.2rem);
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 5vw, 4.9rem);
   font-weight: 500;
-  line-height: 1;
-  letter-spacing: -0.045em;
+  line-height: 0.92;
+  letter-spacing: -0.055em;
 }
 
 .hero-summary {
   max-width: 42rem;
-  margin: 0.45rem 0 0;
+  margin: 1rem 0 0;
   color: var(--ink-soft);
-  font-size: 0.86rem;
-  line-height: 1.35;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.55;
 }
 
 .button-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
-  margin-top: 0.6rem;
+  margin-top: 1rem;
 }
 
 .button {
@@ -124,7 +127,7 @@ main {
   padding: 0.42rem 0.7rem;
   border: 1px solid transparent;
   border-radius: 0;
-  clip-path: polygon(0 0, calc(100% - 0.55rem) 0, 100% 0.55rem, 100% 100%, 0.55rem 100%, 0 calc(100% - 0.55rem));
+  clip-path: none;
   font-size: 0.82rem;
   font-weight: 750;
   text-decoration: none;
@@ -138,7 +141,7 @@ main {
 .button-primary {
   color: #fff;
   background: var(--navy);
-  box-shadow: 0 8px 20px rgba(20, 38, 74, 0.18);
+  box-shadow: 5px 5px 0 rgb(123 33 26 / 22%);
 }
 
 .button-primary:hover {
@@ -147,95 +150,82 @@ main {
 
 .button-secondary {
   color: var(--navy);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgb(251 250 246 / 80%);
   border-color: var(--border);
 }
 
-.knowledge-map {
+.hero-emblem {
   position: relative;
-  display: grid;
-  gap: 0.35rem;
-  padding: 0.75rem;
-  overflow: hidden;
-  color: #fff;
-  background:
-    radial-gradient(circle at 85% 15%, rgba(95, 180, 172, 0.28), transparent 13rem),
-    linear-gradient(145deg, var(--navy), #0b1730);
-  border-radius: 0;
-  clip-path: polygon(0 0, calc(100% - 1.5rem) 0, 100% 1.5rem, 100% 100%, 1.5rem 100%, 0 calc(100% - 1.5rem));
-  box-shadow: var(--shadow);
-}
-
-.knowledge-map::after {
-  content: "";
-  position: absolute;
-  right: -4rem;
-  bottom: -5rem;
-  width: 12rem;
-  height: 12rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  transform: rotate(45deg);
-  box-shadow:
-    0 0 0 2rem rgba(255, 255, 255, 0.035),
-    0 0 0 4rem rgba(255, 255, 255, 0.025);
-}
-
-.knowledge-map-label {
   margin: 0;
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 0.66rem;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.knowledge-row {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.knowledge-node {
-  display: grid;
-  place-items: center;
-  min-height: 2.5rem;
-  padding: 0.4rem;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 0;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.knowledge-node-primary {
-  min-height: 3rem;
-  color: var(--navy);
+  overflow: hidden;
   background: #fff;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.05rem;
+  border: 1px solid var(--ink);
+  box-shadow: 12px 12px 0 var(--ink);
 }
 
-.knowledge-connector {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.knowledge-map-note {
-  position: relative;
+.hero-emblem::before,
+.hero-emblem::after {
+  position: absolute;
   z-index: 1;
-  margin: 0.2rem 0 0;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 0.72rem;
-  line-height: 1.3;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-color: var(--teal);
+  content: "";
+  pointer-events: none;
+}
+
+.hero-emblem::before {
+  top: 0.55rem;
+  left: 0.55rem;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.hero-emblem::after {
+  right: 0.55rem;
+  bottom: 0.55rem;
+  border-right: 1px solid;
+  border-bottom: 1px solid;
+}
+
+.hero-emblem img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.hero-emblem figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  min-width: 10rem;
+  padding: 0.55rem 0.75rem;
+  color: #fff;
+  background: var(--ink);
+  text-align: right;
+}
+
+.hero-emblem figcaption span {
+  font-family: var(--font-blackletter);
+  font-size: 1rem;
+}
+
+.hero-emblem figcaption i {
+  color: #d6c39a;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .site-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   margin: 0 0 1rem;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--border);
+  background: rgb(251 250 246 / 78%);
+  border: 1px solid var(--border-strong);
   border-radius: 0;
 }
 
@@ -316,7 +306,7 @@ main {
 .discipline-card,
 .content-panel {
   position: relative;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgb(251 250 246 / 86%);
   border: 1px solid var(--border);
   border-radius: 0;
 }
@@ -326,23 +316,24 @@ main {
   flex-direction: column;
   min-height: 9.5rem;
   padding: 0.7rem;
-  border-top: 3px solid var(--blue);
+  border-top: 3px solid var(--ink);
 }
 
 .feature-card-accent {
-  background: #eaf4f2;
-  border-color: #cce1de;
+  background: #eee8de;
+  border-color: #c8bcae;
+  border-top-color: var(--teal);
 }
 
 .feature-card-download {
-  background: #f5ead8;
-  border-color: #dfc99f;
+  background: #eee5d4;
+  border-color: #cdbc99;
   border-top-color: var(--gold);
 }
 
 .card-number {
   align-self: flex-end;
-  color: #8b98ac;
+  color: #8a8275;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 0.9rem;
 }
@@ -385,9 +376,9 @@ main {
   gap: 1rem;
   padding: 0.8rem;
   color: #fff;
-  background: linear-gradient(135deg, var(--navy), #243f72);
+  background: linear-gradient(135deg, var(--navy), #342e29);
   border-radius: 0;
-  clip-path: polygon(0 0, calc(100% - 1.5rem) 0, 100% 1.5rem, 100% 100%, 1.5rem 100%, 0 calc(100% - 1.5rem));
+  clip-path: none;
   box-shadow: var(--shadow);
 }
 
@@ -400,7 +391,7 @@ main {
 }
 
 .spotlight .eyebrow {
-  color: #8ed2cb;
+  color: #d6c39a;
 }
 
 .spotlight .button-primary {
@@ -574,7 +565,7 @@ main {
 
 .tool-card {
   color: #fff;
-  background: linear-gradient(145deg, var(--teal), #185b59);
+  background: linear-gradient(145deg, var(--teal), #531712);
   border: none;
 }
 
@@ -622,7 +613,7 @@ main {
   right: 0.5rem;
   width: 2rem;
   height: 2rem;
-  border: 1px solid rgb(49 95 168 / 24%);
+  border: 1px solid rgb(23 22 19 / 24%);
   transform: rotate(45deg);
   content: "";
 }
