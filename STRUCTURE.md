@@ -13,6 +13,7 @@ artificially-neuroscience/
 ├── STRUCTURE.md — Maps the maintained repository.
 ├── index.html — Serves as the public homepage and project entry point.
 ├── style.css — Defines the public site's shared visual system.
+├── site-navigation.css — Keeps the primary header consistent across every page.
 ├── workspace.html — Hosts the local-first workspace shell and dialogs.
 ├── workspace.css — Defines the workspace and tool visual system.
 ├── manifest.webmanifest — Describes the installable workspace app.
@@ -95,7 +96,11 @@ The public entry point. It presents the interdisciplinary laboratory and links t
 
 ### `style.css`
 
-The public site's shared design language, responsive layout, navigation, content cards, list states, and flashcard compatibility styling.
+The public site's shared design language, responsive layout, content cards, list states, and flashcard compatibility styling.
+
+### `site-navigation.css`
+
+The canonical brand header and primary Research, Analysis, Learn, and Workspace navigation used by every public page, workspace view, and tool. It remains visible while the active page or workspace surface scrolls.
 
 ### `workspace.html`
 
@@ -103,7 +108,7 @@ The accessible application shell for the personal workspace. It contains the sid
 
 ### `workspace.css`
 
-The workspace design tokens, responsive shell, cards, editors, dialogs, toasts, and tool-compatible visual styles.
+The public-site-aligned workspace design tokens, responsive shell, sidebar dashboard, cards, editors, dialogs, toasts, and tool-compatible visual styles.
 
 ### `manifest.webmanifest`
 

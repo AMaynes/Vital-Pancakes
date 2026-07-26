@@ -8,8 +8,24 @@
   <link rel="icon" href="../assets/app-icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../workspace.css">
   <link rel="stylesheet" href="tool.css">
+  <link rel="stylesheet" href="../site-navigation.css">
 </head>
 <body class="tool-body">
+  <a class="skip-link" href="#tool-main">Skip to tool</a>
+
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../research_publications/">Research</a>
+      <a href="../literature_analysis/">Analysis</a>
+      <a href="../educational_resources/">Learn</a>
+      <a href="../workspace.html" aria-current="page">Workspace</a>
+    </nav>
+  </header>
+
   <div class="tool-shell">
     <header class="tool-topbar">
       <div class="tool-title-group">
@@ -27,7 +43,7 @@
       </div>
     </header>
 
-    <main class="architecture-workspace">
+    <main class="architecture-workspace" id="tool-main">
       <aside class="architecture-browser">
         <div class="architecture-tabs">
           <button class="architecture-tab is-active" data-mode="scopes" type="button">System map</button>

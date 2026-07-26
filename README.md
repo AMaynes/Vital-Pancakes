@@ -18,7 +18,7 @@ Then open [http://localhost:8000](http://localhost:8000). Opening files directly
 
 ## System Overview
 
-GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` opens the installable knowledge workspace. The public archive uses `style.css`; the workspace and its tools use `workspace.css`.
+GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` opens the installable knowledge workspace. `site-navigation.css` keeps the original top navigation consistent across every page and tool. The public archive uses `style.css`; the workspace and its tools use `workspace.css`.
 
 Repository-managed lists use small text files containing `<Entry>` blocks. `genericListLoader.js` fetches those files, parses their metadata, sorts entries alphabetically, and renders safe links.
 

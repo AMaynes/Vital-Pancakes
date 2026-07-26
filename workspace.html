@@ -15,31 +15,39 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/app-icon-192.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap"
-    rel="stylesheet"
-  >
   <link rel="stylesheet" href="workspace.css">
+  <link rel="stylesheet" href="site-navigation.css">
 </head>
 <body class="workspace-body">
+  <a class="skip-link" href="#app-main">Skip to workspace</a>
+
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="research_publications/">Research</a>
+      <a href="literature_analysis/">Analysis</a>
+      <a href="educational_resources/">Learn</a>
+      <a href="workspace.html" aria-current="page">Workspace</a>
+    </nav>
+  </header>
+
   <div class="app-shell">
     <aside class="app-sidebar" id="app-sidebar" aria-label="Workspace navigation">
-      <a class="brand-lockup" href="#" aria-label="Artificially Neuroscience home">
-        <span class="brand-mark" aria-hidden="true">
-          <span></span><span></span><span></span>
-        </span>
+      <div class="workspace-sidebar-heading">
+        <span class="workspace-sidebar-icon" aria-hidden="true">⌘</span>
         <span>
-          <strong>Artificially</strong>
-          <small>NEUROSCIENCE</small>
+          <strong>Workspace</strong>
+          <small>PERSONAL DASHBOARD</small>
         </span>
-      </a>
+      </div>
 
       <nav class="primary-nav">
         <a class="nav-item is-active" href="#" data-route="home">
           <span class="nav-icon">⌂</span>
-          Home
+          Overview
         </a>
         <div class="nav-group-label">
           <span>LIBRARY</span>
@@ -67,10 +75,6 @@
           <span class="nav-icon">⚙</span>
           Manage sections
         </button>
-        <a class="nav-item" href="educational_resources/">
-          <span class="nav-icon">↗</span>
-          Legacy library
-        </a>
       </div>
     </aside>
 

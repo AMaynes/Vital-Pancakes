@@ -5,10 +5,10 @@
  *
  * Architectural Relationships
  * Called by: HTML documents in tools/.
- * Calls: The root style.css design tokens.
+ * Calls: workspace.css and site-navigation.css.
  *
  * External Resources
- * ../style.css.
+ * ../workspace.css and ../site-navigation.css.
  *
  * Notes
  * Tool panels collapse into stacked mobile layouts below 760px.
@@ -17,12 +17,17 @@
 .tool-body {
   height: 100vh;
   overflow: hidden;
-  background: #eae6dc;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 10% 0%, rgb(49 95 168 / 11%), transparent 34rem),
+    var(--paper);
 }
 
 .tool-shell {
   display: grid;
-  height: 100vh;
+  min-height: 0;
+  flex: 1;
   grid-template-rows: 60px 1fr;
 }
 
