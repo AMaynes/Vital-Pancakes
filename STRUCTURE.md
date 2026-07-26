@@ -23,7 +23,7 @@ artificially-neuroscience/
 ├── sw.js — Caches the workspace, public archive, and tools for offline use.
 ├── genericListLoader.js — Renders repository-managed text lists.
 ├── app/
-│   ├── main.js — Renders workspace routes, libraries, editors, and install controls.
+│   ├── main.js — Renders workspace routes, libraries, and editors.
 │   ├── download-app.js — Connects the install page to supported PWA prompts.
 │   └── store.js — Owns browser-local data, persistence, and deletion policy.
 ├── assets/
@@ -140,11 +140,11 @@ Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sor
 
 ### `app/main.js`
 
-Renders the Protocols, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns editable libraries, relationships, dialogs, search, installation controls, and local notices.
+Renders the Protocols, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns core-library entries, relationships, dialogs, and local notices.
 
 ### `app/store.js`
 
-Defines the browser-local data schema, default empty libraries, migration-safe loading, persistence, identifiers, section operations, and the local delete-password policy.
+Defines the browser-local data schema, permanent empty core libraries, migration-safe restoration, persistence, identifiers, entry operations, and the local delete-password policy.
 
 ### `assets/`
 

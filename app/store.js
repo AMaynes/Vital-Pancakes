@@ -59,6 +59,7 @@ const DEFAULT_SECTIONS = [
     items: [],
   },
 ];
+const CORE_SECTION_IDS = new Set(DEFAULT_SECTIONS.map((section) => section.id));
 
 /**
  * Creates a collision-resistant identifier for local records.
@@ -80,29 +81,41 @@ export function createId() {
  */
 function createInitialWorkspace() {
   return {
-    version: 2,
+    version: 3,
     sections: DEFAULT_SECTIONS.map((section) => ({ ...section, items: [] })),
   };
 }
 
 /**
- * Adds the empty Studies library once for browsers created before the
- * five-section site organization. Later deletion remains respected.
+ * Restores every fixed core library for browsers created before core sections
+ * became permanent. Existing entries and legacy custom sections are preserved.
  *
  * @param {{version?: number, sections: Array<object>}} workspace Stored data.
  * @returns {{workspace: object, changed: boolean}} Migrated data and change flag.
  */
 function migrateWorkspace(workspace) {
-  if ((workspace.version ?? 1) >= 2) {
+  if ((workspace.version ?? 1) >= 3) {
     return { workspace, changed: false };
   }
 
-  if (!workspace.sections.some((section) => section.id === "studies")) {
-    const studiesSection = DEFAULT_SECTIONS.find((section) => section.id === "studies");
-    workspace.sections.splice(1, 0, { ...studiesSection, items: [] });
-  }
-  workspace.version = 2;
+  const existingSections = new Map(workspace.sections.map((section) => [section.id, section]));
+  const coreSections = DEFAULT_SECTIONS.map((section) => (
+    existingSections.get(section.id) ?? { ...section, items: [] }
+  ));
+  const customSections = workspace.sections.filter((section) => !CORE_SECTION_IDS.has(section.id));
+  workspace.sections = [...coreSections, ...customSections];
+  workspace.version = 3;
   return { workspace, changed: true };
+}
+
+/**
+ * Reports whether a section is one of the permanent libraries.
+ *
+ * @param {string} sectionId Section identifier.
+ * @returns {boolean} Whether the section is permanent.
+ */
+export function isCoreSectionId(sectionId) {
+  return CORE_SECTION_IDS.has(sectionId);
 }
 
 /**
@@ -115,7 +128,7 @@ export function getWorkspace() {
   if (!storedWorkspace) {
     const initialWorkspace = createInitialWorkspace();
     // Initialization happens during rendering; avoid a synchronous change event
-    // re-entering navigation before that first render has completed.
+    // re-entering the interface before that first render has completed.
     localStorage.setItem(WORKSPACE_KEY, JSON.stringify(initialWorkspace));
     return initialWorkspace;
   }
@@ -147,34 +160,16 @@ export function saveWorkspace(workspace) {
 }
 
 /**
- * Adds a generic modular section.
- *
- * @param {{title: string, description: string, icon: string, type: string}} sectionInput User input.
- * @returns {object} The created section.
- */
-export function addSection(sectionInput) {
-  const workspace = getWorkspace();
-  const allowedTypes = new Set(["protocol", "language", "algorithm", "project", "custom"]);
-  const section = {
-    id: createId(),
-    title: sectionInput.title.trim(),
-    description: sectionInput.description.trim(),
-    icon: sectionInput.icon,
-    type: allowedTypes.has(sectionInput.type) ? sectionInput.type : "custom",
-    items: [],
-  };
-  workspace.sections.push(section);
-  saveWorkspace(workspace);
-  return section;
-}
-
-/**
- * Permanently removes one section and all of its local entries.
+ * Permanently removes one legacy custom section and its local entries.
  *
  * @param {string} sectionId Section identifier.
- * @returns {boolean} Whether a matching section was removed.
+ * @returns {boolean} Whether a matching non-core section was removed.
  */
 export function deleteSection(sectionId) {
+  if (isCoreSectionId(sectionId)) {
+    return false;
+  }
+
   const workspace = getWorkspace();
   const sectionCount = workspace.sections.length;
   workspace.sections = workspace.sections.filter((section) => section.id !== sectionId);

@@ -37,67 +37,9 @@
 
   <div class="app-shell">
     <div class="app-frame">
-      <header class="app-topbar">
-        <label class="search-control">
-          <span aria-hidden="true">⌕</span>
-          <input id="global-search" type="search" placeholder="Search your workspace…" autocomplete="off">
-          <kbd>⌘ K</kbd>
-        </label>
-        <div class="topbar-actions">
-          <span class="local-status"><i></i> Saved locally</span>
-          <button class="button button-quiet" id="install-button" type="button" hidden>Install app</button>
-          <button class="avatar-button" type="button" aria-label="Personal workspace">AM</button>
-        </div>
-      </header>
-
       <main class="app-main" id="app-main" tabindex="-1"></main>
     </div>
   </div>
-
-  <dialog class="app-dialog" id="section-dialog">
-    <form method="dialog" id="section-form">
-      <div class="dialog-heading">
-        <div>
-          <p class="eyebrow">MODULAR LIBRARY</p>
-          <h2>Add a section</h2>
-        </div>
-        <button class="icon-button dialog-close" type="button" data-dialog-close aria-label="Close">×</button>
-      </div>
-      <label>
-        Section name
-        <input name="title" maxlength="48" required placeholder="e.g. Reading Notes">
-      </label>
-      <label>
-        Short description
-        <textarea name="description" maxlength="180" rows="3" placeholder="What belongs in this section?"></textarea>
-      </label>
-      <label>
-        Section type
-        <select name="type">
-          <option value="custom">Flexible notes</option>
-          <option value="protocol">Protocol checklists</option>
-          <option value="language">Programming language refreshers</option>
-          <option value="algorithm">Algorithms with animation</option>
-          <option value="project">Projects with relationships</option>
-        </select>
-      </label>
-      <label>
-        Icon
-        <select name="icon">
-          <option value="◇">◇ Diamond</option>
-          <option value="◉">◉ Focus</option>
-          <option value="✦">✦ Spark</option>
-          <option value="⌬">⌬ Structure</option>
-          <option value="☰">☰ Notes</option>
-          <option value="↗">↗ Growth</option>
-        </select>
-      </label>
-      <div class="dialog-actions">
-        <button class="button button-quiet" type="button" data-dialog-close>Cancel</button>
-        <button class="button button-primary" type="submit" value="default">Create section</button>
-      </div>
-    </form>
-  </dialog>
 
   <dialog class="app-dialog app-dialog-wide" id="item-dialog">
     <form method="dialog" id="item-form">
@@ -134,23 +76,6 @@
       <div class="dialog-actions">
         <button class="button button-quiet" type="button" data-dialog-close>Cancel</button>
         <button class="button button-danger" type="submit" value="default">Delete</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog class="app-dialog app-dialog-wide" id="manage-dialog">
-    <form method="dialog">
-      <div class="dialog-heading">
-        <div>
-          <p class="eyebrow">WORKSPACE SETTINGS</p>
-          <h2>Manage sections</h2>
-        </div>
-        <button class="icon-button dialog-close" type="button" data-dialog-close aria-label="Close">×</button>
-      </div>
-      <div id="manage-section-list" class="manage-list"></div>
-      <div class="dialog-actions">
-        <button class="button button-quiet" type="button" data-dialog-close>Done</button>
-        <button class="button button-primary" id="manage-add-section" type="button">Add section</button>
       </div>
     </form>
   </dialog>

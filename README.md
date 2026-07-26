@@ -40,7 +40,7 @@ The interface uses a shared geometric visual system based on grids, angular card
 
 ## Personal Libraries
 
-The editable areas start with empty, modular libraries:
+The editable areas use five empty, permanent core libraries:
 
 - **Protocols** — Repeatable triggers and checklists that reduce planning overhead.
 - **Studies** — Concept breakdowns, visual explanations, essays, and developing notes.
@@ -48,9 +48,9 @@ The editable areas start with empty, modular libraries:
 - **Algorithms** — Use cases, explanations, complexity notes, and user-authored animated frames.
 - **Projects** — Problems, solutions, languages, and live relationships to Algorithm entries.
 
-Additional flexible or specialized sections can be added at any time. Sections and entries can also be deleted using the requested password `password`. Because this is a static local-first site, the password is a convenience guard and not secure access control.
+These five core libraries cannot be added, renamed, or deleted. Their entries remain editable and can be deleted using the requested password `password`. Because this is a static local-first site, the password is a convenience guard and not secure access control.
 
-User-created sections, entries, boards, and architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
+User-created entries, boards, and architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 
 ## Workspace Tools
 

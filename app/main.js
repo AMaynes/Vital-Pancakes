@@ -1,11 +1,11 @@
 /**
  * Overview & Purpose
  * Renders the local-first Protocols, Studies & Projects, and tools areas,
- * including modular section editors and PWA controls.
+ * including type-aware entry editors and offline registration.
  *
  * Architectural Relationships
  * Called by: workspace.html.
- * Calls: app/store.js and the browser DOM, dialog, history, and install APIs.
+ * Calls: app/store.js and the browser DOM, dialog, and service-worker APIs.
  *
  * External Resources
  * workspace.css, manifest.webmanifest, and sw.js.
@@ -17,30 +17,25 @@
 
 import {
   addItem,
-  addSection,
   deleteItem,
   deleteSection,
   getSection,
   getWorkspace,
+  isCoreSectionId,
   isDeletePasswordValid,
   updateItem,
 } from "./store.js";
 
 const appMain = document.querySelector("#app-main");
-const searchInput = document.querySelector("#global-search");
-const sectionDialog = document.querySelector("#section-dialog");
-const sectionForm = document.querySelector("#section-form");
 const itemDialog = document.querySelector("#item-dialog");
 const itemForm = document.querySelector("#item-form");
 const passwordDialog = document.querySelector("#password-dialog");
 const passwordForm = document.querySelector("#password-form");
-const manageDialog = document.querySelector("#manage-dialog");
 const animationTimers = new Set();
 
 let activeSectionId = null;
 let editingItemId = null;
 let pendingDeleteAction = null;
-let deferredInstallPrompt = null;
 
 const SECTION_LABELS = {
   protocol: "PROTOCOL",
@@ -162,10 +157,10 @@ function renderWorkspace() {
     if (protocolSections.length === 1) {
       renderSection(protocolSections[0]);
     } else {
-      renderDashboard(area, searchInput.value.trim());
+      renderDashboard(area);
     }
   } else {
-    renderDashboard(area, searchInput.value.trim());
+    renderDashboard(area);
   }
 }
 
@@ -185,20 +180,13 @@ function renderTopNavigation(area) {
 }
 
 /**
- * Shows an area dashboard or a global-search result grid.
+ * Shows the active area dashboard.
  *
  * @param {"protocols"|"studies"|"tools"} area Active area.
- * @param {string} query Case-insensitive query.
  */
-function renderDashboard(area, query = "") {
+function renderDashboard(area) {
   appMain.replaceChildren();
   const workspace = getWorkspace();
-  const normalizedQuery = query.toLocaleLowerCase();
-
-  if (normalizedQuery) {
-    renderSearchResults(workspace, normalizedQuery);
-    return;
-  }
 
   if (area === AREA_TOOLS) {
     renderToolsDashboard();
@@ -254,7 +242,6 @@ function renderStudiesDashboard(workspace) {
   const sectionHeading = createSectionHeading(
     "Studies and project libraries",
     "Add knowledge when it becomes useful. Nothing is prefilled.",
-    createLibraryActions(),
   );
   const libraryGrid = createElement("div", "library-grid");
   getSectionsForArea(workspace, AREA_STUDIES).forEach((section) => libraryGrid.append(createLibraryCard(section)));
@@ -302,20 +289,10 @@ function renderProtocolsDashboard(workspace) {
   const sectionHeading = createSectionHeading(
     "Your protocol libraries",
     "Keep related playbooks together and add only what reduces friction.",
-    createLibraryActions(),
   );
   const libraryGrid = createElement("div", "library-grid");
   const sections = getSectionsForArea(workspace, AREA_PROTOCOLS);
   sections.forEach((section) => libraryGrid.append(createLibraryCard(section)));
-
-  if (!sections.length) {
-    const empty = createEmptyState("No protocol library yet", "Create an empty protocol section, then add playbooks only when they become useful.");
-    const button = createElement("button", "button button-primary", "Create protocol section");
-    button.type = "button";
-    button.addEventListener("click", openSectionDialog);
-    empty.append(button);
-    libraryGrid.append(empty);
-  }
 
   appMain.append(hero, sectionHeading, libraryGrid);
 }
@@ -363,37 +340,18 @@ function renderToolsDashboard() {
  *
  * @param {string} title Heading text.
  * @param {string} description Supporting copy.
- * @param {HTMLElement|null} actions Optional management controls.
  * @returns {HTMLElement} Heading row.
  */
-function createSectionHeading(title, description, actions = null) {
+function createSectionHeading(title, description) {
   const row = createElement("div", "content-heading-row");
   const copy = createElement("div");
   copy.append(createElement("h2", "", title), createElement("p", "", description));
   row.append(copy);
-  if (actions) row.append(actions);
   return row;
 }
 
 /**
- * Creates in-page controls for adding and deleting modular sections.
- *
- * @returns {HTMLElement} Section management controls.
- */
-function createLibraryActions() {
-  const actions = createElement("div", "content-heading-actions");
-  const addButton = createElement("button", "button button-primary", "+ Add section");
-  addButton.type = "button";
-  addButton.addEventListener("click", openSectionDialog);
-  const manageButton = createElement("button", "button button-quiet", "Manage sections");
-  manageButton.type = "button";
-  manageButton.addEventListener("click", openManageDialog);
-  actions.append(addButton, manageButton);
-  return actions;
-}
-
-/**
- * Creates a dashboard card for one modular section.
+ * Creates a dashboard card for one core or legacy section.
  *
  * @param {object} section Section model.
  * @returns {HTMLElement} Linked section card.
@@ -429,47 +387,6 @@ function createToolCard(tool) {
 }
 
 /**
- * Renders matching section entries for global search.
- *
- * @param {{sections: Array<object>}} workspace Workspace model.
- * @param {string} query Lowercase search string.
- */
-function renderSearchResults(workspace, query) {
-  const heading = createElement("section", "page-heading");
-  heading.append(
-    createElement("p", "eyebrow", "SEARCH"),
-    createElement("h1", "", `Results for “${searchInput.value.trim()}”`),
-  );
-
-  const results = [];
-  workspace.sections.forEach((section) => {
-    section.items.forEach((item) => {
-      const searchable = Object.values(item).flat().join(" ").toLocaleLowerCase();
-      if (searchable.includes(query)) {
-        results.push({ section, item });
-      }
-    });
-  });
-
-  const grid = createElement("div", "entry-grid");
-  if (!results.length) {
-    grid.append(createEmptyState("No matching entries", "Try a title, tag, language, algorithm, or phrase from your notes."));
-  } else {
-    results.forEach(({ section, item }) => {
-      const card = createElement("a", "search-result-card");
-      card.href = `#section=${encodeURIComponent(section.id)}`;
-      card.append(
-        createElement("span", "card-kicker", section.title.toUpperCase()),
-        createElement("h3", "", item.title),
-        createElement("p", "", getItemPreview(item)),
-      );
-      grid.append(card);
-    });
-  }
-  appMain.append(heading, grid);
-}
-
-/**
  * Renders one section and its type-aware entries.
  *
  * @param {object} section Section model.
@@ -489,13 +406,13 @@ function renderSection(section) {
   const addButton = createElement("button", "button button-primary", `+ Add ${getSingularLabel(section)}`);
   addButton.type = "button";
   addButton.addEventListener("click", () => openItemDialog(section));
-  const addSectionButton = createElement("button", "button button-quiet", "+ Add section");
-  addSectionButton.type = "button";
-  addSectionButton.addEventListener("click", openSectionDialog);
-  const menuButton = createElement("button", "button button-quiet", "Delete section");
-  menuButton.type = "button";
-  menuButton.addEventListener("click", () => confirmSectionDelete(section));
-  actions.append(addButton, addSectionButton, menuButton);
+  actions.append(addButton);
+  if (!isCoreSectionId(section.id)) {
+    const deleteButton = createElement("button", "button button-quiet", "Delete section");
+    deleteButton.type = "button";
+    deleteButton.addEventListener("click", () => confirmSectionDelete(section));
+    actions.append(deleteButton);
+  }
   heading.append(headingCopy, actions);
 
   const meta = createElement("div", "section-meta");
@@ -837,27 +754,6 @@ function resolveAlgorithmNames(algorithmIds = []) {
 }
 
 /**
- * Selects a concise preview from a generic item.
- *
- * @param {object} item Entry record.
- * @returns {string} Preview text.
- */
-function getItemPreview(item) {
-  return item.summary || item.problem || item.explanation || item.notes || item.trigger || "Open this section to view the entry.";
-}
-
-/**
- * Opens the section creation dialog with a reset form.
- */
-function openSectionDialog() {
-  sectionForm.reset();
-  sectionForm.elements.type.value = getRouteArea() === AREA_PROTOCOLS ? "protocol" : "custom";
-  if (manageDialog.open) manageDialog.close();
-  sectionDialog.showModal();
-  window.setTimeout(() => sectionForm.elements.title.focus(), 0);
-}
-
-/**
  * Opens a type-aware entry editor for creation or update.
  *
  * @param {object} section Parent section.
@@ -1048,6 +944,11 @@ function readItemForm(section) {
  * @param {object} section Section to delete.
  */
 function confirmSectionDelete(section) {
+  if (isCoreSectionId(section.id)) {
+    showToast("Core sections cannot be deleted.");
+    return;
+  }
+
   openPasswordDialog(`Delete “${section.title}”?`, () => {
     deleteSection(section.id);
     location.hash = `area=${getAreaForSection(section)}`;
@@ -1080,32 +981,8 @@ function openPasswordDialog(title, action) {
   passwordForm.reset();
   document.querySelector("#password-error").textContent = "";
   document.querySelector("#password-dialog-title").textContent = title;
-  if (manageDialog.open) manageDialog.close();
   passwordDialog.showModal();
   window.setTimeout(() => passwordForm.elements.password.focus(), 0);
-}
-
-/**
- * Opens the section manager with current entry counts and delete controls.
- */
-function openManageDialog() {
-  const list = document.querySelector("#manage-section-list");
-  list.replaceChildren();
-  getSectionsForArea(getWorkspace(), getRouteArea()).forEach((section) => {
-    const row = createElement("div", "manage-row");
-    const identity = createElement("div", "manage-identity");
-    identity.append(
-      createElement("span", "manage-icon", section.icon),
-      createElement("strong", "", section.title),
-      createElement("small", "", `${section.items.length} ${section.items.length === 1 ? "entry" : "entries"}`),
-    );
-    const deleteButton = createElement("button", "button button-danger-quiet", "Delete");
-    deleteButton.type = "button";
-    deleteButton.addEventListener("click", () => confirmSectionDelete(section));
-    row.append(identity, deleteButton);
-    list.append(row);
-  });
-  manageDialog.showModal();
 }
 
 /**
@@ -1122,20 +999,6 @@ function showToast(message) {
     window.setTimeout(() => toast.remove(), 250);
   }, 2600);
 }
-
-sectionForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const formData = new FormData(sectionForm);
-  const section = addSection({
-    title: String(formData.get("title") ?? ""),
-    description: String(formData.get("description") ?? ""),
-    icon: String(formData.get("icon") ?? "◇"),
-    type: String(formData.get("type") ?? "custom"),
-  });
-  sectionDialog.close();
-  location.hash = `section=${encodeURIComponent(section.id)}`;
-  showToast("Section created.");
-});
 
 itemForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -1165,40 +1028,10 @@ passwordForm.addEventListener("submit", (event) => {
   pendingDeleteAction = null;
 });
 
-searchInput.addEventListener("input", () => {
-  const area = getRouteArea();
-  if (searchInput.value && location.hash) {
-    history.replaceState(null, "", `${location.pathname}#area=${area}`);
-  }
-  renderDashboard(area, searchInput.value.trim());
-});
-
-document.addEventListener("keydown", (event) => {
-  if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k") {
-    event.preventDefault();
-    searchInput.focus();
-  }
-});
-
-document.querySelector("#manage-add-section").addEventListener("click", openSectionDialog);
 document.querySelectorAll("[data-dialog-close]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog")?.close());
 });
 window.addEventListener("hashchange", renderWorkspace);
-
-window.addEventListener("beforeinstallprompt", (event) => {
-  event.preventDefault();
-  deferredInstallPrompt = event;
-  document.querySelector("#install-button").hidden = false;
-});
-
-document.querySelector("#install-button").addEventListener("click", async () => {
-  if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  document.querySelector("#install-button").hidden = true;
-});
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch((error) => {
