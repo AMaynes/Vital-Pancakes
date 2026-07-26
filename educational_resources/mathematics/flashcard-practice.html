@@ -1412,6 +1412,7 @@ Practice progress and review queues are stored locally in the browser.
       background: #666;
     }
   </style>
+  <link rel="stylesheet" href="../flashcards.css?v=16" />
 </head>
 <body>
   <header class="site-header">
@@ -1430,22 +1431,25 @@ Practice progress and review queues are stored locally in the browser.
 
   <main>
     <section>
-      <h2>Flash Card Practice</h2>
+      <h2 class="notecard-page-title">
+        <span class="notecard-logo" aria-hidden="true"></span>
+        <span>Flash Card Practice</span>
+      </h2>
       <p><a href="index.html">&larr; Back to Mathematics Resources</a></p>
       
       <!-- Tab Navigation -->
       <div class="tab-nav">
         <button class="tab-btn active" onclick="showTab('practice')" id="tab-practice">
-          🎴 Practice
+          Practice
         </button>
         <button class="tab-btn" onclick="showTab('quiz')" id="tab-quiz">
-          🧠 Test Your Knowledge
+          Test Your Knowledge
         </button>
         <button class="tab-btn" onclick="showTab('submit')" id="tab-submit">
-          ➕ Submit Card
+          Submit Card
         </button>
         <button class="tab-btn" onclick="showTab('reviews')" id="tab-reviews">
-          📋 Pending Reviews <span class="badge" id="review-count" style="display:none">0</span>
+          Pending Reviews <span class="badge" id="review-count" style="display:none">0</span>
         </button>
       </div>
 
@@ -1468,7 +1472,7 @@ Practice progress and review queues are stored locally in the browser.
         <div class="submit-section">
           <div class="submit-form">
             <div id="submit-success" class="success-message" style="display:none">
-              ✅ Flashcard submitted for review!
+              Flashcard submitted for review.
             </div>
 
             <div class="form-group">
@@ -1502,14 +1506,14 @@ Practice progress and review queues are stored locally in the browser.
       <div id="reviews-tab" class="tab-content" style="display:none">
         <div class="reviews-section">
           <div class="reviews-header">
-            <h3>📋 Pending Reviews</h3>
+            <h3>Pending Reviews</h3>
             <button class="clear-all-btn" onclick="clearAllReviews()" id="clear-all-btn" style="display:none">
-              🗑️ Clear All
+              Clear All
             </button>
           </div>
           <div id="reviews-list">
             <div class="empty-state">
-              <div class="empty-state-icon">📭</div>
+              <div class="empty-state-icon" aria-hidden="true"></div>
               <p>No pending flashcards for review.</p>
             </div>
           </div>
@@ -2535,7 +2539,7 @@ Practice progress and review queues are stored locally in the browser.
       // Add "Unrelated Topics" option
       const unrelatedOption = document.createElement('option');
       unrelatedOption.value = 'unrelated';
-      unrelatedOption.textContent = '⚠️ Unrelated Topics';
+      unrelatedOption.textContent = 'Unrelated Topics';
       select.appendChild(unrelatedOption);
     }
 
@@ -2595,7 +2599,7 @@ Practice progress and review queues are stored locally in the browser.
       if (pendingReviews.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
-            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-icon" aria-hidden="true"></div>
             <p>No pending flashcards for review.</p>
           </div>
         `;
@@ -2622,8 +2626,8 @@ Practice progress and review queues are stored locally in the browser.
               </div>
             </div>
             <div class="review-card-actions">
-              <button class="copy-btn" onclick="copyReview(${index})">📋 Copy JSON</button>
-              <button class="delete-btn" onclick="deleteReview(${index})">🗑️ Delete</button>
+              <button class="copy-btn" onclick="copyReview(${index})">Copy JSON</button>
+              <button class="delete-btn" onclick="deleteReview(${index})">Delete</button>
             </div>
           </div>
         `;
@@ -2894,12 +2898,12 @@ Practice progress and review queues are stored locally in the browser.
       return !!generators[`${catKey}.${subKey}`];
     }
 
-    // Get type emoji
-    function getTypeEmoji(type) {
+    // Get an optional type prefix for compact filter controls.
+    function getTypePrefix(type) {
       switch(type) {
-        case 'formula': return '📝';
-        case 'fact': return '💡';
-        case 'worked': return '✏️';
+        case 'formula': return '';
+        case 'fact': return '';
+        case 'worked': return '';
         default: return '';
       }
     }
@@ -2920,10 +2924,10 @@ Practice progress and review queues are stored locally in the browser.
       
       // Mixed mode
       html += '<div class="mode-section">';
-      html += '<h3>🎲 Special Modes</h3>';
+      html += '<h3>Special Modes</h3>';
       html += '<div class="special-modes">';
       html += `<button class="mode-btn mixed" onclick="startMixed()">
-        🔀 Mixed Mode
+        Mixed Mode
         <span style="font-size:0.8em;opacity:0.8">(${getAllCards().length} cards)</span>
       </button>`;
       html += '</div>';
@@ -2931,7 +2935,7 @@ Practice progress and review queues are stored locally in the browser.
 
       // Category tree
       html += '<div class="mode-section">';
-      html += '<h3>📚 Browse by Topic</h3>';
+      html += '<h3>Browse by Topic</h3>';
       html += '<div class="category-tree">';
 
       for (const catKey in data.categories) {
@@ -3001,12 +3005,12 @@ Practice progress and review queues are stored locally in the browser.
             html += `<div class="type-buttons">`;
             if (formulaCount > 0) {
               html += `<button class="type-btn formula" onclick="startSubcategoryType('${catKey}','${subKey}','formula')">
-                ${getTypeEmoji('formula')} Formulas <span class="type-count">(${formulaCount})</span>
+                ${getTypePrefix('formula')} Formulas <span class="type-count">(${formulaCount})</span>
               </button>`;
             }
             if (factCount > 0) {
               html += `<button class="type-btn fact" onclick="startSubcategoryType('${catKey}','${subKey}','fact')">
-                ${getTypeEmoji('fact')} Facts <span class="type-count">(${factCount})</span>
+                ${getTypePrefix('fact')} Facts <span class="type-count">(${factCount})</span>
               </button>`;
             }
             // Show worked problems button if generator exists OR static worked cards exist
@@ -3014,7 +3018,7 @@ Practice progress and review queues are stored locally in the browser.
             if (workedCount > 0 || hasGen) {
               const workedLabel = hasGen ? '∞ Generated' : `(${workedCount})`;
               html += `<button class="type-btn worked" onclick="startSubcategoryType('${catKey}','${subKey}','worked')">
-                ${getTypeEmoji('worked')} Worked Problems <span class="type-count">${workedLabel}</span>
+                ${getTypePrefix('worked')} Worked Problems <span class="type-count">${workedLabel}</span>
               </button>`;
             }
             html += `</div>`;
@@ -3078,7 +3082,7 @@ Practice progress and review queues are stored locally in the browser.
       currentGeneratorCatKey = null;
       currentGeneratorSubKey = null;
       activeCards = getAllCards();
-      currentMode = '🔀 Mixed Mode';
+      currentMode = 'Mixed Mode';
       startPractice();
     }
 
@@ -3308,7 +3312,7 @@ Practice progress and review queues are stored locally in the browser.
         <div class="info-overlay" id="infoOverlay" onclick="closeInfoPanel()"></div>
         <div class="info-panel" id="infoPanel">
           <div class="info-panel-header">
-            <h3>ℹ️ Detailed Explanation</h3>
+            <h3>Detailed Explanation</h3>
             <button class="info-close-btn" onclick="closeInfoPanel()">✕</button>
           </div>
           <div class="info-panel-body" id="infoPanelBody">
@@ -3574,7 +3578,7 @@ Practice progress and review queues are stored locally in the browser.
             <div class="stat-label">Incorrect</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value streak">🔥 ${quizStreak}</div>
+            <div class="stat-value streak">${quizStreak}</div>
             <div class="stat-label">Streak</div>
           </div>
         </div>
@@ -3638,8 +3642,8 @@ Practice progress and review queues are stored locally in the browser.
       // Show feedback
       const feedbackDiv = document.getElementById('quiz-feedback');
       feedbackDiv.innerHTML = isCorrect 
-        ? '<div class="quiz-feedback correct">✅ Correct!</div>'
-        : '<div class="quiz-feedback incorrect">❌ Incorrect!</div>';
+        ? '<div class="quiz-feedback correct">Correct.</div>'
+        : '<div class="quiz-feedback incorrect">Incorrect.</div>';
 
       // Show next button
       document.getElementById('quiz-next-btn').style.display = 'block';
@@ -3647,7 +3651,7 @@ Practice progress and review queues are stored locally in the browser.
       // Update stats display
       document.querySelector('.stat-value.correct').textContent = quizCorrect;
       document.querySelector('.stat-value.incorrect').textContent = quizIncorrect;
-      document.querySelector('.stat-value.streak').textContent = '🔥 ' + quizStreak;
+      document.querySelector('.stat-value.streak').textContent = quizStreak;
     }
 
     // Initialize

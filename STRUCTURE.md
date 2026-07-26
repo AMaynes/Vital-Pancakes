@@ -49,6 +49,7 @@ artificially-neuroscience/
 │   ├── Calculus-MasterSheet.pdf — Calculus reference sheet.
 │   └── Trigonometry-MasterSheet.pdf — Trigonometry reference sheet.
 ├── educational_resources/
+│   ├── flashcards.css — Shares the compact geometric notecard interface.
 │   ├── index.html — Introduces the four learning disciplines.
 │   ├── arts/
 │   │   ├── index.html — Presents arts notes and practice.
@@ -180,7 +181,7 @@ Stores stable, downloadable mathematics reference documents linked from the math
 
 ### `educational_resources/`
 
-Owns learning material grouped by mathematics, neuroscience, computer science, and arts. Mathematics and arts also contain independent flashcard applications with subject-specific JSON data.
+Owns learning material grouped by mathematics, neuroscience, computer science, and arts. Mathematics and arts contain independent flashcard applications with subject-specific JSON data and one shared geometric interface in `flashcards.css`.
 
 ### `literature_analysis/`
 
