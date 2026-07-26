@@ -28,7 +28,7 @@
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-rows: 50px 1fr;
+  grid-template-rows: 44px 1fr;
 }
 
 .tool-topbar {
@@ -37,8 +37,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 0 14px;
+  gap: 9px;
+  padding: 0 10px;
   border-bottom: 1px solid var(--line-strong);
   background: var(--card);
 }
@@ -54,8 +54,8 @@
 
 .back-link {
   display: inline-grid;
-  width: 30px;
-  height: 30px;
+  width: 27px;
+  height: 27px;
   place-items: center;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -71,7 +71,7 @@
 
 .tool-title-group h1 {
   margin: 0;
-  font-size: 15px;
+  font-size: 13px;
   letter-spacing: -0.02em;
 }
 
@@ -95,11 +95,11 @@
   position: relative;
   z-index: 12;
   display: flex;
-  min-height: 44px;
+  min-height: 38px;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 5px 12px;
+  gap: 7px;
+  padding: 4px 9px;
   overflow-x: auto;
   border-bottom: 1px solid var(--line);
   background: #f6f3eb;
@@ -114,17 +114,17 @@
 
 .tool-button {
   display: inline-flex;
-  min-width: 30px;
-  min-height: 30px;
+  min-width: 26px;
+  min-height: 26px;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 5px 8px;
+  padding: 4px 6px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -148,8 +148,8 @@
 }
 
 .tool-color {
-  width: 28px;
-  height: 28px;
+  width: 25px;
+  height: 25px;
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: 50%;
@@ -163,8 +163,8 @@
 
 .tool-select,
 .tool-input {
-  min-height: 30px;
-  padding: 5px 8px;
+  min-height: 26px;
+  padding: 4px 6px;
   border: 1px solid var(--line);
   border-radius: 8px;
   outline: none;
@@ -244,20 +244,20 @@
 .pdf-workspace {
   display: grid;
   min-height: 0;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 220px 1fr;
 }
 
 .pdf-sidebar,
 .architecture-inspector {
   min-height: 0;
-  padding: 14px;
+  padding: 11px;
   overflow-y: auto;
   border-right: 1px solid var(--line-strong);
   background: #f7f4ec;
 }
 
 .panel-section {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .panel-section h2,
@@ -276,8 +276,8 @@
 
 .drop-zone {
   display: grid;
-  min-height: 90px;
-  padding: 12px;
+  min-height: 72px;
+  padding: 9px;
   place-items: center;
   border: 1px dashed var(--line-strong);
   border-radius: 12px;
@@ -310,7 +310,7 @@
 
 .signature-preview {
   display: grid;
-  min-height: 58px;
+  min-height: 48px;
   margin: 8px 0;
   place-items: center;
   overflow: hidden;
@@ -360,7 +360,7 @@
   min-height: 0;
   place-items: center;
   overflow: auto;
-  padding: 16px;
+  padding: 11px;
   background: #d9d6ce;
 }
 
@@ -415,7 +415,7 @@
 
 .pdf-empty {
   display: grid;
-  min-height: 280px;
+  min-height: 220px;
   place-items: center;
   align-content: center;
   color: var(--ink-faint);
@@ -445,7 +445,7 @@
   position: relative;
   display: grid;
   min-height: 0;
-  grid-template-columns: 220px 1fr 250px;
+  grid-template-columns: 205px 1fr 235px;
   overflow: hidden;
 }
 
@@ -767,8 +767,8 @@
   width: 100%;
   min-height: 100%;
   align-items: flex-start;
-  gap: 20px;
-  padding: 22px;
+  gap: 16px;
+  padding: 16px;
   overflow: auto;
   transform-origin: top left;
 }
@@ -919,7 +919,7 @@
 
 @media (max-width: 760px) {
   .tool-shell {
-    grid-template-rows: 48px 1fr;
+    grid-template-rows: 42px 1fr;
   }
 
   .tool-topbar {
@@ -941,7 +941,7 @@
 
   .tool-toolbar {
     justify-content: flex-start;
-    padding: 5px 8px;
+    padding: 4px 7px;
   }
 
   .tool-button-label {
@@ -981,7 +981,7 @@
 
   .architecture-workspace {
     grid-template-columns: 1fr;
-    grid-template-rows: 160px 1fr;
+    grid-template-rows: 130px 1fr;
   }
 
   .architecture-browser {
@@ -990,7 +990,7 @@
   }
 
   .tree-panel {
-    max-height: 105px;
+    max-height: 78px;
     overflow-y: auto;
   }
 

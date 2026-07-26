@@ -36,7 +36,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Workspace** — The Visual Board, PDF Signer, and Architecture Designer without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
-The interface uses a compact geometric visual system based on dense grids, restrained title sizes, angular cards, clipped corners, structured lines, and navy, teal, blue, and gold accents.
+The interface uses a compact geometric visual system based on one-screen desktop layouts, dense grids, interface-scale titles, angular cards, clipped corners, structured lines, and navy, teal, blue, and gold accents.
 
 ## Personal Libraries
 
