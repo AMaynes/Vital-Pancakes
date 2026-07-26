@@ -28,7 +28,7 @@
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-rows: 60px 1fr;
+  grid-template-rows: 50px 1fr;
 }
 
 .tool-topbar {
@@ -37,8 +37,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 0 18px;
+  gap: 12px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--line-strong);
   background: var(--card);
 }
@@ -54,8 +54,8 @@
 
 .back-link {
   display: inline-grid;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -95,11 +95,11 @@
   position: relative;
   z-index: 12;
   display: flex;
-  min-height: 54px;
+  min-height: 44px;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 7px 15px;
+  gap: 10px;
+  padding: 5px 12px;
   overflow-x: auto;
   border-bottom: 1px solid var(--line);
   background: #f6f3eb;
@@ -114,12 +114,12 @@
 
 .tool-button {
   display: inline-flex;
-  min-width: 34px;
-  min-height: 34px;
+  min-width: 30px;
+  min-height: 30px;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 7px 9px;
+  padding: 5px 8px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -148,8 +148,8 @@
 }
 
 .tool-color {
-  width: 31px;
-  height: 31px;
+  width: 28px;
+  height: 28px;
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: 50%;
@@ -163,8 +163,8 @@
 
 .tool-select,
 .tool-input {
-  min-height: 34px;
-  padding: 6px 9px;
+  min-height: 30px;
+  padding: 5px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   outline: none;
@@ -244,20 +244,20 @@
 .pdf-workspace {
   display: grid;
   min-height: 0;
-  grid-template-columns: 270px 1fr;
+  grid-template-columns: 240px 1fr;
 }
 
 .pdf-sidebar,
 .architecture-inspector {
   min-height: 0;
-  padding: 19px;
+  padding: 14px;
   overflow-y: auto;
   border-right: 1px solid var(--line-strong);
   background: #f7f4ec;
 }
 
 .panel-section {
-  margin-bottom: 25px;
+  margin-bottom: 16px;
 }
 
 .panel-section h2,
@@ -268,7 +268,7 @@
 
 .panel-section > p,
 .panel-copy {
-  margin: 0 0 13px;
+  margin: 0 0 9px;
   color: var(--ink-faint);
   font-size: 10px;
   line-height: 1.5;
@@ -276,8 +276,8 @@
 
 .drop-zone {
   display: grid;
-  min-height: 125px;
-  padding: 16px;
+  min-height: 90px;
+  padding: 12px;
   place-items: center;
   border: 1px dashed var(--line-strong);
   border-radius: 12px;
@@ -310,8 +310,8 @@
 
 .signature-preview {
   display: grid;
-  min-height: 74px;
-  margin: 11px 0;
+  min-height: 58px;
+  margin: 8px 0;
   place-items: center;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -360,7 +360,7 @@
   min-height: 0;
   place-items: center;
   overflow: auto;
-  padding: 28px;
+  padding: 16px;
   background: #d9d6ce;
 }
 
@@ -415,7 +415,7 @@
 
 .pdf-empty {
   display: grid;
-  min-height: 420px;
+  min-height: 280px;
   place-items: center;
   align-content: center;
   color: var(--ink-faint);
@@ -442,9 +442,11 @@
 /* Architecture */
 
 .architecture-workspace {
+  position: relative;
   display: grid;
   min-height: 0;
-  grid-template-columns: 250px 1fr 280px;
+  grid-template-columns: 220px 1fr 250px;
+  overflow: hidden;
 }
 
 .architecture-browser {
@@ -765,8 +767,8 @@
   width: 100%;
   min-height: 100%;
   align-items: flex-start;
-  gap: 28px;
-  padding: 38px;
+  gap: 20px;
+  padding: 22px;
   overflow: auto;
   transform-origin: top left;
 }
@@ -917,7 +919,7 @@
 
 @media (max-width: 760px) {
   .tool-shell {
-    grid-template-rows: 55px 1fr;
+    grid-template-rows: 48px 1fr;
   }
 
   .tool-topbar {
@@ -939,7 +941,7 @@
 
   .tool-toolbar {
     justify-content: flex-start;
-    padding: 7px 9px;
+    padding: 5px 8px;
   }
 
   .tool-button-label {

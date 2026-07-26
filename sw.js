@@ -14,17 +14,17 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "artificially-neuroscience-app-v8";
+const CACHE_NAME = "artificially-neuroscience-app-v10";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css",
-  "./site-navigation.css",
+  "./style.css?v=10",
+  "./site-navigation.css?v=10",
   "./research-literature.html",
   "./download-app.html",
-  "./download-app.css",
+  "./download-app.css?v=10",
   "./workspace.html",
-  "./workspace.css",
+  "./workspace.css?v=10",
   "./manifest.webmanifest",
   "./assets/app-icon.svg",
   "./assets/app-icon-192.png",
@@ -34,7 +34,7 @@ const APP_SHELL = [
   "./app/main.js",
   "./app/store.js",
   "./app/download-app.js",
-  "./tools/tool.css",
+  "./tools/tool.css?v=10",
   "./tools/visual-board.html",
   "./tools/visual-board.js",
   "./tools/pdf-signer.html",

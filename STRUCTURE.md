@@ -102,7 +102,7 @@ The public entry point. It introduces and links exactly five top-level sections:
 
 ### `style.css`
 
-The public site's geometric design language, responsive layout, content cards, list states, and flashcard compatibility styling.
+The public site's compact geometric design language, information-dense responsive layout, content cards, list states, and flashcard compatibility styling.
 
 ### `site-navigation.css`
 
@@ -114,7 +114,7 @@ The single top-level home for research publications, selected research, and anal
 
 ### `download-app.html` and `download-app.css`
 
-The install destination with animated geometric diagrams, phone preview screens, offline guidance, and responsive installation steps.
+The compact install destination with animated geometric diagrams, phone preview screens, offline guidance, and responsive installation steps.
 
 ### `workspace.html`
 
@@ -122,7 +122,7 @@ The accessible application shell for three hash-routed areas. Protocols owns per
 
 ### `workspace.css`
 
-The public-site-aligned geometric workspace design tokens, full-width responsive shell, angular cards, editors, dialogs, toasts, and tool-compatible styles.
+The public-site-aligned compact workspace design tokens, full-width responsive shell, angular cards, editors, dialogs, toasts, and tool-compatible styles.
 
 ### `manifest.webmanifest`
 
