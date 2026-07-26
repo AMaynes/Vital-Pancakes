@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>Architecture Designer · Artificially Neuroscience</title>
+  <link rel="icon" href="../assets/app-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../workspace.css">
+  <link rel="stylesheet" href="tool.css">
+</head>
+<body class="tool-body">
+  <div class="tool-shell">
+    <header class="tool-topbar">
+      <div class="tool-title-group">
+        <a class="back-link" href="../workspace.html" aria-label="Back to workspace">←</a>
+        <span></span>
+        <div>
+          <h1>Architecture Designer</h1>
+          <small>SYSTEM SCOPES + SCRIPT SKELETONS</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions">
+        <span class="tool-save-status">Saved locally</span>
+        <button class="button button-quiet" id="export-architecture" type="button">Export JSON</button>
+        <button class="button button-primary" id="add-architecture-node" type="button">+ Add</button>
+      </div>
+    </header>
+
+    <main class="architecture-workspace">
+      <aside class="architecture-browser">
+        <div class="architecture-tabs">
+          <button class="architecture-tab is-active" data-mode="scopes" type="button">System map</button>
+          <button class="architecture-tab" data-mode="files" type="button">File skeleton</button>
+        </div>
+        <div class="tree-panel" id="architecture-tree"></div>
+      </aside>
+
+      <section class="architecture-map-frame" id="architecture-canvas">
+        <div class="scope-breadcrumbs" id="scope-breadcrumbs" hidden></div>
+        <div class="scope-map" id="scope-map"></div>
+      </section>
+
+      <aside class="architecture-inspector" id="architecture-inspector">
+        <div class="inspector-empty" id="inspector-empty">
+          <span class="empty-symbol">⌘</span>
+          <p>Select a scope, folder, or file to edit its notes and relationships.</p>
+        </div>
+        <form class="inspector-form" id="inspector-form" hidden>
+          <p class="eyebrow" id="inspector-kind">SCOPE</p>
+          <h2 id="inspector-title">Details</h2>
+          <p class="panel-copy" id="inspector-path"></p>
+          <label>
+            Name
+            <input name="name" maxlength="100" required>
+          </label>
+          <label>
+            What it does
+            <textarea name="notes" rows="7" placeholder="Purpose, responsibilities, boundaries, or implementation notes"></textarea>
+          </label>
+          <fieldset class="relation-fieldset" id="inspector-algorithms">
+            <legend>Attached algorithms</legend>
+            <div class="algorithm-link-list" id="algorithm-link-list"></div>
+            <a class="text-link algorithm-library-link" href="../workspace.html#section=algorithms">Open Algorithms library →</a>
+          </fieldset>
+          <div class="inspector-actions">
+            <button class="button button-primary" type="submit">Save details</button>
+            <button class="button button-quiet" id="add-child-node" type="button">Add inside</button>
+            <button class="button button-danger-quiet" id="delete-architecture-node" type="button">Delete</button>
+          </div>
+        </form>
+      </aside>
+    </main>
+  </div>
+
+  <dialog class="app-dialog app-dialog-compact" id="architecture-node-dialog">
+    <form method="dialog" id="architecture-node-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">NEW ARCHITECTURE NODE</p>
+          <h2 id="architecture-node-dialog-title">Add scope</h2>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-dialog-close aria-label="Close">×</button>
+      </div>
+      <label id="node-type-field">
+        Type
+        <select name="type">
+          <option value="folder">Folder</option>
+          <option value="file">File</option>
+        </select>
+      </label>
+      <label>
+        Name
+        <input name="name" maxlength="100" required placeholder="Give this part a clear name">
+      </label>
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" data-dialog-close>Cancel</button>
+        <button class="button button-primary" type="submit" value="default">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="architecture.js"></script>
+</body>
+</html>

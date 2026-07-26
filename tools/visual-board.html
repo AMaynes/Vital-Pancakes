@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>Visual Board · Artificially Neuroscience</title>
+  <link rel="icon" href="../assets/app-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../workspace.css">
+  <link rel="stylesheet" href="tool.css">
+</head>
+<body class="tool-body">
+  <div class="tool-shell">
+    <header class="tool-topbar">
+      <div class="tool-title-group">
+        <a class="back-link" href="../workspace.html" aria-label="Back to workspace">←</a>
+        <span></span>
+        <div>
+          <h1>Visual Board</h1>
+          <small>DIAGRAM + FREEFORM CANVAS</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions">
+        <span class="tool-save-status" id="save-status">Saved locally</span>
+        <button class="button button-quiet" id="clear-board" type="button">Clear</button>
+        <button class="button button-primary" id="export-board" type="button">Export PNG</button>
+      </div>
+    </header>
+
+    <main class="tool-workspace">
+      <div class="tool-toolbar" aria-label="Board tools">
+        <div class="toolbar-group" id="drawing-tools">
+          <button class="tool-button is-active" data-tool="select" type="button" title="Select and move">
+            ↖ <span class="tool-button-label">Select</span>
+          </button>
+          <button class="tool-button" data-tool="pen" type="button" title="Freehand pen">
+            ✎ <span class="tool-button-label">Pen</span>
+          </button>
+          <button class="tool-button" data-tool="rectangle" type="button" title="Rectangle">
+            □ <span class="tool-button-label">Box</span>
+          </button>
+          <button class="tool-button" data-tool="ellipse" type="button" title="Ellipse">
+            ○ <span class="tool-button-label">Ellipse</span>
+          </button>
+          <button class="tool-button" data-tool="connector" type="button" title="Arrow connector">
+            ↗ <span class="tool-button-label">Arrow</span>
+          </button>
+          <button class="tool-button" data-tool="note" type="button" title="Text note">
+            T <span class="tool-button-label">Note</span>
+          </button>
+          <button class="tool-button" data-tool="eraser" type="button" title="Erase an object">
+            ◇ <span class="tool-button-label">Erase</span>
+          </button>
+          <span class="toolbar-divider"></span>
+          <input class="tool-color" id="stroke-color" type="color" value="#173f36" aria-label="Stroke color">
+          <input class="tool-range" id="stroke-width" type="range" min="1" max="12" value="3" aria-label="Stroke width">
+        </div>
+        <div class="toolbar-group">
+          <button class="tool-button" id="undo-board" type="button" title="Undo">↶</button>
+          <button class="tool-button" id="redo-board" type="button" title="Redo">↷</button>
+          <span class="toolbar-divider"></span>
+          <button class="tool-button" id="zoom-out" type="button" title="Zoom out">−</button>
+          <span class="zoom-value" id="zoom-value">100%</span>
+          <button class="tool-button" id="zoom-in" type="button" title="Zoom in">+</button>
+        </div>
+      </div>
+      <section class="canvas-frame">
+        <canvas id="visual-board" aria-label="Diagram and paint canvas"></canvas>
+        <div class="floating-help">
+          Draw freehand, create diagram shapes, connect ideas, or select anything to move it. Your board saves automatically on this device.
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="visual-board.js"></script>
+</body>
+</html>

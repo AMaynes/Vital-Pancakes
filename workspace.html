@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="AN Workspace">
+  <meta
+    name="description"
+    content="A private-thinking workspace for protocols, programming languages, algorithms, projects, diagrams, architecture, and signed PDFs."
+  >
+  <title>Artificially Neuroscience · Workspace</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/app-icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="workspace.css">
+</head>
+<body class="workspace-body">
+  <div class="app-shell">
+    <aside class="app-sidebar" id="app-sidebar" aria-label="Workspace navigation">
+      <a class="brand-lockup" href="#" aria-label="Artificially Neuroscience home">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span>
+          <strong>Artificially</strong>
+          <small>NEUROSCIENCE</small>
+        </span>
+      </a>
+
+      <nav class="primary-nav">
+        <a class="nav-item is-active" href="#" data-route="home">
+          <span class="nav-icon">⌂</span>
+          Home
+        </a>
+        <div class="nav-group-label">
+          <span>LIBRARY</span>
+          <button class="icon-button" id="add-section-shortcut" type="button" aria-label="Add section">+</button>
+        </div>
+        <div id="section-navigation"></div>
+
+        <div class="nav-group-label"><span>TOOLS</span></div>
+        <a class="nav-item" href="tools/visual-board.html">
+          <span class="nav-icon">✣</span>
+          Visual Board
+        </a>
+        <a class="nav-item" href="tools/pdf-signer.html">
+          <span class="nav-icon">⌁</span>
+          PDF Signer
+        </a>
+        <a class="nav-item" href="tools/architecture.html">
+          <span class="nav-icon">⌘</span>
+          Architecture
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="nav-item nav-button" id="manage-sections-button" type="button">
+          <span class="nav-icon">⚙</span>
+          Manage sections
+        </button>
+        <a class="nav-item" href="educational_resources/">
+          <span class="nav-icon">↗</span>
+          Legacy library
+        </a>
+      </div>
+    </aside>
+
+    <div class="app-scrim" id="app-scrim"></div>
+
+    <div class="app-frame">
+      <header class="app-topbar">
+        <button class="mobile-menu-button" id="mobile-menu-button" type="button" aria-label="Open navigation">☰</button>
+        <label class="search-control">
+          <span aria-hidden="true">⌕</span>
+          <input id="global-search" type="search" placeholder="Search your workspace…" autocomplete="off">
+          <kbd>⌘ K</kbd>
+        </label>
+        <div class="topbar-actions">
+          <span class="local-status"><i></i> Saved locally</span>
+          <button class="button button-quiet" id="install-button" type="button" hidden>Install app</button>
+          <button class="avatar-button" type="button" aria-label="Personal workspace">AM</button>
+        </div>
+      </header>
+
+      <main class="app-main" id="app-main" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <dialog class="app-dialog" id="section-dialog">
+    <form method="dialog" id="section-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">MODULAR LIBRARY</p>
+          <h2>Add a section</h2>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-dialog-close aria-label="Close">×</button>
+      </div>
+      <label>
+        Section name
+        <input name="title" maxlength="48" required placeholder="e.g. Reading Notes">
+      </label>
+      <label>
+        Short description
+        <textarea name="description" maxlength="180" rows="3" placeholder="What belongs in this section?"></textarea>
+      </label>
+      <label>
+        Section type
+        <select name="type">
+          <option value="custom">Flexible notes</option>
+          <option value="protocol">Protocol checklists</option>
+          <option value="language">Programming language refreshers</option>
+          <option value="algorithm">Algorithms with animation</option>
+          <option value="project">Projects with relationships</option>
+        </select>
+      </label>
+      <label>
+        Icon
+        <select name="icon">
+          <option value="◇">◇ Diamond</option>
+          <option value="◉">◉ Focus</option>
+          <option value="✦">✦ Spark</option>
+          <option value="⌬">⌬ Structure</option>
+          <option value="☰">☰ Notes</option>
+          <option value="↗">↗ Growth</option>
+        </select>
+      </label>
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" data-dialog-close>Cancel</button>
+        <button class="button button-primary" type="submit" value="default">Create section</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="app-dialog app-dialog-wide" id="item-dialog">
+    <form method="dialog" id="item-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow" id="item-dialog-eyebrow">NEW ENTRY</p>
+          <h2 id="item-dialog-title">Add entry</h2>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-dialog-close aria-label="Close">×</button>
+      </div>
+      <div id="item-form-fields"></div>
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" data-dialog-close>Cancel</button>
+        <button class="button button-primary" type="submit" value="default">Save entry</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="app-dialog app-dialog-compact" id="password-dialog">
+    <form method="dialog" id="password-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">CONFIRM DELETE</p>
+          <h2 id="password-dialog-title">Delete this item?</h2>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-dialog-close aria-label="Close">×</button>
+      </div>
+      <p class="dialog-copy">Enter the delete password to continue.</p>
+      <label>
+        Password
+        <input name="password" type="password" required autocomplete="off">
+      </label>
+      <p class="form-error" id="password-error" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" data-dialog-close>Cancel</button>
+        <button class="button button-danger" type="submit" value="default">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="app-dialog app-dialog-wide" id="manage-dialog">
+    <form method="dialog">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">WORKSPACE SETTINGS</p>
+          <h2>Manage sections</h2>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-dialog-close aria-label="Close">×</button>
+      </div>
+      <div id="manage-section-list" class="manage-list"></div>
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" data-dialog-close>Done</button>
+        <button class="button button-primary" id="manage-add-section" type="button">Add section</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+  <script type="module" src="app/main.js"></script>
+</body>
+</html>

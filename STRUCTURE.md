@@ -4,38 +4,61 @@
 
 ```text
 artificially-neuroscience/
-├── .gitignore — Excludes operating-system, editor, log, and temporary output.
-├── .hintrc — Configures webhint for local HTML development checks.
+├── .gitignore — Excludes local operating-system, editor, log, and temporary files.
+├── .hintrc — Configures webhint for local HTML development.
 ├── .vscode/
-│   └── settings.json — Stores shared VS Code and Live Server workspace settings.
-├── CheatSheets/ — Stores downloadable mathematics reference sheets.
-│   ├── Algebra-MasterSheet.pdf — Compact algebra reference.
-│   ├── Calculus-MasterSheet.pdf — Compact calculus reference.
-│   └── Trigonometry-MasterSheet.pdf — Compact trigonometry reference.
-├── README.md — Introduces the project and explains operation and maintenance.
-├── TODO.md — Tracks pressing and eventual project work.
-├── STRUCTURE.md — Maps and explains every maintained repository path.
+│   └── settings.json — Stores shared VS Code and Live Server settings.
+├── README.md — Explains the public site, workspace, tools, and deployment.
+├── TODO.md — Tracks pressing and eventual work.
+├── STRUCTURE.md — Maps the maintained repository.
 ├── index.html — Serves as the public homepage and project entry point.
-├── style.css — Defines the shared visual system and responsive layouts.
-├── genericListLoader.js — Loads repository-managed text lists into HTML pages.
-├── educational_resources/ — Contains discipline-specific learning material.
+├── style.css — Defines the public site's shared visual system.
+├── workspace.html — Hosts the local-first workspace shell and dialogs.
+├── workspace.css — Defines the workspace and tool visual system.
+├── manifest.webmanifest — Describes the installable workspace app.
+├── sw.js — Caches the workspace, public archive, and tools for offline use.
+├── genericListLoader.js — Renders repository-managed text lists.
+├── app/
+│   ├── main.js — Renders workspace routes, libraries, editors, and install controls.
+│   └── store.js — Owns browser-local data, persistence, and deletion policy.
+├── assets/
+│   ├── app-icon.svg — Editable source for the workspace icon.
+│   ├── app-icon-192.png — Small install and shortcut icon.
+│   └── app-icon-512.png — Large maskable install icon.
+├── tools/
+│   ├── tool.css — Shares full-screen tool layouts and controls.
+│   ├── visual-board.html — Hosts diagramming and painting.
+│   ├── visual-board.js — Implements drawing, history, persistence, and export.
+│   ├── pdf-signer.html — Hosts local PDF viewing and signing.
+│   ├── pdf-signer.js — Renders PDFs and embeds placed signatures.
+│   ├── architecture.html — Hosts recursive scopes and file-skeleton design.
+│   └── architecture.js — Persists architecture models and algorithm links.
+├── vendor/
+│   ├── pdf.min.js — Bundled PDF.js viewer runtime.
+│   ├── pdf.worker.min.js — Bundled PDF.js worker.
+│   └── pdf-lib.min.js — Bundled PDF-Lib editing runtime.
+├── CheatSheets/
+│   ├── Algebra-MasterSheet.pdf — Algebra reference sheet.
+│   ├── Calculus-MasterSheet.pdf — Calculus reference sheet.
+│   └── Trigonometry-MasterSheet.pdf — Trigonometry reference sheet.
+├── educational_resources/
 │   ├── index.html — Introduces the four learning disciplines.
 │   ├── arts/
-│   │   ├── index.html — Presents arts notes and interactive practice.
-│   │   ├── arts_notes_list.txt — Lists arts notes and external resources.
-│   │   ├── flashcard-practice.html — Runs the arts flashcard application.
-│   │   └── flashcards.json — Stores arts flashcard categories and cards.
+│   │   ├── index.html — Presents arts notes and practice.
+│   │   ├── arts_notes_list.txt — Lists arts notes and resources.
+│   │   ├── flashcard-practice.html — Runs arts flashcard practice.
+│   │   └── flashcards.json — Stores arts cards and categories.
 │   ├── compsci/
-│   │   ├── index.html — Presents computer-science learning resources.
-│   │   └── compsci_notes_list.txt — Lists computer-science notes and resources.
+│   │   ├── index.html — Presents computer-science resources.
+│   │   └── compsci_notes_list.txt — Lists computer-science resources.
 │   ├── mathematics/
-│   │   ├── index.html — Presents mathematics references and interactive practice.
-│   │   ├── mathematics_notes_list.txt — Lists downloadable mathematics references.
-│   │   ├── flashcard-practice.html — Runs the mathematics flashcard application.
-│   │   └── flashcards.json — Stores mathematics cards and problem metadata.
+│   │   ├── index.html — Presents mathematics references and practice.
+│   │   ├── mathematics_notes_list.txt — Lists mathematics references.
+│   │   ├── flashcard-practice.html — Runs mathematics flashcard practice.
+│   │   └── flashcards.json — Stores mathematics cards and categories.
 │   └── neurosci/
-│       ├── index.html — Presents neuroscience learning resources.
-│       └── neurosci_notes_list.txt — Lists neuroscience notes and resources.
+│       ├── index.html — Presents neuroscience resources.
+│       └── neurosci_notes_list.txt — Lists neuroscience resources.
 ├── literature_analysis/
 │   ├── index.html — Presents critical-reading analyses.
 │   └── lit_analysis_list.txt — Lists analysis documents.
@@ -43,185 +66,109 @@ artificially-neuroscience/
     ├── index.html — Presents original and selected publications.
     ├── publications.txt — Lists original publications.
     ├── extra-publications.txt — Lists selected external publications.
-    └── pdfs/ — Stores publication PDF files served by the site.
+    └── pdfs/
         ├── dobotpub.pdf — Original DOBOT education publication.
         └── synaptic-info-storage-pub.pdf — Selected synaptic information paper.
 ```
 
-Generated Git internals and the tracked legacy `.DS_Store` file are not architectural project components and are not expanded in this map.
+Generated Git internals and machine-local files are not architectural components and are not expanded here.
 
 ---
 
-# Detailed Reference
+## Root Files
 
-## `artificially-neuroscience/`
+### `README.md`
 
-The repository root owns project-wide documentation, configuration, shared assets, and the three primary content areas. New top-level folders should represent a durable public capability rather than a temporary experiment or technical category.
+Introduces the project, its supported local run path, persistence boundaries, tool capabilities, installation, dependencies, and deployment.
 
-## `.gitignore`
+### `TODO.md`
 
-Prevents common local and machine-generated artifacts from being added to version control. It must not hide source, academic content, configuration required for reproduction, or production assets.
+Tracks actionable work in two priority groups. Completed work is removed; reprioritized work moves between groups.
 
-## `.hintrc`
+### `STRUCTURE.md`
 
-Configures the webhint development extension. It currently uses the development preset while disabling its redundant viewport warning because every page supplies an explicit responsive viewport.
+This authoritative human-readable repository map. Update it when a maintained path or ownership boundary changes.
 
-## `.vscode/`
+### `index.html`
 
-Contains shared editor settings that improve consistency for contributors using Visual Studio Code. It must not contain personal credentials, absolute machine paths, or private editor state.
+The public entry point. It presents the interdisciplinary laboratory and links to research, analysis, learning, and the personal workspace.
 
-## `.vscode/settings.json`
+### `style.css`
 
-Selects the local Python environment defaults and assigns Live Server port `5501`. These settings affect development convenience only and are not required by the deployed website.
+The public site's shared design language, responsive layout, navigation, content cards, list states, and flashcard compatibility styling.
 
-## `CheatSheets/`
+### `workspace.html`
 
-Stores downloadable, subject-focused reference documents. Files placed here should be stable resources intended for public access and should be linked from the relevant educational discipline.
+The accessible application shell for the personal workspace. It contains the sidebar, top bar, routed content surface, and reusable dialogs while delegating state and rendering to `app/`.
 
-## `CheatSheets/Algebra-MasterSheet.pdf`
+### `workspace.css`
 
-Provides a condensed algebra reference. The mathematics resource list links to this file using a repository-relative path.
+The workspace design tokens, responsive shell, cards, editors, dialogs, toasts, and tool-compatible visual styles.
 
-## `CheatSheets/Calculus-MasterSheet.pdf`
+### `manifest.webmanifest`
 
-Provides a consolidated calculus reference. Keep the filename stable unless its list entry is updated in the same change.
+Defines standalone display behavior, theme colors, app identity, install icons, and tool shortcuts. Its start URL points to `workspace.html`.
 
-## `CheatSheets/Trigonometry-MasterSheet.pdf`
+### `sw.js`
 
-Provides a condensed trigonometry reference. It is distributed as a static download through GitHub Pages.
+Pre-caches the workspace, tool code, public pages, data files, PDF libraries, repository PDFs, and mathematics reference sheets. It serves same-origin GET requests cache-first and removes older app-shell caches.
 
-## `README.md`
+### `genericListLoader.js`
 
-Introduces the project, documents the supported local run path, explains the system at a high level, and records dependencies. It should remain concise enough to orient a new contributor before directing them here for detailed structure.
+Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sorts entries, renders safe links, and owns loading, empty, and failure states.
 
-## `TODO.md`
+## Workspace Application
 
-Tracks actionable work in exactly two priority groups. Completed entries are removed, while reprioritized work moves between `Pressing` and `Eventual`.
+### `app/main.js`
 
-## `STRUCTURE.md`
+Renders workspace routes, the four specialized libraries, flexible custom sections, entry editors, algorithm relationships, delete dialogs, install controls, and local notices.
 
-Acts as the authoritative human-readable repository map. Update both its annotated tree and detailed reference whenever a maintained path is added, moved, renamed, deleted, or assigned a materially different responsibility.
+### `app/store.js`
 
-## `index.html`
+Defines the browser-local data schema, default empty libraries, migration-safe loading, persistence, identifiers, section operations, and the local delete-password policy.
 
-Serves as the public entry point. It explains the project's interdisciplinary identity, directs visitors to research, analysis, and learning, and highlights the interactive mathematics laboratory.
+### `assets/`
 
-## `style.css`
+Contains the editable SVG app icon and generated PNG sizes required for installation and maskable display.
 
-Defines the shared design language, responsive layout, navigation, content cards, publication lists, and compatibility styling used by the flashcard applications. Page-specific flashcard styles currently remain inline and are scheduled for consolidation.
+## Tools
 
-## `genericListLoader.js`
+### `tools/tool.css`
 
-Finds elements with `data-list-source`, fetches their text files, parses valid `<Entry>` blocks, sorts them, and renders safe links. It owns loading, empty, and failure states for all list-driven pages.
+Shares responsive full-screen layouts, controls, panels, canvas surfaces, signature controls, file trees, and recursive scope interfaces.
 
-## `educational_resources/`
+### Visual Board
 
-Owns learning material grouped by discipline. New disciplines require an intentional navigation and structure decision; ordinary resources should remain inside the discipline they support.
+`visual-board.html` hosts the tool. `visual-board.js` implements freehand drawing, shapes, notes, arrows, selection, movement, erasing, history, zoom, local autosave, and PNG export.
 
-## `educational_resources/index.html`
+### PDF Signer
 
-Introduces mathematics, neuroscience, computer science, and arts. It also explains the active-learning purpose of the site's flashcard laboratories.
+`pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js, manages page navigation and placed signatures, and embeds those signatures into a downloadable PDF with PDF-Lib.
 
-## `educational_resources/arts/`
+### Architecture Designer
 
-Owns visual-art learning content and practice data. Arts-specific notes, references, and flashcards belong here.
+`architecture.html` hosts recursive system scopes and the file tree. `architecture.js` persists the model, lets any inner scope become the current big picture, annotates files and folders, and creates links to Algorithm entries in the workspace.
 
-## `educational_resources/arts/index.html`
+### `vendor/`
 
-Presents the arts resource list and links to interactive practice. It loads list content from `arts_notes_list.txt`.
+Contains pinned minified PDF.js 3.11.174 and PDF-Lib 1.17.1 browser assets so viewing and signing do not depend on a network CDN.
 
-## `educational_resources/arts/arts_notes_list.txt`
+## Public Archive
 
-Stores arts resources using `<Entry>` blocks. It is currently empty and displays a deliberate empty state on the public page.
+### `CheatSheets/`
 
-## `educational_resources/arts/flashcard-practice.html`
+Stores stable, downloadable mathematics reference documents linked from the mathematics resource list.
 
-Runs the complete arts practice, quiz, missed-answer, and submission interface. Its implementation is currently duplicated from the mathematics application and should eventually become a thin subject configuration over a shared engine.
+### `educational_resources/`
 
-## `educational_resources/arts/flashcards.json`
+Owns learning material grouped by mathematics, neuroscience, computer science, and arts. Mathematics and arts also contain independent flashcard applications with subject-specific JSON data.
 
-Stores the arts category hierarchy and approximately 135 study cards. It is the source of truth for arts practice content.
+### `literature_analysis/`
 
-## `educational_resources/compsci/`
+Owns critical-reading documents distinct from original publications and general educational notes. Its list uses `<Entry>` blocks.
 
-Owns durable computer-science, programming, and artificial-intelligence learning resources. Project-specific development documentation belongs with its project rather than here.
+### `research_publications/`
 
-## `educational_resources/compsci/index.html`
+Owns original and selected publication metadata plus PDFs served by the site. Original and external works remain separated so authorship is clear.
 
-Introduces the technical-learning scope and renders the computer-science resource list.
-
-## `educational_resources/compsci/compsci_notes_list.txt`
-
-Stores computer-science resources using `<Entry>` blocks. It is currently empty and prepared for future notes.
-
-## `educational_resources/mathematics/`
-
-Owns mathematics reference material, flashcard data, generated problem behavior, and the interactive practice interface.
-
-## `educational_resources/mathematics/index.html`
-
-Introduces the mathematics collection, renders downloadable reference sheets, and directs visitors to the flashcard laboratory.
-
-## `educational_resources/mathematics/mathematics_notes_list.txt`
-
-Lists the algebra, calculus, and trigonometry master sheets. New long-form mathematics resources can be added through the same entry format.
-
-## `educational_resources/mathematics/flashcard-practice.html`
-
-Runs the mathematics practice system. In addition to static flashcards, it contains seeded problem generators, category selection, mixed practice, quizzes, missed-answer review, and locally stored submissions.
-
-## `educational_resources/mathematics/flashcards.json`
-
-Stores the mathematics category hierarchy and approximately 716 study cards. The application fetches this file at runtime, so it must remain valid JSON and preserve the expected category schema.
-
-## `educational_resources/neurosci/`
-
-Owns neuroscience learning content and future interactive models. It should become the central subject area without absorbing unrelated mathematics or general software material.
-
-## `educational_resources/neurosci/index.html`
-
-Introduces neuroscience as the study of biological intelligence and renders the neuroscience resource list.
-
-## `educational_resources/neurosci/neurosci_notes_list.txt`
-
-Stores neuroscience resources using `<Entry>` blocks. It is currently empty and identified as pressing content work.
-
-## `literature_analysis/`
-
-Owns critical-reading documents distinct from original publications and general educational notes. Analyses should preserve arguments, evidence, methods, limitations, and open questions.
-
-## `literature_analysis/index.html`
-
-Introduces the purpose of cumulative reading notes and renders the analysis library.
-
-## `literature_analysis/lit_analysis_list.txt`
-
-Stores links to literature analyses using `<Entry>` blocks. It is currently empty and displays an intentional growth-state message.
-
-## `research_publications/`
-
-Owns publication metadata and served PDF files. Original and selected external works remain separated so authorship is clear.
-
-## `research_publications/index.html`
-
-Presents original research beside a selected reading shelf. Both lists are loaded dynamically from repository-managed metadata.
-
-## `research_publications/publications.txt`
-
-Lists original or co-authored publications. Each entry should include a precise title, author attribution, relative path, and useful description.
-
-## `research_publications/extra-publications.txt`
-
-Lists external work selected for its importance to the site's research direction. Selection does not imply authorship.
-
-## `research_publications/pdfs/`
-
-Stores PDFs served by the publication lists. Before adding external publications, confirm that public redistribution is permitted; otherwise link to the publisher, DOI, or an authorized open-access copy.
-
-## `research_publications/pdfs/dobotpub.pdf`
-
-Contains the original AI-enhanced DOBOT Magician classroom-education publication listed under My Publications.
-
-## `research_publications/pdfs/synaptic-info-storage-pub.pdf`
-
-Contains the selected synaptic information-storage publication. Its redistribution status should be confirmed before long-term public hosting.
+Before adding an external PDF, confirm that public redistribution is permitted; otherwise link to the publisher, DOI, or an authorized open-access copy.

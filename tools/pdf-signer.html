@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>PDF Signer · Artificially Neuroscience</title>
+  <link rel="icon" href="../assets/app-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../workspace.css">
+  <link rel="stylesheet" href="tool.css">
+</head>
+<body class="tool-body">
+  <div class="tool-shell">
+    <header class="tool-topbar">
+      <div class="tool-title-group">
+        <a class="back-link" href="../workspace.html" aria-label="Back to workspace">←</a>
+        <span></span>
+        <div>
+          <h1>PDF Signer</h1>
+          <small>VIEW · PLACE · DOWNLOAD</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions">
+        <span class="tool-save-status" id="pdf-status">No document loaded</span>
+        <button class="button button-primary" id="download-signed-pdf" type="button" disabled>
+          Download signed PDF
+        </button>
+      </div>
+    </header>
+
+    <main class="pdf-workspace">
+      <aside class="pdf-sidebar">
+        <section class="panel-section">
+          <h2>1. Choose a PDF</h2>
+          <p>Your document stays in this browser. Nothing is uploaded.</p>
+          <label class="drop-zone" id="pdf-drop-zone">
+            <input id="pdf-file" type="file" accept="application/pdf,.pdf">
+            <span>
+              <strong>Drop PDF here</strong>
+              <small>or tap to browse</small>
+            </span>
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <h2>2. Make your signature</h2>
+          <p>Type your name, choose a style, then place it on any page.</p>
+          <input class="tool-input" id="signature-name" type="text" maxlength="80" placeholder="Type your name">
+          <div class="signature-preview signature-font-1" id="signature-preview">Your signature</div>
+          <div class="font-choice-row" aria-label="Signature style">
+            <button class="font-choice signature-font-1 is-active" data-font="signature-font-1" type="button">Aa</button>
+            <button class="font-choice signature-font-2" data-font="signature-font-2" type="button">Aa</button>
+            <button class="font-choice signature-font-3" data-font="signature-font-3" type="button">Aa</button>
+          </div>
+          <button class="button button-primary" id="add-signature" type="button" disabled>Place signature</button>
+        </section>
+      </aside>
+
+      <section class="tool-workspace">
+        <div class="tool-toolbar">
+          <div class="toolbar-group">
+            <button class="tool-button" id="previous-page" type="button" disabled>← Previous</button>
+            <span class="zoom-value" id="page-count">Page 0 / 0</span>
+            <button class="tool-button" id="next-page" type="button" disabled>Next →</button>
+          </div>
+          <div class="toolbar-group">
+            <span class="tool-save-status">Drag signatures · resize from the dot</span>
+            <button class="tool-button" id="remove-signature" type="button" disabled>Remove selected</button>
+          </div>
+        </div>
+        <div class="pdf-stage-wrap">
+          <div class="pdf-empty" id="pdf-empty">
+            <span>⌁</span>
+            <h2>Your document will appear here</h2>
+            <p>Choose a PDF, move through its pages, then drag your signature exactly where it belongs.</p>
+          </div>
+          <div class="pdf-page-stage" id="pdf-page-stage" hidden>
+            <canvas id="pdf-canvas"></canvas>
+            <div id="signature-layer"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../vendor/pdf.min.js"></script>
+  <script src="../vendor/pdf-lib.min.js"></script>
+  <script type="module" src="pdf-signer.js"></script>
+</body>
+</html>
