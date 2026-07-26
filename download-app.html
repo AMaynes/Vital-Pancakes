@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<!--
+Overview & Purpose
+Explains, previews, and initiates installation of the offline workspace PWA.
+
+Architectural Relationships
+Called by: The permanent site navigation and homepage.
+Calls: manifest.webmanifest, app/download-app.js, and preview assets.
+
+External Resources
+style.css, site-navigation.css, download-app.css, and the local service worker.
+
+Notes
+Browsers control whether a native install prompt is available. iOS installation
+continues through Safari's Add to Home Screen action.
+-->
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Install Artificially Neuroscience as an offline phone app.">
+  <meta name="theme-color" content="#14264a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Download App | Artificially Neuroscience</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/app-icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="download-app.css">
+  <link rel="stylesheet" href="site-navigation.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="workspace.html#area=protocols">Protocols</a>
+      <a href="research-literature.html">Research &amp; Literature</a>
+      <a href="workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="workspace.html#area=tools">Workspace</a>
+      <a href="download-app.html" aria-current="page">Download App</a>
+    </nav>
+  </header>
+
+  <main id="main-content">
+    <section class="download-hero">
+      <div>
+        <p class="eyebrow">Download App</p>
+        <h1>Carry the workspace without carrying the internet.</h1>
+        <p class="hero-summary">
+          Install Artificially Neuroscience on your phone for quick access to
+          protocols, studies, projects, notecards, and workspace tools.
+        </p>
+        <div class="button-row">
+          <button class="button button-primary" id="install-app-button" type="button">Install app</button>
+          <a class="button button-secondary" href="#install-guide">How to install</a>
+        </div>
+        <p class="install-status" id="install-status" role="status">
+          Your browser will show the supported installation method.
+        </p>
+      </div>
+
+      <div class="phone-stage" aria-label="Animated preview of the phone app">
+        <span class="geometry-orbit geometry-orbit-one"></span>
+        <span class="geometry-orbit geometry-orbit-two"></span>
+        <div class="phone-frame">
+          <img src="assets/app-preview-workspace.svg" alt="Workspace tools displayed in the phone app">
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-heading">
+        <p class="eyebrow">App screens</p>
+        <h2>The same structure, fitted to your phone.</h2>
+        <p>The permanent five-section navigation remains available while the personal dashboard becomes touch-friendly.</p>
+      </div>
+
+      <div class="app-screenshot-grid">
+        <figure>
+          <img src="assets/app-preview-studies.svg" alt="Studies and Projects screen with knowledge cards">
+          <figcaption>
+            <strong>Studies &amp; Projects</strong>
+            <span>Notecards, concept studies, algorithms, languages, and project records.</span>
+          </figcaption>
+        </figure>
+        <figure>
+          <img src="assets/app-preview-workspace.svg" alt="Workspace screen with visual tools">
+          <figcaption>
+            <strong>Workspace</strong>
+            <span>Diagramming, PDF signing, and architecture tools in one place.</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="motion-section">
+      <div>
+        <p class="eyebrow">Built for visual thinking</p>
+        <h2>Diagrams and motion make relationships visible.</h2>
+        <p>Animated walkthroughs and recursive maps help turn an abstract idea into something you can inspect.</p>
+      </div>
+      <div class="geometry-animation" aria-label="Animated concept relationship diagram">
+        <span class="motion-node motion-node-a"><i>Idea</i></span>
+        <span class="motion-line motion-line-a"></span>
+        <span class="motion-node motion-node-b"><i>Model</i></span>
+        <span class="motion-line motion-line-b"></span>
+        <span class="motion-node motion-node-c"><i>Build</i></span>
+      </div>
+    </section>
+
+    <section class="install-guide" id="install-guide">
+      <div class="section-heading">
+        <p class="eyebrow">How to install</p>
+        <h2>One visit, then it lives on your phone.</h2>
+      </div>
+      <div class="install-grid">
+        <article>
+          <span>01</span>
+          <h3>Open this page on your phone</h3>
+          <p>Use Safari on iPhone or a supported browser such as Chrome on Android.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Add the app</h3>
+          <p>On iPhone, open Share and choose Add to Home Screen. On Android, choose Install app.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Open it once online</h3>
+          <p>The app caches its pages, tools, and reference files so they can reopen offline.</p>
+        </article>
+      </div>
+      <button class="button button-primary install-again" id="install-app-button-secondary" type="button">Install Artificially Neuroscience</button>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Artificially Neuroscience</p>
+    <a href="workspace.html#area=tools">Open the workspace</a>
+  </footer>
+
+  <script type="module" src="app/download-app.js"></script>
+</body>
+</html>

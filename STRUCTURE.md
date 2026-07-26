@@ -13,19 +13,25 @@ artificially-neuroscience/
 ├── STRUCTURE.md — Maps the maintained repository.
 ├── index.html — Serves as the public homepage and project entry point.
 ├── style.css — Defines the public site's shared visual system.
-├── site-navigation.css — Keeps the primary header consistent across every page.
-├── workspace.html — Hosts the local-first workspace shell and dialogs.
+├── site-navigation.css — Keeps the five-section header consistent everywhere.
+├── research-literature.html — Unifies research, publications, and reading analysis.
+├── download-app.html — Presents phone previews and the install guide.
+├── download-app.css — Styles app previews and geometric motion.
+├── workspace.html — Routes Protocols, Studies & Projects, and tools.
 ├── workspace.css — Defines the workspace and tool visual system.
 ├── manifest.webmanifest — Describes the installable workspace app.
 ├── sw.js — Caches the workspace, public archive, and tools for offline use.
 ├── genericListLoader.js — Renders repository-managed text lists.
 ├── app/
 │   ├── main.js — Renders workspace routes, libraries, editors, and install controls.
+│   ├── download-app.js — Connects the install page to supported PWA prompts.
 │   └── store.js — Owns browser-local data, persistence, and deletion policy.
 ├── assets/
 │   ├── app-icon.svg — Editable source for the workspace icon.
 │   ├── app-icon-192.png — Small install and shortcut icon.
-│   └── app-icon-512.png — Large maskable install icon.
+│   ├── app-icon-512.png — Large maskable install icon.
+│   ├── app-preview-workspace.svg — Geometric phone preview of workspace tools.
+│   └── app-preview-studies.svg — Geometric phone preview of study libraries.
 ├── tools/
 │   ├── tool.css — Shares full-screen tool layouts and controls.
 │   ├── visual-board.html — Hosts diagramming and painting.
@@ -92,27 +98,35 @@ This authoritative human-readable repository map. Update it when a maintained pa
 
 ### `index.html`
 
-The public entry point. It presents the interdisciplinary laboratory and links to research, analysis, learning, and the personal workspace.
+The public entry point. It introduces and links exactly five top-level sections: Protocols, Research & Literature, Studies & Projects, Workspace, and Download App.
 
 ### `style.css`
 
-The public site's shared design language, responsive layout, content cards, list states, and flashcard compatibility styling.
+The public site's geometric design language, responsive layout, content cards, list states, and flashcard compatibility styling.
 
 ### `site-navigation.css`
 
-The canonical brand header and primary Research, Analysis, Learn, and Workspace navigation used by every public page, workspace view, and tool. It remains visible while the active page or workspace surface scrolls.
+The canonical brand header and primary Protocols, Research & Literature, Studies & Projects, Workspace, and Download App navigation used by every public page and tool.
+
+### `research-literature.html`
+
+The single top-level home for research publications, selected research, and analysis of every literature type. It routes into the existing focused collections.
+
+### `download-app.html` and `download-app.css`
+
+The install destination with animated geometric diagrams, phone preview screens, offline guidance, and responsive installation steps.
 
 ### `workspace.html`
 
-The accessible application shell for the personal workspace. It contains the sidebar, top bar, routed content surface, and reusable dialogs while delegating state and rendering to `app/`.
+The accessible application shell for three hash-routed areas. Protocols owns personal playbooks; Studies & Projects owns editable knowledge libraries and notecards; Workspace displays tools only.
 
 ### `workspace.css`
 
-The public-site-aligned workspace design tokens, responsive shell, sidebar dashboard, cards, editors, dialogs, toasts, and tool-compatible visual styles.
+The public-site-aligned geometric workspace design tokens, responsive shell, contextual sidebar, angular cards, editors, dialogs, toasts, and tool-compatible styles.
 
 ### `manifest.webmanifest`
 
-Defines standalone display behavior, theme colors, app identity, install icons, and tool shortcuts. Its start URL points to `workspace.html`.
+Defines standalone display behavior, theme colors, app identity, install icons, and area shortcuts. Its start URL opens the tools Workspace.
 
 ### `sw.js`
 
@@ -126,7 +140,7 @@ Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sor
 
 ### `app/main.js`
 
-Renders workspace routes, the four specialized libraries, flexible custom sections, entry editors, algorithm relationships, delete dialogs, install controls, and local notices.
+Renders the Protocols, Studies & Projects, and Workspace routes; filters the contextual sidebar; owns editable libraries, relationships, dialogs, search, installation controls, and local notices.
 
 ### `app/store.js`
 
@@ -134,7 +148,7 @@ Defines the browser-local data schema, default empty libraries, migration-safe l
 
 ### `assets/`
 
-Contains the editable SVG app icon and generated PNG sizes required for installation and maskable display.
+Contains the editable app icon, generated install sizes, and the two phone preview screens used by Download App.
 
 ## Tools
 

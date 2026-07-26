@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f4f1e8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="AN Workspace">
+  <meta name="apple-mobile-web-app-title" content="Artificially Neuroscience">
   <meta
     name="description"
     content="A private-thinking workspace for protocols, programming languages, algorithms, projects, diagrams, architecture, and signed PDFs."
@@ -27,10 +27,11 @@
       <span>Artificially Neuroscience</span>
     </a>
     <nav aria-label="Primary navigation">
-      <a href="research_publications/">Research</a>
-      <a href="literature_analysis/">Analysis</a>
-      <a href="educational_resources/">Learn</a>
-      <a href="workspace.html" aria-current="page">Workspace</a>
+      <a href="workspace.html#area=protocols" data-site-area="protocols">Protocols</a>
+      <a href="research-literature.html">Research &amp; Literature</a>
+      <a href="workspace.html#area=studies" data-site-area="studies">Studies &amp; Projects</a>
+      <a href="workspace.html#area=tools" data-site-area="tools">Workspace</a>
+      <a href="download-app.html">Download App</a>
     </nav>
   </header>
 
@@ -39,35 +40,40 @@
       <div class="workspace-sidebar-heading">
         <span class="workspace-sidebar-icon" aria-hidden="true">⌘</span>
         <span>
-          <strong>Workspace</strong>
-          <small>PERSONAL DASHBOARD</small>
+          <strong id="workspace-sidebar-title">Workspace</strong>
+          <small id="workspace-sidebar-subtitle">TOOLS</small>
         </span>
       </div>
 
       <nav class="primary-nav">
         <a class="nav-item is-active" href="#" data-route="home">
           <span class="nav-icon">⌂</span>
-          Overview
+          <span id="sidebar-overview-label">Tools overview</span>
         </a>
-        <div class="nav-group-label">
-          <span>LIBRARY</span>
-          <button class="icon-button" id="add-section-shortcut" type="button" aria-label="Add section">+</button>
-        </div>
-        <div id="section-navigation"></div>
 
-        <div class="nav-group-label"><span>TOOLS</span></div>
-        <a class="nav-item" href="tools/visual-board.html">
-          <span class="nav-icon">✣</span>
-          Visual Board
-        </a>
-        <a class="nav-item" href="tools/pdf-signer.html">
-          <span class="nav-icon">⌁</span>
-          PDF Signer
-        </a>
-        <a class="nav-item" href="tools/architecture.html">
-          <span class="nav-icon">⌘</span>
-          Architecture
-        </a>
+        <div id="section-navigation-group">
+          <div class="nav-group-label">
+            <span>LIBRARY</span>
+            <button class="icon-button" id="add-section-shortcut" type="button" aria-label="Add section">+</button>
+          </div>
+          <div id="section-navigation"></div>
+        </div>
+
+        <div id="tool-navigation-group">
+          <div class="nav-group-label"><span>TOOLS</span></div>
+          <a class="nav-item" href="tools/visual-board.html">
+            <span class="nav-icon">✣</span>
+            Visual Board
+          </a>
+          <a class="nav-item" href="tools/pdf-signer.html">
+            <span class="nav-icon">⌁</span>
+            PDF Signer
+          </a>
+          <a class="nav-item" href="tools/architecture.html">
+            <span class="nav-icon">⌘</span>
+            Architecture
+          </a>
+        </div>
       </nav>
 
       <div class="sidebar-footer">

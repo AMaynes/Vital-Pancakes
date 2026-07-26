@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844" role="img" aria-labelledby="title desc">
+  <title id="title">Artificially Neuroscience workspace phone screen</title>
+  <desc id="desc">A geometric phone app preview showing workspace tools.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f5f3ee"/>
+      <stop offset="1" stop-color="#e8eef5"/>
+    </linearGradient>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="#315fa8" stroke-opacity=".07"/>
+    </pattern>
+  </defs>
+  <rect width="390" height="844" fill="url(#bg)"/>
+  <rect width="390" height="844" fill="url(#grid)"/>
+  <path d="M0 0h390v112H0z" fill="#fff" stroke="#d8e0ea"/>
+  <path d="M22 20h42v42H22z" fill="#14264a"/>
+  <text x="43" y="47" fill="#fff" text-anchor="middle" font-family="Arial" font-size="12" font-weight="700">AN</text>
+  <text x="78" y="47" fill="#12213f" font-family="Arial" font-size="15" font-weight="700">Artificially Neuroscience</text>
+  <g fill="#40506d" font-family="Arial" font-size="10" font-weight="700">
+    <text x="24" y="91">PROTOCOLS</text>
+    <text x="105" y="91">RESEARCH</text>
+    <text x="174" y="91">STUDIES</text>
+    <text x="240" y="91" fill="#14264a">WORKSPACE</text>
+    <text x="320" y="91">APP</text>
+  </g>
+  <path d="M226 100h84" stroke="#315fa8" stroke-width="3"/>
+  <path d="M0 112h390v64H0z" fill="#14264a"/>
+  <path d="M20 127h36v36H20z" fill="none" stroke="#91c1bd"/>
+  <text x="38" y="150" fill="#f1c979" text-anchor="middle" font-size="18">⌘</text>
+  <text x="70" y="143" fill="#fff" font-family="Arial" font-size="15" font-weight="700">Workspace</text>
+  <text x="70" y="159" fill="#afbdd2" font-family="Arial" font-size="8" letter-spacing="2">TOOLS</text>
+  <text x="24" y="220" fill="#315fa8" font-family="Arial" font-size="10" font-weight="700" letter-spacing="2">WORKSPACE</text>
+  <text x="24" y="262" fill="#12213f" font-family="Georgia" font-size="32">Tools for doing</text>
+  <text x="24" y="298" fill="#12213f" font-family="Georgia" font-size="32">the work.</text>
+  <text x="24" y="330" fill="#40506d" font-family="Arial" font-size="12">Draw, sign, and design systems.</text>
+  <g>
+    <path d="M24 374h342v128H24z" fill="#fff" stroke="#d8e0ea"/>
+    <path d="M24 374h7v128h-7z" fill="#315fa8"/>
+    <path d="M46 396h42v42H46z" fill="#e4ebf6" stroke="#315fa8"/>
+    <text x="67" y="423" fill="#14264a" text-anchor="middle" font-size="20">✣</text>
+    <text x="105" y="414" fill="#12213f" font-family="Georgia" font-size="22">Visual Board</text>
+    <text x="105" y="443" fill="#40506d" font-family="Arial" font-size="11">Diagram + freeform canvas</text>
+    <path d="M332 410l12 8-12 8" fill="none" stroke="#315fa8" stroke-width="2"/>
+  </g>
+  <g>
+    <path d="M24 518h342v128H24z" fill="#fff" stroke="#d8e0ea"/>
+    <path d="M24 518h7v128h-7z" fill="#b88024"/>
+    <path d="M46 540h42v42H46z" fill="#f5ead8" stroke="#b88024"/>
+    <text x="67" y="567" fill="#14264a" text-anchor="middle" font-size="20">⌁</text>
+    <text x="105" y="558" fill="#12213f" font-family="Georgia" font-size="22">PDF Signer</text>
+    <text x="105" y="587" fill="#40506d" font-family="Arial" font-size="11">View + place + download</text>
+    <path d="M332 554l12 8-12 8" fill="none" stroke="#b88024" stroke-width="2"/>
+  </g>
+  <g>
+    <path d="M24 662h342v128H24z" fill="#fff" stroke="#d8e0ea"/>
+    <path d="M24 662h7v128h-7z" fill="#267774"/>
+    <path d="M46 684h42v42H46z" fill="#e3f0ee" stroke="#267774"/>
+    <text x="67" y="711" fill="#14264a" text-anchor="middle" font-size="20">◇</text>
+    <text x="105" y="702" fill="#12213f" font-family="Georgia" font-size="22">Architecture</text>
+    <text x="105" y="731" fill="#40506d" font-family="Arial" font-size="11">Scopes + script skeletons</text>
+    <path d="M332 698l12 8-12 8" fill="none" stroke="#267774" stroke-width="2"/>
+  </g>
+</svg>

@@ -1,13 +1,14 @@
 /**
  * Overview & Purpose
- * Renders the local-first workspace, modular sections, entry editors, and PWA controls.
+ * Renders the local-first Protocols, Studies & Projects, and tools areas,
+ * including modular section editors and PWA controls.
  *
  * Architectural Relationships
- * Called by: index.html.
+ * Called by: workspace.html.
  * Calls: app/store.js and the browser DOM, dialog, history, and install APIs.
  *
  * External Resources
- * style.css, manifest.webmanifest, and sw.js.
+ * workspace.css, manifest.webmanifest, and sw.js.
  *
  * Notes
  * All user-authored values are rendered with textContent. Animation timers are
@@ -37,6 +38,13 @@ const itemForm = document.querySelector("#item-form");
 const passwordDialog = document.querySelector("#password-dialog");
 const passwordForm = document.querySelector("#password-form");
 const manageDialog = document.querySelector("#manage-dialog");
+const sectionNavigationGroup = document.querySelector("#section-navigation-group");
+const toolNavigationGroup = document.querySelector("#tool-navigation-group");
+const sidebarOverviewLink = document.querySelector('[data-route="home"]');
+const sidebarOverviewLabel = document.querySelector("#sidebar-overview-label");
+const sidebarTitle = document.querySelector("#workspace-sidebar-title");
+const sidebarSubtitle = document.querySelector("#workspace-sidebar-subtitle");
+const sidebarFooter = document.querySelector(".sidebar-footer");
 const animationTimers = new Set();
 
 let activeSectionId = null;
@@ -59,6 +67,11 @@ const SECTION_ACCENTS = {
   project: "ochre",
   custom: "coral",
 };
+
+const AREA_PROTOCOLS = "protocols";
+const AREA_STUDIES = "studies";
+const AREA_TOOLS = "tools";
+const VALID_AREAS = new Set([AREA_PROTOCOLS, AREA_STUDIES, AREA_TOOLS]);
 
 /**
  * Creates an element with optional class and text without parsing user HTML.
@@ -90,6 +103,48 @@ function getRouteSectionId() {
 }
 
 /**
+ * Maps a library section to its top-level site area.
+ *
+ * @param {object} section Workspace section.
+ * @returns {"protocols"|"studies"} Parent area.
+ */
+function getAreaForSection(section) {
+  return section?.type === "protocol" ? AREA_PROTOCOLS : AREA_STUDIES;
+}
+
+/**
+ * Returns the active top-level area, deriving it from deep-linked sections.
+ *
+ * @returns {"protocols"|"studies"|"tools"} Active area.
+ */
+function getRouteArea() {
+  const routeSectionId = getRouteSectionId();
+  const section = routeSectionId ? getSection(routeSectionId) : null;
+  if (section) return getAreaForSection(section);
+
+  const parameters = new URLSearchParams(location.hash.slice(1));
+  const requestedArea = parameters.get("area");
+  return VALID_AREAS.has(requestedArea) ? requestedArea : AREA_TOOLS;
+}
+
+/**
+ * Returns the editable libraries owned by one top-level area.
+ *
+ * @param {{sections: Array<object>}} workspace Workspace data.
+ * @param {"protocols"|"studies"|"tools"} area Active area.
+ * @returns {Array<object>} Area-specific sections.
+ */
+function getSectionsForArea(workspace, area) {
+  if (area === AREA_PROTOCOLS) {
+    return workspace.sections.filter((section) => section.type === "protocol");
+  }
+  if (area === AREA_STUDIES) {
+    return workspace.sections.filter((section) => section.type !== "protocol");
+  }
+  return [];
+}
+
+/**
  * Returns an entry deep-link target encoded in the current hash.
  *
  * @returns {string|null} Entry identifier, or null without a deep link.
@@ -105,28 +160,79 @@ function getRouteItemId() {
 function renderWorkspace() {
   animationTimers.forEach((timer) => window.clearInterval(timer));
   animationTimers.clear();
-  renderNavigation();
+  const area = getRouteArea();
+  renderTopNavigation(area);
+  renderNavigation(area);
 
   const routeSectionId = getRouteSectionId();
   const section = routeSectionId ? getSection(routeSectionId) : null;
   if (section) {
     renderSection(section);
+  } else if (area === AREA_PROTOCOLS) {
+    const protocolSections = getSectionsForArea(getWorkspace(), area);
+    if (protocolSections.length === 1) {
+      renderSection(protocolSections[0]);
+    } else {
+      renderDashboard(area, searchInput.value.trim());
+    }
   } else {
-    renderDashboard(searchInput.value.trim());
+    renderDashboard(area, searchInput.value.trim());
   }
 
   closeMobileNavigation();
 }
 
 /**
- * Rebuilds the sidebar from the modular section model.
+ * Marks the active area in the permanent five-section header.
+ *
+ * @param {"protocols"|"studies"|"tools"} area Active area.
  */
-function renderNavigation() {
+function renderTopNavigation(area) {
+  document.querySelectorAll("[data-site-area]").forEach((link) => {
+    if (link.dataset.siteArea === area) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
+}
+
+/**
+ * Rebuilds the area-specific sidebar from the modular section model.
+ *
+ * @param {"protocols"|"studies"|"tools"} area Active area.
+ */
+function renderNavigation(area = getRouteArea()) {
   sectionNavigation.replaceChildren();
   const workspace = getWorkspace();
   const routeSectionId = getRouteSectionId();
+  const areaSections = getSectionsForArea(workspace, area);
+  const isToolsArea = area === AREA_TOOLS;
 
-  workspace.sections.forEach((section) => {
+  sectionNavigationGroup.hidden = isToolsArea;
+  toolNavigationGroup.hidden = !isToolsArea;
+  sidebarFooter.hidden = isToolsArea;
+  sidebarOverviewLink.href = `#area=${area}`;
+  sidebarOverviewLabel.textContent = {
+    [AREA_PROTOCOLS]: "Protocols",
+    [AREA_STUDIES]: "Studies overview",
+    [AREA_TOOLS]: "Tools overview",
+  }[area];
+  sidebarTitle.textContent = {
+    [AREA_PROTOCOLS]: "Protocols",
+    [AREA_STUDIES]: "Studies & Projects",
+    [AREA_TOOLS]: "Workspace",
+  }[area];
+  sidebarSubtitle.textContent = {
+    [AREA_PROTOCOLS]: "PERSONAL PLAYBOOKS",
+    [AREA_STUDIES]: "KNOWLEDGE LIBRARY",
+    [AREA_TOOLS]: "TOOLS",
+  }[area];
+
+  const navigableSections =
+    area === AREA_PROTOCOLS && areaSections.length === 1 ? [] : areaSections;
+
+  navigableSections.forEach((section) => {
     const link = createElement("a", "nav-item");
     link.href = `#section=${encodeURIComponent(section.id)}`;
     link.dataset.sectionId = section.id;
@@ -138,15 +244,16 @@ function renderNavigation() {
     sectionNavigation.append(link);
   });
 
-  document.querySelector('[data-route="home"]').classList.toggle("is-active", !routeSectionId);
+  sidebarOverviewLink.classList.toggle("is-active", !routeSectionId);
 }
 
 /**
- * Shows the dashboard or a global-search result grid.
+ * Shows an area dashboard or a global-search result grid.
  *
+ * @param {"protocols"|"studies"|"tools"} area Active area.
  * @param {string} query Case-insensitive query.
  */
-function renderDashboard(query = "") {
+function renderDashboard(area, query = "") {
   appMain.replaceChildren();
   const workspace = getWorkspace();
   const normalizedQuery = query.toLocaleLowerCase();
@@ -156,12 +263,34 @@ function renderDashboard(query = "") {
     return;
   }
 
+  if (area === AREA_TOOLS) {
+    renderToolsDashboard();
+    return;
+  }
+
+  if (area === AREA_STUDIES) {
+    renderStudiesDashboard(workspace);
+    return;
+  }
+
+  renderProtocolsDashboard(workspace);
+}
+
+/**
+ * Creates the consistent introduction used by each local-first area.
+ *
+ * @param {string} eyebrow Small uppercase label.
+ * @param {string} title Area title.
+ * @param {string} subtitle Area purpose.
+ * @returns {HTMLElement} Area hero.
+ */
+function createAreaHero(eyebrow, title, subtitle) {
   const hero = createElement("section", "workspace-hero");
   const heroCopy = createElement("div", "hero-copy");
   heroCopy.append(
-    createElement("p", "eyebrow", "PERSONAL KNOWLEDGE OS"),
-    createElement("h1", "", "Good afternoon, Alex."),
-    createElement("p", "hero-subtitle", "Everything you need to think clearly, build deliberately, and remember what matters."),
+    createElement("p", "eyebrow", eyebrow),
+    createElement("h1", "", title),
+    createElement("p", "hero-subtitle", subtitle),
   );
   const dateCard = createElement("div", "date-card");
   const now = new Date();
@@ -171,12 +300,91 @@ function renderDashboard(query = "") {
     createElement("small", "", new Intl.DateTimeFormat(undefined, { month: "long" }).format(now)),
   );
   hero.append(heroCopy, dateCard);
+  return hero;
+}
 
-  const sectionHeading = createSectionHeading("Your library", "Add knowledge when it becomes useful. Nothing is prefilled.");
+/**
+ * Renders the Studies & Projects library and its notecard collections.
+ *
+ * @param {{sections: Array<object>}} workspace Workspace data.
+ */
+function renderStudiesDashboard(workspace) {
+  const hero = createAreaHero(
+    "STUDIES & PROJECTS",
+    "Develop ideas and preserve what you learn.",
+    "Keep concept studies, programming refreshers, algorithms, projects, and notecards together.",
+  );
+  const sectionHeading = createSectionHeading("Studies and project libraries", "Add knowledge when it becomes useful. Nothing is prefilled.");
   const libraryGrid = createElement("div", "library-grid");
-  workspace.sections.forEach((section) => libraryGrid.append(createLibraryCard(section)));
+  getSectionsForArea(workspace, AREA_STUDIES).forEach((section) => libraryGrid.append(createLibraryCard(section)));
 
-  const toolsHeading = createSectionHeading("Thinking tools", "Draw, sign, and design without leaving your workspace.");
+  const notecardHeading = createSectionHeading("Notecards", "Practice existing collections or open the full educational archive.");
+  const notecardGrid = createElement("div", "tool-grid");
+  [
+    {
+      title: "Mathematics Notecards",
+      copy: "Mixed practice, tests, missed-answer review, and worked explanations.",
+      href: "educational_resources/mathematics/flashcard-practice.html",
+      icon: "∑",
+      accent: "blue",
+    },
+    {
+      title: "Arts Notecards",
+      copy: "Study art concepts, methods, movements, and visual language.",
+      href: "educational_resources/arts/flashcard-practice.html",
+      icon: "✦",
+      accent: "ochre",
+    },
+    {
+      title: "Study Library",
+      copy: "Open mathematics, neuroscience, computer science, and arts resources.",
+      href: "educational_resources/",
+      icon: "▤",
+      accent: "violet",
+    },
+  ].forEach((resource) => notecardGrid.append(createToolCard(resource)));
+
+  appMain.append(hero, sectionHeading, libraryGrid, notecardHeading, notecardGrid);
+}
+
+/**
+ * Renders an area chooser when Protocols contains zero or multiple libraries.
+ *
+ * @param {{sections: Array<object>}} workspace Workspace data.
+ */
+function renderProtocolsDashboard(workspace) {
+  const hero = createAreaHero(
+    "PROTOCOLS",
+    "Reduce the overhead of recurring life.",
+    "Turn daily routines and tedious tasks into personal playbooks so your attention stays on what matters.",
+  );
+  const sectionHeading = createSectionHeading("Your protocol libraries", "Keep related playbooks together and add only what reduces friction.");
+  const libraryGrid = createElement("div", "library-grid");
+  const sections = getSectionsForArea(workspace, AREA_PROTOCOLS);
+  sections.forEach((section) => libraryGrid.append(createLibraryCard(section)));
+
+  if (!sections.length) {
+    const empty = createEmptyState("No protocol library yet", "Create an empty protocol section, then add playbooks only when they become useful.");
+    const button = createElement("button", "button button-primary", "Create protocol section");
+    button.type = "button";
+    button.addEventListener("click", openSectionDialog);
+    empty.append(button);
+    libraryGrid.append(empty);
+  }
+
+  appMain.append(hero, sectionHeading, libraryGrid);
+}
+
+/**
+ * Renders the tools-only Workspace requested by the site organization.
+ */
+function renderToolsDashboard() {
+  const hero = createAreaHero(
+    "WORKSPACE",
+    "Tools for doing the work.",
+    "Draw, sign, and design systems without mixing tools into your personal knowledge sections.",
+  );
+  const toolsHeading = createSectionHeading("Workspace tools", "Choose the surface that matches the task.");
   const toolsGrid = createElement("div", "tool-grid");
   [
     {
@@ -202,26 +410,7 @@ function renderDashboard(query = "") {
     },
   ].forEach((tool) => toolsGrid.append(createToolCard(tool)));
 
-  const legacy = createElement("section", "legacy-strip");
-  const legacyCopy = createElement("div");
-  legacyCopy.append(
-    createElement("p", "eyebrow", "EXISTING COLLECTION"),
-    createElement("h2", "", "Research & educational archive"),
-    createElement("p", "", "Your publications, literature analysis, flashcards, and educational resources remain available."),
-  );
-  const legacyLinks = createElement("div", "legacy-links");
-  [
-    ["Research publications", "research_publications/"],
-    ["Literature analysis", "literature_analysis/"],
-    ["Educational resources", "educational_resources/"],
-  ].forEach(([label, href]) => {
-    const link = createElement("a", "text-link", `${label} →`);
-    link.href = href;
-    legacyLinks.append(link);
-  });
-  legacy.append(legacyCopy, legacyLinks);
-
-  appMain.append(hero, sectionHeading, libraryGrid, toolsHeading, toolsGrid, legacy);
+  appMain.append(hero, toolsHeading, toolsGrid);
 }
 
 /**
@@ -695,6 +884,7 @@ function getItemPreview(item) {
  */
 function openSectionDialog() {
   sectionForm.reset();
+  sectionForm.elements.type.value = getRouteArea() === AREA_PROTOCOLS ? "protocol" : "custom";
   if (manageDialog.open) manageDialog.close();
   sectionDialog.showModal();
   window.setTimeout(() => sectionForm.elements.title.focus(), 0);
@@ -893,7 +1083,7 @@ function readItemForm(section) {
 function confirmSectionDelete(section) {
   openPasswordDialog(`Delete “${section.title}”?`, () => {
     deleteSection(section.id);
-    location.hash = "";
+    location.hash = `area=${getAreaForSection(section)}`;
     showToast("Section deleted from this device.");
   });
 }
@@ -934,7 +1124,7 @@ function openPasswordDialog(title, action) {
 function openManageDialog() {
   const list = document.querySelector("#manage-section-list");
   list.replaceChildren();
-  getWorkspace().sections.forEach((section) => {
+  getSectionsForArea(getWorkspace(), getRouteArea()).forEach((section) => {
     const row = createElement("div", "manage-row");
     const identity = createElement("div", "manage-identity");
     identity.append(
@@ -1025,8 +1215,11 @@ passwordForm.addEventListener("submit", (event) => {
 });
 
 searchInput.addEventListener("input", () => {
-  if (searchInput.value && location.hash) history.replaceState(null, "", location.pathname);
-  renderDashboard(searchInput.value.trim());
+  const area = getRouteArea();
+  if (searchInput.value && location.hash) {
+    history.replaceState(null, "", `${location.pathname}#area=${area}`);
+  }
+  renderDashboard(area, searchInput.value.trim());
 });
 
 document.addEventListener("keydown", (event) => {

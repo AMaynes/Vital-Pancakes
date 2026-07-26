@@ -27,6 +27,14 @@ const DEFAULT_SECTIONS = [
     items: [],
   },
   {
+    id: "studies",
+    title: "Studies",
+    description: "Concept breakdowns, visual explanations, essays, and notes worth developing.",
+    icon: "◉",
+    type: "custom",
+    items: [],
+  },
+  {
     id: "programming-languages",
     title: "Programming Languages",
     description: "Fast, personal refreshers for returning to a language.",
@@ -72,9 +80,29 @@ export function createId() {
  */
 function createInitialWorkspace() {
   return {
-    version: 1,
+    version: 2,
     sections: DEFAULT_SECTIONS.map((section) => ({ ...section, items: [] })),
   };
+}
+
+/**
+ * Adds the empty Studies library once for browsers created before the
+ * five-section site organization. Later deletion remains respected.
+ *
+ * @param {{version?: number, sections: Array<object>}} workspace Stored data.
+ * @returns {{workspace: object, changed: boolean}} Migrated data and change flag.
+ */
+function migrateWorkspace(workspace) {
+  if ((workspace.version ?? 1) >= 2) {
+    return { workspace, changed: false };
+  }
+
+  if (!workspace.sections.some((section) => section.id === "studies")) {
+    const studiesSection = DEFAULT_SECTIONS.find((section) => section.id === "studies");
+    workspace.sections.splice(1, 0, { ...studiesSection, items: [] });
+  }
+  workspace.version = 2;
+  return { workspace, changed: true };
 }
 
 /**
@@ -97,7 +125,11 @@ export function getWorkspace() {
     if (!Array.isArray(parsedWorkspace.sections)) {
       throw new TypeError("Workspace sections are missing.");
     }
-    return parsedWorkspace;
+    const migration = migrateWorkspace(parsedWorkspace);
+    if (migration.changed) {
+      localStorage.setItem(WORKSPACE_KEY, JSON.stringify(migration.workspace));
+    }
+    return migration.workspace;
   } catch (error) {
     console.error("Unable to read saved workspace; using an empty workspace.", error);
     return createInitialWorkspace();

@@ -1,0 +1,325 @@
+/**
+ * Overview & Purpose
+ * Styles the phone-install guide, preview screens, and geometric animations.
+ *
+ * Architectural Relationships
+ * Called by: download-app.html.
+ * Calls: Design tokens from style.css.
+ *
+ * External Resources
+ * Local SVG preview assets.
+ */
+
+.download-hero {
+  display: grid;
+  min-height: 38rem;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.72fr);
+  align-items: center;
+  gap: clamp(2rem, 7vw, 6rem);
+  padding: 3rem 0 6rem;
+}
+
+.download-hero h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.2rem, 7vw, 6rem);
+  font-weight: 500;
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.install-status {
+  min-height: 1.5rem;
+  margin-top: 1rem;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.phone-stage {
+  position: relative;
+  display: grid;
+  min-height: 37rem;
+  max-width: 100%;
+  place-items: center;
+  overflow: hidden;
+}
+
+.phone-frame {
+  position: relative;
+  z-index: 2;
+  width: min(18.5rem, 75vw);
+  padding: 0.65rem;
+  background: var(--navy);
+  border: 1px solid #4e6288;
+  box-shadow: 2rem 2rem 0 rgb(49 95 168 / 10%);
+  clip-path: polygon(0 1.2rem, 1.2rem 0, calc(100% - 1.2rem) 0, 100% 1.2rem, 100% calc(100% - 1.2rem), calc(100% - 1.2rem) 100%, 1.2rem 100%, 0 calc(100% - 1.2rem));
+  animation: phone-float 5s ease-in-out infinite;
+}
+
+.phone-frame img {
+  display: block;
+  width: 100%;
+  background: #fff;
+}
+
+.geometry-orbit {
+  position: absolute;
+  border: 1px solid rgb(49 95 168 / 24%);
+  transform: rotate(45deg);
+  animation: orbit-turn 16s linear infinite;
+}
+
+.geometry-orbit-one {
+  width: 23rem;
+  height: 23rem;
+}
+
+.geometry-orbit-two {
+  width: 29rem;
+  height: 29rem;
+  border-color: rgb(38 119 116 / 18%);
+  animation-direction: reverse;
+  animation-duration: 22s;
+}
+
+.app-screenshot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.app-screenshot-grid figure {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.65fr) minmax(12rem, 1fr);
+  align-items: center;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 1.5rem;
+  background: rgb(255 255 255 / 84%);
+  border: 1px solid var(--border);
+  clip-path: polygon(0 0, calc(100% - 1.2rem) 0, 100% 1.2rem, 100% 100%, 1.2rem 100%, 0 calc(100% - 1.2rem));
+}
+
+.app-screenshot-grid img {
+  display: block;
+  width: 100%;
+  max-height: 28rem;
+  object-fit: contain;
+}
+
+.app-screenshot-grid figcaption {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.app-screenshot-grid strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.65rem;
+  font-weight: 500;
+}
+
+.app-screenshot-grid span,
+.motion-section p,
+.install-grid p {
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.motion-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(20rem, 1.2fr);
+  align-items: center;
+  gap: 3rem;
+  margin: 6rem 0;
+  padding: clamp(2rem, 5vw, 4rem);
+  color: #fff;
+  background: var(--navy);
+  clip-path: polygon(0 0, calc(100% - 2rem) 0, 100% 2rem, 100% 100%, 2rem 100%, 0 calc(100% - 2rem));
+}
+
+.motion-section h2,
+.install-guide h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-weight: 500;
+}
+
+.motion-section p {
+  color: rgb(255 255 255 / 70%);
+}
+
+.geometry-animation {
+  display: grid;
+  min-height: 17rem;
+  grid-template-columns: auto 1fr auto 1fr auto;
+  align-items: center;
+}
+
+.motion-node {
+  display: grid;
+  width: 6rem;
+  height: 6rem;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 38%);
+  background: rgb(255 255 255 / 8%);
+  transform: rotate(45deg);
+  animation: node-pulse 3.6s ease-in-out infinite;
+}
+
+.motion-node i {
+  display: inline-block;
+  font-style: normal;
+  transform: rotate(-45deg);
+}
+
+.motion-node-b {
+  animation-delay: 1.2s;
+}
+
+.motion-node-c {
+  animation-delay: 2.4s;
+}
+
+.motion-line {
+  height: 1px;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--gold), #fff);
+  animation: line-travel 2.4s ease-in-out infinite;
+}
+
+.motion-line-b {
+  animation-delay: 1.2s;
+}
+
+.install-guide {
+  padding: 2rem 0 6rem;
+}
+
+.install-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.install-grid article {
+  min-height: 16rem;
+  padding: 1.5rem;
+  background: rgb(255 255 255 / 84%);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--teal);
+}
+
+.install-grid article > span {
+  color: var(--blue);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+}
+
+.install-grid h3 {
+  margin-top: 3rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.install-again {
+  margin-top: 1rem;
+}
+
+@keyframes phone-float {
+  0%, 100% { transform: translateY(-0.35rem); }
+  50% { transform: translateY(0.7rem); }
+}
+
+@keyframes orbit-turn {
+  to { transform: rotate(405deg); }
+}
+
+@keyframes node-pulse {
+  0%, 22%, 100% { border-color: rgb(255 255 255 / 30%); background: rgb(255 255 255 / 8%); }
+  35%, 55% { border-color: var(--gold); background: rgb(184 128 36 / 22%); }
+}
+
+@keyframes line-travel {
+  0%, 20% { transform: scaleX(0); opacity: 0; }
+  50%, 80% { transform: scaleX(1); opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (max-width: 850px) {
+  .download-hero,
+  .motion-section,
+  .app-screenshot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .download-hero {
+    padding-top: 2rem;
+  }
+
+  .phone-stage {
+    min-height: 32rem;
+  }
+
+  .app-screenshot-grid figure {
+    grid-template-columns: minmax(9rem, 0.6fr) minmax(10rem, 1fr);
+  }
+
+  .install-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .install-grid article {
+    min-height: auto;
+  }
+
+  .install-grid h3 {
+    margin-top: 1.5rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .download-hero h1 {
+    font-size: 3.25rem;
+  }
+
+  .geometry-orbit-one {
+    width: 18rem;
+    height: 18rem;
+  }
+
+  .geometry-orbit-two {
+    width: 22rem;
+    height: 22rem;
+  }
+
+  .app-screenshot-grid figure {
+    grid-template-columns: 1fr;
+  }
+
+  .app-screenshot-grid img {
+    max-height: 24rem;
+  }
+
+  .geometry-animation {
+    min-height: 13rem;
+  }
+
+  .motion-node {
+    width: 4.3rem;
+    height: 4.3rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-frame,
+  .geometry-orbit,
+  .motion-node,
+  .motion-line {
+    animation: none;
+  }
+}

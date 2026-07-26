@@ -1,6 +1,6 @@
 # Artificially Neuroscience
 
-[View the live website](https://amaynes.github.io/artificially-neuroscience/) · [Open the workspace](https://amaynes.github.io/artificially-neuroscience/workspace.html)
+[View the live website](https://amaynes.github.io/artificially-neuroscience/) · [Open the workspace](https://amaynes.github.io/artificially-neuroscience/workspace.html#area=tools) · [Download the app](https://amaynes.github.io/artificially-neuroscience/download-app.html)
 
 Artificially Neuroscience is Alex Maynes's public interdisciplinary learning laboratory and personal, local-first knowledge workspace. It preserves research, critical reading notes, reference material, and interactive study tools across neuroscience, artificial intelligence, mathematics, computer science, and art.
 
@@ -18,7 +18,7 @@ Then open [http://localhost:8000](http://localhost:8000). Opening files directly
 
 ## System Overview
 
-GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` opens the installable knowledge workspace. `site-navigation.css` keeps the original top navigation consistent across every page and tool. The public archive uses `style.css`; the workspace and its tools use `workspace.css`.
+GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` routes the editable Protocols, Studies & Projects, and tools-only Workspace areas. `research-literature.html` unifies the research and reading collections, and `download-app.html` provides app previews and installation guidance. `site-navigation.css` keeps the same five-section navigation across every page and tool.
 
 Repository-managed lists use small text files containing `<Entry>` blocks. `genericListLoader.js` fetches those files, parses their metadata, sorts entries alphabetically, and renders safe links.
 
@@ -28,19 +28,22 @@ The workspace uses `app/main.js` for routes and editors and `app/store.js` for i
 
 See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 
-## Public Website
+## Five Top-Level Sections
 
-- **Homepage** — Introduces the project and directs visitors to research, analysis, learning, and the workspace.
-- **Research Publications** — Separates original work from selected external publications.
-- **Literature Analysis** — Preserves durable critical-reading notes.
-- **Educational Resources** — Organizes mathematics, neuroscience, computer science, and arts material.
-- **Flashcard Laboratories** — Provides topic selection, mixed practice, knowledge tests, daily statistics, missed-answer review, LaTeX rendering, and locally drafted submissions.
+- **Protocols** — Personal playbooks that reduce daily and tedious-task overhead.
+- **Research & Literature** — Original publications, selected research, and analysis of fiction, nonfiction, papers, books, and other literature.
+- **Studies & Projects** — Empty personal libraries for studies, programming languages, algorithms, and projects, plus the existing notecard and educational collections.
+- **Workspace** — The Visual Board, PDF Signer, and Architecture Designer without unrelated library content.
+- **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
-## Personal Workspace
+The interface uses a shared geometric visual system based on grids, angular cards, clipped corners, structured lines, and restrained navy, teal, blue, and gold accents.
 
-The workspace starts with empty, modular libraries:
+## Personal Libraries
+
+The editable areas start with empty, modular libraries:
 
 - **Protocols** — Repeatable triggers and checklists that reduce planning overhead.
+- **Studies** — Concept breakdowns, visual explanations, essays, and developing notes.
 - **Programming Languages** — Mental models, syntax refreshers, and personal gotchas.
 - **Algorithms** — Use cases, explanations, complexity notes, and user-authored animated frames.
 - **Projects** — Problems, solutions, languages, and live relationships to Algorithm entries.
@@ -97,10 +100,10 @@ Mathematics cards support KaTeX using `$...$` for inline expressions and `$$...$
 
 ## Installation and Offline Use
 
-After the workspace is opened once over HTTPS:
+Open the **Download App** section after the site is loaded over HTTPS:
 
 - On iPhone or iPad, use Safari's Share menu and choose **Add to Home Screen**.
-- On Android or a supported desktop browser, use the browser's **Install app** action. The workspace also shows an Install button when the browser exposes it.
+- On Android or a supported desktop browser, use the page's **Install app** button or the browser's installation action.
 
 The app shell, tools, public pages, data files, and repository PDFs are cached for offline access. Remote KaTeX assets used by the legacy flashcard pages may still require a previously populated browser cache for full equation rendering.
 

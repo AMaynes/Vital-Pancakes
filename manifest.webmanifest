@@ -1,8 +1,8 @@
 {
-  "name": "Artificially Neuroscience Workspace",
-  "short_name": "AN Workspace",
-  "description": "A local-first workspace for protocols, languages, algorithms, projects, diagrams, architecture, and signed PDFs.",
-  "start_url": "./workspace.html",
+  "name": "Artificially Neuroscience",
+  "short_name": "AN",
+  "description": "A local-first app for protocols, studies, projects, notecards, diagrams, architecture, and signed PDFs.",
+  "start_url": "./workspace.html#area=tools",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
@@ -24,15 +24,21 @@
   ],
   "shortcuts": [
     {
-      "name": "Visual Board",
-      "short_name": "Board",
-      "url": "tools/visual-board.html",
+      "name": "Protocols",
+      "short_name": "Protocols",
+      "url": "workspace.html#area=protocols",
       "icons": [{ "src": "assets/app-icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Architecture Designer",
-      "short_name": "Architecture",
-      "url": "tools/architecture.html",
+      "name": "Studies & Projects",
+      "short_name": "Studies",
+      "url": "workspace.html#area=studies",
+      "icons": [{ "src": "assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Visual Board",
+      "short_name": "Board",
+      "url": "tools/visual-board.html",
       "icons": [{ "src": "assets/app-icon-192.png", "sizes": "192x192" }]
     }
   ]

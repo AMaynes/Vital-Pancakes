@@ -866,6 +866,33 @@
   color: var(--forest);
 }
 
+/* Geometric tool language */
+
+.back-link,
+.tool-button,
+.tool-input,
+.drop-zone,
+.font-choice,
+.pdf-page-stage,
+.architecture-tab,
+.tree-row,
+.inspector-form input,
+.inspector-form textarea,
+.inspector-form select {
+  border-radius: 0;
+}
+
+.tool-topbar,
+.tool-toolbar,
+.pdf-sidebar,
+.architecture-browser,
+.architecture-inspector {
+  background-image:
+    linear-gradient(rgb(49 95 168 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(49 95 168 / 4%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 @media (max-width: 980px) {
   .architecture-workspace {
     grid-template-columns: 210px 1fr;

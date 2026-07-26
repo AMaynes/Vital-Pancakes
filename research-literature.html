@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!--
+Overview & Purpose
+Unifies original research, selected publications, and literature analysis.
+
+Architectural Relationships
+Called by: The permanent site navigation and homepage.
+Calls: research_publications/ and literature_analysis/.
+
+External Resources
+style.css and site-navigation.css.
+
+Notes
+This is the single top-level home for every research and reading-analysis type.
+-->
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Research, publications, and literary analysis across fiction, nonfiction, and academic work.">
+  <meta name="theme-color" content="#14264a">
+  <title>Research &amp; Literature | Artificially Neuroscience</title>
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="site-navigation.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Artificially Neuroscience home">
+      <span class="brand-mark" aria-hidden="true">AN</span>
+      <span>Artificially Neuroscience</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="workspace.html#area=protocols">Protocols</a>
+      <a href="research-literature.html" aria-current="page">Research &amp; Literature</a>
+      <a href="workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="workspace.html#area=tools">Workspace</a>
+      <a href="download-app.html">Download App</a>
+    </nav>
+  </header>
+
+  <main id="main-content">
+    <section class="page-intro geometric-intro">
+      <p class="eyebrow">Research &amp; Literature</p>
+      <h1>Investigate evidence. Read closely. Preserve the useful parts.</h1>
+      <p>
+        One home for original publications, selected research, and analysis of
+        fiction, nonfiction, papers, books, and any other work worth examining.
+      </p>
+    </section>
+
+    <section class="section-block">
+      <div class="section-heading">
+        <p class="eyebrow">Two connected collections</p>
+        <h2>Research and reading inform each other.</h2>
+        <p>Move between evidence, interpretation, methods, arguments, and open questions.</p>
+      </div>
+
+      <div class="feature-grid research-literature-grid">
+        <article class="feature-card">
+          <span class="card-number">01</span>
+          <p class="card-kicker">Evidence &amp; inquiry</p>
+          <h3>Research &amp; Publications</h3>
+          <p>Original work, selected papers, formal publications, and research that informs ongoing questions.</p>
+          <a class="text-link" href="research_publications/">Open research <span aria-hidden="true">→</span></a>
+        </article>
+
+        <article class="feature-card feature-card-accent">
+          <span class="card-number">02</span>
+          <p class="card-kicker">Interpretation &amp; reflection</p>
+          <h3>Literature Analysis</h3>
+          <p>Close readings of fiction, nonfiction, books, essays, papers, and other works across disciplines.</p>
+          <a class="text-link" href="literature_analysis/">Open analyses <span aria-hidden="true">→</span></a>
+        </article>
+      </div>
+    </section>
+
+    <section class="content-panel geometric-panel">
+      <div>
+        <p class="eyebrow">Analysis scope</p>
+        <h2>Any form of literature belongs here.</h2>
+        <p>The structure stays broad so different kinds of reading can use the depth they need.</p>
+      </div>
+      <div class="scope-token-grid" aria-label="Supported literature types">
+        <span>Fiction</span>
+        <span>Nonfiction</span>
+        <span>Academic papers</span>
+        <span>Publications</span>
+        <span>Books &amp; essays</span>
+        <span>Methods &amp; evidence</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Artificially Neuroscience</p>
+    <a href="index.html">Return home</a>
+  </footer>
+</body>
+</html>
