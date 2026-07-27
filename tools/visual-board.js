@@ -22,7 +22,7 @@ import {
 } from "./visual-board-geometry.mjs";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
-const BOARD_VERSION = 3;
+const BOARD_VERSION = 4;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -103,9 +103,12 @@ function loadBoard() {
   try {
     const savedBoard = JSON.parse(localStorage.getItem(BOARD_KEY));
     const rawObjects = Array.isArray(savedBoard?.objects) ? savedBoard.objects : [];
+    const snapToGrid = savedBoard?.settings?.snap ?? false;
     return {
       version: BOARD_VERSION,
-      objects: rawObjects.map(normalizeObject).filter(Boolean),
+      objects: rawObjects
+        .map((object) => normalizeObject(object, { snapToGrid }))
+        .filter(Boolean),
       assets: savedBoard?.assets && typeof savedBoard.assets === "object"
         ? savedBoard.assets
         : {},
@@ -135,7 +138,7 @@ function createEmptyBoard() {
   };
 }
 
-function normalizeObject(rawObject) {
+function normalizeObject(rawObject, options = {}) {
   if (!rawObject || typeof rawObject !== "object") return null;
 
   const type = rawObject.type === "note" ? "textbox" : rawObject.type;
@@ -191,7 +194,7 @@ function normalizeObject(rawObject) {
     const startY = finiteNumber(rawObject.y, 0);
     const legacyEndX = finiteNumber(rawObject.endX, startX + 120);
     const legacyEndY = finiteNumber(rawObject.endY, startY + 80);
-    return normalizeShape({
+    const normalized = normalizeShape({
       ...common,
       x: startX,
       y: startY,
@@ -200,6 +203,12 @@ function normalizeObject(rawObject) {
       rotation: finiteNumber(rawObject.rotation, 0),
       ...(type === "shape" ? { shapeKind: rawObject.shapeKind } : {}),
     });
+    if (normalized.shapeKind === "cube") {
+      const defaultDepth = getCubeDepth(normalized, options.snapToGrid);
+      normalized.shapeDepthX = finiteNumber(rawObject.shapeDepthX, defaultDepth);
+      normalized.shapeDepthY = finiteNumber(rawObject.shapeDepthY, defaultDepth);
+    }
+    return normalized;
   }
 
   if (type === "textbox") {
@@ -304,6 +313,24 @@ function getSnappedPoint(point) {
     x: snapValue(point.x, GRID_SIZE),
     y: snapValue(point.y, GRID_SIZE),
   };
+}
+
+function getCubeDepth(object, snapToGrid = false) {
+  const minimumDimension = Math.min(Math.abs(object.w), Math.abs(object.h));
+  if (!snapToGrid) return Math.max(1, minimumDimension * 0.22);
+  const gridSizedDimension = Math.max(GRID_SIZE * 2, minimumDimension);
+  const desiredDepth = snapValue(gridSizedDimension * 0.22, GRID_SIZE);
+  return clamp(desiredDepth, GRID_SIZE, gridSizedDimension - GRID_SIZE);
+}
+
+function alignCubeToGrid(object) {
+  if (object.shapeKind !== "cube" || !board.settings.snap) return object;
+  object.w = Math.max(GRID_SIZE * 2, object.w);
+  object.h = Math.max(GRID_SIZE * 2, object.h);
+  const depth = getCubeDepth(object, true);
+  object.shapeDepthX = depth;
+  object.shapeDepthY = depth;
+  return object;
 }
 
 function drawBoard(includeInteractionUi = true) {
@@ -936,12 +963,12 @@ function handlePointerMove(event) {
     updateMoveInteraction(screenPoint, worldPoint);
   } else if (interaction.kind === "resize") {
     ensureInteractionCheckpoint();
-    const resized = resizeShapeFromCorner(
+    const resized = alignCubeToGrid(resizeShapeFromCorner(
       interaction.initialObject,
       interaction.corner,
       getSnappedPoint(worldPoint),
       MIN_SHAPE_SIZE,
-    );
+    ));
     replaceObjectProperties(interaction.object, resized);
     interaction.changed = true;
   } else if (interaction.kind === "rotate") {
@@ -1090,7 +1117,7 @@ function commitWorkingObject() {
   if (!workingObject) return;
   let object = workingObject;
 
-  if (SHAPE_TYPES.has(object.type)) object = normalizeShape(object);
+  if (SHAPE_TYPES.has(object.type)) object = alignCubeToGrid(normalizeShape(object));
   if (object.type === "textbox" && (object.w < 8 || object.h < 8)) {
     object.w = DEFAULT_TEXTBOX_WIDTH;
     object.h = DEFAULT_TEXTBOX_HEIGHT;

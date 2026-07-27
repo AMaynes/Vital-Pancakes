@@ -84,6 +84,27 @@ test("outlined 2D and 3D shapes produce selectable world-space segments", () => 
   assert.equal(pointHitsObject(triangle, { x: 70, y: 60 }, 2), false);
 });
 
+test("cube depth offsets place every vertex on the board grid", () => {
+  const cube = {
+    type: "shape",
+    shapeKind: "cube",
+    x: 64,
+    y: 96,
+    w: 352,
+    h: 288,
+    shapeDepthX: 64,
+    shapeDepthY: 64,
+    rotation: 0,
+    strokeWidth: 3,
+  };
+  const vertices = getObjectSegments(cube).flat();
+  assert.equal(vertices.length, 24);
+  vertices.forEach((point) => {
+    assert.equal(point.x % 32, 0);
+    assert.equal(point.y % 32, 0);
+  });
+});
+
 test("curved outlined shapes can be exploded into clean line approximations", () => {
   const ellipse = {
     type: "ellipse",

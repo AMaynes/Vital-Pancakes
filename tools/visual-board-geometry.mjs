@@ -28,20 +28,24 @@ const SHAPE_SEGMENT_BUILDERS = {
     [0.25, 1],
     [0, 0.5],
   ]),
-  cube: () => joinedPolygons([
-    [
-      [0.08, 0.28],
-      [0.68, 0.28],
-      [0.68, 0.9],
-      [0.08, 0.9],
-    ],
-    [
-      [0.3, 0.08],
-      [0.9, 0.08],
-      [0.9, 0.7],
-      [0.3, 0.7],
-    ],
-  ]),
+  cube: (object) => {
+    const depthX = getNormalizedDepth(object.shapeDepthX, object.w);
+    const depthY = getNormalizedDepth(object.shapeDepthY, object.h);
+    return joinedPolygons([
+      [
+        [0, depthY],
+        [1 - depthX, depthY],
+        [1 - depthX, 1],
+        [0, 1],
+      ],
+      [
+        [depthX, 0],
+        [1, 0],
+        [1, 1 - depthY],
+        [depthX, 1 - depthY],
+      ],
+    ]);
+  },
   cuboid: () => joinedPolygons([
     [
       [0.05, 0.34],
@@ -120,6 +124,12 @@ function ellipseSegments(x, y, width, height, count = 32) {
     ];
   });
   return polygonSegments(points);
+}
+
+function getNormalizedDepth(depth, dimension) {
+  const fallback = Math.abs(dimension) * 0.22;
+  const resolvedDepth = Number.isFinite(depth) ? Math.abs(depth) : fallback;
+  return clamp(resolvedDepth / Math.max(1, Math.abs(dimension)), 0.05, 0.45);
 }
 
 export function clamp(value, minimum, maximum) {
@@ -250,7 +260,7 @@ export function getObjectSegments(object) {
   } else if (object.type === "ellipse") {
     normalizedSegments = ellipseSegments(0, 0, 1, 1, 36);
   } else if (object.type === "shape") {
-    normalizedSegments = SHAPE_SEGMENT_BUILDERS[object.shapeKind]?.() ?? [];
+    normalizedSegments = SHAPE_SEGMENT_BUILDERS[object.shapeKind]?.(object) ?? [];
   }
 
   return normalizedSegments.map(([start, end]) => [
