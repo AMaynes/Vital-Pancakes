@@ -304,7 +304,7 @@ function renderToolsDashboard() {
   const hero = createAreaHero(
     "WORKSPACE",
     "Tools for doing the work.",
-    "Draw, sign, and design systems without mixing tools into your personal knowledge sections.",
+    "Draw, sign, plan, analyze, and design without mixing tools into your personal knowledge sections.",
   );
   const toolsHeading = createSectionHeading("Workspace tools", "Choose the surface that matches the task.");
   const toolsGrid = createElement("div", "tool-grid");
@@ -329,6 +329,13 @@ function renderToolsDashboard() {
       href: "tools/literature-analyzer.html",
       icon: "⌑",
       accent: "sage",
+    },
+    {
+      title: "Travel Planner",
+      copy: "Keep flights, stays, places, and daily itinerary notes on a simple calendar.",
+      href: "tools/travel-planner.html",
+      icon: "✈",
+      accent: "coral",
     },
     {
       title: "Architecture",

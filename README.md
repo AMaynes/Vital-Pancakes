@@ -33,7 +33,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Protocols** — Personal playbooks that reduce daily and tedious-task overhead.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Empty personal libraries for studies, programming languages, algorithms, and projects, plus the existing notecard and educational collections.
-- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, and Architecture Designer without unrelated library content.
+- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Travel Planner, and Architecture Designer without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the anatomical Pinakes Vitae emblem.
@@ -61,7 +61,7 @@ The editable areas use five empty, permanent core libraries:
 
 These five core libraries cannot be added, renamed, or deleted. Their entries remain editable and can be deleted using the requested password `password`. Because this is a static local-first site, the password is a convenience guard and not secure access control.
 
-User-created entries, boards, and architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
+User-created entries, boards, travel plans, and architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 
 Existing `localStorage` namespaces retain their original `artificially-neuroscience-*` identifiers. They are implementation-level compatibility keys, not public branding, and must remain unchanged unless a migration preserves previously saved user data.
 
@@ -84,6 +84,12 @@ Opens PDFs locally with bundled PDF.js, supports page navigation, creates signat
 Opens local PDFs or a live embedded website, supports click-and-drag highlights with a comment attached to every mark, restores annotations by source, and exports annotated records as PNG or PDF. PDF export writes highlights into the original pages and adds numbered comment pages.
 
 Websites remain governed by their own embedding policies. Because browsers prevent one website from reading another website's rendered pixels, webpage exports preserve the source URL, highlight map, and comments rather than copying the remote page itself.
+
+### Travel Planner
+
+Provides a simple month calendar for flights, stays, reservations, places, and daily itinerary notes. Each plan can include an optional time, place, and notes; saved places can open directly in Google Maps.
+
+Travel plans stay in the current browser. The tool has no reminders, notifications, accounts, synchronization, or external calendar integration.
 
 ### Architecture Designer
 

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>Travel Planner · Pinakes Vitae</title>
+  <link rel="icon" href="../assets/pinakes-vitae-logo-final-light.png" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=16">
+  <link rel="stylesheet" href="tool.css?v=21">
+  <link rel="stylesheet" href="travel-planner.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=17">
+  <script type="module" src="../site-navigation.js?v=4"></script>
+</head>
+<body class="tool-body">
+  <a class="skip-link" href="#tool-main">Skip to tool</a>
+
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Pinakes Vitae home">
+      <span class="brand-mark" aria-hidden="true">PV</span>
+      <span>Pinakes Vitae</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../workspace.html#area=protocols">Protocols</a>
+      <a href="../research-literature.html">Research &amp; Literature</a>
+      <a href="../workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="../workspace.html#area=tools" aria-current="page">Workspace</a>
+      <a href="../download-app.html">Download App</a>
+    </nav>
+  </header>
+
+  <div class="tool-shell">
+    <header class="tool-topbar">
+      <div class="tool-title-group">
+        <div>
+          <h1>Travel Planner</h1>
+          <small>SIMPLE ITINERARY CALENDAR</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions">
+        <span class="tool-save-status" id="travel-status" aria-live="polite">Saved locally</span>
+        <button class="button button-quiet" id="travel-today" type="button">Today</button>
+        <button class="button button-primary" id="new-travel-plan" type="button">+ Plan</button>
+      </div>
+    </header>
+
+    <main class="travel-planner-workspace" id="tool-main">
+      <section class="travel-calendar-panel" aria-labelledby="travel-month-label">
+        <header class="travel-calendar-header">
+          <div class="travel-month-controls">
+            <button class="tool-button" id="previous-travel-month" type="button" aria-label="Previous month">←</button>
+            <h2 id="travel-month-label"></h2>
+            <button class="tool-button" id="next-travel-month" type="button" aria-label="Next month">→</button>
+          </div>
+          <p>Click a day to plan it. Everything stays in this browser.</p>
+        </header>
+        <div class="travel-weekdays" aria-hidden="true">
+          <span>Sun</span>
+          <span>Mon</span>
+          <span>Tue</span>
+          <span>Wed</span>
+          <span>Thu</span>
+          <span>Fri</span>
+          <span>Sat</span>
+        </div>
+        <div class="travel-calendar-grid" id="travel-calendar-grid" role="grid" aria-label="Travel plans by month"></div>
+      </section>
+
+      <aside class="travel-planner-sidebar">
+        <section class="travel-editor-panel">
+          <header class="travel-sidebar-heading">
+            <div>
+              <p class="travel-sidebar-kicker">Selected day</p>
+              <h2 id="selected-travel-date"></h2>
+            </div>
+            <span id="selected-travel-count">0 plans</span>
+          </header>
+
+          <form id="travel-plan-form">
+            <label for="travel-title">
+              <span>Plan</span>
+              <input class="tool-input" id="travel-title" name="title" type="text" maxlength="120" placeholder="Flight, hotel, museum…" required>
+            </label>
+            <div class="travel-form-row">
+              <label for="travel-date">
+                <span>Date</span>
+                <input class="tool-input" id="travel-date" name="date" type="date" required>
+              </label>
+              <label for="travel-time">
+                <span>Time <small>optional</small></span>
+                <input class="tool-input" id="travel-time" name="time" type="time">
+              </label>
+            </div>
+            <label for="travel-place">
+              <span>Place <small>optional</small></span>
+              <input class="tool-input" id="travel-place" name="place" type="text" maxlength="200" placeholder="Airport, hotel, address…">
+            </label>
+            <label for="travel-notes">
+              <span>Notes <small>optional</small></span>
+              <textarea class="tool-input" id="travel-notes" name="notes" rows="4" maxlength="2000" placeholder="Booking details, route, what to bring…"></textarea>
+            </label>
+            <div class="travel-form-actions">
+              <button class="button button-primary" id="save-travel-plan" type="submit">Add to calendar</button>
+              <button class="button button-quiet" id="cancel-travel-edit" type="button">Clear</button>
+              <button class="button button-danger-quiet" id="delete-travel-plan" type="button" hidden>Delete</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="travel-agenda-panel">
+          <h2>Day itinerary</h2>
+          <div class="travel-agenda" id="travel-agenda"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script type="module" src="travel-planner.js?v=1"></script>
+</body>
+</html>

@@ -64,6 +64,10 @@ const PAGE_TRAILS = {
     segment("workspace", "workspace.html#area=tools"),
     segment("literature-analyzer"),
   ],
+  "tools/travel-planner.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("travel-planner"),
+  ],
   "tools/visual-board.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("visual-board"),

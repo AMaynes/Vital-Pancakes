@@ -1,7 +1,8 @@
 /**
  * Overview & Purpose
  * Provides the full-screen workspace and control styling shared by the visual
- * board, PDF signer, literature analyzer, and architecture designer.
+ * board, PDF signer, literature analyzer, Travel Planner, and architecture
+ * designer.
  *
  * Architectural Relationships
  * Called by: HTML documents in tools/.

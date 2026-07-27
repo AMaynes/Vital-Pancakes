@@ -47,6 +47,11 @@ pinakes-vitae/
 │   ├── literature-analyzer.js — Owns source loading, persistence, comments, and exports.
 │   ├── literature-analyzer-model.mjs — Provides highlight geometry and stored-data validation.
 │   ├── literature-analyzer-model.test.mjs — Verifies normalized highlighting and PDF coordinates.
+│   ├── travel-planner.html — Hosts the simple month itinerary calendar.
+│   ├── travel-planner.css — Styles the month grid, plan editor, and day itinerary.
+│   ├── travel-planner.js — Renders and persists local travel plans.
+│   ├── travel-planner-model.mjs — Owns calendar dates and saved-plan validation.
+│   ├── travel-planner-model.test.mjs — Verifies Travel Planner model behavior.
 │   ├── architecture.html — Hosts the permanent-root folder structure and aligned notes.
 │   ├── architecture.js — Renders and persists editable tree interactions.
 │   ├── architecture-model.mjs — Owns migration, nesting, movement, and deletion policies.
@@ -166,7 +171,7 @@ Contains the canonical light and dark Pinakes Vitae logos, install icons derived
 
 ### `tools/tool.css`
 
-Shares responsive full-screen layouts, controls, panels, canvas surfaces, signature controls, annotation surfaces, and editable file-tree interfaces.
+Shares responsive full-screen layouts, controls, panels, canvas surfaces, signature controls, annotation surfaces, calendar controls, and editable file-tree interfaces.
 
 ### Visual Board
 
@@ -183,6 +188,12 @@ Shares responsive full-screen layouts, controls, panels, canvas surfaces, signat
 `literature-analyzer.html` and `literature-analyzer.css` provide a split source, comment, and reading workspace. `literature-analyzer.js` opens local PDFs or sandboxed website frames, stores source-specific highlights and comments locally, exports annotated PDF pages with a comment appendix, and creates PNG or PDF annotation maps for webpages whose pixels remain protected by cross-origin browser security.
 
 `literature-analyzer-model.mjs` owns normalized rectangle creation, persisted annotation validation, and PDF coordinate conversion. Its Node test suite covers reverse drags, clamping, minimum sizes, malformed storage, and the PDF vertical-axis transform.
+
+### Travel Planner
+
+`travel-planner.html` and `travel-planner.css` provide a simple six-week month calendar, plan editor, and selected-day itinerary. `travel-planner.js` keeps date, time, place, and note entries in local browser storage and offers optional Google Maps search links without adding reminders, notifications, accounts, sync, or calendar integrations.
+
+`travel-planner-model.mjs` owns date generation, validation, sanitization, ordering, querying, updates, and removal. Its Node test suite covers six-week calendar boundaries, leap dates, malformed persistence, deterministic ordering, and the complete plan lifecycle.
 
 ### Architecture Designer
 

@@ -40,6 +40,12 @@
       "short_name": "Board",
       "url": "tools/visual-board.html",
       "icons": [{ "src": "assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Travel Planner",
+      "short_name": "Travel",
+      "url": "tools/travel-planner.html",
+      "icons": [{ "src": "assets/app-icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
