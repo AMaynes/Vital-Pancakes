@@ -1,8 +1,8 @@
 /**
  * Overview & Purpose
- * Provides the full-screen workspace and control styling shared by the visual
- * board, PDF signer, literature analyzer, Travel Planner, and architecture
- * designer.
+ * Provides the full-screen and windowed workspace styling shared by the Visual
+ * Board, PDF Signer, Literature Analyzer, Travel Planner, and Software
+ * Architect.
  *
  * Architectural Relationships
  * Called by: HTML documents in tools/.
@@ -694,7 +694,23 @@
   line-height: 1.5;
 }
 
-/* Architecture */
+/* Software Architect */
+
+.software-architect-body {
+  overflow: auto;
+}
+
+.software-architect-shell {
+  flex: 0 0 auto;
+  width: min(1000px, calc(100% - 48px));
+  height: min(640px, calc(100vh - 160px));
+  min-height: 460px;
+  margin: clamp(18px, 3vh, 30px) auto;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  box-shadow: 0 16px 42px rgb(23 22 19 / 16%);
+}
 
 .architecture-workspace {
   position: relative;
@@ -793,7 +809,7 @@
   align-items: flex-start;
   justify-content: center;
   overflow: auto;
-  padding: 30px;
+  padding: 14px 14px 48px;
   background:
     linear-gradient(rgb(23 22 19 / 3%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(23 22 19 / 3%) 1px, transparent 1px),
@@ -803,8 +819,8 @@
 
 .architecture-sheet {
   position: relative;
-  width: min(1180px, 100%);
-  min-height: max(620px, calc(100% - 38px));
+  width: min(900px, 100%);
+  min-height: 100%;
   border: 1px solid #24231f;
   background: #ffffff;
   box-shadow: 0 8px 24px rgb(23 22 19 / 10%);
@@ -997,9 +1013,10 @@
 }
 
 .architecture-help {
-  position: fixed;
-  right: 18px;
-  bottom: 14px;
+  position: absolute;
+  z-index: 9;
+  right: 12px;
+  bottom: 10px;
   max-width: 380px;
   margin: 0;
   padding: 7px 10px;
@@ -1474,6 +1491,13 @@
 
   .architecture-workspace {
     display: block;
+  }
+
+  .software-architect-shell {
+    width: calc(100% - 16px);
+    height: calc(100vh - 124px);
+    min-height: 430px;
+    margin: 8px auto;
   }
 
   .architecture-map-frame {

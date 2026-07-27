@@ -54,7 +54,7 @@ const PAGE_TRAILS = {
   ],
   "tools/architecture.html": [
     segment("workspace", "workspace.html#area=tools"),
-    segment("architecture-designer"),
+    segment("software-architect"),
   ],
   "tools/pdf-signer.html": [
     segment("workspace", "workspace.html#area=tools"),

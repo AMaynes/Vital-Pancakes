@@ -36,7 +36,7 @@ pinakes-vitae/
 │   ├── app-preview-workspace.svg — Phone preview of workspace tools.
 │   └── app-preview-studies.svg — Phone preview of study libraries.
 ├── tools/
-│   ├── tool.css — Shares full-screen tool layouts and controls.
+│   ├── tool.css — Shares full-screen and windowed tool layouts and controls.
 │   ├── visual-board.html — Hosts diagramming and painting.
 │   ├── visual-board.js — Coordinates the infinite canvas, tools, persistence, and export.
 │   ├── visual-board-clipboard.mjs — Duplicates selected board objects while preserving internal relationships.
@@ -62,7 +62,7 @@ pinakes-vitae/
 │   ├── architecture.html — Hosts the permanent-root folder structure and aligned notes.
 │   ├── architecture.js — Renders and persists editable tree interactions.
 │   ├── architecture-model.mjs — Owns migration, nesting, movement, and deletion policies.
-│   └── architecture-model.test.mjs — Verifies Architecture Designer model behavior.
+│   └── architecture-model.test.mjs — Verifies Software Architect model behavior.
 ├── vendor/
 │   ├── pdf.min.js — Bundled PDF.js viewer runtime.
 │   ├── pdf.worker.min.js — Bundled PDF.js worker.
@@ -178,7 +178,7 @@ Contains the canonical light and dark Pinakes Vitae logos, install icons derived
 
 ### `tools/tool.css`
 
-Shares responsive full-screen layouts, controls, panels, canvas surfaces, signature controls, annotation surfaces, calendar controls, and editable file-tree interfaces.
+Shares responsive full-screen and windowed layouts, controls, panels, canvas surfaces, signature controls, annotation surfaces, calendar controls, and editable file-tree interfaces.
 
 ### Visual Board
 
@@ -202,7 +202,7 @@ Shares responsive full-screen layouts, controls, panels, canvas surfaces, signat
 
 `travel-planner-model.mjs` owns date generation, validation, sanitization, ordering, querying, updates, and removal. Its Node test suite covers six-week calendar boundaries, leap dates, malformed persistence, deterministic ordering, and the complete plan lifecycle.
 
-### Architecture Designer
+### Software Architect
 
 `architecture.html` hosts a single permanent-root file tree with notes aligned across from every row. `architecture.js` supports inline renaming and notes, folder collapsing, immediate blank file or folder creation, drag-to-nest behavior, confirmation-only deletion and complete clearing, local persistence, and JSON export.
 

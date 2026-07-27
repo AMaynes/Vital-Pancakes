@@ -3,7 +3,7 @@
  * Owns the local-first workspace data model and all persistence mutations.
  *
  * Architectural Relationships
- * Called by: The workspace dashboard and architecture designer.
+ * Called by: The workspace dashboard and Software Architect.
  * Calls: Browser localStorage and workspace change events.
  *
  * External Resources

@@ -1,5 +1,5 @@
 /**
- * Pure model helpers for the Architecture Designer folder tree.
+ * Pure model helpers for the Software Architect folder tree.
  */
 
 export const ARCHITECTURE_VERSION = 2;
@@ -151,7 +151,7 @@ function migrateLegacyArchitecture(saved) {
       parentId: ROOT_NODE_ID,
       type: "folder",
       name: "MigratedScopes",
-      notes: "System scopes preserved from the previous Architecture Designer.",
+      notes: "System scopes preserved from the previous Software Architect.",
       collapsed: false,
       order: nodes.length,
     });

@@ -14,13 +14,13 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "pinakes-vitae-app-v35";
+const CACHE_NAME = "pinakes-vitae-app-v36";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./style.css?v=17",
   "./site-navigation.css?v=17",
-  "./site-navigation.js?v=5",
+  "./site-navigation.js?v=6",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
@@ -30,12 +30,12 @@ const APP_SHELL = [
   "./assets/pinakes-vitae-logo-final-light.png",
   "./assets/app-icon-192.png",
   "./assets/app-icon-512.png",
-  "./assets/app-preview-workspace.svg?v=3",
+  "./assets/app-preview-workspace.svg?v=4",
   "./assets/app-preview-studies.svg?v=2",
-  "./app/main.js?v=1",
+  "./app/main.js?v=2",
   "./app/store.js",
   "./app/download-app.js",
-  "./tools/tool.css?v=23",
+  "./tools/tool.css?v=24",
   "./tools/visual-board.html",
   "./tools/visual-board.js?v=10",
   "./tools/visual-board-clipboard.mjs?v=2",
@@ -53,7 +53,7 @@ const APP_SHELL = [
   "./tools/travel-planner.js?v=1",
   "./tools/travel-planner-model.mjs",
   "./tools/architecture.html",
-  "./tools/architecture.js?v=4",
+  "./tools/architecture.js?v=5",
   "./tools/architecture-model.mjs",
   "./vendor/pdf.min.js",
   "./vendor/pdf.worker.min.js",

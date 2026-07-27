@@ -24,7 +24,7 @@ Repository-managed lists use small text files containing `<Entry>` blocks. `gene
 
 The mathematics and arts flashcard applications load subject-specific `flashcards.json` files. Quiz scores, missed-answer queues, and drafted submissions remain in the visitor's browser through `localStorage`.
 
-The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone full-screen module. A service worker pre-caches the workspace, tools, PDF dependencies, and public archive for offline use.
+The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches the workspace, tools, PDF dependencies, and public archive for offline use.
 
 See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 
@@ -33,7 +33,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Everyday Life** — Separate Cooking, Gym, and Cleaning areas for practical knowledge used at home.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Empty personal libraries for studies, programming languages, algorithms, and projects, plus the existing notecard and educational collections.
-- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Travel Planner, and Architecture Designer without unrelated library content.
+- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Travel Planner, and Software Architect without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the anatomical Pinakes Vitae emblem.
@@ -64,7 +64,7 @@ The editable areas use eight empty, permanent core libraries:
 
 These eight core libraries cannot be added, renamed, or deleted. Their entries remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library instead of being discarded.
 
-User-created entries, boards, travel plans, and architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
+User-created entries, boards, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 
 Existing `localStorage` namespaces retain their original `artificially-neuroscience-*` identifiers. They are implementation-level compatibility keys, not public branding, and must remain unchanged unless a migration preserves previously saved user data.
 
@@ -94,11 +94,11 @@ Provides a simple month calendar for flights, stays, reservations, places, and d
 
 Travel plans stay in the current browser. The tool has no reminders, notifications, accounts, synchronization, or external calendar integration.
 
-### Architecture Designer
+### Software Architect
 
 Provides a permanent `root/` folder and an editable file-tree workspace with aligned notes for every item. Folders and files spawn with blank placeholder names, can be renamed inline, and can be dragged into other folders. Individual nodes and the complete workspace can be cleared after a standard confirmation, with no password requirement.
 
-Architecture data saves locally, preserves legacy file nodes and system scopes through migration, and can be exported as JSON.
+Software architecture data saves locally, preserves legacy file nodes and system scopes through migration, and can be exported as JSON.
 
 ## Adding List Content
 

@@ -378,8 +378,8 @@ function renderToolsDashboard() {
       accent: "coral",
     },
     {
-      title: "Architecture",
-      copy: "Build a draggable file and folder tree with aligned implementation notes.",
+      title: "Software Architect",
+      copy: "Design a draggable software file and folder tree with aligned implementation notes.",
       href: "tools/architecture.html",
       icon: "⌘",
       accent: "violet",
