@@ -1235,8 +1235,10 @@ function commitWorkingObject() {
   selectedObjects = [object];
   saveBoard();
   updateSelectionControls();
-  const keepsShapeToolActive = ["rectangle", "ellipse", "shape"].includes(object.type);
-  if (object.type !== "pen" && !keepsShapeToolActive) setActiveTool("select");
+  const keepsCreationToolActive = object.type === "pen"
+    || LINE_TYPES.has(object.type)
+    || ["rectangle", "ellipse", "shape"].includes(object.type);
+  if (!keepsCreationToolActive) setActiveTool("select");
 
   if (object.type === "textbox") {
     window.setTimeout(() => openTextEditor(object, false), 0);
@@ -1402,7 +1404,7 @@ function updateSelectionControls() {
   lockSelectionButton.title = allLocked ? "Unlock selection" : "Lock selection";
   lockSelectionButton.querySelector(".tool-button-label").textContent = allLocked ? "Unlock" : "Lock";
   deleteSelectionButton.disabled = allLocked;
-  groupSelectionButton.disabled = selectedObjects.length < 2 || anyLocked;
+  groupSelectionButton.disabled = !canGroupSelection(selectedObjects);
   mergeVerticesButton.disabled = !canCreateVertexNetwork(selectedObjects);
   ungroupSelectionButton.disabled = anyLocked
     || !selectedObjects.some((object) => Boolean(object.groupId));
@@ -1431,8 +1433,16 @@ function updateTextStyleControls() {
   textColorInput.value = source.color;
 }
 
-function assembleSelection() {
-  if (selectedObjects.length < 2 || selectedObjects.some((object) => object.locked)) return;
+function canGroupSelection(objects) {
+  if (objects.length < 2 || objects.some((object) => object.locked)) return false;
+  const existingGroupId = objects[0].groupId;
+  const isAlreadyGrouped = Boolean(existingGroupId)
+    && objects.every((object) => object.groupId === existingGroupId);
+  return !isAlreadyGrouped;
+}
+
+function groupSelection() {
+  if (!canGroupSelection(selectedObjects)) return;
   checkpoint();
   const groupId = createId();
   selectedObjects.forEach((object) => {
@@ -1441,7 +1451,8 @@ function assembleSelection() {
   saveBoard();
   updateSelectionControls();
   drawBoard();
-  announceStatus(`${selectedObjects.length} objects assembled`);
+  groupSelectionButton.blur();
+  announceStatus(`${selectedObjects.length} objects grouped`);
 }
 
 function canCreateVertexNetwork(objects) {
@@ -1860,7 +1871,9 @@ function openTextEditor(object, checkpointBeforeEdit = true) {
   editor.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       event.preventDefault();
+      event.stopPropagation();
       closeTextEditor(true);
+      returnToSelectionMode();
     } else if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       closeTextEditor();
@@ -1917,6 +1930,11 @@ function handleKeyDown(event) {
   const eventTarget = event.target;
   const isEditingControl = eventTarget instanceof HTMLElement
     && eventTarget.matches("input, textarea, select, [contenteditable='true']");
+  if (event.key === "Escape") {
+    event.preventDefault();
+    returnToSelectionMode();
+    return;
+  }
   if (isEditingControl) return;
 
   if (commandKey && event.key.toLowerCase() === "c") {
@@ -1952,15 +1970,26 @@ function handleKeyDown(event) {
     if (!selectedObjects.length) return;
     event.preventDefault();
     deleteSelection();
-  } else if (event.key === "Escape") {
-    selectedObjects = [];
-    updateSelectionControls();
-    drawBoard();
   } else if (event.code === "Space") {
     event.preventDefault();
     spaceHeld = true;
     updateCanvasCursor();
   }
+}
+
+function returnToSelectionMode() {
+  if (interaction?.kind === "draw") {
+    if (canvas.hasPointerCapture(interaction.pointerId)) {
+      canvas.releasePointerCapture(interaction.pointerId);
+    }
+    interaction = null;
+    workingObject = null;
+  }
+  selectedObjects = [];
+  setActiveTool("select");
+  drawingTools.querySelector('[data-tool="select"]').focus({ preventScroll: true });
+  updateSelectionControls();
+  drawBoard();
 }
 
 function handleKeyUp(event) {
@@ -2121,7 +2150,7 @@ copySelectionButton.addEventListener("click", copySelection);
 pasteSelectionButton.addEventListener("click", pasteSelection);
 deleteSelectionButton.addEventListener("click", deleteSelection);
 lockSelectionButton.addEventListener("click", toggleSelectionLock);
-groupSelectionButton.addEventListener("click", assembleSelection);
+groupSelectionButton.addEventListener("click", groupSelection);
 mergeVerticesButton.addEventListener("click", mergeSelectionVertices);
 ungroupSelectionButton.addEventListener("click", releaseSelection);
 explodeSelectionButton.addEventListener("click", divideSelection);
