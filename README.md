@@ -69,7 +69,7 @@ Existing `localStorage` namespaces retain their original `artificially-neuroscie
 
 ### Visual Board
 
-Provides an infinite white workspace for freehand markup, straight lines, arrows with editable start and tip handles, inline textboxes, and resizable or rotatable outlined shapes. Selection outlines stay tight to each object, including narrow rotated outlines around diagonal lines and arrows. Compact menus create rectangles, ellipses, triangles, diamonds, hexagons, cubes, rectangular and triangular prisms, pyramids, cylinders, and cones.
+Provides an infinite white workspace for freehand markup, straight lines, arrows with editable start and tip handles, inline textboxes, and resizable or rotatable outlined shapes. Selection outlines and marquee hit-testing stay tight to each object, including narrow rotated geometry around diagonal lines and arrows. Compact menus create rectangles, ellipses, triangles, diamonds, hexagons, cubes, rectangular and triangular prisms, pyramids, cylinders, and cones.
 
 Every supported line or shape can use solid, dashed, dotted, dash–dot, or long-dash ink. Marquee-selected objects can be copied and pasted together, assembled into one movable piece, and released later; outlined shapes can also be divided into independently selectable line segments and reassembled into their original form. Textboxes have contextual font-family, font-size, and text-color controls. The board additionally supports locking, post-draw color and line-thickness changes, brush-style erasing, optional grid snapping, deep undo and redo, mouse or trackpad panning, pinch zooming, and PNG export of the current view.
 

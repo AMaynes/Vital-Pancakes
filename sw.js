@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "pinakes-vitae-app-v28";
+const CACHE_NAME = "pinakes-vitae-app-v29";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -37,9 +37,9 @@ const APP_SHELL = [
   "./app/download-app.js",
   "./tools/tool.css?v=22",
   "./tools/visual-board.html",
-  "./tools/visual-board.js?v=6",
+  "./tools/visual-board.js?v=7",
   "./tools/visual-board-clipboard.mjs?v=1",
-  "./tools/visual-board-geometry.mjs?v=5",
+  "./tools/visual-board-geometry.mjs?v=6",
   "./tools/pdf-signer.html",
   "./tools/pdf-signer.js?v=2",
   "./tools/literature-analyzer.html",

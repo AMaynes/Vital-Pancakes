@@ -410,7 +410,47 @@ export function rectanglesIntersect(first, second) {
 }
 
 export function objectIntersectsRectangle(object, rectangle) {
+  if (LINE_TYPES.has(object.type)) {
+    const strokePadding = (object.strokeWidth ?? 1) / 2;
+    return getObjectSegments(object).some(([start, end]) => (
+      segmentIntersectsRectangle(start, end, rectangle, strokePadding)
+    ));
+  }
   return rectanglesIntersect(getObjectBounds(object), rectangle);
+}
+
+function segmentIntersectsRectangle(start, end, rectangle, padding = 0) {
+  const left = rectangle.x - padding;
+  const right = rectangle.x + rectangle.width + padding;
+  const top = rectangle.y - padding;
+  const bottom = rectangle.y + rectangle.height + padding;
+  const deltaX = end.x - start.x;
+  const deltaY = end.y - start.y;
+  const directions = [-deltaX, deltaX, -deltaY, deltaY];
+  const distances = [
+    start.x - left,
+    right - start.x,
+    start.y - top,
+    bottom - start.y,
+  ];
+  let entry = 0;
+  let exit = 1;
+
+  for (let index = 0; index < directions.length; index += 1) {
+    const direction = directions[index];
+    const distance = distances[index];
+    if (direction === 0) {
+      if (distance < 0) return false;
+      continue;
+    }
+
+    const ratio = distance / direction;
+    if (direction < 0) entry = Math.max(entry, ratio);
+    else exit = Math.min(exit, ratio);
+    if (entry > exit) return false;
+  }
+
+  return true;
 }
 
 export function resizeShapeFromCorner(initialObject, corner, worldPoint, minimumSize = 16) {

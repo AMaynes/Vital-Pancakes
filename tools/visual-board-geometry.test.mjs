@@ -68,6 +68,26 @@ test("marquee intersection and grid snapping use world coordinates", () => {
   assert.equal(snapValue(50, 32), 64);
 });
 
+test("a marquee inside a diagonal line's bounds does not select the distant line", () => {
+  const line = {
+    type: "line",
+    x: 0,
+    y: 0,
+    endX: 200,
+    endY: 100,
+    strokeWidth: 4,
+  };
+
+  assert.equal(
+    objectIntersectsRectangle(line, { x: 80, y: 5, width: 20, height: 15 }),
+    false,
+  );
+  assert.equal(
+    objectIntersectsRectangle(line, { x: 80, y: 35, width: 20, height: 15 }),
+    true,
+  );
+});
+
 test("outlined 2D and 3D shapes produce selectable world-space segments", () => {
   const triangle = {
     type: "shape",

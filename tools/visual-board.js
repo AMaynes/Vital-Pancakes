@@ -21,7 +21,7 @@ import {
   pointHitsObject,
   resizeShapeFromCorner,
   snapValue,
-} from "./visual-board-geometry.mjs?v=5";
+} from "./visual-board-geometry.mjs?v=6";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_VERSION = 5;
