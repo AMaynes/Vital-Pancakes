@@ -324,8 +324,15 @@ function renderToolsDashboard() {
       accent: "ochre",
     },
     {
+      title: "Literature Analyzer",
+      copy: "Highlight PDFs or webpages, attach comments, and export an annotated record.",
+      href: "tools/literature-analyzer.html",
+      icon: "⌑",
+      accent: "sage",
+    },
+    {
       title: "Architecture",
-      copy: "Model recursive system scopes and annotate a file/folder skeleton with algorithms.",
+      copy: "Build a draggable file and folder tree with aligned implementation notes.",
       href: "tools/architecture.html",
       icon: "⌘",
       accent: "violet",

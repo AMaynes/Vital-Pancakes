@@ -1,0 +1,187 @@
+/**
+ * Shared file-path navigation for every Pinakes Vitae page.
+ *
+ * The component derives a stable breadcrumb trail from the current route and
+ * keeps browser back/forward controls in one predictable position.
+ */
+
+const SITE_ROOT = new URL("./", import.meta.url);
+
+const PAGE_TRAILS = {
+  "": [],
+  "download-app.html": [
+    segment("download-app"),
+  ],
+  "research-literature.html": [
+    segment("research-literature", "research-literature.html"),
+  ],
+  "research_publications": [
+    segment("research-literature", "research-literature.html"),
+    segment("research-publications"),
+  ],
+  "literature_analysis": [
+    segment("research-literature", "research-literature.html"),
+    segment("literature-analysis"),
+  ],
+  "educational_resources": [
+    segment("educational-resources", "educational_resources/"),
+  ],
+  "educational_resources/arts": [
+    segment("educational-resources", "educational_resources/"),
+    segment("arts"),
+  ],
+  "educational_resources/arts/flashcard-practice.html": [
+    segment("educational-resources", "educational_resources/"),
+    segment("arts", "educational_resources/arts/"),
+    segment("flashcard-practice"),
+  ],
+  "educational_resources/compsci": [
+    segment("educational-resources", "educational_resources/"),
+    segment("computer-science"),
+  ],
+  "educational_resources/mathematics": [
+    segment("educational-resources", "educational_resources/"),
+    segment("mathematics"),
+  ],
+  "educational_resources/mathematics/flashcard-practice.html": [
+    segment("educational-resources", "educational_resources/"),
+    segment("mathematics", "educational_resources/mathematics/"),
+    segment("flashcard-practice"),
+  ],
+  "educational_resources/neurosci": [
+    segment("educational-resources", "educational_resources/"),
+    segment("neuroscience"),
+  ],
+  "tools/architecture.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("architecture-designer"),
+  ],
+  "tools/pdf-signer.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("pdf-signer"),
+  ],
+  "tools/literature-analyzer.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("literature-analyzer"),
+  ],
+  "tools/visual-board.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("visual-board"),
+  ],
+};
+
+function segment(label, href = null) {
+  return { label, href };
+}
+
+function getPageKey() {
+  const rootPath = SITE_ROOT.pathname.endsWith("/") ? SITE_ROOT.pathname : `${SITE_ROOT.pathname}/`;
+  let relativePath = decodeURIComponent(location.pathname);
+  if (relativePath.startsWith(rootPath)) relativePath = relativePath.slice(rootPath.length);
+  relativePath = relativePath.replace(/^\/+/, "").replace(/index\.html$/i, "").replace(/\/+$/, "");
+  return relativePath;
+}
+
+function getTrail() {
+  const pageKey = getPageKey();
+  if (pageKey === "workspace.html") return getWorkspaceTrail();
+  const configuredTrail = PAGE_TRAILS[pageKey];
+  if (configuredTrail) return configuredTrail;
+
+  const parts = pageKey.split("/").filter(Boolean);
+  return parts.map((part, index) => {
+    const isLast = index === parts.length - 1;
+    const label = slugify(part.replace(/\.html$/i, ""));
+    const href = isLast ? null : `${parts.slice(0, index + 1).join("/")}/`;
+    return segment(label, href);
+  });
+}
+
+function getWorkspaceTrail() {
+  const parameters = new URLSearchParams(location.hash.slice(1));
+  const requestedArea = parameters.get("area");
+  const activeLink = document.querySelector("[data-site-area][aria-current='page']");
+  const activeArea = requestedArea || activeLink?.dataset.siteArea || "tools";
+  const areaLabel = {
+    protocols: "protocols",
+    studies: "studies-and-projects",
+    tools: "workspace",
+  }[activeArea] || "workspace";
+  return [segment(areaLabel)];
+}
+
+function slugify(value) {
+  return String(value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+}
+
+function renderPathNavigation() {
+  const header = document.querySelector(".site-header");
+  if (!header) return;
+
+  let navigation = document.querySelector(".path-navigation");
+  if (!navigation) {
+    navigation = document.createElement("nav");
+    navigation.className = "path-navigation";
+    navigation.setAttribute("aria-label", "Current page path and browser history");
+
+    const trail = document.createElement("ol");
+    trail.className = "path-navigation-trail";
+    const historyControls = document.createElement("div");
+    historyControls.className = "path-history-controls";
+    historyControls.append(
+      createHistoryButton("back", "←", () => history.back()),
+      createHistoryButton("forward", "→", () => history.forward()),
+    );
+    navigation.append(trail, historyControls);
+    header.insertAdjacentElement("afterend", navigation);
+    document.body.classList.add("has-path-navigation");
+  }
+
+  const trail = navigation.querySelector(".path-navigation-trail");
+  trail.replaceChildren();
+  const fullTrail = [segment("mainpage", "index.html"), ...getTrail()];
+  fullTrail.forEach((pathSegment, index) => {
+    const item = document.createElement("li");
+    const isCurrent = index === fullTrail.length - 1;
+    if (pathSegment.href && !isCurrent) {
+      const link = document.createElement("a");
+      link.href = new URL(pathSegment.href, SITE_ROOT).href;
+      link.textContent = pathSegment.label;
+      item.append(link);
+    } else {
+      const current = document.createElement("span");
+      current.textContent = pathSegment.label;
+      if (isCurrent) current.setAttribute("aria-current", "page");
+      item.append(current);
+    }
+    trail.append(item);
+  });
+}
+
+function createHistoryButton(direction, glyph, action) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `path-history-button path-history-${direction}`;
+  button.setAttribute("aria-label", `Go ${direction}`);
+  button.title = `Go ${direction}`;
+  button.textContent = glyph;
+  button.addEventListener("click", action);
+  return button;
+}
+
+renderPathNavigation();
+window.addEventListener("hashchange", () => window.setTimeout(renderPathNavigation, 0));
+
+const workspaceMain = document.querySelector("#app-main");
+if (workspaceMain) {
+  new MutationObserver(renderPathNavigation).observe(workspaceMain, {
+    childList: true,
+    subtree: true,
+  });
+}

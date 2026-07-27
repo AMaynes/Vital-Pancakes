@@ -4,7 +4,7 @@
 
 ```text
 pinakes-vitae/
-├── .gitignore — Excludes local operating-system, editor, log, and temporary files.
+├── .gitignore — Excludes local operating-system, editor, log, temporary, and artwork-iteration files.
 ├── .hintrc — Configures webhint for local HTML development.
 ├── .vscode/
 │   └── settings.json — Stores shared VS Code and Live Server settings.
@@ -13,7 +13,8 @@ pinakes-vitae/
 ├── STRUCTURE.md — Maps the maintained repository.
 ├── index.html — Serves as the public homepage and project entry point.
 ├── style.css — Defines the public site's archival visual system.
-├── site-navigation.css — Keeps the branded five-section header consistent everywhere.
+├── site-navigation.css — Styles the shared header, page path, and history controls.
+├── site-navigation.js — Builds the file-like page path and browser-history controls.
 ├── research-literature.html — Unifies research, publications, and reading analysis.
 ├── download-app.html — Presents phone previews and the install guide.
 ├── download-app.css — Styles app previews and archival motion accents.
@@ -36,11 +37,20 @@ pinakes-vitae/
 ├── tools/
 │   ├── tool.css — Shares full-screen tool layouts and controls.
 │   ├── visual-board.html — Hosts diagramming and painting.
-│   ├── visual-board.js — Implements drawing, history, persistence, and export.
+│   ├── visual-board.js — Coordinates the infinite canvas, tools, persistence, and export.
+│   ├── visual-board-geometry.mjs — Provides pure hit-testing, bounds, rotation, and resizing math.
+│   ├── visual-board-geometry.test.mjs — Verifies Visual Board geometry with Node's test runner.
 │   ├── pdf-signer.html — Hosts local PDF viewing and signing.
-│   ├── pdf-signer.js — Renders PDFs and embeds placed signatures.
-│   ├── architecture.html — Hosts recursive scopes and file-skeleton design.
-│   └── architecture.js — Persists architecture models and algorithm links.
+│   ├── pdf-signer.js — Renders PDFs and embeds placed signatures and dates.
+│   ├── literature-analyzer.html — Hosts PDF and website reading, highlighting, and comments.
+│   ├── literature-analyzer.css — Styles the split reading and annotation workspace.
+│   ├── literature-analyzer.js — Owns source loading, persistence, comments, and exports.
+│   ├── literature-analyzer-model.mjs — Provides highlight geometry and stored-data validation.
+│   ├── literature-analyzer-model.test.mjs — Verifies normalized highlighting and PDF coordinates.
+│   ├── architecture.html — Hosts the permanent-root folder structure and aligned notes.
+│   ├── architecture.js — Renders and persists editable tree interactions.
+│   ├── architecture-model.mjs — Owns migration, nesting, movement, and deletion policies.
+│   └── architecture-model.test.mjs — Verifies Architecture Designer model behavior.
 ├── vendor/
 │   ├── pdf.min.js — Bundled PDF.js viewer runtime.
 │   ├── pdf.worker.min.js — Bundled PDF.js worker.
@@ -106,9 +116,9 @@ The public entry point. It introduces and links exactly five top-level sections:
 
 The public site's archival design language: warm paper, black ink, oxblood annotations, antique-brass details, engraved typography, information-dense responsive layouts, content cards, and list states.
 
-### `site-navigation.css`
+### `site-navigation.css` and `site-navigation.js`
 
-The canonical Pinakes Vitae header, anatomical brand mark, and primary Protocols, Research & Literature, Studies & Projects, Workspace, and Download App navigation used by every public page and tool.
+The canonical Pinakes Vitae header, anatomical brand mark, and primary Protocols, Research & Literature, Studies & Projects, Workspace, and Download App navigation used by every public page and tool. The script also inserts an always-present, file-like page path with back and forward history controls directly beneath the header.
 
 ### `research-literature.html`
 
@@ -156,19 +166,29 @@ Contains the canonical light and dark Pinakes Vitae logos, install icons derived
 
 ### `tools/tool.css`
 
-Shares responsive full-screen layouts, controls, panels, canvas surfaces, signature controls, file trees, and recursive scope interfaces.
+Shares responsive full-screen layouts, controls, panels, canvas surfaces, signature controls, annotation surfaces, and editable file-tree interfaces.
 
 ### Visual Board
 
-`visual-board.html` hosts the tool. `visual-board.js` implements freehand drawing, shapes, notes, arrows, selection, movement, erasing, history, zoom, local autosave, and PNG export.
+`visual-board.html` hosts the organized creation, selection, view, history, and style controls, including 2D and 3D shape menus and contextual assembly actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, freehand drawing, brush erasing, straight lines, arrows with editable start and tip handles, inline textboxes, marquee selection, locking, stroke patterns, object grouping, shape division and reassembly, grid snapping, 300-action undo and redo history, local autosave, and PNG export. Dropped images are compressed and retained as local board assets; they are never uploaded.
+
+`visual-board-geometry.mjs` isolates the pure geometry used for reusable 2D and 3D segment outlines, world bounds, rotated handles, hit testing, marquee intersection, grid snapping, corner-based resizing, and shape division. `visual-board-geometry.test.mjs` exercises those contracts with Node's built-in test runner.
 
 ### PDF Signer
 
-`pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js, manages page navigation and placed signatures, and embeds those signatures into a downloadable PDF with PDF-Lib.
+`pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js, manages page navigation and movable signature or date placements, and embeds those fields into a downloadable PDF with PDF-Lib.
+
+### Literature Analyzer
+
+`literature-analyzer.html` and `literature-analyzer.css` provide a split source, comment, and reading workspace. `literature-analyzer.js` opens local PDFs or sandboxed website frames, stores source-specific highlights and comments locally, exports annotated PDF pages with a comment appendix, and creates PNG or PDF annotation maps for webpages whose pixels remain protected by cross-origin browser security.
+
+`literature-analyzer-model.mjs` owns normalized rectangle creation, persisted annotation validation, and PDF coordinate conversion. Its Node test suite covers reverse drags, clamping, minimum sizes, malformed storage, and the PDF vertical-axis transform.
 
 ### Architecture Designer
 
-`architecture.html` hosts recursive system scopes and the file tree. `architecture.js` persists the model, lets any inner scope become the current big picture, annotates files and folders, and creates links to Algorithm entries in the workspace.
+`architecture.html` hosts a single permanent-root file tree with notes aligned across from every row. `architecture.js` supports inline renaming and notes, folder collapsing, immediate blank file or folder creation, drag-to-nest behavior, ungated node deletion, password-gated complete clearing, local persistence, and JSON export.
+
+`architecture-model.mjs` isolates model migration and tree policies so the permanent root, valid folder parents, descendant-aware movement, and recursive deletion can be tested without the browser. Legacy file nodes migrate beneath `root/`; legacy system scopes are retained inside `MigratedScopes/`.
 
 ### `vendor/`
 

@@ -1,7 +1,7 @@
 /**
  * Overview & Purpose
  * Provides the full-screen workspace and control styling shared by the visual
- * board, PDF signer, and architecture designer.
+ * board, PDF signer, literature analyzer, and architecture designer.
  *
  * Architectural Relationships
  * Called by: HTML documents in tools/.
@@ -54,23 +54,6 @@
   gap: 8px;
 }
 
-.back-link {
-  display: inline-grid;
-  width: 27px;
-  height: 27px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  text-decoration: none;
-}
-
-.tool-title-group > span {
-  width: 1px;
-  height: 24px;
-  margin: 0 5px;
-  background: var(--line);
-}
-
 .tool-title-group h1 {
   margin: 0;
   font-size: 13px;
@@ -105,6 +88,31 @@
   overflow-x: auto;
   border-bottom: 1px solid var(--line);
   background: #ece7dc;
+}
+
+.board-toolbar {
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.board-toolbar > .toolbar-group {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 8px;
+  border-right: 1px solid var(--line);
+}
+
+.board-toolbar > .toolbar-group:first-child {
+  padding-left: 0;
+}
+
+.board-toolbar > .toolbar-group:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.board-history-group {
+  margin-left: auto;
 }
 
 .toolbar-divider {
@@ -149,6 +157,34 @@
   opacity: 0.35;
 }
 
+.tool-icon {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.toolbar-control {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.toolbar-control output {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
 .tool-color {
   width: 25px;
   height: 25px;
@@ -161,6 +197,39 @@
 .tool-range {
   width: 74px;
   accent-color: var(--forest);
+}
+
+.selection-actions {
+  position: absolute;
+  z-index: 14;
+  top: 46px;
+  right: 12px;
+  padding: 5px 6px;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 10px;
+  background: rgb(123 33 26 / 7%);
+  background-color: var(--card);
+  box-shadow: var(--shadow-md);
+}
+
+.selection-count {
+  min-width: 55px;
+  color: var(--coral);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.delete-selection {
+  color: var(--coral);
+}
+
+.delete-selection:hover {
+  border-color: rgb(123 33 26 / 35%);
+  background: #fff7f5;
+  color: #5f1712;
 }
 
 .tool-select,
@@ -180,7 +249,37 @@
   border-color: #789186;
 }
 
-.canvas-frame,
+.shape-picker {
+  display: inline-flex;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.shape-picker.is-active {
+  border-color: #90a79d;
+  background: var(--sage-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.shape-select {
+  min-width: 84px;
+  max-width: 112px;
+  border-color: transparent;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.shape-picker:hover .shape-select,
+.shape-picker.is-active .shape-select {
+  background: var(--card);
+}
+
+.pattern-select {
+  width: 76px;
+  font-size: 9px;
+}
+
 .architecture-map-frame,
 .pdf-frame {
   position: relative;
@@ -194,11 +293,66 @@
   background-size: 24px 24px;
 }
 
+.canvas-frame {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #ffffff;
+}
+
 #visual-board {
   display: block;
   width: 100%;
   height: 100%;
+  background: #ffffff;
   touch-action: none;
+  user-select: none;
+}
+
+.board-text-editor {
+  position: absolute;
+  z-index: 15;
+  margin: 0;
+  padding: 5px;
+  overflow: hidden;
+  border: 1px solid var(--coral);
+  border-radius: 0;
+  outline: 0;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 0 0 2px rgb(123 33 26 / 12%);
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.25;
+  resize: none;
+  transform-origin: center center;
+}
+
+.board-text-editor::placeholder {
+  color: #a7a7a7;
+  opacity: 1;
+}
+
+.canvas-frame.is-drop-target::after {
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  inset: 14px;
+  place-items: center;
+  border: 2px dashed var(--coral);
+  background: rgb(255 255 255 / 88%);
+  color: var(--coral);
+  content: "DROP IMAGE TO PLACE IT ON THE BOARD";
+  font: 800 12px/1 var(--font-body);
+  letter-spacing: 0.12em;
+  pointer-events: none;
+}
+
+.tool-save-status.has-error {
+  color: var(--coral);
+}
+
+.tool-save-status.has-error::before {
+  background: var(--coral);
 }
 
 .floating-help {
@@ -336,10 +490,34 @@
   font-style: italic;
 }
 
+.date-font {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: normal;
+}
+
 .font-choice-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 5px;
+}
+
+.date-field {
+  display: grid;
+  margin-bottom: 8px;
+  gap: 5px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.date-field .tool-input {
+  width: 100%;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  text-transform: none;
 }
 
 .font-choice {
@@ -404,6 +582,12 @@
   box-shadow: 0 5px 18px rgb(23 35 31 / 20%);
 }
 
+.signature-stamp.date-stamp {
+  min-width: 90px;
+  min-height: 34px;
+  font-size: 18px;
+}
+
 .signature-resize {
   position: absolute;
   right: -5px;
@@ -445,10 +629,10 @@
 
 .architecture-workspace {
   position: relative;
-  display: grid;
+  display: block;
   min-height: 0;
-  grid-template-columns: 205px 1fr 235px;
   overflow: hidden;
+  background: #d9d6ce;
 }
 
 .architecture-browser {
@@ -533,8 +717,234 @@
 }
 
 .architecture-map-frame {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: auto;
+  padding: 30px;
+  background:
+    linear-gradient(rgb(23 22 19 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(23 22 19 / 3%) 1px, transparent 1px),
+    #d9d6ce;
+  background-size: 24px 24px;
+}
+
+.architecture-sheet {
+  position: relative;
+  width: min(1180px, 100%);
+  min-height: max(620px, calc(100% - 38px));
+  border: 1px solid #24231f;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgb(23 22 19 / 10%);
+}
+
+.architecture-tree-heading,
+.architecture-node-row {
   display: grid;
+  grid-template-columns: minmax(330px, 0.95fr) minmax(280px, 1.05fr) 34px;
+  column-gap: 18px;
+}
+
+.architecture-tree-heading {
+  position: sticky;
+  z-index: 8;
+  top: 0;
+  min-height: 36px;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid #d4d1ca;
+  background: rgb(255 255 255 / 96%);
+  color: #77736b;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.architecture-tree {
+  padding: 12px 24px 42px;
+}
+
+.architecture-node-row {
+  position: relative;
+  min-height: 40px;
+  align-items: start;
+  padding: 5px 0;
+  border-bottom: 1px solid rgb(36 35 31 / 6%);
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.architecture-node-row:hover,
+.architecture-node-row.is-selected {
+  background: #f8f7f3;
+  box-shadow: -8px 0 0 #f8f7f3, 8px 0 0 #f8f7f3;
+}
+
+.architecture-node-row.is-drop-target {
+  z-index: 2;
+  background: #edf1ed;
+  box-shadow: inset 0 0 0 1px #6e8178, -8px 0 0 #edf1ed, 8px 0 0 #edf1ed;
+}
+
+.architecture-node-row.is-dragging {
+  opacity: 0.35;
+}
+
+.architecture-node-identity {
+  display: flex;
+  min-width: 0;
+  min-height: 29px;
+  align-items: center;
+  padding-left: calc(var(--tree-depth) * 27px);
+  color: #24231f;
+}
+
+.architecture-drag-handle,
+.architecture-root-marker,
+.architecture-file-marker,
+.architecture-folder-toggle {
+  display: inline-grid;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 26px;
   place-items: center;
+  border: 0;
+  background: transparent;
+  color: #77736b;
+  font: 600 12px/1 var(--font-body);
+}
+
+.architecture-drag-handle {
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.architecture-node-row:hover .architecture-drag-handle,
+.architecture-drag-handle:focus {
+  opacity: 0.7;
+}
+
+.architecture-drag-handle:active {
+  cursor: grabbing;
+}
+
+.architecture-folder-toggle:not(:disabled) {
+  cursor: pointer;
+}
+
+.architecture-folder-toggle:disabled {
+  opacity: 1;
+}
+
+.architecture-name-input {
+  flex: 0 1 auto;
+  min-width: 60px;
+  max-width: min(100%, 360px);
+  height: 28px;
+  padding: 3px 4px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  outline: 0;
+  background: transparent;
+  color: #24231f;
+  font: 500 12px/1.2 var(--font-body);
+  text-overflow: ellipsis;
+}
+
+.architecture-name-input:hover {
+  border-bottom-color: #cfcbc2;
+}
+
+.architecture-name-input:focus {
+  border-color: #77736b;
+  background: #ffffff;
+}
+
+.architecture-folder-slash {
+  margin-left: -4px;
+  color: #24231f;
+  font-size: 12px;
+}
+
+.architecture-note-input {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 6px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  outline: 0;
+  background: transparent;
+  color: #625f58;
+  font: 400 11px/1.55 var(--font-body);
+  resize: none;
+}
+
+.architecture-note-input::placeholder {
+  color: #aaa69e;
+}
+
+.architecture-note-input:hover {
+  border-bottom-color: #d7d3cb;
+}
+
+.architecture-note-input:focus {
+  border-color: #77736b;
+  background: #ffffff;
+  color: #24231f;
+}
+
+.architecture-row-actions {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.architecture-delete-node {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #9c433b;
+  font-size: 16px;
+  opacity: 0;
+}
+
+.architecture-node-row:hover .architecture-delete-node,
+.architecture-delete-node:focus {
+  opacity: 1;
+}
+
+.architecture-delete-node:hover {
+  border-color: #d9aaa5;
+  background: #fff7f5;
+}
+
+.architecture-help {
+  position: fixed;
+  right: 18px;
+  bottom: 14px;
+  max-width: 380px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid #c7c3ba;
+  background: rgb(251 250 246 / 92%);
+  box-shadow: var(--shadow-sm);
+  color: #77736b;
+  font-size: 8px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+#architecture-status.has-error {
+  color: var(--coral);
 }
 
 .scope-map {
@@ -870,9 +1280,8 @@
   color: var(--forest);
 }
 
-/* Geometric tool language */
+/* Archival tool language */
 
-.back-link,
 .tool-button,
 .tool-input,
 .drop-zone,
@@ -946,6 +1355,19 @@
     padding: 4px 7px;
   }
 
+  .board-toolbar {
+    padding: 4px 7px;
+  }
+
+  .board-toolbar > .toolbar-group {
+    padding: 0 6px;
+  }
+
+  .board-history-group {
+    margin-left: 0;
+  }
+
+  .toolbar-control > span,
   .tool-button-label {
     display: none;
   }
@@ -982,32 +1404,30 @@
   }
 
   .architecture-workspace {
-    grid-template-columns: 1fr;
-    grid-template-rows: 130px 1fr;
+    display: block;
   }
 
-  .architecture-browser {
-    border-right: 0;
-    border-bottom: 1px solid var(--line-strong);
+  .architecture-map-frame {
+    justify-content: flex-start;
+    padding: 10px;
   }
 
-  .tree-panel {
-    max-height: 78px;
-    overflow-y: auto;
+  .architecture-sheet {
+    min-width: 680px;
   }
 
-  .scope-map {
-    width: 95%;
+  .architecture-help {
+    display: none;
   }
 
-  .scope-node {
-    width: 108px;
-    min-height: 64px;
-    padding: 7px;
+  #export-architecture {
+    display: none;
   }
 
-  .scope-node.is-root {
-    width: 135px;
-    min-height: 82px;
+  #clear-architecture,
+  #add-architecture-folder,
+  #add-architecture-file {
+    padding-inline: 7px;
+    font-size: 8px;
   }
 }

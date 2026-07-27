@@ -16,12 +16,15 @@
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 export const DELETE_PASSWORD = "password";
+const CURRENT_WORKSPACE_VERSION = 4;
+const LEGACY_PROTOCOL_DESCRIPTION = "Repeatable playbooks that protect your attention and reduce overhead.";
+const PROTOCOL_DESCRIPTION = "Repeatable playbooks that protect my attention and reduce overhead.";
 
 const DEFAULT_SECTIONS = [
   {
     id: "protocols",
     title: "Protocols",
-    description: "Repeatable playbooks that protect your attention and reduce overhead.",
+    description: PROTOCOL_DESCRIPTION,
     icon: "◎",
     type: "protocol",
     items: [],
@@ -81,7 +84,7 @@ export function createId() {
  */
 function createInitialWorkspace() {
   return {
-    version: 3,
+    version: CURRENT_WORKSPACE_VERSION,
     sections: DEFAULT_SECTIONS.map((section) => ({ ...section, items: [] })),
   };
 }
@@ -94,18 +97,28 @@ function createInitialWorkspace() {
  * @returns {{workspace: object, changed: boolean}} Migrated data and change flag.
  */
 function migrateWorkspace(workspace) {
-  if ((workspace.version ?? 1) >= 3) {
-    return { workspace, changed: false };
+  let changed = false;
+  if ((workspace.version ?? 1) < 3) {
+    const existingSections = new Map(workspace.sections.map((section) => [section.id, section]));
+    const coreSections = DEFAULT_SECTIONS.map((section) => (
+      existingSections.get(section.id) ?? { ...section, items: [] }
+    ));
+    const customSections = workspace.sections.filter((section) => !CORE_SECTION_IDS.has(section.id));
+    workspace.sections = [...coreSections, ...customSections];
+    changed = true;
   }
 
-  const existingSections = new Map(workspace.sections.map((section) => [section.id, section]));
-  const coreSections = DEFAULT_SECTIONS.map((section) => (
-    existingSections.get(section.id) ?? { ...section, items: [] }
-  ));
-  const customSections = workspace.sections.filter((section) => !CORE_SECTION_IDS.has(section.id));
-  workspace.sections = [...coreSections, ...customSections];
-  workspace.version = 3;
-  return { workspace, changed: true };
+  const protocols = workspace.sections.find((section) => section.id === "protocols");
+  if (protocols?.description === LEGACY_PROTOCOL_DESCRIPTION) {
+    protocols.description = PROTOCOL_DESCRIPTION;
+    changed = true;
+  }
+
+  if ((workspace.version ?? 1) < CURRENT_WORKSPACE_VERSION) {
+    workspace.version = CURRENT_WORKSPACE_VERSION;
+    changed = true;
+  }
+  return { workspace, changed };
 }
 
 /**

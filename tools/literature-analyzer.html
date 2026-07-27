@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>Literature Analyzer · Pinakes Vitae</title>
+  <link rel="icon" href="../assets/pinakes-vitae-logo-final-light.png" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=16">
+  <link rel="stylesheet" href="tool.css?v=20">
+  <link rel="stylesheet" href="literature-analyzer.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=17">
+  <script type="module" src="../site-navigation.js?v=3"></script>
+</head>
+<body class="tool-body">
+  <a class="skip-link" href="#tool-main">Skip to tool</a>
+
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Pinakes Vitae home">
+      <span class="brand-mark" aria-hidden="true">PV</span>
+      <span>Pinakes Vitae</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../workspace.html#area=protocols">Protocols</a>
+      <a href="../research-literature.html">Research &amp; Literature</a>
+      <a href="../workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="../workspace.html#area=tools" aria-current="page">Workspace</a>
+      <a href="../download-app.html">Download App</a>
+    </nav>
+  </header>
+
+  <div class="tool-shell analyzer-shell">
+    <header class="tool-topbar">
+      <div class="tool-title-group">
+        <div>
+          <h1>Literature Analyzer</h1>
+          <small>READ · HIGHLIGHT · COMMENT · EXPORT</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions">
+        <span class="tool-save-status" id="analyzer-status" aria-live="polite">No source open</span>
+        <button class="button button-quiet" id="clear-highlights" type="button" disabled>Clear marks</button>
+        <button class="button button-quiet" id="export-analysis-png" type="button" disabled>Export PNG</button>
+        <button class="button button-primary" id="export-analysis-pdf" type="button" disabled>Export PDF</button>
+      </div>
+    </header>
+
+    <main class="literature-analyzer-workspace" id="tool-main">
+      <aside class="analyzer-sidebar">
+        <section class="panel-section">
+          <h2>1. Open a source</h2>
+          <p>PDF files remain in this browser and are never uploaded.</p>
+          <label class="drop-zone" id="analysis-pdf-drop-zone">
+            <input id="analysis-pdf-file" type="file" accept="application/pdf,.pdf">
+            <span>
+              <strong>Drop PDF here</strong>
+              <small>or tap to browse</small>
+            </span>
+          </label>
+
+          <form class="website-source-form" id="website-source-form">
+            <label for="website-url">Website URL</label>
+            <div>
+              <input
+                class="tool-input"
+                id="website-url"
+                type="url"
+                inputmode="url"
+                placeholder="https://example.com/article"
+                autocomplete="url"
+              >
+              <button class="button button-primary" type="submit">Open</button>
+            </div>
+          </form>
+          <p class="analyzer-constraint-note">
+            Some websites block embedded viewing. Web highlights attach to the visible browser frame; exports preserve
+            the URL, highlight map, and comments because browsers do not expose another website's pixels.
+          </p>
+        </section>
+
+        <section class="panel-section">
+          <h2>2. Choose highlight ink</h2>
+          <p>Drag across the document after switching to Highlight mode.</p>
+          <div class="highlight-color-row" id="highlight-color-row" role="radiogroup" aria-label="Highlight color">
+            <button class="highlight-color is-active" type="button" data-highlight-color="#f6d84a" aria-label="Yellow" aria-checked="true" role="radio"></button>
+            <button class="highlight-color" type="button" data-highlight-color="#f29ca3" aria-label="Rose" aria-checked="false" role="radio"></button>
+            <button class="highlight-color" type="button" data-highlight-color="#8ecae6" aria-label="Blue" aria-checked="false" role="radio"></button>
+            <button class="highlight-color" type="button" data-highlight-color="#9ed6a5" aria-label="Green" aria-checked="false" role="radio"></button>
+          </div>
+        </section>
+
+        <section class="panel-section analyzer-comment-panel" id="analyzer-comment-panel" hidden>
+          <h2>3. Comment on selection</h2>
+          <label for="highlight-comment">Comment</label>
+          <textarea
+            class="tool-input"
+            id="highlight-comment"
+            rows="6"
+            maxlength="4000"
+            placeholder="Write what this passage means, challenges, or connects to…"
+          ></textarea>
+          <button class="button button-danger-quiet" id="delete-highlight" type="button">Delete selected highlight</button>
+        </section>
+
+        <section class="panel-section analyzer-index-panel">
+          <div class="analyzer-index-heading">
+            <h2>Highlights</h2>
+            <span id="highlight-count">0</span>
+          </div>
+          <div class="annotation-list" id="annotation-list">
+            <p class="annotation-empty">Highlights and comments will be indexed here.</p>
+          </div>
+        </section>
+      </aside>
+
+      <section class="analyzer-viewer">
+        <div class="tool-toolbar analyzer-toolbar">
+          <div class="toolbar-group" role="toolbar" aria-label="Annotation mode">
+            <button class="tool-button" data-analyzer-mode="browse" type="button">↖ Browse</button>
+            <button class="tool-button is-active" data-analyzer-mode="highlight" type="button">▰ Highlight</button>
+          </div>
+          <div class="toolbar-group analyzer-page-controls">
+            <button class="tool-button" id="analysis-previous-page" type="button" disabled>← Previous</button>
+            <span class="zoom-value" id="analysis-page-count">Page 0 / 0</span>
+            <button class="tool-button" id="analysis-next-page" type="button" disabled>Next →</button>
+          </div>
+          <div class="toolbar-group analyzer-source-meta">
+            <a id="open-web-source" href="#" target="_blank" rel="noopener noreferrer" hidden>Open original ↗</a>
+            <span id="analysis-source-name">Choose a PDF or website</span>
+          </div>
+        </div>
+
+        <div class="analyzer-stage-scroll">
+          <div class="pdf-empty analyzer-empty" id="analyzer-empty">
+            <span>⌑</span>
+            <h2>Open something worth reading closely</h2>
+            <p>Drop in a PDF or enter a website URL, then drag highlights and attach your own comments.</p>
+          </div>
+
+          <div class="analyzer-pdf-stage" id="analyzer-pdf-stage" hidden>
+            <canvas id="analyzer-pdf-canvas"></canvas>
+            <div class="highlight-layer is-drawing-mode" id="pdf-highlight-layer" aria-label="PDF highlight layer"></div>
+          </div>
+
+          <div class="analyzer-web-stage" id="analyzer-web-stage" hidden>
+            <iframe
+              id="analyzer-web-frame"
+              title="Website being analyzed"
+              referrerpolicy="no-referrer"
+              sandbox="allow-downloads allow-forms allow-popups allow-same-origin allow-scripts"
+            ></iframe>
+            <div class="highlight-layer is-drawing-mode" id="web-highlight-layer" aria-label="Website highlight layer"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../vendor/pdf.min.js"></script>
+  <script src="../vendor/pdf-lib.min.js"></script>
+  <script type="module" src="literature-analyzer.js?v=2"></script>
+</body>
+</html>

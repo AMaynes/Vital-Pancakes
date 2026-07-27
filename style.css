@@ -43,8 +43,10 @@ html {
 }
 
 body {
+  display: flex;
   margin: 0;
   min-height: 100vh;
+  flex-direction: column;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background:
@@ -70,6 +72,7 @@ input:focus-visible {
 
 main {
   width: min(calc(100% - 2rem), var(--max-width));
+  flex: 1 0 auto;
   margin: 0 auto;
   padding: 0.6rem 0 1.25rem;
 }
@@ -583,7 +586,7 @@ main {
   justify-content: space-between;
   gap: 1rem;
   width: min(calc(100% - 2rem), var(--max-width));
-  margin: 0 auto;
+  margin: auto auto 0;
   padding: 0.6rem 0 0.8rem;
   color: var(--ink-soft);
   border-top: 1px solid var(--border);
@@ -618,36 +621,99 @@ main {
   content: "";
 }
 
-.research-literature-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.research-collection-stack {
+  display: grid;
+  gap: 0.65rem;
+  padding-bottom: 1.2rem;
 }
 
-.geometric-panel {
+.research-collection-card {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(20rem, 1.2fr);
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.7rem;
-  border-left: 3px solid var(--teal);
-}
-
-.scope-token-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.35rem;
-}
-
-.scope-token-grid span {
-  display: grid;
-  min-height: 2rem;
-  padding: 0.3rem;
-  place-items: center;
-  color: var(--navy);
-  background: var(--surface-soft);
+  grid-template-columns: minmax(15rem, 0.8fr) minmax(18rem, 1.2fr);
+  background: rgb(251 250 246 / 86%);
   border: 1px solid var(--border);
-  text-align: center;
+  border-top: 3px solid var(--ink);
+}
+
+.research-collection-card-accent {
+  background: #eee8de;
+  border-color: #c8bcae;
+  border-top-color: var(--teal);
+}
+
+.research-collection-main {
+  display: flex;
+  min-height: 8.25rem;
+  flex-direction: column;
+  padding: 0.8rem;
+}
+
+.research-collection-main .card-number {
+  align-self: flex-start;
+  margin-bottom: 0.35rem;
+}
+
+.research-collection-main h2 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.research-collection-main > p {
+  margin: 0 0 0.6rem;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.collection-preview {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.8rem;
+  background: var(--surface-soft);
+  border-left: 1px solid var(--border);
+}
+
+.collection-preview-label {
+  margin: 0 0 0.4rem;
+  color: var(--teal);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.collection-preview-link {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.collection-preview-link:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
+
+.collection-preview strong {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.collection-preview span {
+  color: var(--ink-soft);
   font-size: 0.72rem;
-  font-weight: 700;
+  line-height: 1.35;
+}
+
+.collection-preview-empty {
+  opacity: 0.78;
 }
 
 /* Compatibility styling for the existing flashcard application. */
@@ -711,9 +777,13 @@ main > section:has(> .tab-nav) > .tab-content {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .research-literature-grid,
-  .geometric-panel {
+  .research-collection-card {
     grid-template-columns: 1fr;
+  }
+
+  .collection-preview {
+    border-top: 1px solid var(--border);
+    border-left: 0;
   }
 
   .discipline-grid {
@@ -764,10 +834,6 @@ main > section:has(> .tab-nav) > .tab-content {
   .knowledge-row {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: 0.35rem;
-  }
-
-  .scope-token-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .site-stats,

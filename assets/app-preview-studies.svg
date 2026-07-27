@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844" role="img" aria-labelledby="title desc">
-  <title id="title">Artificially Neuroscience studies phone screen</title>
+  <title id="title">Pinakes Vitae studies phone screen</title>
   <desc id="desc">A geometric phone app preview showing studies, programming languages, algorithms, and projects.</desc>
   <defs>
     <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
@@ -14,8 +14,8 @@
   <rect width="390" height="844" fill="url(#grid2)"/>
   <path d="M0 0h390v112H0z" fill="#fff" stroke="#d8e0ea"/>
   <path d="M22 20h42v42H22z" fill="#14264a"/>
-  <text x="43" y="47" fill="#fff" text-anchor="middle" font-family="Arial" font-size="12" font-weight="700">AN</text>
-  <text x="78" y="47" fill="#12213f" font-family="Arial" font-size="15" font-weight="700">Artificially Neuroscience</text>
+  <text x="43" y="47" fill="#fff" text-anchor="middle" font-family="Georgia" font-size="12" font-weight="700">PV</text>
+  <text x="78" y="47" fill="#12213f" font-family="Georgia" font-size="17" font-weight="700">Pinakes Vitae</text>
   <g fill="#40506d" font-family="Arial" font-size="10" font-weight="700">
     <text x="24" y="91">PROTOCOLS</text>
     <text x="105" y="91">RESEARCH</text>

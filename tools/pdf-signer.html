@@ -7,8 +7,9 @@
   <title>PDF Signer · Pinakes Vitae</title>
   <link rel="icon" href="../assets/pinakes-vitae-logo-final-light.png" type="image/png">
   <link rel="stylesheet" href="../workspace.css?v=16">
-  <link rel="stylesheet" href="tool.css?v=16">
-  <link rel="stylesheet" href="../site-navigation.css?v=16">
+  <link rel="stylesheet" href="tool.css?v=20">
+  <link rel="stylesheet" href="../site-navigation.css?v=17">
+  <script type="module" src="../site-navigation.js?v=3"></script>
 </head>
 <body class="tool-body">
   <a class="skip-link" href="#tool-main">Skip to tool</a>
@@ -30,8 +31,6 @@
   <div class="tool-shell">
     <header class="tool-topbar">
       <div class="tool-title-group">
-        <a class="back-link" href="../workspace.html#area=tools" aria-label="Back to workspace">←</a>
-        <span></span>
         <div>
           <h1>PDF Signer</h1>
           <small>VIEW · PLACE · DOWNLOAD</small>
@@ -71,6 +70,16 @@
           </div>
           <button class="button button-primary" id="add-signature" type="button" disabled>Place signature</button>
         </section>
+
+        <section class="panel-section">
+          <h2>3. Add a date</h2>
+          <p>Choose a date, then place and resize it independently.</p>
+          <label class="date-field" for="signature-date">
+            <span>Date</span>
+            <input class="tool-input" id="signature-date" type="date">
+          </label>
+          <button class="button button-primary" id="add-date" type="button" disabled>Place date</button>
+        </section>
       </aside>
 
       <section class="tool-workspace">
@@ -81,7 +90,7 @@
             <button class="tool-button" id="next-page" type="button" disabled>Next →</button>
           </div>
           <div class="toolbar-group">
-            <span class="tool-save-status">Drag signatures · resize from the dot</span>
+            <span class="tool-save-status">Drag placed fields · resize from the dot</span>
             <button class="tool-button" id="remove-signature" type="button" disabled>Remove selected</button>
           </div>
         </div>
@@ -89,7 +98,7 @@
           <div class="pdf-empty" id="pdf-empty">
             <span>⌁</span>
             <h2>Your document will appear here</h2>
-            <p>Choose a PDF, move through its pages, then drag your signature exactly where it belongs.</p>
+            <p>Choose a PDF, move through its pages, then place signatures and dates exactly where they belong.</p>
           </div>
           <div class="pdf-page-stage" id="pdf-page-stage" hidden>
             <canvas id="pdf-canvas"></canvas>
@@ -102,6 +111,6 @@
 
   <script src="../vendor/pdf.min.js"></script>
   <script src="../vendor/pdf-lib.min.js"></script>
-  <script type="module" src="pdf-signer.js"></script>
+  <script type="module" src="pdf-signer.js?v=2"></script>
 </body>
 </html>

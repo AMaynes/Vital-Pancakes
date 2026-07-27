@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#f4f1e8">
   <title>Visual Board · Pinakes Vitae</title>
   <link rel="icon" href="../assets/pinakes-vitae-logo-final-light.png" type="image/png">
   <link rel="stylesheet" href="../workspace.css?v=16">
-  <link rel="stylesheet" href="tool.css?v=16">
-  <link rel="stylesheet" href="../site-navigation.css?v=16">
+  <link rel="stylesheet" href="tool.css?v=20">
+  <link rel="stylesheet" href="../site-navigation.css?v=17">
+  <script type="module" src="../site-navigation.js?v=3"></script>
 </head>
 <body class="tool-body">
   <a class="skip-link" href="#tool-main">Skip to tool</a>
@@ -30,11 +31,9 @@
   <div class="tool-shell">
     <header class="tool-topbar">
       <div class="tool-title-group">
-        <a class="back-link" href="../workspace.html#area=tools" aria-label="Back to workspace">←</a>
-        <span></span>
         <div>
           <h1>Visual Board</h1>
-          <small>DIAGRAM + FREEFORM CANVAS</small>
+          <small>INFINITE DIAGRAM + MARKUP CANVAS</small>
         </div>
       </div>
       <div class="tool-topbar-actions">
@@ -45,50 +44,127 @@
     </header>
 
     <main class="tool-workspace" id="tool-main">
-      <div class="tool-toolbar" aria-label="Board tools">
-        <div class="toolbar-group" id="drawing-tools">
+      <div class="tool-toolbar board-toolbar" aria-label="Board tools">
+        <div class="toolbar-group board-tool-group" id="drawing-tools" role="toolbar" aria-label="Create and navigate">
+          <button class="tool-button" data-tool="pan" type="button" title="Pan across the infinite board">
+            ✥ <span class="tool-button-label">Pan</span>
+          </button>
           <button class="tool-button is-active" data-tool="select" type="button" title="Select and move">
             ↖ <span class="tool-button-label">Select</span>
           </button>
           <button class="tool-button" data-tool="pen" type="button" title="Freehand pen">
             ✎ <span class="tool-button-label">Pen</span>
           </button>
-          <button class="tool-button" data-tool="rectangle" type="button" title="Rectangle">
-            □ <span class="tool-button-label">Box</span>
-          </button>
-          <button class="tool-button" data-tool="ellipse" type="button" title="Ellipse">
-            ○ <span class="tool-button-label">Ellipse</span>
+          <button class="tool-button" data-tool="line" type="button" title="Straight line">
+            ╱ <span class="tool-button-label">Line</span>
           </button>
           <button class="tool-button" data-tool="connector" type="button" title="Arrow connector">
             ↗ <span class="tool-button-label">Arrow</span>
           </button>
-          <button class="tool-button" data-tool="note" type="button" title="Text note">
-            T <span class="tool-button-label">Note</span>
+          <label class="shape-picker" id="shape-2d-control" title="Choose an outlined 2D shape">
+            <select class="tool-select shape-select" id="shape-2d" aria-label="Choose a 2D shape">
+              <option value="">2D shape…</option>
+              <option value="rectangle">Rectangle</option>
+              <option value="ellipse">Ellipse</option>
+              <option value="shape:triangle">Triangle</option>
+              <option value="shape:diamond">Diamond</option>
+              <option value="shape:hexagon">Hexagon</option>
+            </select>
+          </label>
+          <label class="shape-picker" id="shape-3d-control" title="Choose an outlined 3D shape">
+            <select class="tool-select shape-select" id="shape-3d" aria-label="Choose a 3D shape">
+              <option value="">3D shape…</option>
+              <option value="shape:cube">Cube</option>
+              <option value="shape:cuboid">Rectangular prism</option>
+              <option value="shape:pyramid">Pyramid</option>
+              <option value="shape:triangular-prism">Triangular prism</option>
+              <option value="shape:cylinder">Cylinder</option>
+              <option value="shape:cone">Cone</option>
+            </select>
+          </label>
+          <button class="tool-button" data-tool="textbox" type="button" title="Click and drag to create a textbox">
+            T <span class="tool-button-label">Text</span>
           </button>
-          <button class="tool-button" data-tool="eraser" type="button" title="Erase an object">
-            ◇ <span class="tool-button-label">Erase</span>
+          <button class="tool-button" data-tool="eraser" type="button" title="Drag to erase like a pen">
+            ◌ <span class="tool-button-label">Erase</span>
           </button>
-          <span class="toolbar-divider"></span>
-          <input class="tool-color" id="stroke-color" type="color" value="#173f36" aria-label="Stroke color">
-          <input class="tool-range" id="stroke-width" type="range" min="1" max="12" value="3" aria-label="Stroke width">
         </div>
-        <div class="toolbar-group">
-          <button class="tool-button" id="undo-board" type="button" title="Undo">↶</button>
-          <button class="tool-button" id="redo-board" type="button" title="Redo">↷</button>
+
+        <div class="toolbar-group board-property-group" aria-label="Object style">
+          <label class="toolbar-control color-control" title="Color for the selection or next object">
+            <span>Ink</span>
+            <input class="tool-color" id="stroke-color" type="color" value="#000000" aria-label="Stroke color">
+          </label>
+          <label class="toolbar-control width-control" title="Line thickness for the selection or next object">
+            <span>Line <output id="stroke-width-value" for="stroke-width">3</output></span>
+            <input class="tool-range" id="stroke-width" type="range" min="1" max="24" value="3" aria-label="Stroke width">
+          </label>
+          <label class="toolbar-control pattern-control" title="Line pattern for the selection or next object">
+            <span>Pattern</span>
+            <select class="tool-select pattern-select" id="stroke-pattern" aria-label="Stroke pattern">
+              <option value="solid">Solid</option>
+              <option value="dashed">Dashed</option>
+              <option value="dotted">Dotted</option>
+              <option value="dash-dot">Dash–dot</option>
+              <option value="long-dash">Long dash</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="toolbar-group board-view-group" role="toolbar" aria-label="Grid controls">
+          <button class="tool-button" id="toggle-grid" type="button" aria-pressed="true" title="Show or hide the grid">
+            ▦ <span class="tool-button-label">Grid</span>
+          </button>
+          <button class="tool-button" id="toggle-snap" type="button" aria-pressed="false" title="Snap objects and handles to the grid">
+            ⌗ <span class="tool-button-label">Snap</span>
+          </button>
+        </div>
+
+        <div class="toolbar-group board-history-group" role="toolbar" aria-label="History and zoom">
+          <button class="tool-button" id="undo-board" type="button" title="Undo" aria-label="Undo">↶</button>
+          <button class="tool-button" id="redo-board" type="button" title="Redo" aria-label="Redo">↷</button>
           <span class="toolbar-divider"></span>
-          <button class="tool-button" id="zoom-out" type="button" title="Zoom out">−</button>
+          <button class="tool-button" id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">−</button>
           <span class="zoom-value" id="zoom-value">100%</span>
-          <button class="tool-button" id="zoom-in" type="button" title="Zoom in">+</button>
+          <button class="tool-button" id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button>
         </div>
+      </div>
+      <div class="toolbar-group selection-actions" id="selection-actions" aria-label="Selection actions" hidden>
+        <span class="selection-count" id="selection-count" aria-live="polite">1 selected</span>
+        <button class="tool-button" id="lock-selection" type="button" aria-pressed="false" title="Lock selection">
+          <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <rect x="5" y="10" width="14" height="10"></rect>
+            <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+          </svg>
+          <span class="tool-button-label">Lock</span>
+        </button>
+        <button class="tool-button" id="group-selection" type="button" title="Assemble selected objects into one movable piece">
+          ⛓ <span class="tool-button-label">Assemble</span>
+        </button>
+        <button class="tool-button" id="ungroup-selection" type="button" title="Release an assembled piece into its objects">
+          ⛓ <span class="tool-button-label">Release</span>
+        </button>
+        <button class="tool-button" id="explode-selection" type="button" title="Divide selected outlined shapes into individual lines">
+          ⤢ <span class="tool-button-label">Divide</span>
+        </button>
+        <button class="tool-button" id="reassemble-selection" type="button" title="Reassemble divided lines into their original shape">
+          ⤡ <span class="tool-button-label">Reassemble</span>
+        </button>
+        <button class="tool-button delete-selection" id="delete-selection" type="button" title="Delete selection">
+          <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 10v7M14 10v7"></path>
+          </svg>
+          <span class="tool-button-label">Delete</span>
+        </button>
       </div>
       <section class="canvas-frame">
         <canvas id="visual-board" aria-label="Diagram and paint canvas"></canvas>
         <div class="floating-help">
-          Draw freehand, create diagram shapes, connect ideas, or select anything to move it. Your board saves automatically on this device.
+          Drop an image anywhere to mark it up. Drag with Pan—or use two fingers—to travel; pinch to zoom. Double-click text to edit. Everything stays on this device.
         </div>
       </section>
     </main>
   </div>
-  <script type="module" src="visual-board.js"></script>
+  <script type="module" src="visual-board.js?v=3"></script>
 </body>
 </html>

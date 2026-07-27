@@ -1,541 +1,368 @@
 /**
- * Overview & Purpose
- * Implements recursive system-scope navigation and an annotated file/folder
- * skeleton whose nodes link to real records in the Algorithms section.
+ * Folder-structure workspace with inline names, notes, and drag-to-nest.
  *
- * Architectural Relationships
- * Called by: architecture.html.
- * Calls: app/store.js for identifiers, password checks, and algorithm choices.
- *
- * External Resources
- * localStorage key "artificially-neuroscience-architecture-v1".
- *
- * Notes
- * Architecture data is a flat collection with parent identifiers. Rendering
- * derives both trees and zoomed views, which keeps mutation and persistence simple.
+ * The permanent root node and every descendant are stored locally under the
+ * established architecture key. Individual deletion is intentionally ungated;
+ * only clearing the complete workspace requires the shared delete password.
  */
 
+import { createId, isDeletePasswordValid } from "../app/store.js";
 import {
-  createId,
-  getAlgorithmOptions,
-  getWorkspace,
-  isDeletePasswordValid,
-} from "../app/store.js";
+  DEFAULT_FILE_NAME,
+  DEFAULT_FOLDER_NAME,
+  ROOT_NODE_ID,
+  addArchitectureNode,
+  collectDescendantIds,
+  createEmptyArchitecture,
+  getArchitectureChildren,
+  moveNodeToFolder,
+  normalizeArchitecture,
+  normalizeNodeName,
+  removeArchitectureNode,
+} from "./architecture-model.mjs";
 
 const ARCHITECTURE_KEY = "artificially-neuroscience-architecture-v1";
-const treePanel = document.querySelector("#architecture-tree");
-const canvas = document.querySelector("#architecture-canvas");
-const scopeMap = document.querySelector("#scope-map");
-const breadcrumbs = document.querySelector("#scope-breadcrumbs");
-const inspector = document.querySelector("#architecture-inspector");
-const inspectorForm = document.querySelector("#inspector-form");
-const inspectorEmpty = document.querySelector("#inspector-empty");
-const nodeDialog = document.querySelector("#architecture-node-dialog");
-const nodeForm = document.querySelector("#architecture-node-form");
+const SAVE_DELAY = 220;
+
+const tree = document.querySelector("#architecture-tree");
+const sheet = document.querySelector("#architecture-sheet");
+const status = document.querySelector("#architecture-status");
 
 let architecture = loadArchitecture();
-let mode = "scopes";
-let selectedId = null;
-let focusedScopeId = null;
-let pendingParentId = null;
-let zoom = 1;
+let selectedId = ROOT_NODE_ID;
+let saveTimer = null;
+let draggedId = null;
 
 /**
- * Loads saved architecture or returns an intentionally empty model.
+ * Loads and migrates saved data while guaranteeing a permanent root folder.
  *
- * @returns {{scopes: Array<object>, files: Array<object>}} Architecture model.
+ * @returns {{version: number, rootId: string, nodes: Array<object>}} Model.
  */
 function loadArchitecture() {
   try {
     const saved = JSON.parse(localStorage.getItem(ARCHITECTURE_KEY));
-    if (Array.isArray(saved?.scopes) && Array.isArray(saved?.files)) return saved;
+    return normalizeArchitecture(saved);
   } catch (error) {
     console.error("Unable to load architecture data.", error);
+    return createEmptyArchitecture();
   }
-  return { scopes: [], files: [] };
 }
 
 /**
- * Persists the complete architecture model locally.
+ * Persists the complete model and updates the visible local-save status.
  */
 function saveArchitecture() {
-  localStorage.setItem(ARCHITECTURE_KEY, JSON.stringify(architecture));
+  window.clearTimeout(saveTimer);
+  try {
+    localStorage.setItem(ARCHITECTURE_KEY, JSON.stringify(architecture));
+    status.textContent = "Saved locally";
+    status.classList.remove("has-error");
+  } catch (error) {
+    console.error("Unable to save architecture data.", error);
+    status.textContent = "Storage is full";
+    status.classList.add("has-error");
+  }
+}
+
+function queueSave() {
+  status.textContent = "Saving…";
+  window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(saveArchitecture, SAVE_DELAY);
 }
 
 /**
- * Renders the active tree, canvas, and inspector from current state.
+ * Rebuilds the visible tree from the flat parent-linked model.
  */
 function renderArchitecture() {
-  renderBrowserTree();
-  if (mode === "scopes") {
-    renderScopeCanvas();
-  } else {
-    renderFileCanvas();
+  const root = architecture.nodes.find((node) => node.id === ROOT_NODE_ID);
+  tree.replaceChildren();
+  if (!root) {
+    architecture = createEmptyArchitecture();
+    selectedId = ROOT_NODE_ID;
+    return renderArchitecture();
   }
-  renderInspector();
+  tree.append(createTreeBranch(root, 0));
 }
 
 /**
- * Builds the left navigation tree for scopes or file skeleton nodes.
- */
-function renderBrowserTree() {
-  treePanel.replaceChildren();
-  const collection = mode === "scopes" ? architecture.scopes : architecture.files;
-  const roots = collection.filter((node) => !node.parentId);
-  if (!roots.length) {
-    const empty = document.createElement("p");
-    empty.className = "tree-empty";
-    empty.textContent = mode === "scopes"
-      ? "No system scopes yet. Add a root, then place smaller scopes inside it."
-      : "No skeleton yet. Add a root folder or file, then build downward.";
-    treePanel.append(empty);
-    return;
-  }
-
-  const tree = document.createElement("ul");
-  tree.className = "tree-list";
-  roots.forEach((root) => tree.append(createTreeBranch(root, collection)));
-  treePanel.append(tree);
-}
-
-/**
- * Recursively creates a navigation branch.
+ * Creates one row and its recursively nested children.
  *
- * @param {object} node Current node.
- * @param {Array<object>} collection Sibling model collection.
- * @returns {HTMLLIElement} Tree branch.
+ * @param {object} node Architecture node.
+ * @param {number} depth Zero-based tree depth.
+ * @returns {HTMLElement} Branch element.
  */
-function createTreeBranch(node, collection) {
-  const listItem = document.createElement("li");
-  const row = document.createElement("div");
-  row.className = "tree-row";
-  row.classList.toggle("is-selected", selectedId === node.id);
-  const icon = document.createElement("span");
-  icon.textContent = mode === "scopes" ? "◉" : node.type === "folder" ? "▾" : "·";
-  const name = document.createElement("span");
-  name.textContent = node.name;
-  row.append(icon, name);
-  row.addEventListener("click", () => {
-    selectedId = node.id;
-    if (mode === "scopes") focusedScopeId = node.id;
-    renderArchitecture();
-    inspector.classList.add("is-open");
-  });
-  listItem.append(row);
-
-  const children = collection.filter((candidate) => candidate.parentId === node.id);
-  if (children.length) {
-    const childList = document.createElement("ul");
-    children.forEach((child) => childList.append(createTreeBranch(child, collection)));
-    listItem.append(childList);
-  }
-  return listItem;
-}
-
-/**
- * Renders the focused scope and its direct children as a recursive system map.
- */
-function renderScopeCanvas() {
-  canvas.classList.remove("file-mode");
-  scopeMap.className = "scope-map";
-  scopeMap.style.transform = `scale(${zoom})`;
-  scopeMap.replaceChildren();
-  breadcrumbs.hidden = architecture.scopes.length === 0;
-
-  if (!architecture.scopes.length) {
-    renderCanvasEmpty(
-      "No system map yet",
-      "Start with the largest scope. Each child can be opened and viewed as the new big picture.",
-    );
-    breadcrumbs.hidden = true;
-    return;
-  }
-
-  if (!focusedScopeId || !architecture.scopes.some((scope) => scope.id === focusedScopeId)) {
-    focusedScopeId = architecture.scopes.find((scope) => !scope.parentId)?.id ?? architecture.scopes[0].id;
-  }
-  const focusedScope = architecture.scopes.find((scope) => scope.id === focusedScopeId);
-  const children = architecture.scopes.filter((scope) => scope.parentId === focusedScope.id);
-  renderBreadcrumbs(focusedScope);
-
-  const rootNode = createScopeNode(focusedScope, true);
-  scopeMap.append(rootNode);
-  children.forEach((child, index) => {
-    const angle = -Math.PI / 2 + index * ((Math.PI * 2) / Math.max(children.length, 1));
-    const x = 50 + Math.cos(angle) * 40;
-    const y = 50 + Math.sin(angle) * 37;
-    const edge = document.createElement("span");
-    edge.className = "scope-edge";
-    edge.style.transform = `rotate(${angle}rad)`;
-    scopeMap.append(edge);
-
-    const node = createScopeNode(child, false);
-    node.style.left = `${x}%`;
-    node.style.top = `${y}%`;
-    node.style.transform = "translate(-50%, -50%)";
-    scopeMap.append(node);
-  });
-
-  if (!children.length) {
-    const hint = document.createElement("p");
-    hint.className = "scope-leaf-hint";
-    hint.textContent = "This scope has no inside parts yet.";
-    scopeMap.append(hint);
-  }
-}
-
-/**
- * Creates a clickable scope node that can become the next focused system.
- *
- * @param {object} scope Scope model.
- * @param {boolean} isRoot Whether it is the current big-picture scope.
- * @returns {HTMLButtonElement} Scope node.
- */
-function createScopeNode(scope, isRoot) {
-  const node = document.createElement("button");
-  node.type = "button";
-  node.className = `scope-node ${isRoot ? "is-root" : ""}`;
-  const title = document.createElement("strong");
-  title.textContent = scope.name;
-  const note = document.createElement("small");
-  note.textContent = scope.notes ? scope.notes.slice(0, 72) : isRoot ? "Current scope" : "Open scope";
-  node.append(title, note);
-  node.addEventListener("click", () => {
-    selectedId = scope.id;
-    if (!isRoot) focusedScopeId = scope.id;
-    renderArchitecture();
-    inspector.classList.add("is-open");
-  });
-  return node;
-}
-
-/**
- * Shows the ancestry path for the focused system scope.
- *
- * @param {object} scope Focused scope.
- */
-function renderBreadcrumbs(scope) {
-  breadcrumbs.replaceChildren();
-  const path = getNodePath(scope, architecture.scopes);
-  path.forEach((pathNode, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = pathNode.name;
-    button.addEventListener("click", () => {
-      focusedScopeId = pathNode.id;
-      selectedId = pathNode.id;
-      renderArchitecture();
-    });
-    breadcrumbs.append(button);
-    if (index < path.length - 1) {
-      const separator = document.createElement("i");
-      separator.textContent = "›";
-      breadcrumbs.append(separator);
-    }
-  });
-  breadcrumbs.hidden = false;
-}
-
-/**
- * Renders the file/folder skeleton as a spacious recursive architecture.
- */
-function renderFileCanvas() {
-  breadcrumbs.hidden = true;
-  canvas.classList.add("file-mode");
-  scopeMap.className = "file-map";
-  scopeMap.style.transform = `scale(${zoom})`;
-  scopeMap.replaceChildren();
-  const roots = architecture.files.filter((node) => !node.parentId);
-  if (!roots.length) {
-    renderCanvasEmpty(
-      "No script skeleton yet",
-      "Create folders and files, then annotate what each part does and attach the algorithms it uses.",
-    );
-    return;
-  }
-
-  roots.forEach((root) => scopeMap.append(createFileMapBranch(root)));
-}
-
-/**
- * Recursively renders a file map branch with live algorithm links.
- *
- * @param {object} node File or folder node.
- * @returns {HTMLElement} File map branch.
- */
-function createFileMapBranch(node) {
+function createTreeBranch(node, depth) {
   const branch = document.createElement("div");
-  branch.className = "file-map-branch";
-  const card = document.createElement("div");
-  card.tabIndex = 0;
-  card.setAttribute("role", "button");
-  card.className = "file-map-node";
-  card.classList.toggle("is-selected", selectedId === node.id);
-  const identity = document.createElement("div");
-  const icon = document.createElement("span");
-  icon.textContent = node.type === "folder" ? "▰" : "▤";
-  const name = document.createElement("strong");
-  name.textContent = node.name;
-  identity.append(icon, name);
-  const notes = document.createElement("p");
-  notes.textContent = node.notes || "No notes yet";
-  card.append(identity, notes);
+  branch.className = "architecture-branch";
+  branch.dataset.nodeId = node.id;
 
-  card.addEventListener("click", () => {
-    selectedId = node.id;
-    renderArchitecture();
-    inspector.classList.add("is-open");
-  });
-  card.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      card.click();
-    }
-  });
-  branch.append(card);
+  const children = getArchitectureChildren(architecture.nodes, node.id);
+  const row = document.createElement("div");
+  row.className = "architecture-node-row";
+  row.dataset.nodeId = node.id;
+  row.setAttribute("role", "treeitem");
+  row.setAttribute("aria-level", String(depth + 1));
+  row.classList.toggle("is-selected", selectedId === node.id);
+  if (node.type === "folder") row.setAttribute("aria-expanded", String(!node.collapsed));
 
-  const algorithmLinks = resolveAlgorithmLinks(node.algorithmIds);
-  if (algorithmLinks.length) {
-    const tags = document.createElement("div");
-    tags.className = "file-algorithm-tags";
-    algorithmLinks.forEach((algorithm) => {
-      const tag = document.createElement("a");
-      tag.href = `../workspace.html#section=${encodeURIComponent(algorithm.sectionId)}&item=${encodeURIComponent(algorithm.id)}`;
-      tag.textContent = algorithm.title;
-      tags.append(tag);
-    });
-    branch.append(tags);
-  }
+  const identity = createIdentityCell(node, depth, children.length);
+  const notes = createNotesField(node);
+  const actions = createRowActions(node);
+  row.append(identity, notes, actions);
+  row.addEventListener("click", () => selectNode(node.id));
 
-  const children = architecture.files.filter((candidate) => candidate.parentId === node.id);
-  if (children.length) {
+  if (node.type === "folder") addFolderDropTarget(row, node);
+  branch.append(row);
+
+  if (node.type === "folder" && children.length && !node.collapsed) {
     const childGroup = document.createElement("div");
-    childGroup.className = "file-map-children";
-    children.forEach((child) => childGroup.append(createFileMapBranch(child)));
+    childGroup.className = "architecture-children";
+    childGroup.setAttribute("role", "group");
+    children.forEach((child) => childGroup.append(createTreeBranch(child, depth + 1)));
     branch.append(childGroup);
   }
   return branch;
 }
 
-/**
- * Places an empty-state prompt in the central canvas.
- *
- * @param {string} title Empty-state title.
- * @param {string} copy Guidance.
- */
-function renderCanvasEmpty(title, copy) {
-  scopeMap.className = "scope-empty";
-  scopeMap.style.transform = "";
-  const symbol = document.createElement("span");
-  symbol.className = "empty-symbol";
-  symbol.textContent = "⌘";
-  const heading = document.createElement("h2");
-  heading.textContent = title;
-  const paragraph = document.createElement("p");
-  paragraph.textContent = copy;
-  const addButton = document.createElement("button");
-  addButton.type = "button";
-  addButton.className = "button button-primary";
-  addButton.textContent = mode === "scopes" ? "Add root scope" : "Add root node";
-  addButton.addEventListener("click", () => openNodeDialog(null));
-  scopeMap.append(symbol, heading, paragraph, addButton);
-}
+function createIdentityCell(node, depth, childCount) {
+  const identity = document.createElement("div");
+  identity.className = "architecture-node-identity";
+  identity.style.setProperty("--tree-depth", depth);
 
-/**
- * Renders a type-aware inspector for the selected architecture node.
- */
-function renderInspector() {
-  const collection = mode === "scopes" ? architecture.scopes : architecture.files;
-  const node = collection.find((candidate) => candidate.id === selectedId);
-  if (!node) {
-    inspectorEmpty.hidden = false;
-    inspectorForm.hidden = true;
-    return;
+  if (node.id === ROOT_NODE_ID) {
+    const rootMarker = document.createElement("span");
+    rootMarker.className = "architecture-root-marker";
+    rootMarker.textContent = "○";
+    rootMarker.title = "Permanent root folder";
+    identity.append(rootMarker);
+  } else {
+    const dragHandle = document.createElement("span");
+    dragHandle.className = "architecture-drag-handle";
+    dragHandle.textContent = "⠿";
+    dragHandle.title = "Drag into another folder";
+    dragHandle.draggable = true;
+    dragHandle.addEventListener("dragstart", (event) => startDragging(event, node));
+    dragHandle.addEventListener("dragend", finishDragging);
+    identity.append(dragHandle);
   }
 
-  inspectorEmpty.hidden = true;
-  inspectorForm.hidden = false;
-  document.querySelector("#inspector-kind").textContent = mode === "scopes" ? "SYSTEM SCOPE" : node.type.toUpperCase();
-  document.querySelector("#inspector-title").textContent = node.name;
-  document.querySelector("#inspector-path").textContent = getNodePath(node, collection).map((pathNode) => pathNode.name).join(" / ");
-  inspectorForm.elements.name.value = node.name;
-  inspectorForm.elements.notes.value = node.notes ?? "";
-  document.querySelector("#inspector-algorithms").hidden = mode === "scopes";
-  document.querySelector("#add-child-node").textContent = mode === "scopes" ? "Add inside" : "Add child";
-  document.querySelector("#add-child-node").hidden = mode === "files" && node.type === "file";
-  if (mode === "files") renderAlgorithmChoices(node);
+  if (node.type === "folder") {
+    const toggle = document.createElement("button");
+    toggle.className = "architecture-folder-toggle";
+    toggle.type = "button";
+    toggle.textContent = childCount ? (node.collapsed ? "▸" : "▾") : "○";
+    toggle.title = childCount ? (node.collapsed ? "Expand folder" : "Collapse folder") : "Empty folder";
+    toggle.disabled = childCount === 0;
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!childCount) return;
+      node.collapsed = !node.collapsed;
+      saveArchitecture();
+      renderArchitecture();
+    });
+    identity.append(toggle);
+  } else {
+    const fileMarker = document.createElement("span");
+    fileMarker.className = "architecture-file-marker";
+    fileMarker.textContent = "—";
+    identity.append(fileMarker);
+  }
+
+  const nameInput = document.createElement("input");
+  nameInput.className = "architecture-name-input";
+  nameInput.value = node.name;
+  nameInput.maxLength = 120;
+  nameInput.spellcheck = false;
+  nameInput.setAttribute("aria-label", `Rename ${node.type}`);
+  resizeNameField(nameInput);
+  nameInput.addEventListener("click", (event) => event.stopPropagation());
+  nameInput.addEventListener("input", () => {
+    node.name = nameInput.value;
+    resizeNameField(nameInput);
+    queueSave();
+  });
+  nameInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      nameInput.blur();
+    }
+  });
+  nameInput.addEventListener("blur", () => {
+    node.name = normalizeNodeName(nameInput.value, node.type);
+    nameInput.value = node.name;
+    resizeNameField(nameInput);
+    saveArchitecture();
+  });
+  identity.append(nameInput);
+
+  if (node.type === "folder") {
+    const slash = document.createElement("span");
+    slash.className = "architecture-folder-slash";
+    slash.textContent = "/";
+    identity.append(slash);
+  }
+  return identity;
 }
 
-/**
- * Builds live algorithm checkboxes for one file/folder node.
- *
- * @param {object} node File or folder node.
- */
-function renderAlgorithmChoices(node) {
-  const list = document.querySelector("#algorithm-link-list");
-  const libraryLink = document.querySelector(".algorithm-library-link");
-  list.replaceChildren();
-  const algorithms = getAlgorithmOptions();
-  const firstAlgorithmSection = getWorkspace().sections.find((section) => section.type === "algorithm");
-  libraryLink.href = firstAlgorithmSection
-    ? `../workspace.html#section=${encodeURIComponent(firstAlgorithmSection.id)}`
-    : "../workspace.html";
-  if (!algorithms.length) {
-    const hint = document.createElement("p");
-    hint.className = "field-hint";
-    hint.textContent = "Your Algorithms section is empty.";
-    list.append(hint);
-    return;
-  }
-  algorithms.forEach((algorithm) => {
-    const label = document.createElement("label");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.name = "algorithmIds";
-    checkbox.value = algorithm.id;
-    checkbox.checked = (node.algorithmIds ?? []).includes(algorithm.id);
-    label.append(checkbox, document.createTextNode(algorithm.title));
-    list.append(label);
+function createNotesField(node) {
+  const notes = document.createElement("textarea");
+  notes.className = "architecture-note-input";
+  notes.rows = 1;
+  notes.value = node.notes;
+  notes.placeholder = "Add a note…";
+  notes.setAttribute("aria-label", `Notes for ${node.name}`);
+  notes.addEventListener("click", (event) => event.stopPropagation());
+  notes.addEventListener("input", () => {
+    node.notes = notes.value;
+    resizeNotesField(notes);
+    queueSave();
+  });
+  notes.addEventListener("blur", saveArchitecture);
+  window.requestAnimationFrame(() => resizeNotesField(notes));
+  return notes;
+}
+
+function createRowActions(node) {
+  const actions = document.createElement("div");
+  actions.className = "architecture-row-actions";
+  if (node.id === ROOT_NODE_ID) return actions;
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "architecture-delete-node";
+  deleteButton.title = `Delete ${node.name}`;
+  deleteButton.setAttribute("aria-label", `Delete ${node.name}`);
+  deleteButton.textContent = "×";
+  deleteButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    deleteNode(node);
+  });
+  actions.append(deleteButton);
+  return actions;
+}
+
+function resizeNotesField(field) {
+  field.style.height = "0";
+  field.style.height = `${Math.max(28, field.scrollHeight)}px`;
+}
+
+function resizeNameField(field) {
+  const characterWidth = Math.min(45, Math.max(5, field.value.length + 1));
+  field.style.width = `${characterWidth}ch`;
+}
+
+function selectNode(nodeId) {
+  if (selectedId === nodeId) return;
+  selectedId = nodeId;
+  tree.querySelectorAll(".architecture-node-row").forEach((row) => {
+    row.classList.toggle("is-selected", row.dataset.nodeId === selectedId);
   });
 }
 
-/**
- * Resolves current algorithm identifiers to deep-link metadata.
- *
- * @param {Array<string>} algorithmIds Algorithm identifiers.
- * @returns {Array<{id: string, title: string, sectionId: string}>} Existing links.
- */
-function resolveAlgorithmLinks(algorithmIds = []) {
-  const options = getAlgorithmOptions();
-  return algorithmIds
-    .map((algorithmId) => options.find((option) => option.id === algorithmId))
-    .filter(Boolean);
+function startDragging(event, node) {
+  draggedId = node.id;
+  selectedId = node.id;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", node.id);
+  window.requestAnimationFrame(() => {
+    const branch = [...tree.querySelectorAll(".architecture-branch")]
+      .find((candidate) => candidate.dataset.nodeId === node.id);
+    branch?.querySelector(".architecture-node-row")?.classList.add("is-dragging");
+  });
 }
 
-/**
- * Returns the root-to-node ancestry path with cycle protection.
- *
- * @param {object} node Starting node.
- * @param {Array<object>} collection Node collection.
- * @returns {Array<object>} Ordered ancestry.
- */
-function getNodePath(node, collection) {
-  const path = [];
-  const visited = new Set();
-  let current = node;
-  while (current && !visited.has(current.id)) {
-    visited.add(current.id);
-    path.unshift(current);
-    current = collection.find((candidate) => candidate.id === current.parentId);
-  }
-  return path;
+function finishDragging() {
+  draggedId = null;
+  tree.querySelectorAll(".is-dragging, .is-drop-target").forEach((element) => {
+    element.classList.remove("is-dragging", "is-drop-target");
+  });
 }
 
-/**
- * Opens the creation dialog for a root or child node.
- *
- * @param {string|null} parentId Optional parent identifier.
- */
-function openNodeDialog(parentId) {
-  pendingParentId = parentId;
-  nodeForm.reset();
-  document.querySelector("#node-type-field").hidden = mode === "scopes";
-  document.querySelector("#architecture-node-dialog-title").textContent = mode === "scopes"
-    ? parentId ? "Add an inside scope" : "Add a root scope"
-    : parentId ? "Add inside this node" : "Add a root node";
-  nodeDialog.showModal();
-  window.setTimeout(() => nodeForm.elements.name.focus(), 0);
+function addFolderDropTarget(row, folder) {
+  row.addEventListener("dragover", (event) => {
+    if (!draggedId || !moveIsAllowed(draggedId, folder.id)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    row.classList.add("is-drop-target");
+  });
+  row.addEventListener("dragleave", (event) => {
+    if (!row.contains(event.relatedTarget)) row.classList.remove("is-drop-target");
+  });
+  row.addEventListener("drop", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    row.classList.remove("is-drop-target");
+    const nodeId = draggedId || event.dataTransfer.getData("text/plain");
+    if (!moveNodeToFolder(architecture, nodeId, folder.id)) return;
+    folder.collapsed = false;
+    selectedId = nodeId;
+    saveArchitecture();
+    finishDragging();
+    renderArchitecture();
+  });
 }
 
-/**
- * Creates a new architecture node from the dialog.
- *
- * @param {SubmitEvent} event Form submission.
- */
-function createNode(event) {
-  event.preventDefault();
-  const formData = new FormData(nodeForm);
-  const node = {
+function moveIsAllowed(nodeId, folderId) {
+  if (nodeId === ROOT_NODE_ID || nodeId === folderId) return false;
+  const descendants = collectDescendantIds(architecture.nodes, nodeId);
+  return !descendants.has(folderId);
+}
+
+function getSelectedParentId() {
+  const selected = architecture.nodes.find((node) => node.id === selectedId);
+  if (!selected) return ROOT_NODE_ID;
+  return selected.type === "folder" ? selected.id : selected.parentId || ROOT_NODE_ID;
+}
+
+function createNode(type) {
+  const parentId = getSelectedParentId();
+  const node = addArchitectureNode(architecture, {
     id: createId(),
-    parentId: pendingParentId,
-    name: String(formData.get("name") ?? "").trim(),
-    notes: "",
-  };
-  if (mode === "files") {
-    node.type = String(formData.get("type") ?? "folder");
-    node.algorithmIds = [];
-    architecture.files.push(node);
-  } else {
-    architecture.scopes.push(node);
-    focusedScopeId = node.id;
-  }
+    type,
+    parentId,
+  });
+  const parent = architecture.nodes.find((candidate) => candidate.id === parentId);
+  if (parent) parent.collapsed = false;
   selectedId = node.id;
   saveArchitecture();
-  nodeDialog.close();
   renderArchitecture();
-  inspector.classList.add("is-open");
+  window.requestAnimationFrame(() => {
+    const branch = [...tree.querySelectorAll(".architecture-branch")]
+      .find((candidate) => candidate.dataset.nodeId === node.id);
+    const input = branch?.querySelector(".architecture-name-input");
+    input?.focus();
+    input?.select();
+  });
 }
 
-/**
- * Saves inspector fields into the selected node.
- *
- * @param {SubmitEvent} event Form submission.
- */
-function saveInspector(event) {
-  event.preventDefault();
-  const collection = mode === "scopes" ? architecture.scopes : architecture.files;
-  const node = collection.find((candidate) => candidate.id === selectedId);
-  if (!node) return;
-  const formData = new FormData(inspectorForm);
-  node.name = String(formData.get("name") ?? "").trim();
-  node.notes = String(formData.get("notes") ?? "").trim();
-  if (mode === "files") {
-    node.algorithmIds = formData.getAll("algorithmIds").map(String);
+function deleteNode(node) {
+  const descendants = collectDescendantIds(architecture.nodes, node.id);
+  if (descendants.size) {
+    const confirmed = window.confirm(
+      `Delete “${node.name}” and ${descendants.size} item${descendants.size === 1 ? "" : "s"} inside it?`,
+    );
+    if (!confirmed) return;
   }
+  const parentId = node.parentId || ROOT_NODE_ID;
+  removeArchitectureNode(architecture, node.id);
+  selectedId = parentId;
   saveArchitecture();
   renderArchitecture();
 }
 
-/**
- * Deletes the selected node and all nested descendants after password confirmation.
- */
-function deleteSelectedNode() {
-  const collection = mode === "scopes" ? architecture.scopes : architecture.files;
-  const node = collection.find((candidate) => candidate.id === selectedId);
-  if (!node) return;
-  const password = window.prompt(`Enter the delete password to delete “${node.name}” and everything inside it.`);
+function clearWorkspace() {
+  const password = window.prompt("Enter the delete password to clear the entire architecture workspace.");
   if (password === null) return;
   if (!isDeletePasswordValid(password)) {
     window.alert("That password is not correct.");
     return;
   }
-
-  const deletedIds = new Set([node.id]);
-  let foundChild = true;
-  while (foundChild) {
-    foundChild = false;
-    collection.forEach((candidate) => {
-      if (candidate.parentId && deletedIds.has(candidate.parentId) && !deletedIds.has(candidate.id)) {
-        deletedIds.add(candidate.id);
-        foundChild = true;
-      }
-    });
-  }
-  const remaining = collection.filter((candidate) => !deletedIds.has(candidate.id));
-  if (mode === "scopes") {
-    architecture.scopes = remaining;
-    focusedScopeId = node.parentId;
-  } else {
-    architecture.files = remaining;
-  }
-  selectedId = null;
+  architecture = createEmptyArchitecture();
+  selectedId = ROOT_NODE_ID;
   saveArchitecture();
   renderArchitecture();
 }
 
-/**
- * Exports architecture data as a portable JSON backup.
- */
 function exportArchitecture() {
   const blob = new Blob([JSON.stringify(architecture, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -546,32 +373,24 @@ function exportArchitecture() {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-document.querySelectorAll(".architecture-tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    mode = tab.dataset.mode;
-    selectedId = null;
-    document.querySelectorAll(".architecture-tab").forEach((candidate) => candidate.classList.toggle("is-active", candidate === tab));
-    renderArchitecture();
-  });
-});
-
-document.querySelector("#add-architecture-node").addEventListener("click", () => openNodeDialog(null));
-document.querySelector("#add-child-node").addEventListener("click", () => {
-  if (selectedId) openNodeDialog(selectedId);
-});
-document.querySelector("#delete-architecture-node").addEventListener("click", deleteSelectedNode);
+document.querySelector("#add-architecture-folder").addEventListener("click", () => createNode("folder"));
+document.querySelector("#add-architecture-file").addEventListener("click", () => createNode("file"));
+document.querySelector("#clear-architecture").addEventListener("click", clearWorkspace);
 document.querySelector("#export-architecture").addEventListener("click", exportArchitecture);
-nodeForm.addEventListener("submit", createNode);
-inspectorForm.addEventListener("submit", saveInspector);
-document.querySelectorAll("[data-dialog-close]").forEach((button) => {
-  button.addEventListener("click", () => button.closest("dialog")?.close());
+
+sheet.addEventListener("dragover", (event) => {
+  if (!draggedId || !moveIsAllowed(draggedId, ROOT_NODE_ID)) return;
+  if (event.target.closest(".architecture-node-row")) return;
+  event.preventDefault();
+});
+sheet.addEventListener("drop", (event) => {
+  if (event.target.closest(".architecture-node-row")) return;
+  event.preventDefault();
+  if (!draggedId || !moveNodeToFolder(architecture, draggedId, ROOT_NODE_ID)) return;
+  saveArchitecture();
+  finishDragging();
+  renderArchitecture();
 });
 
-canvas.addEventListener("wheel", (event) => {
-  if (!event.ctrlKey && !event.metaKey) return;
-  event.preventDefault();
-  zoom = Math.min(1.4, Math.max(0.65, zoom + (event.deltaY < 0 ? 0.08 : -0.08)));
-  scopeMap.style.transform = `scale(${zoom})`;
-}, { passive: false });
-
+saveArchitecture();
 renderArchitecture();

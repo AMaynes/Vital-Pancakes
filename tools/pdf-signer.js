@@ -1,7 +1,7 @@
 /**
  * Overview & Purpose
- * Provides local PDF viewing, page navigation, styled signature placement, and
- * export of a genuine signed PDF with signatures embedded as raster images.
+ * Provides local PDF viewing, page navigation, signature and date placement,
+ * and export of a genuine signed PDF with every placed field embedded.
  *
  * Architectural Relationships
  * Called by: pdf-signer.html.
@@ -11,7 +11,7 @@
  * ../vendor/pdf.min.js, ../vendor/pdf.worker.min.js, and ../vendor/pdf-lib.min.js.
  *
  * Notes
- * Loaded PDF bytes never leave the browser. Signature coordinates are normalized
+ * Loaded PDF bytes never leave the browser. Placement coordinates are normalized
  * against each rendered page so export remains correct across PDF page sizes.
  */
 
@@ -25,6 +25,8 @@ const dropZone = document.querySelector("#pdf-drop-zone");
 const signatureInput = document.querySelector("#signature-name");
 const signaturePreview = document.querySelector("#signature-preview");
 const addSignatureButton = document.querySelector("#add-signature");
+const dateInput = document.querySelector("#signature-date");
+const addDateButton = document.querySelector("#add-date");
 const downloadButton = document.querySelector("#download-signed-pdf");
 const removeButton = document.querySelector("#remove-signature");
 const pageStage = document.querySelector("#pdf-page-stage");
@@ -46,6 +48,7 @@ const FONT_STYLES = {
   "signature-font-1": '"Snell Roundhand", "Segoe Script", cursive',
   "signature-font-2": '"Brush Script MT", "Bradley Hand", cursive',
   "signature-font-3": '"American Typewriter", Georgia, serif',
+  "date-font": 'Georgia, "Times New Roman", serif',
 };
 
 /**
@@ -107,14 +110,14 @@ async function renderPage() {
 }
 
 /**
- * Rebuilds draggable signature stamps for the current PDF page.
+ * Rebuilds draggable signature and date stamps for the current PDF page.
  */
 function renderPlacements() {
   signatureLayer.replaceChildren();
   const currentPlacements = placements.filter((placement) => placement.pageNumber === currentPageNumber);
   currentPlacements.forEach((placement) => {
     const stamp = document.createElement("div");
-    stamp.className = `signature-stamp ${placement.font}`;
+    stamp.className = `signature-stamp ${placement.font} ${placement.kind === "date" ? "date-stamp" : ""}`;
     stamp.dataset.placementId = placement.id;
     stamp.textContent = placement.text;
     stamp.style.left = `${placement.xRatio * 100}%`;
@@ -125,7 +128,7 @@ function renderPlacements() {
 
     const resizeHandle = document.createElement("span");
     resizeHandle.className = "signature-resize";
-    resizeHandle.title = "Resize signature";
+    resizeHandle.title = `Resize ${placement.kind}`;
     stamp.append(resizeHandle);
     signatureLayer.append(stamp);
   });
@@ -139,6 +142,7 @@ function addSignature() {
   if (!pdfDocument || !signatureInput.value.trim()) return;
   const placement = {
     id: createId(),
+    kind: "signature",
     pageNumber: currentPageNumber,
     text: signatureInput.value.trim(),
     font: signatureFont,
@@ -154,7 +158,58 @@ function addSignature() {
 }
 
 /**
- * Starts dragging or resizing a signature stamp.
+ * Adds a formatted date placement to the visible page.
+ */
+function addDate() {
+  if (!pdfDocument || !dateInput.value) return;
+  const placement = {
+    id: createId(),
+    kind: "date",
+    pageNumber: currentPageNumber,
+    text: formatDateValue(dateInput.value),
+    font: "date-font",
+    xRatio: 0.68,
+    yRatio: 0.78,
+    widthRatio: 0.18,
+    fontSizeRatio: 0.026,
+  };
+  placements.push(placement);
+  selectedPlacementId = placement.id;
+  renderPlacements();
+  updateControls();
+}
+
+/**
+ * Formats a date input value without converting it through UTC.
+ *
+ * @param {string} value ISO-style date input value.
+ * @returns {string} Readable month/day/year date.
+ */
+function formatDateValue(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(year, month - 1, day));
+}
+
+/**
+ * Returns today's date in the value format required by an HTML date input.
+ *
+ * @returns {string} Local calendar date as YYYY-MM-DD.
+ */
+function getTodayInputValue() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Starts dragging or resizing a placed signature or date.
  *
  * @param {PointerEvent} event Pointer-down event on the signature layer.
  */
@@ -211,7 +266,7 @@ function movePlacement(event) {
 }
 
 /**
- * Completes an active signature gesture.
+ * Completes an active placement gesture.
  *
  * @param {PointerEvent} event Pointer-up event.
  */
@@ -223,31 +278,34 @@ function endPlacementGesture(event) {
 }
 
 /**
- * Produces a transparent PNG of a styled signature using browser fonts.
+ * Produces a transparent PNG of a styled signature or date.
  *
- * @param {object} placement Signature placement.
+ * @param {object} placement Signature or date placement.
  * @returns {Promise<Uint8Array>} PNG bytes.
  */
-async function createSignaturePng(placement) {
+async function createPlacementPng(placement) {
   const scale = 4;
-  const signatureCanvas = document.createElement("canvas");
-  const signatureContext = signatureCanvas.getContext("2d");
-  const fontSize = 52;
-  signatureContext.font = `${fontSize}px ${FONT_STYLES[placement.font]}`;
-  const measuredWidth = Math.ceil(signatureContext.measureText(placement.text).width);
-  signatureCanvas.width = Math.max(240, measuredWidth + 35) * scale;
-  signatureCanvas.height = 90 * scale;
-  signatureContext.scale(scale, scale);
-  signatureContext.font = `${fontSize}px ${FONT_STYLES[placement.font]}`;
-  signatureContext.fillStyle = "#17231f";
-  signatureContext.textBaseline = "middle";
-  signatureContext.fillText(placement.text, 14, 45);
-  const blob = await new Promise((resolve) => signatureCanvas.toBlob(resolve, "image/png"));
+  const isDate = placement.kind === "date";
+  const fontSize = isDate ? 32 : 52;
+  const canvasHeight = isDate ? 58 : 90;
+  const placementCanvas = document.createElement("canvas");
+  const placementContext = placementCanvas.getContext("2d");
+  placementContext.font = `${fontSize}px ${FONT_STYLES[placement.font]}`;
+  const measuredWidth = Math.ceil(placementContext.measureText(placement.text).width);
+  placementCanvas.width = Math.max(isDate ? 150 : 240, measuredWidth + 35) * scale;
+  placementCanvas.height = canvasHeight * scale;
+  placementContext.scale(scale, scale);
+  placementContext.font = `${fontSize}px ${FONT_STYLES[placement.font]}`;
+  placementContext.fillStyle = "#17231f";
+  placementContext.textBaseline = "middle";
+  placementContext.fillText(placement.text, 14, canvasHeight / 2);
+  const blob = await new Promise((resolve) => placementCanvas.toBlob(resolve, "image/png"));
+  if (!blob) throw new Error("Unable to render the placed field.");
   return new Uint8Array(await blob.arrayBuffer());
 }
 
 /**
- * Embeds every placed signature into the original PDF and downloads a new copy.
+ * Embeds every placed signature and date into the original PDF.
  */
 async function downloadSignedPdf() {
   if (!pdfBytes || !placements.length) return;
@@ -260,13 +318,13 @@ async function downloadSignedPdf() {
     for (const placement of placements) {
       const page = pages[placement.pageNumber - 1];
       if (!page) continue;
-      const pngBytes = await createSignaturePng(placement);
-      const signatureImage = await outputDocument.embedPng(pngBytes);
+      const pngBytes = await createPlacementPng(placement);
+      const placementImage = await outputDocument.embedPng(pngBytes);
       const pageWidth = page.getWidth();
       const pageHeight = page.getHeight();
       const drawWidth = pageWidth * placement.widthRatio;
-      const drawHeight = drawWidth * (signatureImage.height / signatureImage.width);
-      page.drawImage(signatureImage, {
+      const drawHeight = drawWidth * (placementImage.height / placementImage.width);
+      page.drawImage(placementImage, {
         x: pageWidth * placement.xRatio,
         y: pageHeight - pageHeight * placement.yRatio - drawHeight,
         width: drawWidth,
@@ -316,6 +374,7 @@ function updateControls() {
   document.querySelector("#previous-page").disabled = !hasDocument || currentPageNumber <= 1;
   document.querySelector("#next-page").disabled = !hasDocument || currentPageNumber >= pdfDocument.numPages;
   addSignatureButton.disabled = !hasDocument || !signatureInput.value.trim();
+  addDateButton.disabled = !hasDocument || !dateInput.value;
   downloadButton.disabled = !hasDocument || placements.length === 0;
   removeButton.disabled = !selectedPlacementId;
 }
@@ -348,6 +407,7 @@ signatureInput.addEventListener("input", () => {
   signaturePreview.textContent = signatureInput.value.trim() || "Your signature";
   updateControls();
 });
+dateInput.addEventListener("change", updateControls);
 document.querySelectorAll(".font-choice").forEach((button) => {
   button.addEventListener("click", () => {
     signatureFont = button.dataset.font;
@@ -357,6 +417,7 @@ document.querySelectorAll(".font-choice").forEach((button) => {
 });
 
 addSignatureButton.addEventListener("click", addSignature);
+addDateButton.addEventListener("click", addDate);
 downloadButton.addEventListener("click", downloadSignedPdf);
 document.querySelector("#previous-page").addEventListener("click", async () => {
   if (currentPageNumber <= 1) return;
@@ -381,4 +442,5 @@ signatureLayer.addEventListener("pointerdown", startPlacementGesture);
 signatureLayer.addEventListener("pointermove", movePlacement);
 signatureLayer.addEventListener("pointerup", endPlacementGesture);
 signatureLayer.addEventListener("pointercancel", endPlacementGesture);
+dateInput.value = getTodayInputValue();
 updateControls();

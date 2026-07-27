@@ -7,8 +7,9 @@
   <title>Architecture Designer · Pinakes Vitae</title>
   <link rel="icon" href="../assets/pinakes-vitae-logo-final-light.png" type="image/png">
   <link rel="stylesheet" href="../workspace.css?v=16">
-  <link rel="stylesheet" href="tool.css?v=16">
-  <link rel="stylesheet" href="../site-navigation.css?v=16">
+  <link rel="stylesheet" href="tool.css?v=20">
+  <link rel="stylesheet" href="../site-navigation.css?v=17">
+  <script type="module" src="../site-navigation.js?v=3"></script>
 </head>
 <body class="tool-body">
   <a class="skip-link" href="#tool-main">Skip to tool</a>
@@ -30,93 +31,37 @@
   <div class="tool-shell">
     <header class="tool-topbar">
       <div class="tool-title-group">
-        <a class="back-link" href="../workspace.html#area=tools" aria-label="Back to workspace">←</a>
-        <span></span>
         <div>
           <h1>Architecture Designer</h1>
-          <small>SYSTEM SCOPES + SCRIPT SKELETONS</small>
+          <small>FOLDER STRUCTURE + NOTES</small>
         </div>
       </div>
       <div class="tool-topbar-actions">
-        <span class="tool-save-status">Saved locally</span>
+        <span class="tool-save-status" id="architecture-status">Saved locally</span>
+        <button class="button button-danger-quiet" id="clear-architecture" type="button">Clear workspace</button>
         <button class="button button-quiet" id="export-architecture" type="button">Export JSON</button>
-        <button class="button button-primary" id="add-architecture-node" type="button">+ Add</button>
+        <button class="button button-quiet" id="add-architecture-folder" type="button">+ Folder</button>
+        <button class="button button-primary" id="add-architecture-file" type="button">+ File</button>
       </div>
     </header>
 
     <main class="architecture-workspace" id="tool-main">
-      <aside class="architecture-browser">
-        <div class="architecture-tabs">
-          <button class="architecture-tab is-active" data-mode="scopes" type="button">System map</button>
-          <button class="architecture-tab" data-mode="files" type="button">File skeleton</button>
+      <section class="architecture-map-frame">
+        <div class="architecture-sheet" id="architecture-sheet">
+          <header class="architecture-tree-heading" aria-hidden="true">
+            <span>Structure</span>
+            <span>Notes</span>
+            <span></span>
+          </header>
+          <div class="architecture-tree" id="architecture-tree" role="tree" aria-label="Folder and file architecture"></div>
         </div>
-        <div class="tree-panel" id="architecture-tree"></div>
-      </aside>
-
-      <section class="architecture-map-frame" id="architecture-canvas">
-        <div class="scope-breadcrumbs" id="scope-breadcrumbs" hidden></div>
-        <div class="scope-map" id="scope-map"></div>
+        <p class="architecture-help">
+          Select a folder before adding to place the new item inside it. Drag the handle on any item into another folder to move it.
+        </p>
       </section>
-
-      <aside class="architecture-inspector" id="architecture-inspector">
-        <div class="inspector-empty" id="inspector-empty">
-          <span class="empty-symbol">⌘</span>
-          <p>Select a scope, folder, or file to edit its notes and relationships.</p>
-        </div>
-        <form class="inspector-form" id="inspector-form" hidden>
-          <p class="eyebrow" id="inspector-kind">SCOPE</p>
-          <h2 id="inspector-title">Details</h2>
-          <p class="panel-copy" id="inspector-path"></p>
-          <label>
-            Name
-            <input name="name" maxlength="100" required>
-          </label>
-          <label>
-            What it does
-            <textarea name="notes" rows="7" placeholder="Purpose, responsibilities, boundaries, or implementation notes"></textarea>
-          </label>
-          <fieldset class="relation-fieldset" id="inspector-algorithms">
-            <legend>Attached algorithms</legend>
-            <div class="algorithm-link-list" id="algorithm-link-list"></div>
-            <a class="text-link algorithm-library-link" href="../workspace.html#section=algorithms">Open Algorithms library →</a>
-          </fieldset>
-          <div class="inspector-actions">
-            <button class="button button-primary" type="submit">Save details</button>
-            <button class="button button-quiet" id="add-child-node" type="button">Add inside</button>
-            <button class="button button-danger-quiet" id="delete-architecture-node" type="button">Delete</button>
-          </div>
-        </form>
-      </aside>
     </main>
   </div>
 
-  <dialog class="app-dialog app-dialog-compact" id="architecture-node-dialog">
-    <form method="dialog" id="architecture-node-form">
-      <div class="dialog-heading">
-        <div>
-          <p class="eyebrow">NEW ARCHITECTURE NODE</p>
-          <h2 id="architecture-node-dialog-title">Add scope</h2>
-        </div>
-        <button class="icon-button dialog-close" type="button" data-dialog-close aria-label="Close">×</button>
-      </div>
-      <label id="node-type-field">
-        Type
-        <select name="type">
-          <option value="folder">Folder</option>
-          <option value="file">File</option>
-        </select>
-      </label>
-      <label>
-        Name
-        <input name="name" maxlength="100" required placeholder="Give this part a clear name">
-      </label>
-      <div class="dialog-actions">
-        <button class="button button-quiet" type="button" data-dialog-close>Cancel</button>
-        <button class="button button-primary" type="submit" value="default">Add</button>
-      </div>
-    </form>
-  </dialog>
-
-  <script type="module" src="architecture.js"></script>
+  <script type="module" src="architecture.js?v=3"></script>
 </body>
 </html>

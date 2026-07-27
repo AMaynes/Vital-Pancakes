@@ -18,7 +18,7 @@ Then open [http://localhost:8000](http://localhost:8000). Opening files directly
 
 ## System Overview
 
-GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` routes the editable Protocols, Studies & Projects, and tools-only Workspace areas. `research-literature.html` unifies the research and reading collections, and `download-app.html` provides app previews and installation guidance. `site-navigation.css` keeps the same five-section navigation across every page and tool.
+GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` routes the editable Protocols, Studies & Projects, and tools-only Workspace areas. `research-literature.html` unifies the research and reading collections, and `download-app.html` provides app previews and installation guidance. `site-navigation.css` and `site-navigation.js` keep the five-section header, file-like page path, and browser-history controls consistent across every page and tool.
 
 Repository-managed lists use small text files containing `<Entry>` blocks. `genericListLoader.js` fetches those files, parses their metadata, sorts entries alphabetically, and renders safe links.
 
@@ -31,9 +31,9 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 ## Five Top-Level Sections
 
 - **Protocols** — Personal playbooks that reduce daily and tedious-task overhead.
-- **Research & Literature** — Original publications, selected research, and analysis of fiction, nonfiction, papers, books, and other literature.
+- **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Empty personal libraries for studies, programming languages, algorithms, and projects, plus the existing notecard and educational collections.
-- **Workspace** — The Visual Board, PDF Signer, and Architecture Designer without unrelated library content.
+- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, and Architecture Designer without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the anatomical Pinakes Vitae emblem.
@@ -69,20 +69,27 @@ Existing `localStorage` namespaces retain their original `artificially-neuroscie
 
 ### Visual Board
 
-Combines freehand painting with boxes, ellipses, notes, arrow connectors, selection and movement, erasing, undo and redo, zoom, local autosave, and PNG export.
+Provides an infinite white workspace for freehand markup, straight lines, arrows with editable start and tip handles, inline textboxes, and resizable or rotatable outlined shapes. Compact menus create rectangles, ellipses, triangles, diamonds, hexagons, cubes, rectangular and triangular prisms, pyramids, cylinders, and cones.
+
+Every supported line or shape can use solid, dashed, dotted, dash–dot, or long-dash ink. Marquee-selected objects can be assembled into one movable piece and released later; outlined shapes can also be divided into independently selectable line segments and reassembled into their original form. The board additionally supports locking, post-draw color and line-thickness changes, brush-style erasing, optional grid snapping, deep undo and redo, mouse or trackpad panning, pinch zooming, and PNG export of the current view.
+
+Image files can be dropped directly onto the board without an upload control. They are compressed and stored locally as movable, resizable, rotatable board objects so annotations can be drawn over them without sending the source image to a server.
 
 ### PDF Signer
 
-Opens PDFs locally with bundled PDF.js, supports page navigation, creates signatures in three visual styles, allows placement and resizing on any page, and downloads a genuinely signed PDF with PDF-Lib. Documents never leave the browser.
+Opens PDFs locally with bundled PDF.js, supports page navigation, creates signatures in three visual styles, adds selectable dates, allows every placed field to be moved and resized on any page, and downloads a genuinely signed PDF with PDF-Lib. Documents never leave the browser.
+
+### Literature Analyzer
+
+Opens local PDFs or a live embedded website, supports click-and-drag highlights with a comment attached to every mark, restores annotations by source, and exports annotated records as PNG or PDF. PDF export writes highlights into the original pages and adds numbered comment pages.
+
+Websites remain governed by their own embedding policies. Because browsers prevent one website from reading another website's rendered pixels, webpage exports preserve the source URL, highlight map, and comments rather than copying the remote page itself.
 
 ### Architecture Designer
 
-Provides two related views:
+Provides a permanent `root/` folder and an editable file-tree workspace with aligned notes for every item. Folders and files spawn with blank placeholder names, can be renamed inline, and can be dragged into other folders. Individual nodes can be removed without a password; clearing the complete workspace retains the shared delete-password safeguard.
 
-- A recursive system-scope map where any inside part can become the new big picture.
-- A file and folder skeleton with purpose notes and algorithm relationships that link to entries in the Algorithms library.
-
-Architecture data saves locally and can be exported as JSON.
+Architecture data saves locally, preserves legacy file nodes and system scopes through migration, and can be exported as JSON.
 
 ## Adding List Content
 
@@ -124,12 +131,19 @@ The app shell, tools, public pages, data files, and repository PDFs are cached f
 
 Serve the repository locally and run browser acceptance checks against `http://localhost:8000`. JavaScript source can also be syntax-checked with Node.js.
 
+Run every maintained model and geometry test from the repository root:
+
+```bash
+node --test tools/*.test.mjs
+```
+
 Production is hosted from the `main` branch with GitHub Pages. Publishing requires committing and pushing the verified static files; there is no build step.
 
 ## Dependencies
 
 - A current browser with ES modules, Canvas 2D, service workers, localStorage, and dialog support
 - Python 3 for the documented local server command
+- Node.js 18 or newer for the maintained test suite
 - GitHub Pages for production hosting
 - Bundled PDF.js 3.11.174 and PDF-Lib 1.17.1
 - KaTeX 0.16.9 from jsDelivr for flashcard equation rendering

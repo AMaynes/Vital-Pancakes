@@ -1,0 +1,114 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  getObjectSegments,
+  getObjectBounds,
+  getShapeCorners,
+  isExplodableObject,
+  normalizeShape,
+  objectIntersectsRectangle,
+  pointHitsObject,
+  resizeShapeFromCorner,
+  snapValue,
+} from "./visual-board-geometry.mjs";
+
+test("normalizeShape converts reverse drags into positive geometry", () => {
+  assert.deepEqual(
+    normalizeShape({ x: 30, y: 40, w: -20, h: -10 }),
+    { x: 10, y: 30, w: 20, h: 10 },
+  );
+});
+
+test("rotated shape bounds follow its world-space corners", () => {
+  const object = { type: "rectangle", x: 0, y: 0, w: 100, h: 40, rotation: Math.PI / 2 };
+  const bounds = getObjectBounds(object);
+  assert.ok(Math.abs(bounds.width - 40) < 0.0001);
+  assert.ok(Math.abs(bounds.height - 100) < 0.0001);
+});
+
+test("corner resizing keeps the opposite corner fixed", () => {
+  const object = { type: "rectangle", x: 10, y: 20, w: 100, h: 50, rotation: Math.PI / 6 };
+  const originalSouthWest = getShapeCorners(object).sw;
+  const resized = resizeShapeFromCorner(object, "ne", { x: 180, y: 5 });
+  const resizedSouthWest = getShapeCorners(resized).sw;
+  assert.ok(Math.abs(originalSouthWest.x - resizedSouthWest.x) < 0.0001);
+  assert.ok(Math.abs(originalSouthWest.y - resizedSouthWest.y) < 0.0001);
+  assert.ok(resized.w >= 16);
+  assert.ok(resized.h >= 16);
+});
+
+test("hit testing respects shape rotation", () => {
+  const object = {
+    type: "rectangle",
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 30,
+    rotation: Math.PI / 4,
+    strokeWidth: 2,
+  };
+  assert.equal(pointHitsObject(object, { x: 50, y: 15 }, 0), true);
+  assert.equal(pointHitsObject(object, { x: 0, y: 80 }, 0), false);
+});
+
+test("marquee intersection and grid snapping use world coordinates", () => {
+  const object = { type: "connector", x: 40, y: 40, endX: 120, endY: 90, strokeWidth: 3 };
+  assert.equal(
+    objectIntersectsRectangle(object, { x: 80, y: 60, width: 80, height: 80 }),
+    true,
+  );
+  assert.equal(
+    objectIntersectsRectangle(object, { x: 200, y: 200, width: 20, height: 20 }),
+    false,
+  );
+  assert.equal(snapValue(47, 32), 32);
+  assert.equal(snapValue(50, 32), 64);
+});
+
+test("outlined 2D and 3D shapes produce selectable world-space segments", () => {
+  const triangle = {
+    type: "shape",
+    shapeKind: "triangle",
+    x: 10,
+    y: 20,
+    w: 120,
+    h: 80,
+    rotation: 0,
+    strokeWidth: 3,
+  };
+  const cube = { ...triangle, shapeKind: "cube" };
+  assert.equal(getObjectSegments(triangle).length, 3);
+  assert.equal(getObjectSegments(cube).length, 12);
+  assert.equal(pointHitsObject(triangle, { x: 70, y: 20 }, 2), true);
+  assert.equal(pointHitsObject(triangle, { x: 70, y: 60 }, 2), false);
+});
+
+test("curved outlined shapes can be exploded into clean line approximations", () => {
+  const ellipse = {
+    type: "ellipse",
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 60,
+    rotation: Math.PI / 8,
+    strokeWidth: 2,
+  };
+  assert.equal(getObjectSegments(ellipse).length, 36);
+  assert.equal(isExplodableObject(ellipse), true);
+  assert.equal(isExplodableObject({ type: "textbox" }), false);
+});
+
+test("lines share connector bounds and hit-testing behavior", () => {
+  const line = {
+    type: "line",
+    x: 20,
+    y: 30,
+    endX: 120,
+    endY: 70,
+    strokeWidth: 4,
+  };
+  assert.deepEqual(getObjectBounds(line), { x: 20, y: 30, width: 100, height: 40 });
+  assert.equal(pointHitsObject(line, { x: 70, y: 50 }, 0), true);
+  assert.equal(pointHitsObject(line, { x: 70, y: 75 }, 0), false);
+});

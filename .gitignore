@@ -8,3 +8,9 @@
 # Temporary output
 tmp/
 dist/
+
+# Local logo-generation iterations; canonical artwork uses the final files.
+assets/pinakes-vitae-logo-concept*.png
+assets/pinakes-vitae-logo-blackletter*.png
+assets/pinakes-vitae-logo-inscribed*.png
+assets/pinakes-vitae-logo-white-on-charcoal*.png
