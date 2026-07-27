@@ -207,6 +207,47 @@ export function distancePointToSegment(point, start, end) {
   });
 }
 
+/**
+ * Returns a narrow rotated rectangle surrounding a straight line or arrow.
+ */
+export function getLineSelectionCorners(object, padding = 8) {
+  const start = { x: object.x, y: object.y };
+  const end = { x: object.endX, y: object.endY };
+  const length = distanceBetween(start, end);
+  if (length === 0) {
+    return [
+      { x: start.x - padding, y: start.y - padding },
+      { x: start.x + padding, y: start.y - padding },
+      { x: start.x + padding, y: start.y + padding },
+      { x: start.x - padding, y: start.y + padding },
+    ];
+  }
+
+  const tangent = {
+    x: (end.x - start.x) / length,
+    y: (end.y - start.y) / length,
+  };
+  const normal = { x: -tangent.y, y: tangent.x };
+  return [
+    {
+      x: start.x - tangent.x * padding + normal.x * padding,
+      y: start.y - tangent.y * padding + normal.y * padding,
+    },
+    {
+      x: end.x + tangent.x * padding + normal.x * padding,
+      y: end.y + tangent.y * padding + normal.y * padding,
+    },
+    {
+      x: end.x + tangent.x * padding - normal.x * padding,
+      y: end.y + tangent.y * padding - normal.y * padding,
+    },
+    {
+      x: start.x - tangent.x * padding - normal.x * padding,
+      y: start.y - tangent.y * padding - normal.y * padding,
+    },
+  ];
+}
+
 function normalizedPointToWorld(object, point) {
   const center = getShapeCenter(object);
   return rotatePoint({

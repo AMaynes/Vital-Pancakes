@@ -281,6 +281,25 @@
   font-size: 9px;
 }
 
+.board-text-style-group {
+  background: rgb(49 95 168 / 4%);
+}
+
+.text-font-select {
+  width: 94px;
+  font-size: 9px;
+}
+
+.text-size-input {
+  width: 47px;
+  font-size: 9px;
+  text-align: center;
+}
+
+.text-color-control .tool-color {
+  border-radius: 50%;
+}
+
 .architecture-map-frame,
 .pdf-frame {
   position: relative;

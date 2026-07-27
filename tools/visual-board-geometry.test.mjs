@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  distanceBetween,
   getObjectSegments,
   getObjectBounds,
+  getLineSelectionCorners,
   getShapeCorners,
   isExplodableObject,
   normalizeShape,
@@ -132,4 +134,22 @@ test("lines share connector bounds and hit-testing behavior", () => {
   assert.deepEqual(getObjectBounds(line), { x: 20, y: 30, width: 100, height: 40 });
   assert.equal(pointHitsObject(line, { x: 70, y: 50 }, 0), true);
   assert.equal(pointHitsObject(line, { x: 70, y: 75 }, 0), false);
+});
+
+test("diagonal line selection uses a narrow rotated rectangle", () => {
+  const line = {
+    type: "line",
+    x: 0,
+    y: 0,
+    endX: 120,
+    endY: 60,
+  };
+  const corners = getLineSelectionCorners(line, 8);
+  const sideLength = distanceBetween(corners[0], corners[3]);
+  const longEdgeLength = distanceBetween(corners[0], corners[1]);
+
+  assert.ok(Math.abs(sideLength - 16) < 0.0001);
+  assert.ok(Math.abs(longEdgeLength - (Math.hypot(120, 60) + 16)) < 0.0001);
+  assert.ok(corners[0].y > line.y);
+  assert.ok(corners[3].y < line.y);
 });

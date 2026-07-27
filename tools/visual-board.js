@@ -4,11 +4,13 @@
  */
 
 import { createId, isDeletePasswordValid } from "../app/store.js";
+import { duplicateBoardObjects } from "./visual-board-clipboard.mjs";
 import {
   LINE_TYPES,
   SHAPE_TYPES,
   clamp,
   distanceBetween,
+  getLineSelectionCorners,
   getObjectBounds,
   getObjectSegments,
   getShapeCenter,
@@ -22,7 +24,7 @@ import {
 } from "./visual-board-geometry.mjs";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
-const BOARD_VERSION = 4;
+const BOARD_VERSION = 5;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -34,6 +36,13 @@ const DEFAULT_TEXTBOX_WIDTH = 210;
 const DEFAULT_TEXTBOX_HEIGHT = 72;
 const MAX_IMAGE_DIMENSION = 1800;
 const DASH_PATTERNS = new Set(["solid", "dashed", "dotted", "dash-dot", "long-dash"]);
+const TEXT_FONT_FAMILIES = Object.freeze({
+  serif: 'Georgia, "Times New Roman", serif',
+  sans: "Arial, Helvetica, sans-serif",
+  mono: '"Courier New", Courier, monospace',
+  typewriter: '"American Typewriter", "Courier New", serif',
+  handwriting: '"Bradley Hand", "Segoe Print", cursive',
+});
 const SHAPE_KINDS = new Set([
   "triangle",
   "diamond",
@@ -53,6 +62,10 @@ const colorInput = document.querySelector("#stroke-color");
 const widthInput = document.querySelector("#stroke-width");
 const widthValue = document.querySelector("#stroke-width-value");
 const patternInput = document.querySelector("#stroke-pattern");
+const textStyleControls = document.querySelector("#text-style-controls");
+const textFontInput = document.querySelector("#text-font");
+const textSizeInput = document.querySelector("#text-font-size");
+const textColorInput = document.querySelector("#text-color");
 const shape2dInput = document.querySelector("#shape-2d");
 const shape3dInput = document.querySelector("#shape-3d");
 const drawingTools = document.querySelector("#drawing-tools");
@@ -64,6 +77,8 @@ const ungroupSelectionButton = document.querySelector("#ungroup-selection");
 const explodeSelectionButton = document.querySelector("#explode-selection");
 const reassembleSelectionButton = document.querySelector("#reassemble-selection");
 const deleteSelectionButton = document.querySelector("#delete-selection");
+const copySelectionButton = document.querySelector("#copy-selection");
+const pasteSelectionButton = document.querySelector("#paste-selection");
 const gridToggle = document.querySelector("#toggle-grid");
 const snapToggle = document.querySelector("#toggle-snap");
 const saveStatus = document.querySelector("#save-status");
@@ -82,6 +97,9 @@ let viewSaveTimer = null;
 let spaceHeld = false;
 let widthChangeActive = false;
 let colorChangeActive = false;
+let textColorChangeActive = false;
+let objectClipboard = [];
+let pasteGeneration = 0;
 
 const imageCache = new Map();
 
@@ -212,6 +230,9 @@ function normalizeObject(rawObject, options = {}) {
   }
 
   if (type === "textbox") {
+    const fontFamily = Object.hasOwn(TEXT_FONT_FAMILIES, rawObject.fontFamily)
+      ? rawObject.fontFamily
+      : "serif";
     return normalizeShape({
       ...common,
       x: finiteNumber(rawObject.x, 0),
@@ -221,6 +242,7 @@ function normalizeObject(rawObject, options = {}) {
       rotation: finiteNumber(rawObject.rotation, 0),
       text: typeof rawObject.text === "string" ? rawObject.text : "",
       fontSize: clamp(finiteNumber(rawObject.fontSize, 18), 8, 96),
+      fontFamily,
     });
   }
 
@@ -517,7 +539,7 @@ function drawTextbox(object) {
   context.rect(object.x, object.y, object.w, object.h);
   context.clip();
   context.fillStyle = isPlaceholder ? "#a7a7a7" : object.color;
-  context.font = `${object.fontSize}px Georgia, "Times New Roman", serif`;
+  context.font = `${object.fontSize}px ${getTextFontCss(object.fontFamily)}`;
   context.textBaseline = "top";
   const lines = wrapText(text, Math.max(20, object.w - padding * 2));
   const lineHeight = object.fontSize * 1.25;
@@ -525,6 +547,10 @@ function drawTextbox(object) {
     context.fillText(line, object.x + padding, object.y + padding + index * lineHeight);
   });
   context.restore();
+}
+
+function getTextFontCss(fontFamily) {
+  return TEXT_FONT_FAMILIES[fontFamily] ?? TEXT_FONT_FAMILIES.serif;
 }
 
 function wrapText(text, maximumWidth) {
@@ -604,26 +630,17 @@ function drawSelection() {
   context.lineWidth = 1 / viewport.zoom;
   context.setLineDash([6 / viewport.zoom, 4 / viewport.zoom]);
 
-  if (selectedObjects.length > 1) {
-    const bounds = getSelectionBounds(selectedObjects);
-    context.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
-    if (selectedObjects.some((object) => object.locked)) drawLockBadge(bounds);
-    context.restore();
-    return;
-  }
+  const showHandles = selectedObjects.length === 1;
+  selectedObjects.forEach((object) => drawObjectSelection(object, showHandles));
+  context.restore();
+}
 
-  const object = selectedObjects[0];
+function drawObjectSelection(object, showHandles) {
   if (SHAPE_TYPES.has(object.type)) {
     const corners = getShapeCorners(object);
-    context.beginPath();
-    context.moveTo(corners.nw.x, corners.nw.y);
-    context.lineTo(corners.ne.x, corners.ne.y);
-    context.lineTo(corners.se.x, corners.se.y);
-    context.lineTo(corners.sw.x, corners.sw.y);
-    context.closePath();
-    context.stroke();
+    strokeSelectionPolygon(Object.values(corners));
 
-    if (!object.locked) {
+    if (showHandles && !object.locked) {
       context.setLineDash([]);
       Object.values(corners).forEach((point) => drawHandle(point));
       const rotationHandle = getRotationHandlePoint(object);
@@ -635,11 +652,9 @@ function drawSelection() {
       drawHandle(rotationHandle, true);
     }
   } else if (LINE_TYPES.has(object.type)) {
-    context.beginPath();
-    context.moveTo(object.x, object.y);
-    context.lineTo(object.endX, object.endY);
-    context.stroke();
-    if (!object.locked) {
+    const padding = Math.max(8 / viewport.zoom, object.strokeWidth / 2 + 4 / viewport.zoom);
+    strokeSelectionPolygon(getLineSelectionCorners(object, padding));
+    if (showHandles && !object.locked) {
       context.setLineDash([]);
       drawHandle({ x: object.x, y: object.y });
       drawHandle({ x: object.endX, y: object.endY });
@@ -650,7 +665,15 @@ function drawSelection() {
   }
 
   if (object.locked) drawLockBadge(getObjectBounds(object));
-  context.restore();
+}
+
+function strokeSelectionPolygon(points) {
+  if (!points.length) return;
+  context.beginPath();
+  context.moveTo(points[0].x, points[0].y);
+  points.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+  context.closePath();
+  context.stroke();
 }
 
 function drawHandle(point, isRotationHandle = false) {
@@ -927,13 +950,15 @@ function createWorkingObject(type, startPoint) {
   if (type === "textbox") {
     return {
       ...common,
+      color: textColorInput.value,
       x: startPoint.x,
       y: startPoint.y,
       w: 0,
       h: 0,
       rotation: 0,
       text: "",
-      fontSize: 18,
+      fontSize: clamp(Number(textSizeInput.value), 8, 96),
+      fontFamily: textFontInput.value,
     };
   }
   return null;
@@ -1286,10 +1311,13 @@ function exportBoard() {
 
 function updateSelectionControls() {
   selectionActions.hidden = selectedObjects.length === 0;
+  copySelectionButton.disabled = selectedObjects.length === 0;
+  pasteSelectionButton.disabled = objectClipboard.length === 0;
   selectionCount.textContent = selectedObjects.length === 1
     ? "1 selected"
     : `${selectedObjects.length} selected`;
 
+  updateTextStyleControls();
   if (!selectedObjects.length) return;
   const allLocked = selectedObjects.every((object) => object.locked);
   const anyLocked = selectedObjects.some((object) => object.locked);
@@ -1314,6 +1342,16 @@ function updateSelectionControls() {
     widthValue.textContent = styleObject.strokeWidth;
     patternInput.value = styleObject.dashPattern ?? "solid";
   }
+}
+
+function updateTextStyleControls() {
+  const selectedTextboxes = selectedObjects.filter((object) => object.type === "textbox");
+  textStyleControls.hidden = activeTool !== "textbox" && selectedTextboxes.length === 0;
+  const source = selectedTextboxes[0];
+  if (!source) return;
+  textFontInput.value = source.fontFamily ?? "serif";
+  textSizeInput.value = String(source.fontSize);
+  textColorInput.value = source.color;
 }
 
 function assembleSelection() {
@@ -1454,6 +1492,35 @@ function deleteSelection() {
   drawBoard();
 }
 
+function copySelection() {
+  if (!selectedObjects.length) return;
+  objectClipboard = cloneValue(selectedObjects);
+  pasteGeneration = 0;
+  updateSelectionControls();
+  announceStatus(`${objectClipboard.length} object${objectClipboard.length === 1 ? "" : "s"} copied`);
+}
+
+function pasteSelection() {
+  if (!objectClipboard.length) return;
+  pasteGeneration += 1;
+  const offset = GRID_SIZE * pasteGeneration;
+  const pastedObjects = duplicateBoardObjects(
+    objectClipboard,
+    createId,
+    { x: offset, y: offset },
+  ).map(normalizeObject).filter(Boolean);
+  if (!pastedObjects.length) return;
+
+  checkpoint();
+  board.objects.push(...pastedObjects);
+  selectedObjects = pastedObjects;
+  closeTextEditor();
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  announceStatus(`${pastedObjects.length} object${pastedObjects.length === 1 ? "" : "s"} pasted`);
+}
+
 function toggleSelectionLock() {
   if (!selectedObjects.length) return;
   const shouldLock = selectedObjects.some((object) => !object.locked);
@@ -1477,7 +1544,57 @@ function applySelectedColor() {
   targets.forEach((object) => {
     object.color = colorInput.value;
   });
+  const selectedTextbox = targets.find((object) => object.type === "textbox");
+  if (selectedTextbox) textColorInput.value = selectedTextbox.color;
   drawBoard();
+}
+
+function getEditableSelectedTextboxes() {
+  return selectedObjects.filter((object) => object.type === "textbox" && !object.locked);
+}
+
+function applySelectedTextFont() {
+  const targets = getEditableSelectedTextboxes();
+  if (!targets.length) return;
+  checkpoint();
+  targets.forEach((object) => {
+    object.fontFamily = textFontInput.value;
+  });
+  saveBoard();
+  drawBoard();
+}
+
+function applySelectedTextSize() {
+  const fontSize = clamp(Number(textSizeInput.value), 8, 96);
+  textSizeInput.value = String(fontSize);
+  const targets = getEditableSelectedTextboxes();
+  if (!targets.length) return;
+  checkpoint();
+  targets.forEach((object) => {
+    object.fontSize = fontSize;
+  });
+  saveBoard();
+  drawBoard();
+}
+
+function applySelectedTextColor() {
+  const targets = getEditableSelectedTextboxes();
+  colorInput.value = textColorInput.value;
+  if (!targets.length) return;
+  if (!textColorChangeActive) {
+    checkpoint();
+    textColorChangeActive = true;
+  }
+  targets.forEach((object) => {
+    object.color = textColorInput.value;
+  });
+  drawBoard();
+}
+
+function finishTextColorChange() {
+  if (!textColorChangeActive) return;
+  textColorChangeActive = false;
+  saveBoard();
 }
 
 function applySelectedStrokeWidth() {
@@ -1542,6 +1659,7 @@ function setActiveTool(nextTool) {
   if (!is2dShape) shape2dInput.value = "";
   if (!is3dShape) shape3dInput.value = "";
   closeTextEditor();
+  updateTextStyleControls();
   updateCanvasCursor();
   drawBoard();
 }
@@ -1585,6 +1703,7 @@ function openTextEditor(object, checkpointBeforeEdit = true) {
   editor.value = object.text;
   editor.placeholder = "blank textbox";
   editor.setAttribute("aria-label", "Textbox content");
+  editor.style.fontFamily = getTextFontCss(object.fontFamily);
   canvasFrame.append(editor);
 
   const historyLength = history.length;
@@ -1625,6 +1744,7 @@ function positionTextEditor() {
   editor.style.width = `${Math.max(40, object.w * viewport.zoom)}px`;
   editor.style.height = `${Math.max(28, object.h * viewport.zoom)}px`;
   editor.style.fontSize = `${Math.max(8, object.fontSize * viewport.zoom)}px`;
+  editor.style.fontFamily = getTextFontCss(object.fontFamily);
   editor.style.color = object.color;
   editor.style.transform = `rotate(${object.rotation ?? 0}rad)`;
 }
@@ -1657,7 +1777,23 @@ function handleDoubleClick(event) {
 function handleKeyDown(event) {
   if (textEditorSession) return;
   const commandKey = event.metaKey || event.ctrlKey;
+  const eventTarget = event.target;
+  const isEditingControl = eventTarget instanceof HTMLElement
+    && eventTarget.matches("input, textarea, select, [contenteditable='true']");
+  if (isEditingControl) return;
 
+  if (commandKey && event.key.toLowerCase() === "c") {
+    if (!selectedObjects.length) return;
+    event.preventDefault();
+    copySelection();
+    return;
+  }
+  if (commandKey && event.key.toLowerCase() === "v") {
+    if (!objectClipboard.length) return;
+    event.preventDefault();
+    pasteSelection();
+    return;
+  }
   if (commandKey && event.key.toLowerCase() === "z") {
     event.preventDefault();
     if (event.shiftKey) redo();
@@ -1844,6 +1980,8 @@ document.querySelector("#redo-board").addEventListener("click", redo);
 document.querySelector("#zoom-in").addEventListener("click", () => setZoom(viewport.zoom + 0.1));
 document.querySelector("#zoom-out").addEventListener("click", () => setZoom(viewport.zoom - 0.1));
 document.querySelector("#export-board").addEventListener("click", exportBoard);
+copySelectionButton.addEventListener("click", copySelection);
+pasteSelectionButton.addEventListener("click", pasteSelection);
 deleteSelectionButton.addEventListener("click", deleteSelection);
 lockSelectionButton.addEventListener("click", toggleSelectionLock);
 groupSelectionButton.addEventListener("click", assembleSelection);
@@ -1857,6 +1995,11 @@ widthInput.addEventListener("input", applySelectedStrokeWidth);
 widthInput.addEventListener("change", finishWidthChange);
 widthInput.addEventListener("blur", finishWidthChange);
 patternInput.addEventListener("change", applySelectedStrokePattern);
+textFontInput.addEventListener("change", applySelectedTextFont);
+textSizeInput.addEventListener("change", applySelectedTextSize);
+textColorInput.addEventListener("input", applySelectedTextColor);
+textColorInput.addEventListener("change", finishTextColorChange);
+textColorInput.addEventListener("blur", finishTextColorChange);
 gridToggle.addEventListener("click", () => {
   board.settings.grid = !board.settings.grid;
   updateViewControls();

@@ -38,6 +38,8 @@ pinakes-vitae/
 │   ├── tool.css — Shares full-screen tool layouts and controls.
 │   ├── visual-board.html — Hosts diagramming and painting.
 │   ├── visual-board.js — Coordinates the infinite canvas, tools, persistence, and export.
+│   ├── visual-board-clipboard.mjs — Duplicates selected board objects while preserving internal relationships.
+│   ├── visual-board-clipboard.test.mjs — Verifies multi-object clipboard duplication and identifier remapping.
 │   ├── visual-board-geometry.mjs — Provides pure hit-testing, bounds, rotation, and resizing math.
 │   ├── visual-board-geometry.test.mjs — Verifies Visual Board geometry with Node's test runner.
 │   ├── pdf-signer.html — Hosts local PDF viewing and signing.
@@ -175,9 +177,9 @@ Shares responsive full-screen layouts, controls, panels, canvas surfaces, signat
 
 ### Visual Board
 
-`visual-board.html` hosts the organized creation, selection, view, history, and style controls, including 2D and 3D shape menus and contextual assembly actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, freehand drawing, brush erasing, straight lines, arrows with editable start and tip handles, inline textboxes, marquee selection, locking, stroke patterns, object grouping, shape division and reassembly, grid snapping, 300-action undo and redo history, local autosave, and PNG export. Dropped images are compressed and retained as local board assets; they are never uploaded.
+`visual-board.html` hosts the organized creation, selection, view, history, and style controls, including 2D and 3D shape menus, copy and paste tools, contextual textbox typography, and assembly actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, freehand drawing, brush erasing, straight lines, arrows with editable start and tip handles, inline textboxes, tight per-object selection outlines, marquee selection, multi-object copy and paste, locking, stroke patterns, object grouping, shape division and reassembly, grid snapping, 300-action undo and redo history, local autosave, and PNG export. Dropped images are compressed and retained as local board assets; they are never uploaded.
 
-`visual-board-geometry.mjs` isolates the pure geometry used for reusable 2D and 3D segment outlines, world bounds, rotated handles, hit testing, marquee intersection, grid snapping, corner-based resizing, and shape division. `visual-board-geometry.test.mjs` exercises those contracts with Node's built-in test runner.
+`visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps group and divided-shape identifiers without mutating the originals. Its adjacent test file verifies those relationships. `visual-board-geometry.mjs` isolates the pure geometry used for reusable 2D and 3D segment outlines, world bounds, tight rotated line selections, rotated handles, hit testing, marquee intersection, grid snapping, corner-based resizing, and shape division. `visual-board-geometry.test.mjs` exercises those contracts with Node's built-in test runner.
 
 ### PDF Signer
 

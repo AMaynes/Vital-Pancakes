@@ -7,7 +7,7 @@
   <title>Visual Board · Pinakes Vitae</title>
   <link rel="icon" href="../assets/pinakes-vitae-logo-final-light.png" type="image/png">
   <link rel="stylesheet" href="../workspace.css?v=16">
-  <link rel="stylesheet" href="tool.css?v=21">
+  <link rel="stylesheet" href="tool.css?v=22">
   <link rel="stylesheet" href="../site-navigation.css?v=17">
   <script type="module" src="../site-navigation.js?v=4"></script>
 </head>
@@ -111,6 +111,27 @@
           </label>
         </div>
 
+        <div class="toolbar-group board-text-style-group" id="text-style-controls" aria-label="Textbox style" hidden>
+          <label class="toolbar-control text-font-control" title="Font for selected textboxes or the next textbox">
+            <span>Font</span>
+            <select class="tool-select text-font-select" id="text-font" aria-label="Textbox font">
+              <option value="serif">Serif</option>
+              <option value="sans">Sans serif</option>
+              <option value="mono">Monospace</option>
+              <option value="typewriter">Typewriter</option>
+              <option value="handwriting">Handwriting</option>
+            </select>
+          </label>
+          <label class="toolbar-control text-size-control" title="Font size for selected textboxes or the next textbox">
+            <span>Size</span>
+            <input class="tool-input text-size-input" id="text-font-size" type="number" min="8" max="96" step="1" value="18" aria-label="Textbox font size">
+          </label>
+          <label class="toolbar-control text-color-control" title="Color for selected textboxes or the next textbox">
+            <span>Text</span>
+            <input class="tool-color" id="text-color" type="color" value="#000000" aria-label="Textbox color">
+          </label>
+        </div>
+
         <div class="toolbar-group board-view-group" role="toolbar" aria-label="Grid controls">
           <button class="tool-button" id="toggle-grid" type="button" aria-pressed="true" title="Show or hide the grid">
             ▦ <span class="tool-button-label">Grid</span>
@@ -121,6 +142,9 @@
         </div>
 
         <div class="toolbar-group board-history-group" role="toolbar" aria-label="History and zoom">
+          <button class="tool-button" id="copy-selection" type="button" title="Copy selection" aria-label="Copy selection" disabled>⧉</button>
+          <button class="tool-button" id="paste-selection" type="button" title="Paste copied objects" aria-label="Paste copied objects" disabled>▣</button>
+          <span class="toolbar-divider"></span>
           <button class="tool-button" id="undo-board" type="button" title="Undo" aria-label="Undo">↶</button>
           <button class="tool-button" id="redo-board" type="button" title="Redo" aria-label="Redo">↷</button>
           <span class="toolbar-divider"></span>
@@ -165,6 +189,6 @@
       </section>
     </main>
   </div>
-  <script type="module" src="visual-board.js?v=4"></script>
+  <script type="module" src="visual-board.js?v=5"></script>
 </body>
 </html>
