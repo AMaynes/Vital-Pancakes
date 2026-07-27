@@ -16,6 +16,7 @@
  */
 
 import { createId } from "../app/store.js";
+import { removePlacementById } from "./pdf-signer-placements.mjs";
 
 const { PDFDocument } = globalThis.PDFLib;
 globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc = "../vendor/pdf.worker.min.js";
@@ -28,7 +29,7 @@ const addSignatureButton = document.querySelector("#add-signature");
 const dateInput = document.querySelector("#signature-date");
 const addDateButton = document.querySelector("#add-date");
 const downloadButton = document.querySelector("#download-signed-pdf");
-const removeButton = document.querySelector("#remove-signature");
+const deletePlacementButton = document.querySelector("#delete-placement");
 const pageStage = document.querySelector("#pdf-page-stage");
 const signatureLayer = document.querySelector("#signature-layer");
 const pdfCanvas = document.querySelector("#pdf-canvas");
@@ -119,7 +120,15 @@ function renderPlacements() {
     const stamp = document.createElement("div");
     stamp.className = `signature-stamp ${placement.font} ${placement.kind === "date" ? "date-stamp" : ""}`;
     stamp.dataset.placementId = placement.id;
+    stamp.dataset.placementKind = placement.kind;
+    stamp.dataset.placementText = placement.text;
     stamp.textContent = placement.text;
+    stamp.tabIndex = 0;
+    stamp.setAttribute("role", "group");
+    stamp.setAttribute(
+      "aria-label",
+      `${placement.id === selectedPlacementId ? "Selected " : ""}placed ${placement.kind}: ${placement.text}`,
+    );
     stamp.style.left = `${placement.xRatio * 100}%`;
     stamp.style.top = `${placement.yRatio * 100}%`;
     stamp.style.width = `${placement.widthRatio * 100}%`;
@@ -129,10 +138,29 @@ function renderPlacements() {
     const resizeHandle = document.createElement("span");
     resizeHandle.className = "signature-resize";
     resizeHandle.title = `Resize ${placement.kind}`;
+
+    const deleteControl = document.createElement("button");
+    deleteControl.className = "signature-delete";
+    deleteControl.type = "button";
+    deleteControl.title = `Delete ${placement.kind}`;
+    deleteControl.setAttribute("aria-label", `Delete placed ${placement.kind}`);
+    deleteControl.innerHTML = `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"></path>
+      </svg>
+    `;
+    deleteControl.addEventListener("pointerdown", (event) => event.stopPropagation());
+    deleteControl.addEventListener("click", (event) => {
+      event.stopPropagation();
+      deletePlacement(placement.id);
+    });
+
     stamp.append(resizeHandle);
+    stamp.append(deleteControl);
+    stamp.addEventListener("focus", () => selectPlacement(placement.id));
     signatureLayer.append(stamp);
   });
-  removeButton.disabled = !selectedPlacementId;
+  deletePlacementButton.disabled = !selectedPlacementId;
 }
 
 /**
@@ -155,6 +183,7 @@ function addSignature() {
   selectedPlacementId = placement.id;
   renderPlacements();
   updateControls();
+  setStatus("Signature placed · selected");
 }
 
 /**
@@ -177,6 +206,7 @@ function addDate() {
   selectedPlacementId = placement.id;
   renderPlacements();
   updateControls();
+  setStatus("Date placed · selected");
 }
 
 /**
@@ -216,14 +246,13 @@ function getTodayInputValue() {
 function startPlacementGesture(event) {
   const stamp = event.target.closest(".signature-stamp");
   if (!stamp) {
-    selectedPlacementId = null;
-    renderPlacements();
+    selectPlacement(null);
     return;
   }
   event.preventDefault();
   const placement = placements.find((candidate) => candidate.id === stamp.dataset.placementId);
   if (!placement) return;
-  selectedPlacementId = placement.id;
+  selectPlacement(placement.id);
   stamp.setPointerCapture(event.pointerId);
   stamp.classList.add("is-dragging");
   activeDrag = {
@@ -237,7 +266,6 @@ function startPlacementGesture(event) {
     startTop: placement.yRatio,
     startWidth: placement.widthRatio,
   };
-  removeButton.disabled = false;
 }
 
 /**
@@ -275,6 +303,42 @@ function endPlacementGesture(event) {
   activeDrag.stamp.classList.remove("is-dragging");
   activeDrag = null;
   renderPlacements();
+}
+
+/**
+ * Selects one placed field and refreshes its accessible and visual state.
+ *
+ * @param {string | null} placementId Placement identifier, or null to clear.
+ */
+function selectPlacement(placementId) {
+  selectedPlacementId = placements.some((placement) => placement.id === placementId)
+    ? placementId
+    : null;
+  signatureLayer.querySelectorAll(".signature-stamp").forEach((stamp) => {
+    const isSelected = stamp.dataset.placementId === selectedPlacementId;
+    stamp.classList.toggle("is-selected", isSelected);
+    stamp.setAttribute(
+      "aria-label",
+      `${isSelected ? "Selected " : ""}placed ${stamp.dataset.placementKind}: ${stamp.dataset.placementText}`,
+    );
+  });
+  updateControls();
+}
+
+/**
+ * Removes a placed field from both the viewer overlay and export data.
+ *
+ * @param {string | null} placementId Placement identifier.
+ */
+function deletePlacement(placementId) {
+  const result = removePlacementById(placements, placementId);
+  if (!result.removed) return;
+  placements = result.placements;
+  selectedPlacementId = null;
+  renderPlacements();
+  updateControls();
+  const label = result.removed.kind === "date" ? "Date" : "Signature";
+  setStatus(`${label} deleted`);
 }
 
 /**
@@ -376,7 +440,7 @@ function updateControls() {
   addSignatureButton.disabled = !hasDocument || !signatureInput.value.trim();
   addDateButton.disabled = !hasDocument || !dateInput.value;
   downloadButton.disabled = !hasDocument || placements.length === 0;
-  removeButton.disabled = !selectedPlacementId;
+  deletePlacementButton.disabled = !selectedPlacementId;
 }
 
 /**
@@ -431,11 +495,21 @@ document.querySelector("#next-page").addEventListener("click", async () => {
   selectedPlacementId = null;
   await renderPage();
 });
-removeButton.addEventListener("click", () => {
-  placements = placements.filter((placement) => placement.id !== selectedPlacementId);
-  selectedPlacementId = null;
-  renderPlacements();
-  updateControls();
+deletePlacementButton.addEventListener("click", () => deletePlacement(selectedPlacementId));
+
+document.addEventListener("keydown", (event) => {
+  const target = event.target;
+  const isEditing = target instanceof Element
+    && (target.matches("input, textarea, select") || target.closest("[contenteditable='true']"));
+  if (isEditing) return;
+
+  if ((event.key === "Delete" || event.key === "Backspace") && selectedPlacementId) {
+    event.preventDefault();
+    deletePlacement(selectedPlacementId);
+  } else if (event.key === "Escape" && selectedPlacementId) {
+    event.preventDefault();
+    selectPlacement(null);
+  }
 });
 
 signatureLayer.addEventListener("pointerdown", startPlacementGesture);

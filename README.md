@@ -80,7 +80,7 @@ Image files can be dropped directly onto the board without an upload control. Th
 
 ### PDF Signer
 
-Opens PDFs locally with bundled PDF.js, supports page navigation, creates signatures in three visual styles, adds selectable dates, allows every placed field to be moved and resized on any page, and downloads a genuinely signed PDF with PDF-Lib. Documents never leave the browser.
+Opens PDFs locally with bundled PDF.js, supports page navigation, creates signatures in three visual styles, adds selectable dates, and allows every placed field to be moved, resized, or deleted before export. Select a signature or date to use its visible trash control, the toolbar action, or Delete/Backspace; Escape clears the selection. The finished file downloads as a genuinely signed PDF with PDF-Lib, and documents never leave the browser.
 
 ### Literature Analyzer
 

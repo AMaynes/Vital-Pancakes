@@ -602,6 +602,13 @@
   box-shadow: 0 5px 18px rgb(23 35 31 / 20%);
 }
 
+.signature-stamp.is-selected {
+  border-style: solid;
+  outline: 2px solid rgb(123 33 26 / 30%);
+  outline-offset: 2px;
+  background: rgb(255 255 255 / 72%);
+}
+
 .signature-stamp.date-stamp {
   min-width: 90px;
   min-height: 34px;
@@ -617,6 +624,48 @@
   border: 1px solid var(--white);
   border-radius: 50%;
   background: var(--forest);
+}
+
+.signature-delete {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  display: none;
+  width: 27px;
+  height: 27px;
+  padding: 5px;
+  place-items: center;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: #7b211a;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgb(23 22 19 / 24%);
+}
+
+.signature-stamp.is-selected .signature-delete {
+  display: grid;
+}
+
+.signature-delete:hover,
+.signature-delete:focus-visible {
+  background: #5f1712;
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+.signature-delete svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.pdf-delete-button:not(:disabled) {
+  color: #7b211a;
 }
 
 .pdf-empty {

@@ -8,6 +8,7 @@
 # Temporary output
 tmp/
 dist/
+.playwright-cli/
 
 # Local logo-generation iterations; canonical artwork uses the final files.
 assets/pinakes-vitae-logo-concept*.png

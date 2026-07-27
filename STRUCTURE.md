@@ -47,6 +47,8 @@ pinakes-vitae/
 │   ├── visual-board-vertices.test.mjs — Verifies vertex merging, preservation, and connected-line reshaping.
 │   ├── pdf-signer.html — Hosts local PDF viewing and signing.
 │   ├── pdf-signer.js — Renders PDFs and embeds placed signatures and dates.
+│   ├── pdf-signer-placements.mjs — Owns immutable deletion of placed PDF fields.
+│   ├── pdf-signer-placements.test.mjs — Verifies placed-field deletion behavior.
 │   ├── literature-analyzer.html — Hosts PDF and website reading, highlighting, and comments.
 │   ├── literature-analyzer.css — Styles the split reading and annotation workspace.
 │   ├── literature-analyzer.js — Owns source loading, persistence, comments, and exports.
@@ -186,7 +188,7 @@ Shares responsive full-screen layouts, controls, panels, canvas surfaces, signat
 
 ### PDF Signer
 
-`pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js, manages page navigation and movable signature or date placements, and embeds those fields into a downloadable PDF with PDF-Lib.
+`pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js, manages page navigation and selectable, movable, resizable, or deletable signature and date placements, and embeds the remaining fields into a downloadable PDF with PDF-Lib. Selected fields expose an inline trash control and can also be deleted from the toolbar or keyboard. `pdf-signer-placements.mjs` owns immutable removal from export state, with an adjacent Node test suite.
 
 ### Literature Analyzer
 

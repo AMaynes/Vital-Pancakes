@@ -7,7 +7,7 @@
   <title>PDF Signer · Pinakes Vitae</title>
   <link rel="icon" href="../assets/pinakes-vitae-logo-final-light.png" type="image/png">
   <link rel="stylesheet" href="../workspace.css?v=17">
-  <link rel="stylesheet" href="tool.css?v=22">
+  <link rel="stylesheet" href="tool.css?v=23">
   <link rel="stylesheet" href="../site-navigation.css?v=17">
   <script type="module" src="../site-navigation.js?v=5"></script>
 </head>
@@ -37,7 +37,7 @@
         </div>
       </div>
       <div class="tool-topbar-actions">
-        <span class="tool-save-status" id="pdf-status">No document loaded</span>
+        <span class="tool-save-status" id="pdf-status" aria-live="polite">No document loaded</span>
         <button class="button button-primary" id="download-signed-pdf" type="button" disabled>
           Download signed PDF
         </button>
@@ -90,8 +90,19 @@
             <button class="tool-button" id="next-page" type="button" disabled>Next →</button>
           </div>
           <div class="toolbar-group">
-            <span class="tool-save-status">Drag placed fields · resize from the dot</span>
-            <button class="tool-button" id="remove-signature" type="button" disabled>Remove selected</button>
+            <span class="tool-save-status">Select a field · drag to move · resize from the dot</span>
+            <button
+              class="tool-button pdf-delete-button"
+              id="delete-placement"
+              type="button"
+              title="Delete the selected signature or date"
+              disabled
+            >
+              <svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"></path>
+              </svg>
+              Delete selected
+            </button>
           </div>
         </div>
         <div class="pdf-stage-wrap">
@@ -111,6 +122,6 @@
 
   <script src="../vendor/pdf.min.js"></script>
   <script src="../vendor/pdf-lib.min.js"></script>
-  <script type="module" src="pdf-signer.js?v=2"></script>
+  <script type="module" src="pdf-signer.js?v=3"></script>
 </body>
 </html>
