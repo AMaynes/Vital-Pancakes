@@ -18,7 +18,7 @@ pinakes-vitae/
 ├── research-literature.html — Unifies research, publications, and reading analysis.
 ├── download-app.html — Presents phone previews and the install guide.
 ├── download-app.css — Styles app previews and archival motion accents.
-├── workspace.html — Routes Protocols, Studies & Projects, and tools.
+├── workspace.html — Routes Everyday Life, Studies & Projects, and tools.
 ├── workspace.css — Defines the workspace and tool visual system.
 ├── manifest.webmanifest — Describes the installable workspace app.
 ├── sw.js — Caches the workspace, public archive, and tools for offline use.
@@ -26,6 +26,7 @@ pinakes-vitae/
 ├── app/
 │   ├── main.js — Renders workspace routes, libraries, and editors.
 │   ├── download-app.js — Connects the install page to supported PWA prompts.
+│   ├── store.test.mjs — Verifies Everyday Life defaults and legacy data migration.
 │   └── store.js — Owns browser-local data, persistence, and deletion policy.
 ├── assets/
 │   ├── pinakes-vitae-logo-final-light.png — Canonical black-ink logo on white.
@@ -117,7 +118,7 @@ This authoritative human-readable repository map. Update it when a maintained pa
 
 ### `index.html`
 
-The public entry point. It introduces and links exactly five top-level sections: Protocols, Research & Literature, Studies & Projects, Workspace, and Download App.
+The public entry point. It introduces and links exactly five top-level sections: Everyday Life, Research & Literature, Studies & Projects, Workspace, and Download App.
 
 ### `style.css`
 
@@ -125,7 +126,7 @@ The public site's archival design language: warm paper, black ink, oxblood annot
 
 ### `site-navigation.css` and `site-navigation.js`
 
-The canonical Pinakes Vitae header, anatomical brand mark, and primary Protocols, Research & Literature, Studies & Projects, Workspace, and Download App navigation used by every public page and tool. The script also inserts an always-present, file-like page path with back and forward history controls directly beneath the header.
+The canonical Pinakes Vitae header, anatomical brand mark, and primary Everyday Life, Research & Literature, Studies & Projects, Workspace, and Download App navigation used by every public page and tool. The script also inserts an always-present, file-like page path with back and forward history controls directly beneath the header.
 
 ### `research-literature.html`
 
@@ -137,7 +138,7 @@ The compact install destination with animated archival diagrams, phone preview s
 
 ### `workspace.html`
 
-The accessible application shell for three hash-routed areas. Protocols owns personal playbooks; Studies & Projects owns editable knowledge libraries and notecards; Workspace displays tools only.
+The accessible application shell for three hash-routed areas. Everyday Life owns separate Cooking, Gym, and Cleaning libraries; Studies & Projects owns editable knowledge libraries and notecards; Workspace displays tools only.
 
 ### `workspace.css`
 
@@ -159,11 +160,11 @@ Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sor
 
 ### `app/main.js`
 
-Renders the Protocols, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns core-library entries, relationships, dialogs, and local notices.
+Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns core-library entries, relationships, dialogs, and local notices.
 
 ### `app/store.js`
 
-Defines the browser-local data schema, permanent empty core libraries, migration-safe restoration, persistence, identifiers, entry operations, and the local delete-password policy. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
+Defines the browser-local data schema, permanent empty core libraries, Protocols-to-Personal-Routines migration, persistence, identifiers, entry operations, and the local delete-password policy. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
 
 ### `assets/`
 

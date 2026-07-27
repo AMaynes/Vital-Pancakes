@@ -1,7 +1,7 @@
 {
   "name": "Pinakes Vitae",
   "short_name": "Pinakes",
-  "description": "A living, local-first index for preserving studies, research, protocols, projects, and practical tools.",
+  "description": "A living, local-first index for everyday life, studies, research, projects, and practical tools.",
   "start_url": "./workspace.html#area=tools",
   "scope": "./",
   "display": "standalone",
@@ -24,9 +24,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Protocols",
-      "short_name": "Protocols",
-      "url": "workspace.html#area=protocols",
+      "name": "Everyday Life",
+      "short_name": "Everyday",
+      "url": "workspace.html#area=everyday",
       "icons": [{ "src": "assets/app-icon-192.png", "sizes": "192x192" }]
     },
     {

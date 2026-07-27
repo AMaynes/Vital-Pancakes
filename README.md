@@ -2,7 +2,7 @@
 
 [View the live website](https://amaynes.github.io/pinakes-vitae/) · [Open the workspace](https://amaynes.github.io/pinakes-vitae/workspace.html#area=tools) · [Download the app](https://amaynes.github.io/pinakes-vitae/download-app.html)
 
-Pinakes Vitae—*in perpetuum*—is Alex Maynes's living, local-first index of knowledge. It preserves research, critical reading notes, reference material, protocols, projects, and interactive study tools so that what was learned can be found and used again. The name evokes the *Pinakes* of the Library of Alexandria while giving the idea a new purpose: recovering knowledge that study, time, and disuse would otherwise erase.
+Pinakes Vitae—*in perpetuum*—is Alex Maynes's living, local-first index of knowledge. It preserves research, critical reading notes, everyday-life guides, reference material, projects, and interactive study tools so that what was learned can be found and used again. The name evokes the *Pinakes* of the Library of Alexandria while giving the idea a new purpose: recovering knowledge that study, time, and disuse would otherwise erase.
 
 The project remains a static website: it needs no server-side application, database, account, or paid hosting platform.
 
@@ -18,7 +18,7 @@ Then open [http://localhost:8000](http://localhost:8000). Opening files directly
 
 ## System Overview
 
-GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` routes the editable Protocols, Studies & Projects, and tools-only Workspace areas. `research-literature.html` unifies the research and reading collections, and `download-app.html` provides app previews and installation guidance. `site-navigation.css` and `site-navigation.js` keep the five-section header, file-like page path, and browser-history controls consistent across every page and tool.
+GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` routes the editable Everyday Life, Studies & Projects, and tools-only Workspace areas. `research-literature.html` unifies the research and reading collections, and `download-app.html` provides app previews and installation guidance. `site-navigation.css` and `site-navigation.js` keep the five-section header, file-like page path, and browser-history controls consistent across every page and tool.
 
 Repository-managed lists use small text files containing `<Entry>` blocks. `genericListLoader.js` fetches those files, parses their metadata, sorts entries alphabetically, and renders safe links.
 
@@ -30,7 +30,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 
 ## Five Top-Level Sections
 
-- **Protocols** — Personal playbooks that reduce daily and tedious-task overhead.
+- **Everyday Life** — Separate Cooking, Gym, and Cleaning areas for practical knowledge used at home.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Empty personal libraries for studies, programming languages, algorithms, and projects, plus the existing notecard and educational collections.
 - **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Travel Planner, and Architecture Designer without unrelated library content.
@@ -51,15 +51,18 @@ The logo combines an anatomical skull and brain with a neural chip and circuitry
 
 ## Personal Libraries
 
-The editable areas use five empty, permanent core libraries:
+The editable areas use eight empty, permanent core libraries:
 
-- **Protocols** — Repeatable triggers and checklists that reduce planning overhead.
+- **How to Cook** — Cooking methods, principles, tools, steps, and common mistakes.
+- **Recipes** — Ingredients, timing, method, and notes for meals worth repeating.
+- **Workout Types** — Training organized by purpose, frequency, exercises, and form notes.
+- **House Cleaning** — Rooms and surfaces divided into supplies, frequency, and ordered cleaning steps.
 - **Studies** — Concept breakdowns, visual explanations, essays, and developing notes.
 - **Programming Languages** — Mental models, syntax refreshers, and personal gotchas.
 - **Algorithms** — Use cases, explanations, complexity notes, and user-authored animated frames.
 - **Projects** — Problems, solutions, languages, and live relationships to Algorithm entries.
 
-These five core libraries cannot be added, renamed, or deleted. Their entries remain editable and can be deleted using the requested password `password`. Because this is a static local-first site, the password is a convenience guard and not secure access control.
+These eight core libraries cannot be added, renamed, or deleted. Their entries remain editable and can be deleted using the requested password `password`. Because this is a static local-first site, the password is a convenience guard and not secure access control. Saved entries from the former Protocols area migrate into an optional Personal Routines library instead of being discarded.
 
 User-created entries, boards, travel plans, and architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 

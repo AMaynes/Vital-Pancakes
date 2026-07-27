@@ -16,17 +16,44 @@
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 export const DELETE_PASSWORD = "password";
-const CURRENT_WORKSPACE_VERSION = 4;
-const LEGACY_PROTOCOL_DESCRIPTION = "Repeatable playbooks that protect your attention and reduce overhead.";
-const PROTOCOL_DESCRIPTION = "Repeatable playbooks that protect my attention and reduce overhead.";
+const CURRENT_WORKSPACE_VERSION = 5;
+const EVERYDAY_AREA = "everyday";
 
 const DEFAULT_SECTIONS = [
   {
-    id: "protocols",
-    title: "Protocols",
-    description: PROTOCOL_DESCRIPTION,
-    icon: "◎",
-    type: "protocol",
+    id: "how-to-cook",
+    title: "How to Cook",
+    description: "Techniques, methods, tools, and repeatable steps for becoming a capable cook.",
+    icon: "⌁",
+    type: "cooking-guide",
+    area: EVERYDAY_AREA,
+    items: [],
+  },
+  {
+    id: "recipes",
+    title: "Recipes",
+    description: "Ingredients, timing, method, and practical notes for meals worth making again.",
+    icon: "◫",
+    type: "recipe",
+    area: EVERYDAY_AREA,
+    items: [],
+  },
+  {
+    id: "workouts",
+    title: "Workout Types",
+    description: "Different kinds of training organized by purpose, structure, exercises, and frequency.",
+    icon: "⌇",
+    type: "workout",
+    area: EVERYDAY_AREA,
+    items: [],
+  },
+  {
+    id: "cleaning",
+    title: "House Cleaning",
+    description: "Break the house into manageable parts with supplies, order, and repeatable cleaning steps.",
+    icon: "⌂",
+    type: "cleaning",
+    area: EVERYDAY_AREA,
     items: [],
   },
   {
@@ -63,6 +90,15 @@ const DEFAULT_SECTIONS = [
   },
 ];
 const CORE_SECTION_IDS = new Set(DEFAULT_SECTIONS.map((section) => section.id));
+const LEGACY_ROUTINE_SECTION = {
+  id: "personal-routines",
+  title: "Personal Routines",
+  description: "Saved personal playbooks carried forward from the former Protocols section.",
+  icon: "◎",
+  type: "routine",
+  area: EVERYDAY_AREA,
+  items: [],
+};
 
 /**
  * Creates a collision-resistant identifier for local records.
@@ -90,28 +126,68 @@ function createInitialWorkspace() {
 }
 
 /**
- * Restores every fixed core library for browsers created before core sections
- * became permanent. Existing entries and legacy custom sections are preserved.
+ * Restores every fixed core library and moves saved Protocol entries into an
+ * optional Personal Routines library. Empty legacy Protocols are discarded.
  *
  * @param {{version?: number, sections: Array<object>}} workspace Stored data.
  * @returns {{workspace: object, changed: boolean}} Migrated data and change flag.
  */
 function migrateWorkspace(workspace) {
   let changed = false;
-  if ((workspace.version ?? 1) < 3) {
-    const existingSections = new Map(workspace.sections.map((section) => [section.id, section]));
-    const coreSections = DEFAULT_SECTIONS.map((section) => (
-      existingSections.get(section.id) ?? { ...section, items: [] }
+  let sections = workspace.sections;
+
+  const legacyProtocolSections = sections.filter((section) => (
+    section.id === "protocols" || section.type === "protocol"
+  ));
+  const existingRoutineSection = sections.find((section) => section.id === LEGACY_ROUTINE_SECTION.id);
+  if (legacyProtocolSections.length) {
+    const routineItemsById = new Map();
+    [existingRoutineSection, ...legacyProtocolSections].filter(Boolean).forEach((section) => {
+      (section.items ?? []).forEach((item) => routineItemsById.set(item.id, item));
+    });
+    sections = sections.filter((section) => (
+      section.id !== LEGACY_ROUTINE_SECTION.id
+      && section.id !== "protocols"
+      && section.type !== "protocol"
     ));
-    const customSections = workspace.sections.filter((section) => !CORE_SECTION_IDS.has(section.id));
-    workspace.sections = [...coreSections, ...customSections];
+    if (routineItemsById.size) {
+      sections.push({
+        ...LEGACY_ROUTINE_SECTION,
+        ...existingRoutineSection,
+        id: LEGACY_ROUTINE_SECTION.id,
+        title: LEGACY_ROUTINE_SECTION.title,
+        description: LEGACY_ROUTINE_SECTION.description,
+        icon: LEGACY_ROUTINE_SECTION.icon,
+        type: LEGACY_ROUTINE_SECTION.type,
+        area: LEGACY_ROUTINE_SECTION.area,
+        items: [...routineItemsById.values()],
+      });
+    }
     changed = true;
   }
 
-  const protocols = workspace.sections.find((section) => section.id === "protocols");
-  if (protocols?.description === LEGACY_PROTOCOL_DESCRIPTION) {
-    protocols.description = PROTOCOL_DESCRIPTION;
+  const shouldRestoreCoreSections = (
+    (workspace.version ?? 1) < CURRENT_WORKSPACE_VERSION
+    || DEFAULT_SECTIONS.some((section) => !sections.some((candidate) => candidate.id === section.id))
+  );
+  if (shouldRestoreCoreSections) {
+    const existingSections = new Map(sections.map((section) => [section.id, section]));
+    const coreSections = DEFAULT_SECTIONS.map((section) => (
+      existingSections.has(section.id)
+        ? {
+          ...section,
+          ...existingSections.get(section.id),
+          id: section.id,
+          type: section.type,
+          area: section.area,
+        }
+        : { ...section, items: [] }
+    ));
+    const customSections = sections.filter((section) => !CORE_SECTION_IDS.has(section.id));
+    workspace.sections = [...coreSections, ...customSections];
     changed = true;
+  } else if (changed) {
+    workspace.sections = sections;
   }
 
   if ((workspace.version ?? 1) < CURRENT_WORKSPACE_VERSION) {

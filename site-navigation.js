@@ -107,7 +107,8 @@ function getWorkspaceTrail() {
   const activeLink = document.querySelector("[data-site-area][aria-current='page']");
   const activeArea = requestedArea || activeLink?.dataset.siteArea || "tools";
   const areaLabel = {
-    protocols: "protocols",
+    everyday: "everyday-life",
+    protocols: "everyday-life",
     studies: "studies-and-projects",
     tools: "workspace",
   }[activeArea] || "workspace";

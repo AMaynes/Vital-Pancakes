@@ -1,6 +1,6 @@
 /**
  * Overview & Purpose
- * Renders the local-first Protocols, Studies & Projects, and tools areas,
+ * Renders the local-first Everyday Life, Studies & Projects, and tools areas,
  * including type-aware entry editors and offline registration.
  *
  * Architectural Relationships
@@ -38,7 +38,11 @@ let editingItemId = null;
 let pendingDeleteAction = null;
 
 const SECTION_LABELS = {
-  protocol: "PROTOCOL",
+  "cooking-guide": "COOKING GUIDE",
+  recipe: "RECIPE",
+  workout: "WORKOUT",
+  cleaning: "CLEANING AREA",
+  routine: "ROUTINE",
   language: "LANGUAGE",
   algorithm: "ALGORITHM",
   project: "PROJECT",
@@ -46,17 +50,21 @@ const SECTION_LABELS = {
 };
 
 const SECTION_ACCENTS = {
-  protocol: "sage",
+  "cooking-guide": "ochre",
+  recipe: "coral",
+  workout: "blue",
+  cleaning: "sage",
+  routine: "violet",
   language: "blue",
   algorithm: "violet",
   project: "ochre",
   custom: "coral",
 };
 
-const AREA_PROTOCOLS = "protocols";
+const AREA_EVERYDAY = "everyday";
 const AREA_STUDIES = "studies";
 const AREA_TOOLS = "tools";
-const VALID_AREAS = new Set([AREA_PROTOCOLS, AREA_STUDIES, AREA_TOOLS]);
+const VALID_AREAS = new Set([AREA_EVERYDAY, AREA_STUDIES, AREA_TOOLS]);
 
 /**
  * Creates an element with optional class and text without parsing user HTML.
@@ -91,16 +99,16 @@ function getRouteSectionId() {
  * Maps a library section to its top-level site area.
  *
  * @param {object} section Workspace section.
- * @returns {"protocols"|"studies"} Parent area.
+ * @returns {"everyday"|"studies"} Parent area.
  */
 function getAreaForSection(section) {
-  return section?.type === "protocol" ? AREA_PROTOCOLS : AREA_STUDIES;
+  return section?.area === AREA_EVERYDAY ? AREA_EVERYDAY : AREA_STUDIES;
 }
 
 /**
  * Returns the active top-level area, deriving it from deep-linked sections.
  *
- * @returns {"protocols"|"studies"|"tools"} Active area.
+ * @returns {"everyday"|"studies"|"tools"} Active area.
  */
 function getRouteArea() {
   const routeSectionId = getRouteSectionId();
@@ -109,6 +117,7 @@ function getRouteArea() {
 
   const parameters = new URLSearchParams(location.hash.slice(1));
   const requestedArea = parameters.get("area");
+  if (requestedArea === "protocols") return AREA_EVERYDAY;
   return VALID_AREAS.has(requestedArea) ? requestedArea : AREA_TOOLS;
 }
 
@@ -116,15 +125,15 @@ function getRouteArea() {
  * Returns the editable libraries owned by one top-level area.
  *
  * @param {{sections: Array<object>}} workspace Workspace data.
- * @param {"protocols"|"studies"|"tools"} area Active area.
+ * @param {"everyday"|"studies"|"tools"} area Active area.
  * @returns {Array<object>} Area-specific sections.
  */
 function getSectionsForArea(workspace, area) {
-  if (area === AREA_PROTOCOLS) {
-    return workspace.sections.filter((section) => section.type === "protocol");
+  if (area === AREA_EVERYDAY) {
+    return workspace.sections.filter((section) => section.area === AREA_EVERYDAY);
   }
   if (area === AREA_STUDIES) {
-    return workspace.sections.filter((section) => section.type !== "protocol");
+    return workspace.sections.filter((section) => section.area !== AREA_EVERYDAY);
   }
   return [];
 }
@@ -152,13 +161,6 @@ function renderWorkspace() {
   const section = routeSectionId ? getSection(routeSectionId) : null;
   if (section) {
     renderSection(section);
-  } else if (area === AREA_PROTOCOLS) {
-    const protocolSections = getSectionsForArea(getWorkspace(), area);
-    if (protocolSections.length === 1) {
-      renderSection(protocolSections[0]);
-    } else {
-      renderDashboard(area);
-    }
   } else {
     renderDashboard(area);
   }
@@ -167,7 +169,7 @@ function renderWorkspace() {
 /**
  * Marks the active area in the permanent five-section header.
  *
- * @param {"protocols"|"studies"|"tools"} area Active area.
+ * @param {"everyday"|"studies"|"tools"} area Active area.
  */
 function renderTopNavigation(area) {
   document.querySelectorAll("[data-site-area]").forEach((link) => {
@@ -182,7 +184,7 @@ function renderTopNavigation(area) {
 /**
  * Shows the active area dashboard.
  *
- * @param {"protocols"|"studies"|"tools"} area Active area.
+ * @param {"everyday"|"studies"|"tools"} area Active area.
  */
 function renderDashboard(area) {
   appMain.replaceChildren();
@@ -198,7 +200,7 @@ function renderDashboard(area) {
     return;
   }
 
-  renderProtocolsDashboard(workspace);
+  renderEverydayDashboard(workspace);
 }
 
 /**
@@ -276,25 +278,67 @@ function renderStudiesDashboard(workspace) {
 }
 
 /**
- * Renders an area chooser when Protocols contains zero or multiple libraries.
+ * Renders the Everyday Life dashboard as three distinct practical domains.
  *
  * @param {{sections: Array<object>}} workspace Workspace data.
  */
-function renderProtocolsDashboard(workspace) {
+function renderEverydayDashboard(workspace) {
   const hero = createAreaHero(
-    "PROTOCOLS",
-    "Reduce the overhead of recurring life.",
-    "Turn daily routines and tedious tasks into personal playbooks so your attention stays on what matters.",
+    "EVERYDAY LIFE",
+    "Keep ordinary life clear, capable, and manageable.",
+    "Cooking, training, and house care stay here—separate from studies, research, projects, and work tools.",
   );
-  const sectionHeading = createSectionHeading(
-    "Your protocol libraries",
-    "Keep related playbooks together and add only what reduces friction.",
-  );
-  const libraryGrid = createElement("div", "library-grid");
-  const sections = getSectionsForArea(workspace, AREA_PROTOCOLS);
-  sections.forEach((section) => libraryGrid.append(createLibraryCard(section)));
+  const sections = getSectionsForArea(workspace, AREA_EVERYDAY);
+  const sectionsById = new Map(sections.map((section) => [section.id, section]));
+  const domainGrid = createElement("div", "everyday-domain-grid");
+  [
+    {
+      label: "01",
+      title: "Cooking",
+      copy: "Learn the underlying methods, then keep the recipes you actually use.",
+      sectionIds: ["how-to-cook", "recipes"],
+    },
+    {
+      label: "02",
+      title: "Gym",
+      copy: "Organize different workout types by goal, structure, exercises, and frequency.",
+      sectionIds: ["workouts"],
+    },
+    {
+      label: "03",
+      title: "Cleaning",
+      copy: "Divide the house into parts so every area has a clear cleaning method.",
+      sectionIds: ["cleaning"],
+    },
+  ].forEach((domain) => {
+    const domainSection = createElement("section", "everyday-domain");
+    const domainHeading = createElement("div", "everyday-domain-heading");
+    domainHeading.append(
+      createElement("span", "everyday-domain-number", domain.label),
+      createElement("h2", "", domain.title),
+      createElement("p", "", domain.copy),
+    );
+    const libraryGrid = createElement("div", "library-grid everyday-library-grid");
+    domain.sectionIds
+      .map((sectionId) => sectionsById.get(sectionId))
+      .filter(Boolean)
+      .forEach((section) => libraryGrid.append(createLibraryCard(section)));
+    domainSection.append(domainHeading, libraryGrid);
+    domainGrid.append(domainSection);
+  });
 
-  appMain.append(hero, sectionHeading, libraryGrid);
+  const displayedSectionIds = new Set(["how-to-cook", "recipes", "workouts", "cleaning"]);
+  const additionalSections = sections.filter((section) => !displayedSectionIds.has(section.id));
+  appMain.append(hero, domainGrid);
+  if (additionalSections.length) {
+    const additionalHeading = createSectionHeading(
+      "Personal routines",
+      "Saved routines carried forward from the former Protocols section.",
+    );
+    const additionalGrid = createElement("div", "library-grid");
+    additionalSections.forEach((section) => additionalGrid.append(createLibraryCard(section)));
+    appMain.append(additionalHeading, additionalGrid);
+  }
 }
 
 /**
@@ -489,7 +533,11 @@ function createEmptyState(title, copy) {
  */
 function getEmptyMessage(section) {
   const messages = {
-    protocol: "Turn a recurring task into a clear trigger and a checklist you can follow without re-planning it.",
+    "cooking-guide": "Add a cooking method or skill when you want its principles and steps available without searching again.",
+    recipe: "Add a recipe you want to make, improve, and return to.",
+    workout: "Add a type of workout with its purpose, frequency, and exercise structure.",
+    cleaning: "Add one room, surface, or part of the house with the order and supplies needed to clean it.",
+    routine: "Turn a recurring task into a clear trigger and a checklist you can follow without re-planning it.",
     language: "Add a language when you need a refresher. Capture syntax, mental models, and the mistakes you want to avoid.",
     algorithm: "Add algorithms as you encounter them, including use cases and visual frames you can play back.",
     project: "Document a project’s interesting problem, your approach, and its language and algorithm relationships.",
@@ -506,7 +554,11 @@ function getEmptyMessage(section) {
  */
 function getSingularLabel(section) {
   return {
-    protocol: "protocol",
+    "cooking-guide": "cooking guide",
+    recipe: "recipe",
+    workout: "workout type",
+    cleaning: "cleaning area",
+    routine: "routine",
     language: "language",
     algorithm: "algorithm",
     project: "project",
@@ -547,8 +599,16 @@ function createEntryCard(section, item) {
     card.append(createElement("p", "entry-summary", item.summary));
   }
 
-  if (section.type === "protocol") {
-    card.append(createProtocolBody(section, item));
+  if (section.type === "cooking-guide") {
+    card.append(createCookingGuideBody(section, item));
+  } else if (section.type === "recipe") {
+    card.append(createRecipeBody(section, item));
+  } else if (section.type === "workout") {
+    card.append(createWorkoutBody(section, item));
+  } else if (section.type === "cleaning") {
+    card.append(createCleaningBody(section, item));
+  } else if (section.type === "routine") {
+    card.append(createRoutineBody(section, item));
   } else if (section.type === "language") {
     card.append(createLanguageBody(item));
   } else if (section.type === "algorithm") {
@@ -562,38 +622,126 @@ function createEntryCard(section, item) {
 }
 
 /**
- * Renders an interactive, persistently checked protocol.
+ * Renders a saved routine carried forward from the former Protocols area.
  *
  * @param {object} section Parent section.
- * @param {object} item Protocol record.
- * @returns {HTMLElement} Protocol content.
+ * @param {object} item Routine record.
+ * @returns {HTMLElement} Routine content.
  */
-function createProtocolBody(section, item) {
+function createRoutineBody(section, item) {
   const body = createElement("div", "entry-body");
   if (item.trigger) {
     body.append(createDefinition("Trigger", item.trigger));
   }
-  const steps = item.steps ?? [];
-  const checkedSteps = new Set(item.checkedSteps ?? []);
-  const checklist = createElement("ol", "protocol-checklist");
-  steps.forEach((step, index) => {
+  appendPersistentChecklist(body, section, item, "Steps", item.steps, "checkedSteps");
+  return body;
+}
+
+/**
+ * Renders cooking principles, essentials, mistakes, and a repeatable method.
+ *
+ * @param {object} section Parent section.
+ * @param {object} item Cooking-guide record.
+ * @returns {HTMLElement} Cooking-guide content.
+ */
+function createCookingGuideBody(section, item) {
+  const body = createElement("div", "entry-body");
+  const details = createElement("div", "two-column-details");
+  if (item.principles) details.append(createDefinition("What to understand", item.principles));
+  if (item.essentials) details.append(createDefinition("Tools and essentials", item.essentials));
+  if (item.mistakes) details.append(createDefinition("Common mistakes", item.mistakes));
+  if (details.childElementCount) body.append(details);
+  appendPersistentChecklist(body, section, item, "Method", item.steps, "checkedSteps");
+  return body;
+}
+
+/**
+ * Renders recipe details with separately trackable ingredients and method.
+ *
+ * @param {object} section Parent section.
+ * @param {object} item Recipe record.
+ * @returns {HTMLElement} Recipe content.
+ */
+function createRecipeBody(section, item) {
+  const body = createElement("div", "entry-body");
+  const details = createElement("div", "two-column-details");
+  if (item.servings) details.append(createDefinition("Servings", item.servings));
+  if (item.timing) details.append(createDefinition("Time", item.timing));
+  if (item.notes) details.append(createDefinition("Notes", item.notes));
+  if (details.childElementCount) body.append(details);
+  appendPersistentChecklist(body, section, item, "Ingredients", item.ingredients, "checkedIngredients");
+  appendPersistentChecklist(body, section, item, "Method", item.steps, "checkedSteps");
+  return body;
+}
+
+/**
+ * Renders one workout type with its purpose, schedule, and exercise sequence.
+ *
+ * @param {object} section Parent section.
+ * @param {object} item Workout record.
+ * @returns {HTMLElement} Workout content.
+ */
+function createWorkoutBody(section, item) {
+  const body = createElement("div", "entry-body");
+  const details = createElement("div", "two-column-details");
+  if (item.goal) details.append(createDefinition("Purpose", item.goal));
+  if (item.frequency) details.append(createDefinition("Frequency", item.frequency));
+  if (item.notes) details.append(createDefinition("Notes", item.notes));
+  if (details.childElementCount) body.append(details);
+  appendPersistentChecklist(body, section, item, "Exercises", item.exercises, "checkedExercises");
+  return body;
+}
+
+/**
+ * Renders a house area with supplies, frequency, and ordered cleaning steps.
+ *
+ * @param {object} section Parent section.
+ * @param {object} item Cleaning record.
+ * @returns {HTMLElement} Cleaning content.
+ */
+function createCleaningBody(section, item) {
+  const body = createElement("div", "entry-body");
+  const details = createElement("div", "two-column-details");
+  if (item.frequency) details.append(createDefinition("When to clean it", item.frequency));
+  if (item.notes) details.append(createDefinition("Notes", item.notes));
+  if (details.childElementCount) body.append(details);
+  appendPersistentChecklist(body, section, item, "Supplies", item.supplies, "checkedSupplies");
+  appendPersistentChecklist(body, section, item, "Cleaning order", item.steps, "checkedSteps");
+  return body;
+}
+
+/**
+ * Adds a labeled checklist whose completion state is saved with its entry.
+ *
+ * @param {HTMLElement} parent Destination body.
+ * @param {object} section Parent section.
+ * @param {object} item Parent entry.
+ * @param {string} labelText Visible list label.
+ * @param {Array<string>} values Checklist values.
+ * @param {string} checkedProperty Item property containing checked indexes.
+ */
+function appendPersistentChecklist(parent, section, item, labelText, values = [], checkedProperty) {
+  if (!values?.length) return;
+  const group = createElement("section", "life-list-group");
+  group.append(createElement("h3", "", labelText));
+  const checkedIndexes = new Set(item[checkedProperty] ?? []);
+  const checklist = createElement("ol", "life-checklist");
+  values.forEach((value, index) => {
     const row = createElement("li");
     const label = createElement("label");
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = checkedSteps.has(index);
+    checkbox.checked = checkedIndexes.has(index);
     checkbox.addEventListener("change", () => {
-      checkbox.checked ? checkedSteps.add(index) : checkedSteps.delete(index);
-      updateItem(section.id, item.id, { checkedSteps: [...checkedSteps] });
+      checkbox.checked ? checkedIndexes.add(index) : checkedIndexes.delete(index);
+      updateItem(section.id, item.id, { [checkedProperty]: [...checkedIndexes] });
     });
-    label.append(checkbox, createElement("span", "", step));
+    label.append(checkbox, createElement("span", "", value));
     row.append(label);
     checklist.append(row);
   });
-  if (steps.length) {
-    body.append(checklist);
-  }
-  return body;
+  group.append(checklist);
+  parent.append(group);
 }
 
 /**
@@ -798,9 +946,38 @@ function createItemFields(section, item) {
     createField("One-line summary", "summary", "textarea", item?.summary ?? "", false, "Why is this worth remembering?"),
   ];
 
-  if (section.type === "protocol") {
+  if (section.type === "cooking-guide") {
     fields.push(
-      createField("Trigger", "trigger", "textarea", item?.trigger ?? "", false, "When should you use this protocol?"),
+      createField("What to understand", "principles", "textarea", item?.principles ?? "", false, "The principles behind this method"),
+      createField("Tools and essentials", "essentials", "textarea", item?.essentials ?? "", false, "Equipment, ingredients, heat, or setup"),
+      createField("Method · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write the method in the order you use it"),
+      createField("Common mistakes", "mistakes", "textarea", item?.mistakes ?? "", false, "What usually goes wrong and how to notice it"),
+    );
+  } else if (section.type === "recipe") {
+    fields.push(
+      createField("Servings", "servings", "text", item?.servings ?? "", false, "e.g. 4 servings"),
+      createField("Prep and cook time", "timing", "text", item?.timing ?? "", false, "e.g. 15 min prep · 35 min cook"),
+      createField("Ingredients · one per line", "ingredients", "textarea", (item?.ingredients ?? []).join("\n"), false, "Include useful amounts"),
+      createField("Method · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write the cooking order"),
+      createField("Notes and adjustments", "notes", "textarea", item?.notes ?? "", false, "Substitutions, storage, or changes for next time"),
+    );
+  } else if (section.type === "workout") {
+    fields.push(
+      createField("Purpose", "goal", "textarea", item?.goal ?? "", false, "What this kind of workout develops"),
+      createField("Frequency and structure", "frequency", "text", item?.frequency ?? "", false, "How often, duration, sets, or intensity"),
+      createField("Exercises · one per line", "exercises", "textarea", (item?.exercises ?? []).join("\n"), false, "List the movements in order"),
+      createField("Notes", "notes", "textarea", item?.notes ?? "", false, "Progression, recovery, equipment, or form cues"),
+    );
+  } else if (section.type === "cleaning") {
+    fields.push(
+      createField("Frequency", "frequency", "text", item?.frequency ?? "", false, "Daily, weekly, monthly, or as needed"),
+      createField("Supplies · one per line", "supplies", "textarea", (item?.supplies ?? []).join("\n"), false, "Only what this part of the house needs"),
+      createField("Cleaning order · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Work from the first action to the last"),
+      createField("Notes", "notes", "textarea", item?.notes ?? "", false, "Warnings, material care, or shortcuts"),
+    );
+  } else if (section.type === "routine") {
+    fields.push(
+      createField("Trigger", "trigger", "textarea", item?.trigger ?? "", false, "When should you use this routine?"),
       createField("Steps · one per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write only the steps you actually need"),
     );
   } else if (section.type === "language") {
@@ -916,7 +1093,44 @@ function readItemForm(section) {
     .map((part) => part.trim())
     .filter(Boolean);
 
-  if (section.type === "protocol") {
+  if (section.type === "cooking-guide") {
+    return {
+      ...base,
+      principles: String(formData.get("principles") ?? "").trim(),
+      essentials: String(formData.get("essentials") ?? "").trim(),
+      steps: lineList("steps"),
+      mistakes: String(formData.get("mistakes") ?? "").trim(),
+    };
+  }
+  if (section.type === "recipe") {
+    return {
+      ...base,
+      servings: String(formData.get("servings") ?? "").trim(),
+      timing: String(formData.get("timing") ?? "").trim(),
+      ingredients: lineList("ingredients"),
+      steps: lineList("steps"),
+      notes: String(formData.get("notes") ?? "").trim(),
+    };
+  }
+  if (section.type === "workout") {
+    return {
+      ...base,
+      goal: String(formData.get("goal") ?? "").trim(),
+      frequency: String(formData.get("frequency") ?? "").trim(),
+      exercises: lineList("exercises"),
+      notes: String(formData.get("notes") ?? "").trim(),
+    };
+  }
+  if (section.type === "cleaning") {
+    return {
+      ...base,
+      frequency: String(formData.get("frequency") ?? "").trim(),
+      supplies: lineList("supplies"),
+      steps: lineList("steps"),
+      notes: String(formData.get("notes") ?? "").trim(),
+    };
+  }
+  if (section.type === "routine") {
     return { ...base, trigger: String(formData.get("trigger") ?? "").trim(), steps: lineList("steps") };
   }
   if (section.type === "language") {
