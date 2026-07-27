@@ -4,7 +4,7 @@
  */
 
 import { createId, isDeletePasswordValid } from "../app/store.js";
-import { duplicateBoardObjects } from "./visual-board-clipboard.mjs";
+import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=1";
 import {
   LINE_TYPES,
   SHAPE_TYPES,
@@ -21,7 +21,7 @@ import {
   pointHitsObject,
   resizeShapeFromCorner,
   snapValue,
-} from "./visual-board-geometry.mjs";
+} from "./visual-board-geometry.mjs?v=5";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_VERSION = 5;
