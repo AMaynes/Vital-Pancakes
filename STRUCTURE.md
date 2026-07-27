@@ -52,8 +52,8 @@ pinakes-vitae/
 │   ├── literature-analyzer.html — Hosts PDF and website reading, highlighting, and comments.
 │   ├── literature-analyzer.css — Styles the split reading and annotation workspace.
 │   ├── literature-analyzer.js — Owns source loading, persistence, comments, and exports.
-│   ├── literature-analyzer-model.mjs — Provides highlight geometry and stored-data validation.
-│   ├── literature-analyzer-model.test.mjs — Verifies normalized highlighting and PDF coordinates.
+│   ├── literature-analyzer-model.mjs — Provides highlight geometry, stored-data validation, and bounded history.
+│   ├── literature-analyzer-model.test.mjs — Verifies highlighting, PDF coordinates, and undo/redo history.
 │   ├── travel-planner.html — Hosts the simple month itinerary calendar.
 │   ├── travel-planner.css — Styles the month grid, plan editor, and day itinerary.
 │   ├── travel-planner.js — Renders and persists local travel plans.
@@ -192,7 +192,7 @@ Shares responsive full-screen layouts, controls, panels, canvas surfaces, signat
 
 ### Literature Analyzer
 
-`literature-analyzer.html` and `literature-analyzer.css` provide a split source, comment, and reading workspace. `literature-analyzer.js` opens local PDFs or sandboxed website frames, stores source-specific highlights and comments locally, exports annotated PDF pages with a comment appendix, and creates PNG or PDF annotation maps for webpages whose pixels remain protected by cross-origin browser security.
+`literature-analyzer.html` and `literature-analyzer.css` provide a split source, comment, and reading workspace with inline comment cards and a toggleable right-side comment rail. `literature-analyzer.js` opens local PDFs or sandboxed website frames, stores source-specific highlights and comments locally, owns 300-step undo and redo for annotation changes, exports annotated PDF pages with a comment appendix, and creates PNG or PDF annotation maps for webpages whose pixels remain protected by cross-origin browser security. `literature-analyzer-model.mjs` provides normalized geometry, stored-data validation, and immutable bounded annotation-history operations.
 
 `literature-analyzer-model.mjs` owns normalized rectangle creation, persisted annotation validation, and PDF coordinate conversion. Its Node test suite covers reverse drags, clamping, minimum sizes, malformed storage, and the PDF vertical-axis transform.
 

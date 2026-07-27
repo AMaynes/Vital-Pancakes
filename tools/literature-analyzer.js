@@ -19,18 +19,25 @@
 
 import { createId } from "../app/store.js";
 import {
+  commitAnnotationHistory,
+  createAnnotationHistory,
+  DEFAULT_ANNOTATION_HISTORY_LIMIT,
   DEFAULT_HIGHLIGHT_COLOR,
   getPdfHighlightBounds,
   normalizeHighlight,
+  redoAnnotationHistory,
   sanitizeAnnotations,
+  undoAnnotationHistory,
 } from "./literature-analyzer-model.mjs";
 
 const { PDFDocument, StandardFonts, rgb } = globalThis.PDFLib;
 globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc = "../vendor/pdf.worker.min.js";
 
 const STORAGE_KEY = "pinakes-vitae-literature-analyzer-v1";
+const COMMENT_LAYOUT_KEY = "pinakes-vitae-literature-analyzer-comment-layout-v1";
 const MAX_PDF_BYTES = 100 * 1024 * 1024;
 const MAX_SAVED_SOURCES = 50;
+const COMMENT_HISTORY_IDLE_MS = 700;
 
 const fileInput = document.querySelector("#analysis-pdf-file");
 const pdfDropZone = document.querySelector("#analysis-pdf-drop-zone");
@@ -58,6 +65,13 @@ const nextPageButton = document.querySelector("#analysis-next-page");
 const pageCount = document.querySelector("#analysis-page-count");
 const sourceName = document.querySelector("#analysis-source-name");
 const status = document.querySelector("#analyzer-status");
+const undoButton = document.querySelector("#undo-analysis");
+const redoButton = document.querySelector("#redo-analysis");
+const commentLayoutButton = document.querySelector("#comment-layout-toggle");
+const commentsBackOnPageButton = document.querySelector("#comments-back-on-page");
+const readingArea = document.querySelector("#analyzer-reading-area");
+const commentRail = document.querySelector("#analyzer-comment-rail");
+const commentRailList = document.querySelector("#analyzer-comment-rail-list");
 
 let source = null;
 let pdfBytes = null;
@@ -69,6 +83,10 @@ let activeColor = DEFAULT_HIGHLIGHT_COLOR;
 let isHighlightMode = true;
 let activeDraft = null;
 let renderSequence = 0;
+let annotationHistory = createAnnotationHistory([], DEFAULT_ANNOTATION_HISTORY_LIMIT);
+let isCommentHistoryTransactionOpen = false;
+let commentHistoryTimer = null;
+let commentLayout = restoreCommentLayout();
 
 /**
  * Loads and renders a local PDF while restoring any saved annotations for the
@@ -100,6 +118,7 @@ async function loadPdf(file) {
       url: "",
     };
     annotations = restoreAnnotations(source.key);
+    resetAnnotationHistory();
     selectedAnnotationId = null;
     showSource("pdf");
     await renderPdfPage();
@@ -139,6 +158,7 @@ function loadWebsite(value) {
   pdfDocument = null;
   currentPageNumber = 1;
   annotations = restoreAnnotations(source.key);
+  resetAnnotationHistory();
   selectedAnnotationId = null;
   webFrame.src = url.href;
   openWebSource.href = url.href;
@@ -157,6 +177,7 @@ function showSource(sourceType) {
   pdfStage.hidden = sourceType !== "pdf";
   webStage.hidden = sourceType !== "web";
   openWebSource.hidden = sourceType !== "web";
+  applyCommentLayout();
   updateControls();
 }
 
@@ -214,11 +235,54 @@ function renderAnnotations() {
       badge.textContent = String(index);
       mark.append(badge);
       layer.append(mark);
+
+      if (commentLayout === "inline") {
+        layer.append(createInlineComment(annotation, index));
+      }
     });
   }
   renderAnnotationIndex();
+  renderCommentRail();
   renderSelectedAnnotation();
   updateControls();
+}
+
+/**
+ * Creates a comment card positioned immediately above its highlight.
+ *
+ * @param {object} annotation Highlight annotation.
+ * @param {number} index One-based global annotation number.
+ * @returns {HTMLButtonElement} Positioned comment card.
+ */
+function createInlineComment(annotation, index) {
+  const card = document.createElement("button");
+  const widthRatio = Math.min(0.38, Math.max(0.22, annotation.width + 0.12));
+  const leftRatio = Math.min(Math.max(annotation.x, 0.01), 0.99 - widthRatio);
+  const placeBelow = annotation.y < 0.18;
+  card.type = "button";
+  card.className = "highlight-inline-comment";
+  card.dataset.commentAnnotationId = annotation.id;
+  card.hidden = !annotation.comment.trim();
+  card.style.left = `${leftRatio * 100}%`;
+  card.style.top = `${(placeBelow ? annotation.y + annotation.height : annotation.y) * 100}%`;
+  card.style.width = `${widthRatio * 100}%`;
+  card.style.setProperty("--annotation-color", annotation.color);
+  card.classList.toggle("is-below", placeBelow);
+  card.classList.toggle("is-selected", annotation.id === selectedAnnotationId);
+  card.setAttribute("aria-label", `Comment for highlight ${index}: ${annotation.comment || "Empty comment"}`);
+
+  const number = document.createElement("span");
+  number.className = "highlight-inline-comment-number";
+  number.textContent = String(index);
+  const text = document.createElement("span");
+  text.className = "highlight-inline-comment-text";
+  text.textContent = annotation.comment;
+  card.append(number, text);
+  card.addEventListener("click", (event) => {
+    event.stopPropagation();
+    selectAnnotation(annotation.id, true);
+  });
+  return card;
 }
 
 /**
@@ -274,6 +338,54 @@ function renderAnnotationIndex() {
 }
 
 /**
+ * Rebuilds the optional right-side comment rail for the visible page.
+ */
+function renderCommentRail() {
+  if (commentLayout !== "rail" || !source) {
+    commentRailList.replaceChildren();
+    return;
+  }
+  const commentedAnnotations = getVisibleAnnotations()
+    .filter((annotation) => annotation.comment.trim());
+  if (!commentedAnnotations.length) {
+    const empty = document.createElement("p");
+    empty.className = "annotation-empty";
+    empty.textContent = source.type === "pdf"
+      ? "No comments on this page."
+      : "No comments on this source.";
+    commentRailList.replaceChildren(empty);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  commentedAnnotations.forEach((annotation) => {
+    const index = annotations.indexOf(annotation) + 1;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "analyzer-comment-rail-card";
+    button.dataset.commentAnnotationId = annotation.id;
+    button.style.setProperty("--annotation-color", annotation.color);
+    button.classList.toggle("is-selected", annotation.id === selectedAnnotationId);
+
+    const heading = document.createElement("span");
+    heading.className = "analyzer-comment-rail-heading";
+    const number = document.createElement("strong");
+    number.textContent = String(index);
+    const location = document.createElement("span");
+    location.textContent = source.type === "pdf" ? `Page ${annotation.pageNumber}` : "Web highlight";
+    heading.append(number, location);
+
+    const comment = document.createElement("span");
+    comment.className = "analyzer-comment-rail-copy";
+    comment.textContent = annotation.comment;
+    button.append(heading, comment);
+    button.addEventListener("click", () => navigateToAnnotation(annotation.id, true));
+    fragment.append(button);
+  });
+  commentRailList.replaceChildren(fragment);
+}
+
+/**
  * Shows the selected highlight's comment editor.
  */
 function renderSelectedAnnotation() {
@@ -289,20 +401,47 @@ function renderSelectedAnnotation() {
 }
 
 /**
+ * Updates visible comment copies without rebuilding the focused editor.
+ *
+ * @param {string} annotationId Highlight identifier.
+ * @param {string} comment Updated comment text.
+ */
+function updateRenderedCommentCopies(annotationId, comment) {
+  const escapedId = CSS.escape(annotationId);
+  const listComment = annotationList.querySelector(
+    `[data-annotation-id="${escapedId}"] .annotation-list-comment`,
+  );
+  if (listComment) listComment.textContent = comment || "No comment yet";
+
+  const inlineComment = getActiveLayer()?.querySelector(
+    `[data-comment-annotation-id="${escapedId}"]`,
+  );
+  if (inlineComment) {
+    inlineComment.hidden = !comment.trim();
+    inlineComment.querySelector(".highlight-inline-comment-text").textContent = comment;
+    inlineComment.setAttribute("aria-label", `Comment: ${comment || "Empty comment"}`);
+  }
+  if (commentLayout === "rail") renderCommentRail();
+}
+
+/**
  * Navigates to a highlight's PDF page, then selects it.
  *
  * @param {string} annotationId Highlight identifier.
+ * @param {boolean} focusComment Whether to focus the comment editor.
  */
-async function navigateToAnnotation(annotationId) {
+async function navigateToAnnotation(annotationId, focusComment = false) {
   const annotation = annotations.find((candidate) => candidate.id === annotationId);
   if (!annotation) return;
   if (source?.type === "pdf" && annotation.pageNumber !== currentPageNumber) {
+    finishCommentHistoryTransaction();
     currentPageNumber = annotation.pageNumber;
     selectedAnnotationId = annotationId;
     await renderPdfPage();
+    if (focusComment) window.requestAnimationFrame(() => commentInput.focus());
     return;
   }
-  selectAnnotation(annotationId);
+  selectAnnotation(annotationId, focusComment);
 }
 
 /**
@@ -312,6 +451,7 @@ async function navigateToAnnotation(annotationId) {
  * @param {boolean} focusComment Whether to move focus into the comment editor.
  */
 function selectAnnotation(annotationId, focusComment = false) {
+  if (annotationId !== selectedAnnotationId) finishCommentHistoryTransaction();
   selectedAnnotationId = annotationId;
   renderAnnotations();
   if (focusComment && annotationId) {
@@ -383,7 +523,9 @@ function endHighlight(event) {
     comment: "",
     createdAt: new Date().toISOString(),
   };
-  annotations.push(annotation);
+  finishCommentHistoryTransaction();
+  annotationHistory = commitAnnotationHistory(annotationHistory, [...annotations, annotation]);
+  annotations = annotationHistory.present;
   selectedAnnotationId = annotation.id;
   persistAnnotations();
   renderAnnotations();
@@ -442,6 +584,138 @@ function getActiveLayer() {
 
 function getSelectedAnnotation() {
   return annotations.find((annotation) => annotation.id === selectedAnnotationId) ?? null;
+}
+
+/**
+ * Resets undo and redo when a different source becomes active.
+ */
+function resetAnnotationHistory() {
+  cancelCommentHistoryTransaction();
+  annotationHistory = createAnnotationHistory(annotations, DEFAULT_ANNOTATION_HISTORY_LIMIT);
+  annotations = annotationHistory.present;
+}
+
+/**
+ * Begins a coalesced comment-edit transaction.
+ */
+function beginCommentHistoryTransaction() {
+  if (!isCommentHistoryTransactionOpen) {
+    isCommentHistoryTransactionOpen = true;
+  }
+  if (commentHistoryTimer) window.clearTimeout(commentHistoryTimer);
+  commentHistoryTimer = window.setTimeout(finishCommentHistoryTransaction, COMMENT_HISTORY_IDLE_MS);
+}
+
+/**
+ * Commits a burst of comment typing as one undoable history step.
+ */
+function finishCommentHistoryTransaction() {
+  if (commentHistoryTimer) {
+    window.clearTimeout(commentHistoryTimer);
+    commentHistoryTimer = null;
+  }
+  if (!isCommentHistoryTransactionOpen) return;
+  isCommentHistoryTransactionOpen = false;
+  annotationHistory = commitAnnotationHistory(annotationHistory, annotations);
+  annotations = annotationHistory.present;
+  updateControls();
+}
+
+/**
+ * Drops transaction bookkeeping while switching sources.
+ */
+function cancelCommentHistoryTransaction() {
+  if (commentHistoryTimer) window.clearTimeout(commentHistoryTimer);
+  commentHistoryTimer = null;
+  isCommentHistoryTransactionOpen = false;
+}
+
+/**
+ * Commits a discrete annotation mutation after any active comment edit.
+ *
+ * @param {Array<object>} nextAnnotations Updated annotation collection.
+ */
+function commitAnnotationChange(nextAnnotations) {
+  finishCommentHistoryTransaction();
+  annotationHistory = commitAnnotationHistory(annotationHistory, nextAnnotations);
+  annotations = annotationHistory.present;
+}
+
+/**
+ * Restores the preceding annotation state.
+ */
+function undoAnnotations() {
+  finishCommentHistoryTransaction();
+  const nextHistory = undoAnnotationHistory(annotationHistory);
+  if (nextHistory === annotationHistory) return;
+  annotationHistory = nextHistory;
+  annotations = annotationHistory.present;
+  if (!getSelectedAnnotation()) selectedAnnotationId = null;
+  persistAnnotations();
+  renderAnnotations();
+  setStatus("Undid annotation change");
+}
+
+/**
+ * Reapplies the next annotation state.
+ */
+function redoAnnotations() {
+  finishCommentHistoryTransaction();
+  const nextHistory = redoAnnotationHistory(annotationHistory);
+  if (nextHistory === annotationHistory) return;
+  annotationHistory = nextHistory;
+  annotations = annotationHistory.present;
+  if (!getSelectedAnnotation()) selectedAnnotationId = null;
+  persistAnnotations();
+  renderAnnotations();
+  setStatus("Redid annotation change");
+}
+
+/**
+ * Restores the preferred comment layout from local browser storage.
+ *
+ * @returns {"inline"|"rail"} Saved layout.
+ */
+function restoreCommentLayout() {
+  try {
+    return localStorage.getItem(COMMENT_LAYOUT_KEY) === "rail" ? "rail" : "inline";
+  } catch {
+    return "inline";
+  }
+}
+
+/**
+ * Applies and persists the inline or right-side comment layout.
+ *
+ * @param {"inline"|"rail"} layout Requested layout.
+ */
+function setCommentLayout(layout) {
+  commentLayout = layout === "rail" ? "rail" : "inline";
+  try {
+    localStorage.setItem(COMMENT_LAYOUT_KEY, commentLayout);
+  } catch (error) {
+    console.error("Unable to save the Literature Analyzer comment layout.", error);
+  }
+  applyCommentLayout();
+  renderAnnotations();
+  setStatus(commentLayout === "rail" ? "Comments moved to the right" : "Comments placed above highlights");
+}
+
+/**
+ * Updates the reading-area grid and layout toggle without rebuilding marks.
+ */
+function applyCommentLayout() {
+  const isRailLayout = commentLayout === "rail" && Boolean(source);
+  readingArea.classList.toggle("is-comment-rail-layout", isRailLayout);
+  commentRail.hidden = !isRailLayout;
+  commentLayoutButton.classList.toggle("is-active", commentLayout === "rail");
+  commentLayoutButton.setAttribute("aria-pressed", String(commentLayout === "rail"));
+  commentLayoutButton.textContent = commentLayout === "rail"
+    ? "⇤ Comments above"
+    : "⇥ Comments right";
+  commentLayoutButton.title = commentLayout === "rail"
+    ? "Put comments back above their highlights"
+    : "Move highlight comments to the right side";
 }
 
 /**
@@ -939,6 +1213,12 @@ function updateControls() {
   clearButton.disabled = !annotations.length;
   exportPngButton.disabled = !hasSource;
   exportPdfButton.disabled = !hasSource;
+  undoButton.disabled = !hasSource
+    || (!annotationHistory.past.length && !isCommentHistoryTransactionOpen);
+  redoButton.disabled = !hasSource
+    || !annotationHistory.future.length
+    || isCommentHistoryTransactionOpen;
+  commentLayoutButton.disabled = !hasSource;
   previousPageButton.disabled = !hasPdf || currentPageNumber <= 1;
   nextPageButton.disabled = !hasPdf || currentPageNumber >= pdfDocument.numPages;
   pageCount.textContent = hasPdf ? `Page ${currentPageNumber} / ${pdfDocument.numPages}` : "Page 0 / 0";
@@ -951,7 +1231,9 @@ function setStatus(message) {
 
 function deleteSelectedHighlight() {
   if (!selectedAnnotationId) return;
-  annotations = annotations.filter((annotation) => annotation.id !== selectedAnnotationId);
+  commitAnnotationChange(
+    annotations.filter((annotation) => annotation.id !== selectedAnnotationId),
+  );
   selectedAnnotationId = null;
   persistAnnotations();
   renderAnnotations();
@@ -961,7 +1243,7 @@ function clearHighlights() {
   if (!annotations.length) return;
   const confirmed = window.confirm("Clear every highlight and comment for this source?");
   if (!confirmed) return;
-  annotations = [];
+  commitAnnotationChange([]);
   selectedAnnotationId = null;
   persistAnnotations();
   renderAnnotations();
@@ -1038,7 +1320,13 @@ document.querySelectorAll("[data-highlight-color]").forEach((button) => {
     });
     const selected = getSelectedAnnotation();
     if (selected) {
-      selected.color = activeColor;
+      commitAnnotationChange(
+        annotations.map((annotation) => (
+          annotation.id === selected.id
+            ? { ...annotation, color: activeColor }
+            : annotation
+        )),
+      );
       persistAnnotations();
       renderAnnotations();
     }
@@ -1048,27 +1336,40 @@ document.querySelectorAll("[data-highlight-color]").forEach((button) => {
 commentInput.addEventListener("input", () => {
   const selected = getSelectedAnnotation();
   if (!selected) return;
-  selected.comment = commentInput.value;
+  beginCommentHistoryTransaction();
+  annotations = annotations.map((annotation) => (
+    annotation.id === selected.id
+      ? { ...annotation, comment: commentInput.value }
+      : annotation
+  ));
   persistAnnotations();
-  const listComment = annotationList.querySelector(
-    `[data-annotation-id="${CSS.escape(selected.id)}"] .annotation-list-comment`,
-  );
-  if (listComment) listComment.textContent = selected.comment || "No comment yet";
+  updateRenderedCommentCopies(selected.id, commentInput.value);
+  updateControls();
 });
-commentInput.addEventListener("change", renderAnnotations);
+commentInput.addEventListener("blur", () => {
+  finishCommentHistoryTransaction();
+});
 deleteHighlightButton.addEventListener("click", deleteSelectedHighlight);
 clearButton.addEventListener("click", clearHighlights);
 exportPngButton.addEventListener("click", exportPng);
 exportPdfButton.addEventListener("click", exportPdf);
+undoButton.addEventListener("click", undoAnnotations);
+redoButton.addEventListener("click", redoAnnotations);
+commentLayoutButton.addEventListener("click", () => {
+  setCommentLayout(commentLayout === "inline" ? "rail" : "inline");
+});
+commentsBackOnPageButton.addEventListener("click", () => setCommentLayout("inline"));
 
 previousPageButton.addEventListener("click", async () => {
   if (currentPageNumber <= 1) return;
+  finishCommentHistoryTransaction();
   currentPageNumber -= 1;
   selectedAnnotationId = null;
   await renderPdfPage();
 });
 nextPageButton.addEventListener("click", async () => {
   if (!pdfDocument || currentPageNumber >= pdfDocument.numPages) return;
+  finishCommentHistoryTransaction();
   currentPageNumber += 1;
   selectedAnnotationId = null;
   await renderPdfPage();
@@ -1082,10 +1383,22 @@ nextPageButton.addEventListener("click", async () => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && selectedAnnotationId) {
+  const hasCommandModifier = event.metaKey || event.ctrlKey;
+  const key = event.key.toLocaleLowerCase();
+  const isUndoShortcut = hasCommandModifier && key === "z" && !event.shiftKey;
+  const isRedoShortcut = hasCommandModifier
+    && ((key === "z" && event.shiftKey) || key === "y");
+  if (isUndoShortcut && source) {
+    event.preventDefault();
+    undoAnnotations();
+  } else if (isRedoShortcut && source) {
+    event.preventDefault();
+    redoAnnotations();
+  } else if (event.key === "Escape" && selectedAnnotationId) {
     selectAnnotation(null);
   }
 });
 
 setMode("highlight");
+applyCommentLayout();
 updateControls();

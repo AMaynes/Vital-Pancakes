@@ -17,6 +17,7 @@
 
 export const DEFAULT_HIGHLIGHT_COLOR = "#f6d84a";
 export const MAX_COMMENT_LENGTH = 4000;
+export const DEFAULT_ANNOTATION_HISTORY_LIMIT = 300;
 
 /**
  * Converts a pointer drag into a normalized, clamped highlight rectangle.
@@ -112,6 +113,93 @@ export function sanitizeAnnotations(value) {
       createdAt: String(annotation.createdAt ?? ""),
     }];
   });
+}
+
+/**
+ * Creates an immutable annotation history with a bounded undo depth.
+ *
+ * @param {Array<object>} annotations Initial annotation collection.
+ * @param {number} limit Maximum undo and redo entries.
+ * @returns {{past: Array<Array<object>>, present: Array<object>, future: Array<Array<object>>, limit: number}}
+ * History state.
+ */
+export function createAnnotationHistory(annotations, limit = DEFAULT_ANNOTATION_HISTORY_LIMIT) {
+  return {
+    past: [],
+    present: cloneAnnotations(annotations),
+    future: [],
+    limit: normalizeHistoryLimit(limit),
+  };
+}
+
+/**
+ * Commits a changed annotation collection and invalidates redo history.
+ *
+ * @param {object} history Current history state.
+ * @param {Array<object>} annotations Next annotation collection.
+ * @returns {object} Updated history state.
+ */
+export function commitAnnotationHistory(history, annotations) {
+  const nextAnnotations = cloneAnnotations(annotations);
+  if (annotationCollectionsMatch(history.present, nextAnnotations)) return history;
+  return {
+    ...history,
+    past: [...history.past, cloneAnnotations(history.present)].slice(-history.limit),
+    present: nextAnnotations,
+    future: [],
+  };
+}
+
+/**
+ * Restores the most recently committed annotation collection.
+ *
+ * @param {object} history Current history state.
+ * @returns {object} Updated history state.
+ */
+export function undoAnnotationHistory(history) {
+  if (!history.past.length) return history;
+  const previous = history.past.at(-1);
+  return {
+    ...history,
+    past: history.past.slice(0, -1),
+    present: cloneAnnotations(previous),
+    future: [cloneAnnotations(history.present), ...history.future].slice(0, history.limit),
+  };
+}
+
+/**
+ * Reapplies the next annotation collection in redo history.
+ *
+ * @param {object} history Current history state.
+ * @returns {object} Updated history state.
+ */
+export function redoAnnotationHistory(history) {
+  if (!history.future.length) return history;
+  const [next, ...remainingFuture] = history.future;
+  return {
+    ...history,
+    past: [...history.past, cloneAnnotations(history.present)].slice(-history.limit),
+    present: cloneAnnotations(next),
+    future: remainingFuture,
+  };
+}
+
+function cloneAnnotations(annotations) {
+  return Array.isArray(annotations)
+    ? annotations.map((annotation) => ({ ...annotation }))
+    : [];
+}
+
+function annotationCollectionsMatch(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function normalizeHistoryLimit(limit) {
+  const numericLimit = Number(limit);
+  if (!Number.isInteger(numericLimit) || numericLimit < 1) {
+    return DEFAULT_ANNOTATION_HISTORY_LIMIT;
+  }
+  return Math.min(numericLimit, 1000);
 }
 
 function finiteNumber(value) {

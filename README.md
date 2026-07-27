@@ -84,7 +84,7 @@ Opens PDFs locally with bundled PDF.js, supports page navigation, creates signat
 
 ### Literature Analyzer
 
-Opens local PDFs or a live embedded website, supports click-and-drag highlights with a comment attached to every mark, restores annotations by source, and exports annotated records as PNG or PDF. PDF export writes highlights into the original pages and adds numbered comment pages.
+Opens local PDFs or a live embedded website, supports click-and-drag highlights with a comment attached to every mark, restores annotations by source, and exports annotated records as PNG or PDF. Comments appear in compact cards directly above their highlights by default and can be moved into a dedicated right-side rail with one toolbar toggle. A 300-step undo and redo history covers highlight creation, recoloring, comment edits, deletion, and complete clearing, with buttons plus standard Command/Ctrl keyboard shortcuts. PDF export writes highlights into the original pages and adds numbered comment pages.
 
 Websites remain governed by their own embedding policies. Because browsers prevent one website from reading another website's rendered pixels, webpage exports preserve the source URL, highlight map, and comments rather than copying the remote page itself.
 

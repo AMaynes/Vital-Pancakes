@@ -2,10 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  commitAnnotationHistory,
+  createAnnotationHistory,
   DEFAULT_HIGHLIGHT_COLOR,
   getPdfHighlightBounds,
   normalizeHighlight,
+  redoAnnotationHistory,
   sanitizeAnnotations,
+  undoAnnotationHistory,
 } from "./literature-analyzer-model.mjs";
 
 test("normalizeHighlight converts a reverse drag into unit coordinates", () => {
@@ -80,4 +84,33 @@ test("sanitizeAnnotations drops malformed records and bounds comments", () => {
   assert.equal(result.length, 1);
   assert.equal(result[0].color, DEFAULT_HIGHLIGHT_COLOR);
   assert.equal(result[0].comment.length, 4000);
+});
+
+test("annotation history supports deep undo and redo without sharing mutable records", () => {
+  const first = [{ id: "one", comment: "" }];
+  let history = createAnnotationHistory(first, 3);
+  history = commitAnnotationHistory(history, [{ id: "one", comment: "A" }]);
+  history = commitAnnotationHistory(history, [{ id: "one", comment: "AB" }]);
+  history = commitAnnotationHistory(history, [{ id: "one", comment: "ABC" }]);
+
+  history = undoAnnotationHistory(history);
+  assert.equal(history.present[0].comment, "AB");
+  history.present[0].comment = "mutated outside history";
+
+  history = redoAnnotationHistory(history);
+  assert.equal(history.present[0].comment, "ABC");
+  assert.equal(first[0].comment, "");
+});
+
+test("annotation history is bounded and a new edit invalidates redo", () => {
+  let history = createAnnotationHistory([], 2);
+  history = commitAnnotationHistory(history, [{ id: "one" }]);
+  history = commitAnnotationHistory(history, [{ id: "one" }, { id: "two" }]);
+  history = commitAnnotationHistory(history, [{ id: "one" }, { id: "two" }, { id: "three" }]);
+  assert.equal(history.past.length, 2);
+
+  history = undoAnnotationHistory(history);
+  assert.equal(history.future.length, 1);
+  history = commitAnnotationHistory(history, [{ id: "replacement" }]);
+  assert.equal(history.future.length, 0);
 });

@@ -194,6 +194,17 @@
   grid-template-rows: auto 1fr;
 }
 
+.analyzer-reading-area {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.analyzer-reading-area.is-comment-rail-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(225px, 285px);
+}
+
 .analyzer-toolbar {
   gap: 12px;
 }
@@ -230,6 +241,96 @@
     linear-gradient(45deg, rgb(23 22 19 / 2%) 25%, transparent 25%) 0 0 / 18px 18px,
     linear-gradient(-45deg, rgb(23 22 19 / 2%) 25%, transparent 25%) 0 9px / 18px 18px,
     #d7d1c6;
+}
+
+.analyzer-comment-rail {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--line-strong);
+  background: var(--card);
+}
+
+.analyzer-comment-rail > header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  min-height: 51px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(249 247 241 / 95%);
+  backdrop-filter: blur(8px);
+}
+
+.analyzer-comment-rail > header span {
+  color: var(--ink-faint);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.analyzer-comment-rail > header h2 {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.analyzer-comment-rail-list {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+}
+
+.analyzer-comment-rail-card {
+  display: grid;
+  width: 100%;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--annotation-color);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+
+.analyzer-comment-rail-card:hover,
+.analyzer-comment-rail-card.is-selected {
+  border-color: var(--ink);
+  border-left-color: var(--annotation-color);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.analyzer-comment-rail-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.analyzer-comment-rail-heading strong {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border: 1px solid rgb(23 22 19 / 30%);
+  background: var(--annotation-color);
+  color: var(--ink);
+  font-size: 8px;
+}
+
+.analyzer-comment-rail-copy {
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .analyzer-empty {
@@ -321,6 +422,60 @@
   mix-blend-mode: normal;
 }
 
+.highlight-inline-comment {
+  position: absolute;
+  z-index: 8;
+  display: grid;
+  min-width: 135px;
+  max-height: 104px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  padding: 7px 8px;
+  overflow: auto;
+  border: 1px solid var(--line-strong);
+  border-top: 3px solid var(--annotation-color);
+  border-radius: 7px;
+  background: rgb(255 254 250 / 96%);
+  color: var(--ink);
+  text-align: left;
+  transform: translateY(calc(-100% - 7px));
+  box-shadow: 0 5px 16px rgb(23 22 19 / 18%);
+  mix-blend-mode: normal;
+  pointer-events: auto;
+}
+
+.highlight-inline-comment.is-below {
+  transform: translateY(7px);
+}
+
+.highlight-inline-comment:hover,
+.highlight-inline-comment.is-selected {
+  border-color: var(--ink);
+  border-top-color: var(--annotation-color);
+  outline: 1px solid rgb(23 22 19 / 22%);
+  outline-offset: 1px;
+}
+
+.highlight-inline-comment-number {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid rgb(23 22 19 / 28%);
+  background: var(--annotation-color);
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.highlight-inline-comment-text {
+  overflow-wrap: anywhere;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 760px) {
   .literature-analyzer-workspace {
     grid-template-columns: 210px minmax(0, 1fr);
@@ -332,6 +487,10 @@
 
   .analyzer-web-stage {
     min-width: 560px;
+  }
+
+  .analyzer-reading-area.is-comment-rail-layout {
+    grid-template-columns: minmax(0, 1fr) 220px;
   }
 }
 
@@ -352,5 +511,15 @@
 
   .analyzer-page-controls {
     margin-left: 0;
+  }
+
+  .analyzer-reading-area.is-comment-rail-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(150px, 30vh);
+  }
+
+  .analyzer-comment-rail {
+    border-top: 1px solid var(--line-strong);
+    border-left: 0;
   }
 }
