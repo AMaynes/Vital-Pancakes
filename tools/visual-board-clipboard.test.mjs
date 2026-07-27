@@ -98,3 +98,43 @@ test("copying divided lines preserves a movable, reassemblable source", () => {
     [136, 46, 136, 106],
   );
 });
+
+test("copying an editable vertex network remaps shared vertices together", () => {
+  const source = [
+    {
+      id: "line-1",
+      type: "line",
+      x: 0,
+      y: 0,
+      endX: 50,
+      endY: 0,
+      groupId: "group-1",
+      vertexNetworkId: "network-1",
+      startVertexId: "vertex-a",
+      endVertexId: "vertex-b",
+    },
+    {
+      id: "line-2",
+      type: "line",
+      x: 50,
+      y: 0,
+      endX: 50,
+      endY: 50,
+      groupId: "group-1",
+      vertexNetworkId: "network-1",
+      startVertexId: "vertex-b",
+      endVertexId: "vertex-c",
+    },
+  ];
+
+  const copies = duplicateBoardObjects(source, identifierFactory(), { x: 16, y: 16 });
+
+  assert.equal(copies[0].vertexNetworkId, copies[1].vertexNetworkId);
+  assert.notEqual(copies[0].vertexNetworkId, source[0].vertexNetworkId);
+  assert.equal(copies[0].endVertexId, copies[1].startVertexId);
+  assert.notEqual(copies[0].endVertexId, source[0].endVertexId);
+  assert.deepEqual(
+    [copies[1].x, copies[1].y, copies[1].endX, copies[1].endY],
+    [66, 16, 66, 66],
+  );
+});

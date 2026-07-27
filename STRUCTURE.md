@@ -43,6 +43,8 @@ pinakes-vitae/
 │   ├── visual-board-clipboard.test.mjs — Verifies multi-object clipboard duplication and identifier remapping.
 │   ├── visual-board-geometry.mjs — Provides pure hit-testing, bounds, rotation, and resizing math.
 │   ├── visual-board-geometry.test.mjs — Verifies Visual Board geometry with Node's test runner.
+│   ├── visual-board-vertices.mjs — Builds and reshapes grouped line networks with shared editable vertices.
+│   ├── visual-board-vertices.test.mjs — Verifies vertex merging, preservation, and connected-line reshaping.
 │   ├── pdf-signer.html — Hosts local PDF viewing and signing.
 │   ├── pdf-signer.js — Renders PDFs and embeds placed signatures and dates.
 │   ├── literature-analyzer.html — Hosts PDF and website reading, highlighting, and comments.
@@ -178,9 +180,9 @@ Shares responsive full-screen layouts, controls, panels, canvas surfaces, signat
 
 ### Visual Board
 
-`visual-board.html` hosts the organized creation, selection, view, history, and style controls, including 2D and 3D shape menus, copy and paste tools, contextual textbox typography, and assembly actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, freehand drawing, brush erasing, straight lines, arrows with editable start and tip handles, inline textboxes, tight per-object selection outlines, marquee selection, multi-object copy and paste, locking, stroke patterns, object grouping, shape division and reassembly, grid snapping, 300-action undo and redo history, local autosave, and PNG export. Dropped images are compressed and retained as local board assets; they are never uploaded.
+`visual-board.html` hosts the organized creation, selection, view, history, and style controls, including persistent 2D and 3D shape menus, copy and paste tools, contextual textbox typography, and assembly actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, repeated shape placement, freehand drawing, brush erasing, straight lines, arrows with editable start and tip handles, inline textboxes, tight per-object selection outlines, marquee selection, multi-object copy and paste, locking, stroke patterns, object grouping, editable shared-vertex networks, shape division and reassembly, grid snapping, 300-action undo and redo history, local autosave, and PNG export. Dropped images are compressed and retained as local board assets; they are never uploaded.
 
-`visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps group and divided-shape identifiers without mutating the originals. Its adjacent test file verifies those relationships. `visual-board-geometry.mjs` isolates the pure geometry used for reusable 2D and 3D segment outlines, world bounds, tight rotated line selections, rotated handles, hit testing, outline-aware marquee intersection, grid snapping, corner-based resizing, and shape division. `visual-board-geometry.test.mjs` exercises those contracts with Node's built-in test runner.
+`visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps group, divided-shape, and vertex-network identifiers without mutating the originals. Its adjacent test file verifies those relationships. `visual-board-geometry.mjs` isolates the pure geometry used for reusable 2D and 3D segment outlines, world bounds, tight rotated line selections, rotated handles, hit testing, outline-aware marquee intersection, grid snapping, corner-based resizing, and shape division. `visual-board-geometry.test.mjs` exercises those contracts with Node's built-in test runner. `visual-board-vertices.mjs` merges touching endpoints into shared controls and applies vertex movement to every incident line; its test file covers both merged and independent vertices.
 
 ### PDF Signer
 

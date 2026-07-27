@@ -8,6 +8,8 @@ export function duplicateBoardObjects(sourceObjects, createIdentifier, offset = 
   const groupIdentifiers = new Map();
   const assemblyIdentifiers = new Map();
   const assemblySourceIdentifiers = new Map();
+  const vertexNetworkIdentifiers = new Map();
+  const vertexIdentifiers = new Map();
 
   return sourceObjects.map((sourceObject) => {
     const duplicate = cloneValue(sourceObject);
@@ -38,6 +40,24 @@ export function duplicateBoardObjects(sourceObjects, createIdentifier, offset = 
         createIdentifier,
       );
       translateBoardObject(duplicate.assemblySource, offset.x, offset.y);
+    }
+
+    if (duplicate.vertexNetworkId) {
+      duplicate.vertexNetworkId = getMappedIdentifier(
+        vertexNetworkIdentifiers,
+        duplicate.vertexNetworkId,
+        createIdentifier,
+      );
+      duplicate.startVertexId = getMappedIdentifier(
+        vertexIdentifiers,
+        duplicate.startVertexId,
+        createIdentifier,
+      );
+      duplicate.endVertexId = getMappedIdentifier(
+        vertexIdentifiers,
+        duplicate.endVertexId,
+        createIdentifier,
+      );
     }
 
     translateBoardObject(duplicate, offset.x, offset.y);

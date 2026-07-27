@@ -4,7 +4,12 @@
  */
 
 import { createId, isDeletePasswordValid } from "../app/store.js";
-import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=1";
+import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=2";
+import {
+  createEditableVertexNetwork,
+  getVertexNetworkVertices,
+  setVertexNetworkPosition,
+} from "./visual-board-vertices.mjs?v=1";
 import {
   LINE_TYPES,
   SHAPE_TYPES,
@@ -24,7 +29,7 @@ import {
 } from "./visual-board-geometry.mjs?v=6";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
-const BOARD_VERSION = 5;
+const BOARD_VERSION = 6;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -35,6 +40,7 @@ const ROTATION_HANDLE_OFFSET = 28;
 const DEFAULT_TEXTBOX_WIDTH = 210;
 const DEFAULT_TEXTBOX_HEIGHT = 72;
 const MAX_IMAGE_DIMENSION = 1800;
+const VERTEX_TOUCH_TOLERANCE = 0.01;
 const DASH_PATTERNS = new Set(["solid", "dashed", "dotted", "dash-dot", "long-dash"]);
 const TEXT_FONT_FAMILIES = Object.freeze({
   serif: 'Georgia, "Times New Roman", serif',
@@ -73,6 +79,7 @@ const selectionActions = document.querySelector("#selection-actions");
 const selectionCount = document.querySelector("#selection-count");
 const lockSelectionButton = document.querySelector("#lock-selection");
 const groupSelectionButton = document.querySelector("#group-selection");
+const mergeVerticesButton = document.querySelector("#merge-vertices");
 const ungroupSelectionButton = document.querySelector("#ungroup-selection");
 const explodeSelectionButton = document.querySelector("#explode-selection");
 const reassembleSelectionButton = document.querySelector("#reassemble-selection");
@@ -187,12 +194,24 @@ function normalizeObject(rawObject, options = {}) {
   }
 
   if (LINE_TYPES.has(type)) {
+    const hasVertexNetwork = [
+      rawObject.vertexNetworkId,
+      rawObject.startVertexId,
+      rawObject.endVertexId,
+    ].every((value) => typeof value === "string" && value);
     return {
       ...common,
       x: finiteNumber(rawObject.x, 0),
       y: finiteNumber(rawObject.y, 0),
       endX: finiteNumber(rawObject.endX, finiteNumber(rawObject.x, 0)),
       endY: finiteNumber(rawObject.endY, finiteNumber(rawObject.y, 0)),
+      ...(hasVertexNetwork
+        ? {
+          vertexNetworkId: rawObject.vertexNetworkId,
+          startVertexId: rawObject.startVertexId,
+          endVertexId: rawObject.endVertexId,
+        }
+        : {}),
       ...(typeof rawObject.assemblyId === "string" && rawObject.assemblyId
         ? {
           assemblyId: rawObject.assemblyId,
@@ -624,14 +643,19 @@ function drawMarquee() {
 function drawSelection() {
   if (!selectedObjects.length) return;
 
+  const vertexNetwork = getSelectedVertexNetwork();
   context.save();
   context.strokeStyle = selectedObjects.every((object) => object.locked) ? "#777777" : "#7b211a";
   context.fillStyle = "#ffffff";
   context.lineWidth = 1 / viewport.zoom;
   context.setLineDash([6 / viewport.zoom, 4 / viewport.zoom]);
 
-  const showHandles = selectedObjects.length === 1;
+  const showHandles = selectedObjects.length === 1 && !vertexNetwork;
   selectedObjects.forEach((object) => drawObjectSelection(object, showHandles));
+  if (vertexNetwork && !vertexNetwork.objects.some((object) => object.locked)) {
+    context.setLineDash([]);
+    vertexNetwork.vertices.forEach((vertex) => drawHandle(vertex));
+  }
   context.restore();
 }
 
@@ -776,10 +800,40 @@ function expandGroupedObjects(objects) {
   return [...expanded];
 }
 
+function getSelectedVertexNetwork() {
+  const networkIds = new Set(
+    selectedObjects.map((object) => object.vertexNetworkId).filter(Boolean),
+  );
+  if (networkIds.size !== 1) return null;
+  const networkId = [...networkIds][0];
+  if (selectedObjects.some((object) => object.vertexNetworkId !== networkId)) return null;
+  const objects = board.objects.filter((object) => object.vertexNetworkId === networkId);
+  if (!objects.length) return null;
+  return {
+    id: networkId,
+    objects,
+    vertices: getVertexNetworkVertices(objects),
+  };
+}
+
 function findSelectionHandle(point) {
+  const hitRadius = 11 / viewport.zoom;
+  const vertexNetwork = getSelectedVertexNetwork();
+  if (vertexNetwork && !vertexNetwork.objects.some((object) => object.locked)) {
+    const vertex = vertexNetwork.vertices.find((candidate) => (
+      distanceBetween(point, candidate) <= hitRadius
+    ));
+    if (vertex) {
+      return {
+        kind: "network-vertex",
+        vertexId: vertex.id,
+        objects: vertexNetwork.objects,
+      };
+    }
+  }
+
   if (selectedObjects.length !== 1 || selectedObjects[0].locked) return null;
   const object = selectedObjects[0];
-  const hitRadius = 11 / viewport.zoom;
 
   if (SHAPE_TYPES.has(object.type)) {
     const rotationHandle = getRotationHandlePoint(object);
@@ -858,6 +912,17 @@ function handlePointerDown(event) {
 function startSelectionInteraction(event, screenPoint, worldPoint) {
   const handle = findSelectionHandle(worldPoint);
   if (handle) {
+    if (handle.kind === "network-vertex") {
+      interaction = {
+        ...handle,
+        pointerId: event.pointerId,
+        startWorld: worldPoint,
+        originals: new Map(handle.objects.map((object) => [object.id, cloneValue(object)])),
+        checkpointed: false,
+        changed: false,
+      };
+      return;
+    }
     interaction = {
       ...handle,
       pointerId: event.pointerId,
@@ -1013,6 +1078,15 @@ function handlePointerMove(event) {
       interaction.object.endY = point.y;
     }
     interaction.changed = true;
+  } else if (interaction.kind === "network-vertex") {
+    ensureInteractionCheckpoint();
+    restoreInteractionOriginals();
+    setVertexNetworkPosition(
+      interaction.objects,
+      interaction.vertexId,
+      getSnappedPoint(worldPoint),
+    );
+    interaction.changed = true;
   } else if (interaction.kind === "erase") {
     interaction.changed = eraseBetween(interaction.lastWorld, worldPoint) || interaction.changed;
     interaction.lastWorld = worldPoint;
@@ -1127,7 +1201,8 @@ function finishPointerInteraction(event, cancelled) {
       history.pop();
       updateHistoryControls();
     }
-  } else if (["move", "resize", "rotate", "endpoint"].includes(finishedInteraction.kind)) {
+  } else if (["move", "resize", "rotate", "endpoint", "network-vertex"]
+    .includes(finishedInteraction.kind)) {
     if (finishedInteraction.changed) saveBoard();
   } else if (finishedInteraction.kind === "pan") {
     saveBoard();
@@ -1160,7 +1235,8 @@ function commitWorkingObject() {
   selectedObjects = [object];
   saveBoard();
   updateSelectionControls();
-  if (object.type !== "pen") setActiveTool("select");
+  const keepsShapeToolActive = ["rectangle", "ellipse", "shape"].includes(object.type);
+  if (object.type !== "pen" && !keepsShapeToolActive) setActiveTool("select");
 
   if (object.type === "textbox") {
     window.setTimeout(() => openTextEditor(object, false), 0);
@@ -1327,6 +1403,7 @@ function updateSelectionControls() {
   lockSelectionButton.querySelector(".tool-button-label").textContent = allLocked ? "Unlock" : "Lock";
   deleteSelectionButton.disabled = allLocked;
   groupSelectionButton.disabled = selectedObjects.length < 2 || anyLocked;
+  mergeVerticesButton.disabled = !canCreateVertexNetwork(selectedObjects);
   ungroupSelectionButton.disabled = anyLocked
     || !selectedObjects.some((object) => Boolean(object.groupId));
   explodeSelectionButton.disabled = anyLocked
@@ -1367,12 +1444,72 @@ function assembleSelection() {
   announceStatus(`${selectedObjects.length} objects assembled`);
 }
 
+function canCreateVertexNetwork(objects) {
+  return objects.length > 0
+    && objects.every((object) => (
+      !object.locked && (LINE_TYPES.has(object.type) || isExplodableObject(object))
+    ));
+}
+
+function mergeSelectionVertices() {
+  if (!canCreateVertexNetwork(selectedObjects)) return;
+  const targets = new Set(selectedObjects);
+  const sourceLines = selectedObjects.flatMap(createVertexCandidateLines);
+  const network = createEditableVertexNetwork(
+    sourceLines,
+    createId,
+    VERTEX_TOUCH_TOLERANCE,
+  );
+  if (!network) return;
+
+  checkpoint();
+  let insertedNetwork = false;
+  board.objects = board.objects.flatMap((object) => {
+    if (!targets.has(object)) return [object];
+    if (insertedNetwork) return [];
+    insertedNetwork = true;
+    return network.objects;
+  });
+  selectedObjects = network.objects;
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  announceStatus(
+    `Editable shape created with ${network.vertices.length} shared vertices`,
+  );
+}
+
+function createVertexCandidateLines(object) {
+  if (LINE_TYPES.has(object.type)) return [cloneValue(object)];
+  return getObjectSegments(object).map(([start, end]) => ({
+    id: createId(),
+    type: "line",
+    x: start.x,
+    y: start.y,
+    endX: end.x,
+    endY: end.y,
+    color: object.color,
+    strokeWidth: object.strokeWidth,
+    dashPattern: object.dashPattern ?? "solid",
+    locked: false,
+  }));
+}
+
 function releaseSelection() {
   const groupIds = new Set(selectedObjects.map((object) => object.groupId).filter(Boolean));
-  if (!groupIds.size || selectedObjects.some((object) => object.locked)) return;
+  const vertexNetworkIds = new Set(
+    selectedObjects.map((object) => object.vertexNetworkId).filter(Boolean),
+  );
+  if ((!groupIds.size && !vertexNetworkIds.size)
+    || selectedObjects.some((object) => object.locked)) return;
   checkpoint();
   board.objects.forEach((object) => {
     if (groupIds.has(object.groupId)) delete object.groupId;
+    if (vertexNetworkIds.has(object.vertexNetworkId)) {
+      delete object.vertexNetworkId;
+      delete object.startVertexId;
+      delete object.endVertexId;
+    }
   });
   saveBoard();
   updateSelectionControls();
@@ -1684,7 +1821,7 @@ function updateCanvasCursor(worldPoint = hoverPoint) {
 
   const handle = worldPoint ? findSelectionHandle(worldPoint) : null;
   if (handle?.kind === "rotate") canvas.style.cursor = "crosshair";
-  else if (handle?.kind === "endpoint") canvas.style.cursor = "move";
+  else if (["endpoint", "network-vertex"].includes(handle?.kind)) canvas.style.cursor = "move";
   else if (handle?.kind === "resize") {
     canvas.style.cursor = ["nw", "se"].includes(handle.corner) ? "nwse-resize" : "nesw-resize";
   } else if (worldPoint && selectedObjects.includes(findObjectAt(worldPoint))) {
@@ -1985,6 +2122,7 @@ pasteSelectionButton.addEventListener("click", pasteSelection);
 deleteSelectionButton.addEventListener("click", deleteSelection);
 lockSelectionButton.addEventListener("click", toggleSelectionLock);
 groupSelectionButton.addEventListener("click", assembleSelection);
+mergeVerticesButton.addEventListener("click", mergeSelectionVertices);
 ungroupSelectionButton.addEventListener("click", releaseSelection);
 explodeSelectionButton.addEventListener("click", divideSelection);
 reassembleSelectionButton.addEventListener("click", reassembleSelection);

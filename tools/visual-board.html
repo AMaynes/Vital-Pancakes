@@ -75,7 +75,6 @@
             <select class="tool-select shape-select" id="shape-3d" aria-label="Choose a 3D shape">
               <option value="">3D shape…</option>
               <option value="shape:cube">Cube</option>
-              <option value="shape:cuboid">Rectangular prism</option>
               <option value="shape:pyramid">Pyramid</option>
               <option value="shape:triangular-prism">Triangular prism</option>
               <option value="shape:cylinder">Cylinder</option>
@@ -165,6 +164,9 @@
         <button class="tool-button" id="group-selection" type="button" title="Assemble selected objects into one movable piece">
           ⛓ <span class="tool-button-label">Assemble</span>
         </button>
+        <button class="tool-button" id="merge-vertices" type="button" title="Convert selected outlines into one shape with editable shared vertices">
+          ◇ <span class="tool-button-label">Merge vertices</span>
+        </button>
         <button class="tool-button" id="ungroup-selection" type="button" title="Release an assembled piece into its objects">
           ⛓ <span class="tool-button-label">Release</span>
         </button>
@@ -189,6 +191,6 @@
       </section>
     </main>
   </div>
-  <script type="module" src="visual-board.js?v=7"></script>
+  <script type="module" src="visual-board.js?v=8"></script>
 </body>
 </html>
