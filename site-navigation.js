@@ -1,5 +1,5 @@
 /**
- * Shared file-path navigation for every Pinakes Vitae page.
+ * Shared file-path navigation for every Vital Pancakes page.
  *
  * The component derives a stable breadcrumb trail from the current route and
  * keeps browser back/forward controls in one predictable position.

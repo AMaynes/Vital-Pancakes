@@ -48,7 +48,7 @@ window.addEventListener("beforeinstallprompt", (event) => {
 });
 
 window.addEventListener("appinstalled", () => {
-  installStatus.textContent = "Pinakes Vitae is installed.";
+  installStatus.textContent = "Vital Pancakes is installed.";
   installButtons.forEach((button) => {
     button.textContent = "App installed";
     button.disabled = true;

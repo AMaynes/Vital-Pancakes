@@ -1,6 +1,6 @@
 {
-  "name": "Pinakes Vitae",
-  "short_name": "Pinakes",
+  "name": "Vital Pancakes",
+  "short_name": "Pancakes",
   "description": "A living, local-first index for everyday life, studies, research, projects, and practical tools.",
   "start_url": "./workspace.html#area=tools",
   "scope": "./",

@@ -3,7 +3,7 @@
 ## Structure at a Glance
 
 ```text
-pinakes-vitae/
+vital-pancakes/
 ├── .gitignore — Excludes local operating-system, editor, log, temporary, and artwork-iteration files.
 ├── .hintrc — Configures webhint for local HTML development.
 ├── .vscode/
@@ -133,7 +133,7 @@ The public site's archival design language: warm paper, black ink, oxblood annot
 
 ### `site-navigation.css` and `site-navigation.js`
 
-The canonical Pinakes Vitae header, anatomical brand mark, and primary Everyday Life, Research & Literature, Studies & Projects, Workspace, and Download App navigation used by every public page and tool. The script also inserts an always-present, file-like page path with back and forward history controls directly beneath the header.
+The canonical Vital Pancakes header, anatomical brand mark, and primary Everyday Life, Research & Literature, Studies & Projects, Workspace, and Download App navigation used by every public page and tool. The script also inserts an always-present, file-like page path with back and forward history controls directly beneath the header.
 
 ### `research-literature.html`
 
@@ -175,7 +175,7 @@ Defines the browser-local data schema, permanent empty core libraries, Protocols
 
 ### `assets/`
 
-Contains the canonical light and dark Pinakes Vitae logos, install icons derived from the light mark, and the two phone preview screens used by Download App. The `pinakes-vitae-logo-final-light.png` file is the primary website artwork; the charcoal version is its inverted companion.
+Contains the original light and dark *Pinakes Vitae* logos retained by Vital Pancakes, install icons derived from the light mark, and the two phone preview screens used by Download App. The historical `pinakes-vitae-logo-final-light.png` filename remains the primary website artwork; the charcoal version is its inverted companion.
 
 ## Tools
 

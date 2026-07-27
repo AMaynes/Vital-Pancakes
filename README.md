@@ -1,8 +1,8 @@
-# Pinakes Vitae — In Perpetuum
+# Vital Pancakes
 
-[View the live website](https://amaynes.github.io/pinakes-vitae/) · [Open the workspace](https://amaynes.github.io/pinakes-vitae/workspace.html#area=tools) · [Download the app](https://amaynes.github.io/pinakes-vitae/download-app.html)
+[View the live website](https://amaynes.github.io/vital-pancakes/) · [Open the workspace](https://amaynes.github.io/vital-pancakes/workspace.html#area=tools) · [Download the app](https://amaynes.github.io/vital-pancakes/download-app.html)
 
-Pinakes Vitae—*in perpetuum*—is Alex Maynes's living, local-first index of knowledge. It preserves research, critical reading notes, everyday-life guides, reference material, projects, and interactive study tools so that what was learned can be found and used again. The name evokes the *Pinakes* of the Library of Alexandria while giving the idea a new purpose: recovering knowledge that study, time, and disuse would otherwise erase.
+**Vital Pancakes**—*Pinakes Vitae*, comically renamed—is Alex Maynes's living, local-first index of knowledge. It gathers research, literature, studies, everyday-life guides, and working tools into a single enduring catalogue so that what was learned can be found and used again. The project carries forward the spirit of the lost *Pinakes* by *Callimachus*, which catalogued the works of the Library of Alexandria; this version records personally learned knowledge that Alex hopes not to lose, even as forgetting remains inevitable.
 
 The project remains a static website: it needs no server-side application, database, account, or paid hosting platform.
 
@@ -36,11 +36,11 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Travel Planner, and Software Architect without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
-The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the anatomical Pinakes Vitae emblem.
+The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the original anatomical *Pinakes Vitae* emblem.
 
 ## Brand Identity
 
-The complete project name is **Pinakes Vitae — In Perpetuum**. Use **Pinakes Vitae** as the compact navigation and app name, and *In Perpetuum* as the motto.
+The public project, navigation, app, repository, and website name is **Vital Pancakes**. The homepage preserves **Pinakes Vitae — In Perpetuum** as the project's original identity and historical inspiration.
 
 The canonical logo files are:
 
@@ -66,7 +66,7 @@ These eight core libraries cannot be added, renamed, or deleted. Their entries r
 
 User-created entries, boards, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 
-Existing `localStorage` namespaces retain their original `artificially-neuroscience-*` identifiers. They are implementation-level compatibility keys, not public branding, and must remain unchanged unless a migration preserves previously saved user data.
+Existing `localStorage` namespaces retain their earlier `pinakes-vitae-*` and `artificially-neuroscience-*` identifiers. They are implementation-level compatibility keys, not public branding, and must remain unchanged unless a migration preserves previously saved user data.
 
 ## Workspace Tools
 
