@@ -42,6 +42,7 @@ const SECTION_LABELS = {
   language: "LANGUAGE",
   algorithm: "ALGORITHM",
   project: "PROJECT",
+  question: "QUESTION / IDEA",
   custom: "ENTRY",
 };
 
@@ -54,6 +55,7 @@ const SECTION_ACCENTS = {
   language: "blue",
   algorithm: "violet",
   project: "ochre",
+  question: "sage",
   custom: "coral",
 };
 
@@ -235,7 +237,7 @@ function renderStudiesDashboard(workspace) {
   const hero = createAreaHero(
     "STUDIES & PROJECTS",
     "Develop ideas and preserve what you learn.",
-    "Keep concept studies, programming refreshers, algorithms, projects, and notecards together.",
+    "Keep questions, emerging ideas, concept studies, programming refreshers, algorithms, projects, and notecards together.",
   );
   const sectionHeading = createSectionHeading(
     "Studies and project libraries",
@@ -369,6 +371,13 @@ function renderToolsDashboard() {
       href: "tools/literature-analyzer.html",
       icon: "⌑",
       accent: "sage",
+    },
+    {
+      title: "Literature Curation",
+      copy: "Organize literature analyses around an idea, claim, or hypothesis and compare how each source relates.",
+      href: "tools/literature-curator.html",
+      icon: "∵",
+      accent: "blue",
     },
     {
       title: "Travel Planner",
@@ -537,6 +546,7 @@ function getEmptyMessage(section) {
     language: "Add a language when you need a refresher. Capture syntax, mental models, and the mistakes you want to avoid.",
     algorithm: "Add algorithms as you encounter them, including use cases and visual frames you can play back.",
     project: "Document a project’s interesting problem, your approach, and its language and algorithm relationships.",
+    question: "Capture an open question or emerging idea, what prompted it, and the directions worth exploring.",
     custom: "Add the first note when this space has something worth keeping.",
   };
   return messages[section.type] ?? messages.custom;
@@ -558,6 +568,7 @@ function getSingularLabel(section) {
     language: "language",
     algorithm: "algorithm",
     project: "project",
+    question: "question or idea",
     custom: "entry",
   }[section.type] ?? "entry";
 }
@@ -611,6 +622,8 @@ function createEntryCard(section, item) {
     card.append(createAlgorithmBody(item));
   } else if (section.type === "project") {
     card.append(createProjectBody(item));
+  } else if (section.type === "question") {
+    card.append(createQuestionBody(item));
   } else {
     card.append(createGenericBody(item));
   }
@@ -843,6 +856,26 @@ function createProjectBody(item) {
 }
 
 /**
+ * Renders one open question or emerging idea with its current direction.
+ *
+ * @param {object} item Question-or-idea record.
+ * @returns {HTMLElement} Question or idea content.
+ */
+function createQuestionBody(item) {
+  const body = createElement("div", "entry-body");
+  const details = createElement("div", "two-column-details");
+  if (item.kind) details.append(createDefinition("Kind", item.kind));
+  if (item.status) details.append(createDefinition("Status", item.status));
+  if (details.childElementCount) body.append(details);
+  if (item.context) body.append(createDefinition("What prompted it", item.context));
+  if (item.directions?.length) {
+    body.append(createDefinition("Possible directions", item.directions.join("\n")));
+  }
+  if (item.currentPosition) body.append(createDefinition("Current position", item.currentPosition));
+  return body;
+}
+
+/**
  * Renders a custom section entry.
  *
  * @param {object} item Generic record.
@@ -1003,6 +1036,33 @@ function createItemFields(section, item) {
       createField("Languages · comma separated", "languages", "text", (item?.languages ?? []).join(", "), false, "e.g. Python, Rust"),
       createAlgorithmPicker(item?.algorithmIds ?? []),
     );
+  } else if (section.type === "question") {
+    fields.push(
+      createSelectField("Kind", "kind", item?.kind ?? "Question", ["Question", "Idea"]),
+      createSelectField(
+        "Status",
+        "status",
+        item?.status ?? "Open",
+        ["Open", "Exploring", "Developed", "Resolved", "Parked"],
+      ),
+      createField("What prompted it", "context", "textarea", item?.context ?? "", false, "Observation, tension, source, or problem that raised it"),
+      createField(
+        "Possible directions · one per line",
+        "directions",
+        "textarea",
+        (item?.directions ?? []).join("\n"),
+        false,
+        "A path to investigate, test, build, or connect",
+      ),
+      createField(
+        "Current position",
+        "currentPosition",
+        "textarea",
+        item?.currentPosition ?? "",
+        false,
+        "What you presently think, including uncertainty",
+      ),
+    );
   } else {
     fields.push(
       createField("Notes", "notes", "textarea", item?.notes ?? "", false, "Write what you want to remember"),
@@ -1033,6 +1093,31 @@ function createField(labelText, name, type, value, required, placeholder) {
   control.required = required;
   control.placeholder = placeholder;
   if (type === "textarea") control.rows = name === "visualFrames" || name === "syntax" ? 5 : 3;
+  label.append(control);
+  return label;
+}
+
+/**
+ * Creates a labeled select control.
+ *
+ * @param {string} labelText Visible label.
+ * @param {string} name Form field name.
+ * @param {string} value Selected value.
+ * @param {Array<string>} options Allowed options.
+ * @returns {HTMLElement} Label containing the select.
+ */
+function createSelectField(labelText, name, value, options) {
+  const label = createElement("label");
+  label.append(document.createTextNode(labelText));
+  const control = document.createElement("select");
+  control.name = name;
+  options.forEach((optionValue) => {
+    const option = document.createElement("option");
+    option.value = optionValue;
+    option.textContent = optionValue;
+    option.selected = optionValue === value;
+    control.append(option);
+  });
   label.append(control);
   return label;
 }
@@ -1153,6 +1238,16 @@ function readItemForm(section) {
       solution: String(formData.get("solution") ?? "").trim(),
       languages: commaList("languages"),
       algorithmIds: formData.getAll("algorithmIds").map(String),
+    };
+  }
+  if (section.type === "question") {
+    return {
+      ...base,
+      kind: String(formData.get("kind") ?? "Question"),
+      status: String(formData.get("status") ?? "Open"),
+      context: String(formData.get("context") ?? "").trim(),
+      directions: lineList("directions"),
+      currentPosition: String(formData.get("currentPosition") ?? "").trim(),
     };
   }
   return {

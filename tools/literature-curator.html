@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>Literature Curation · Vital Pancakes</title>
+  <link rel="icon" href="../assets/pinakes-vitae-logo-final-light.png" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=17">
+  <link rel="stylesheet" href="tool.css?v=24">
+  <link rel="stylesheet" href="literature-curator.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=17">
+  <script type="module" src="../site-navigation.js?v=6"></script>
+</head>
+<body class="tool-body literature-curator-body">
+  <a class="skip-link" href="#tool-main">Skip to tool</a>
+
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Vital Pancakes home">
+      <span class="brand-mark" aria-hidden="true">VP</span>
+      <span>Vital Pancakes</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../workspace.html#area=everyday">Everyday Life</a>
+      <a href="../research-literature.html">Research &amp; Literature</a>
+      <a href="../workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="../workspace.html#area=tools" aria-current="page">Workspace</a>
+      <a href="../download-app.html">Download App</a>
+    </nav>
+  </header>
+
+  <div class="tool-shell literature-curator-shell">
+    <header class="tool-topbar">
+      <div class="tool-title-group">
+        <div>
+          <h1>Literature Curation</h1>
+          <small>IDEAS + CLAIMS + HYPOTHESES</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions">
+        <span class="tool-save-status" id="curation-status" aria-live="polite">Saved locally</span>
+        <button class="button button-danger-quiet" id="clear-curations" type="button">Clear all</button>
+        <button class="button button-quiet" id="export-curation" type="button" disabled>Export Markdown</button>
+        <button class="button button-primary" id="add-curation" type="button">+ Curation</button>
+      </div>
+    </header>
+
+    <main class="literature-curator-workspace" id="tool-main">
+      <aside class="curation-index" aria-label="Literature curations">
+        <header>
+          <div>
+            <p class="curation-kicker">Curations</p>
+            <h2>Working arguments</h2>
+          </div>
+          <span id="curation-count">0</span>
+        </header>
+        <div class="curation-list" id="curation-list"></div>
+      </aside>
+
+      <section class="curation-detail" id="curation-detail" aria-live="polite">
+        <div class="curation-empty">
+          <span aria-hidden="true">∵</span>
+          <h2>Build an evidence trail</h2>
+          <p>Create an idea, claim, or hypothesis, then curate literature analyses according to how each source supports, complicates, contradicts, or contextualizes it.</p>
+          <button class="button button-primary" type="button" data-create-first-curation>Create the first curation</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="app-dialog app-dialog-wide" id="curation-dialog">
+    <form method="dialog" id="curation-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow" id="curation-dialog-eyebrow">NEW CURATION</p>
+          <h2 id="curation-dialog-title">Add curation</h2>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-close-dialog aria-label="Close">×</button>
+      </div>
+      <label>
+        Short title
+        <input name="title" type="text" maxlength="160" placeholder="A name for this line of thought" required>
+      </label>
+      <label>
+        Target type
+        <select name="targetType">
+          <option>Idea</option>
+          <option>Claim</option>
+          <option>Hypothesis</option>
+        </select>
+      </label>
+      <label>
+        Idea, claim, or hypothesis
+        <textarea name="statement" rows="4" maxlength="6000" placeholder="State the thought clearly enough that evidence can bear on it." required></textarea>
+      </label>
+      <label>
+        Working synthesis
+        <textarea name="synthesis" rows="5" maxlength="6000" placeholder="What does the literature collectively suggest so far?"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" data-close-dialog>Cancel</button>
+        <button class="button button-primary" type="submit">Save curation</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="app-dialog app-dialog-wide" id="analysis-dialog">
+    <form method="dialog" id="analysis-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow" id="analysis-dialog-eyebrow">NEW ANALYSIS</p>
+          <h2 id="analysis-dialog-title">Add literature analysis</h2>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-close-dialog aria-label="Close">×</button>
+      </div>
+      <label>
+        Source title
+        <input name="sourceTitle" type="text" maxlength="160" placeholder="Paper, book, essay, or literature review" required>
+      </label>
+      <label>
+        Citation
+        <textarea name="citation" rows="2" maxlength="600" placeholder="Author, year, publication, DOI, or your preferred reference"></textarea>
+      </label>
+      <label>
+        Source link
+        <input name="sourceUrl" type="url" maxlength="1200" placeholder="https://…">
+      </label>
+      <label>
+        Relationship to the target
+        <select name="relationship">
+          <option>Supports</option>
+          <option>Complicates</option>
+          <option>Contradicts</option>
+          <option>Context</option>
+        </select>
+      </label>
+      <label>
+        Key finding or passage
+        <textarea name="finding" rows="3" maxlength="6000" placeholder="The evidence, result, argument, or passage that matters here"></textarea>
+      </label>
+      <label>
+        My analysis
+        <textarea name="analysis" rows="4" maxlength="6000" placeholder="Explain how and why this source bears on the target."></textarea>
+      </label>
+      <label>
+        Limits and notes
+        <textarea name="notes" rows="3" maxlength="6000" placeholder="Methods, caveats, unanswered questions, or follow-up reading"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" data-close-dialog>Cancel</button>
+        <button class="button button-primary" type="submit">Save analysis</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="literature-curator.js?v=1"></script>
+</body>
+</html>

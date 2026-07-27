@@ -14,7 +14,7 @@
  */
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
-const CURRENT_WORKSPACE_VERSION = 5;
+const CURRENT_WORKSPACE_VERSION = 6;
 const EVERYDAY_AREA = "everyday";
 
 const DEFAULT_SECTIONS = [
@@ -60,6 +60,14 @@ const DEFAULT_SECTIONS = [
     description: "Concept breakdowns, visual explanations, essays, and notes worth developing.",
     icon: "◉",
     type: "custom",
+    items: [],
+  },
+  {
+    id: "questions-ideas",
+    title: "Questions & Ideas",
+    description: "Open questions, emerging ideas, possible explanations, and directions worth pursuing.",
+    icon: "?",
+    type: "question",
     items: [],
   },
   {

@@ -550,6 +550,10 @@ h3 {
   border-top-color: var(--sage);
 }
 
+.entry-question {
+  border-top-color: var(--ochre);
+}
+
 .entry-card.is-targeted {
   border-color: var(--ochre);
   box-shadow: 0 0 0 3px rgb(215 181 109 / 22%), var(--shadow-sm);

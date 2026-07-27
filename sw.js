@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v1";
+const CACHE_NAME = "vital-pancakes-app-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -32,7 +32,7 @@ const APP_SHELL = [
   "./assets/app-icon-512.png",
   "./assets/app-preview-workspace.svg?v=4",
   "./assets/app-preview-studies.svg?v=2",
-  "./app/main.js?v=3",
+  "./app/main.js?v=4",
   "./app/store.js",
   "./app/download-app.js",
   "./tools/tool.css?v=24",
@@ -48,6 +48,10 @@ const APP_SHELL = [
   "./tools/literature-analyzer.css?v=2",
   "./tools/literature-analyzer.js?v=3",
   "./tools/literature-analyzer-model.mjs",
+  "./tools/literature-curator.html",
+  "./tools/literature-curator.css?v=1",
+  "./tools/literature-curator.js?v=1",
+  "./tools/literature-curator-model.mjs",
   "./tools/travel-planner.html",
   "./tools/travel-planner.css?v=2",
   "./tools/travel-planner.js?v=2",

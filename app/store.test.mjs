@@ -5,6 +5,13 @@ import { getWorkspace, isCoreSectionId } from "./store.js";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const EVERYDAY_SECTION_IDS = ["how-to-cook", "recipes", "workouts", "cleaning"];
+const STUDIES_SECTION_IDS = [
+  "studies",
+  "questions-ideas",
+  "programming-languages",
+  "algorithms",
+  "projects",
+];
 
 class MemoryStorage {
   #values = new Map();
@@ -39,9 +46,14 @@ test("a new workspace starts with four permanent Everyday Life libraries", () =>
   const workspace = getWorkspace();
   const everydaySections = workspace.sections.filter((section) => section.area === "everyday");
 
-  assert.equal(workspace.version, 5);
+  assert.equal(workspace.version, 6);
   assert.deepEqual(everydaySections.map((section) => section.id), EVERYDAY_SECTION_IDS);
+  assert.deepEqual(
+    workspace.sections.filter((section) => section.area !== "everyday").map((section) => section.id),
+    STUDIES_SECTION_IDS,
+  );
   assert.ok(everydaySections.every((section) => isCoreSectionId(section.id)));
+  assert.equal(isCoreSectionId("questions-ideas"), true);
   assert.equal(workspace.sections.some((section) => section.id === "protocols"), false);
 });
 
@@ -107,4 +119,34 @@ test("saved Protocol entries migrate into an Everyday Life routines library", ()
   assert.equal(routines.area, "everyday");
   assert.equal(routines.type, "routine");
   assert.deepEqual(routines.items, [savedRoutine]);
+});
+
+test("existing workspaces gain Questions & Ideas without losing saved studies", () => {
+  const savedStudy = {
+    id: "study-1",
+    title: "Existing study",
+    updatedAt: "2026-01-01",
+  };
+  useStorage({
+    version: 5,
+    sections: [
+      {
+        id: "studies",
+        title: "Studies",
+        description: "Existing studies",
+        icon: "◉",
+        type: "custom",
+        items: [savedStudy],
+      },
+    ],
+  });
+
+  const workspace = getWorkspace();
+  const questionsAndIdeas = workspace.sections.find((section) => section.id === "questions-ideas");
+
+  assert.equal(workspace.version, 6);
+  assert.deepEqual(workspace.sections.find((section) => section.id === "studies").items, [savedStudy]);
+  assert.deepEqual(questionsAndIdeas.items, []);
+  assert.equal(questionsAndIdeas.type, "question");
+  assert.equal(isCoreSectionId(questionsAndIdeas.id), true);
 });

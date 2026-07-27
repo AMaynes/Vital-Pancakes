@@ -26,7 +26,7 @@ vital-pancakes/
 ├── app/
 │   ├── main.js — Renders workspace routes, libraries, and editors.
 │   ├── download-app.js — Connects the install page to supported PWA prompts.
-│   ├── store.test.mjs — Verifies Everyday Life defaults and legacy data migration.
+│   ├── store.test.mjs — Verifies permanent libraries and legacy data migration.
 │   └── store.js — Owns browser-local data, persistence, and deletion policy.
 ├── assets/
 │   ├── pinakes-vitae-logo-final-light.png — Canonical black-ink logo on white.
@@ -54,6 +54,11 @@ vital-pancakes/
 │   ├── literature-analyzer.js — Owns source loading, persistence, comments, and exports.
 │   ├── literature-analyzer-model.mjs — Provides highlight geometry, stored-data validation, and bounded history.
 │   ├── literature-analyzer-model.test.mjs — Verifies highlighting, PDF coordinates, and undo/redo history.
+│   ├── literature-curator.html — Hosts idea, claim, and hypothesis evidence curation.
+│   ├── literature-curator.css — Styles the curation index and evidence matrix.
+│   ├── literature-curator.js — Owns local curation editing, persistence, and Markdown export.
+│   ├── literature-curator-model.mjs — Validates curations and immutable analysis updates.
+│   ├── literature-curator-model.test.mjs — Verifies validation, evidence categories, and updates.
 │   ├── travel-planner.html — Hosts overhead tools, month selection, day pages, and the anchored event editor.
 │   ├── travel-planner.css — Styles the month grid, 24-hour timeline, place results, and event popover.
 │   ├── travel-planner.js — Renders multi-day selection, editing, place search, and local persistence.
@@ -167,11 +172,11 @@ Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sor
 
 ### `app/main.js`
 
-Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns core-library entries, relationships, dialogs, and local notices.
+Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns core-library entries, Questions & Ideas records, relationships, dialogs, and local notices.
 
 ### `app/store.js`
 
-Defines the browser-local data schema, permanent empty core libraries, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
+Defines the browser-local data schema, nine permanent empty core libraries, Questions & Ideas migration, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
 
 ### `assets/`
 
@@ -198,6 +203,12 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 `literature-analyzer.html` and `literature-analyzer.css` provide a split source, comment, and reading workspace with inline comment cards and a toggleable right-side comment rail. `literature-analyzer.js` opens local PDFs or sandboxed website frames, stores source-specific highlights and comments locally, owns 300-step undo and redo for annotation changes, exports annotated PDF pages with a comment appendix, and creates PNG or PDF annotation maps for webpages whose pixels remain protected by cross-origin browser security. `literature-analyzer-model.mjs` provides normalized geometry, stored-data validation, and immutable bounded annotation-history operations.
 
 `literature-analyzer-model.mjs` owns normalized rectangle creation, persisted annotation validation, and PDF coordinate conversion. Its Node test suite covers reverse drags, clamping, minimum sizes, malformed storage, and the PDF vertical-axis transform.
+
+### Literature Curation
+
+`literature-curator.html` and `literature-curator.css` provide a local curation index, editable target statement and synthesis, relationship totals, and a four-part evidence matrix for sources that support, complicate, contradict, or contextualize an idea, claim, or hypothesis. `literature-curator.js` owns creation, editing, deletion, local persistence, safe source links, and Markdown export.
+
+`literature-curator-model.mjs` isolates storage-boundary validation and immutable curation and analysis updates. Its Node test suite covers malformed records, unsafe source URLs, relationship counts, and preservation of prior state during updates.
 
 ### Travel Planner
 
