@@ -372,7 +372,7 @@ function renderToolsDashboard() {
     },
     {
       title: "Travel Planner",
-      copy: "Keep flights, stays, places, and daily itinerary notes on a simple calendar.",
+      copy: "Build multi-day itineraries with 24-hour timelines and linked places.",
       href: "tools/travel-planner.html",
       icon: "✈",
       accent: "coral",

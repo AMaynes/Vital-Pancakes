@@ -47,6 +47,20 @@ export function isValidDateKey(value) {
   return formatDateKey(year, monthIndex, day) === value;
 }
 
+export function isValid24HourTime(value) {
+  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(value ?? ""));
+}
+
+export function toggleSelectedTravelDate(selectedDates, dateKey) {
+  const normalized = [...new Set(
+    (Array.isArray(selectedDates) ? selectedDates : []).filter(isValidDateKey),
+  )];
+  if (!isValidDateKey(dateKey)) return normalized;
+  return normalized.includes(dateKey)
+    ? normalized.filter((selectedDate) => selectedDate !== dateKey)
+    : [...normalized, dateKey];
+}
+
 export function sanitizeTravelPlans(saved) {
   const source = Array.isArray(saved) ? saved : saved?.plans;
   if (!Array.isArray(source)) return [];
@@ -103,7 +117,7 @@ function normalizeText(value, limit, preserveLines = false) {
 
 function normalizeTime(value) {
   const time = String(value ?? "");
-  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : "";
+  return isValid24HourTime(time) ? time : "";
 }
 
 function timeSortKey(time) {

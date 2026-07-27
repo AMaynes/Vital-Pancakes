@@ -5,10 +5,12 @@ import {
   createCalendarMonth,
   formatDateKey,
   getPlansForDate,
+  isValid24HourTime,
   isValidDateKey,
   removeTravelPlan,
   sanitizeTravelPlan,
   sanitizeTravelPlans,
+  toggleSelectedTravelDate,
   upsertTravelPlan,
 } from "./travel-planner-model.mjs";
 
@@ -25,6 +27,25 @@ test("date keys validate leap days and reject rolled-over dates", () => {
   assert.equal(isValidDateKey("2024-02-29"), true);
   assert.equal(isValidDateKey("2025-02-29"), false);
   assert.equal(isValidDateKey("2026-13-01"), false);
+});
+
+test("times use strict 24-hour HH:MM values", () => {
+  assert.equal(isValid24HourTime("00:00"), true);
+  assert.equal(isValid24HourTime("23:59"), true);
+  assert.equal(isValid24HourTime("24:00"), false);
+  assert.equal(isValid24HourTime("9:30"), false);
+  assert.equal(isValid24HourTime("09:60"), false);
+});
+
+test("selected days toggle independently while preserving page order", () => {
+  const firstSelection = toggleSelectedTravelDate([], "2026-07-15");
+  const multipleSelection = toggleSelectedTravelDate(firstSelection, "2026-07-18");
+  assert.deepEqual(multipleSelection, ["2026-07-15", "2026-07-18"]);
+  assert.deepEqual(
+    toggleSelectedTravelDate(multipleSelection, "2026-07-15"),
+    ["2026-07-18"],
+  );
+  assert.deepEqual(toggleSelectedTravelDate(multipleSelection, "invalid"), multipleSelection);
 });
 
 test("saved plans are trimmed, bounded, and ordered by date and time", () => {

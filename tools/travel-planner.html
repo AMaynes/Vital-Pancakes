@@ -7,10 +7,10 @@
   <title>Travel Planner · Pinakes Vitae</title>
   <link rel="icon" href="../assets/pinakes-vitae-logo-final-light.png" type="image/png">
   <link rel="stylesheet" href="../workspace.css?v=17">
-  <link rel="stylesheet" href="tool.css?v=22">
-  <link rel="stylesheet" href="travel-planner.css?v=1">
+  <link rel="stylesheet" href="tool.css?v=24">
+  <link rel="stylesheet" href="travel-planner.css?v=2">
   <link rel="stylesheet" href="../site-navigation.css?v=17">
-  <script type="module" src="../site-navigation.js?v=5"></script>
+  <script type="module" src="../site-navigation.js?v=6"></script>
 </head>
 <body class="tool-body">
   <a class="skip-link" href="#tool-main">Skip to tool</a>
@@ -39,82 +39,128 @@
       </div>
       <div class="tool-topbar-actions">
         <span class="tool-save-status" id="travel-status" aria-live="polite">Saved locally</span>
-        <button class="button button-quiet" id="travel-today" type="button">Today</button>
-        <button class="button button-primary" id="new-travel-plan" type="button">+ Plan</button>
       </div>
     </header>
 
     <main class="travel-planner-workspace" id="tool-main">
-      <section class="travel-calendar-panel" aria-labelledby="travel-month-label">
-        <header class="travel-calendar-header">
-          <div class="travel-month-controls">
-            <button class="tool-button" id="previous-travel-month" type="button" aria-label="Previous month">←</button>
-            <h2 id="travel-month-label"></h2>
-            <button class="tool-button" id="next-travel-month" type="button" aria-label="Next month">→</button>
-          </div>
-          <p>Click a day to plan it. Everything stays in this browser.</p>
-        </header>
-        <div class="travel-weekdays" aria-hidden="true">
-          <span>Sun</span>
-          <span>Mon</span>
-          <span>Tue</span>
-          <span>Wed</span>
-          <span>Thu</span>
-          <span>Fri</span>
-          <span>Sat</span>
+      <nav class="travel-tool-strip" aria-label="Travel planner tools">
+        <div class="travel-mode-controls" aria-label="Calendar interaction mode">
+          <button class="travel-mode-button is-active" type="button" data-travel-mode="select" aria-pressed="true">
+            <span aria-hidden="true">↖</span>
+            Select
+          </button>
+          <button class="travel-mode-button" type="button" data-travel-mode="event" aria-pressed="false">
+            <span aria-hidden="true">＋</span>
+            Add event
+          </button>
         </div>
-        <div class="travel-calendar-grid" id="travel-calendar-grid" role="grid" aria-label="Travel plans by month"></div>
-      </section>
 
-      <aside class="travel-planner-sidebar">
-        <section class="travel-editor-panel">
-          <header class="travel-sidebar-heading">
-            <div>
-              <p class="travel-sidebar-kicker">Selected day</p>
-              <h2 id="selected-travel-date"></h2>
-            </div>
-            <span id="selected-travel-count">0 plans</span>
+        <div class="travel-month-controls">
+          <button class="tool-button" id="previous-travel-month" type="button" aria-label="Previous month">←</button>
+          <h2 id="travel-month-label"></h2>
+          <button class="tool-button" id="next-travel-month" type="button" aria-label="Next month">→</button>
+          <button class="button button-quiet" id="travel-today" type="button">Today</button>
+        </div>
+
+        <div class="travel-selection-tools">
+          <span id="travel-selection-count">1 day selected</span>
+          <button class="button button-quiet" id="clear-travel-selection" type="button">Clear selection</button>
+        </div>
+      </nav>
+
+      <div class="travel-planner-stage">
+        <section class="travel-calendar-panel" aria-labelledby="travel-month-label">
+          <header class="travel-calendar-header">
+            <p id="travel-mode-instruction">Select one or more days to compare their complete itineraries.</p>
           </header>
-
-          <form id="travel-plan-form">
-            <label for="travel-title">
-              <span>Plan</span>
-              <input class="tool-input" id="travel-title" name="title" type="text" maxlength="120" placeholder="Flight, hotel, museum…" required>
-            </label>
-            <div class="travel-form-row">
-              <label for="travel-date">
-                <span>Date</span>
-                <input class="tool-input" id="travel-date" name="date" type="date" required>
-              </label>
-              <label for="travel-time">
-                <span>Time <small>optional</small></span>
-                <input class="tool-input" id="travel-time" name="time" type="time">
-              </label>
-            </div>
-            <label for="travel-place">
-              <span>Place <small>optional</small></span>
-              <input class="tool-input" id="travel-place" name="place" type="text" maxlength="200" placeholder="Airport, hotel, address…">
-            </label>
-            <label for="travel-notes">
-              <span>Notes <small>optional</small></span>
-              <textarea class="tool-input" id="travel-notes" name="notes" rows="4" maxlength="2000" placeholder="Booking details, route, what to bring…"></textarea>
-            </label>
-            <div class="travel-form-actions">
-              <button class="button button-primary" id="save-travel-plan" type="submit">Add to calendar</button>
-              <button class="button button-quiet" id="cancel-travel-edit" type="button">Clear</button>
-              <button class="button button-danger-quiet" id="delete-travel-plan" type="button" hidden>Delete</button>
-            </div>
-          </form>
+          <div class="travel-weekdays" aria-hidden="true">
+            <span>Sun</span>
+            <span>Mon</span>
+            <span>Tue</span>
+            <span>Wed</span>
+            <span>Thu</span>
+            <span>Fri</span>
+            <span>Sat</span>
+          </div>
+          <div class="travel-calendar-grid" id="travel-calendar-grid" role="grid" aria-label="Travel plans by month"></div>
         </section>
 
-        <section class="travel-agenda-panel">
-          <h2>Day itinerary</h2>
-          <div class="travel-agenda" id="travel-agenda"></div>
-        </section>
-      </aside>
+        <aside class="travel-day-pages" aria-label="Selected day itineraries">
+          <header class="travel-day-page-header">
+            <div class="travel-day-page-controls">
+              <button class="tool-button" id="previous-selected-day" type="button" aria-label="Previous selected day">←</button>
+              <h2 id="selected-travel-date">Select a day</h2>
+              <button class="tool-button" id="next-selected-day" type="button" aria-label="Next selected day">→</button>
+            </div>
+            <span id="selected-travel-page">0 / 0</span>
+          </header>
+          <div class="travel-day-page-body" id="travel-day-page-body"></div>
+        </aside>
+      </div>
+
+      <section
+        class="travel-event-popover"
+        id="travel-event-popover"
+        role="dialog"
+        aria-labelledby="travel-event-title"
+        hidden
+      >
+        <header class="travel-event-popover-header">
+          <div class="travel-event-heading">
+            <p class="travel-event-kicker">Event</p>
+            <h2 id="travel-event-title">Add event</h2>
+            <p id="travel-event-date-label"></p>
+          </div>
+          <button class="icon-button" id="close-travel-event" type="button" aria-label="Close event editor">×</button>
+        </header>
+
+        <form id="travel-plan-form">
+          <input id="travel-date" name="date" type="hidden">
+          <label for="travel-title">
+            <span>Event</span>
+            <input class="tool-input" id="travel-title" name="title" type="text" maxlength="120" placeholder="Flight, hotel, museum…" required>
+          </label>
+          <label for="travel-time">
+            <span>Time <small>24-hour, optional</small></span>
+            <input
+              class="tool-input"
+              id="travel-time"
+              name="time"
+              type="text"
+              inputmode="numeric"
+              maxlength="5"
+              pattern="(?:[01]\d|2[0-3]):[0-5]\d"
+              placeholder="14:30"
+              title="Enter time as HH:MM from 00:00 to 23:59"
+            >
+          </label>
+          <label for="travel-place">
+            <span>Address or business <small>optional</small></span>
+            <div class="travel-place-search-row">
+              <input class="tool-input" id="travel-place" name="place" type="text" maxlength="200" placeholder="Business name or full address…" autocomplete="off">
+              <button class="button button-quiet" id="search-travel-place" type="button">Search</button>
+            </div>
+          </label>
+          <p class="travel-place-search-status" id="travel-place-search-status" role="status"></p>
+          <div class="travel-place-results" id="travel-place-results" role="listbox" aria-label="Address and business results" hidden></div>
+          <p class="travel-place-attribution">
+            Search runs only when requested. Results ©
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>.
+          </p>
+          <label for="travel-notes">
+            <span>Notes <small>optional</small></span>
+            <textarea class="tool-input" id="travel-notes" name="notes" rows="3" maxlength="2000" placeholder="Booking details, route, what to bring…"></textarea>
+          </label>
+          <div class="travel-form-actions">
+            <button class="button button-primary" id="save-travel-plan" type="submit">Add event</button>
+            <button class="button button-quiet" id="cancel-travel-edit" type="button">Cancel</button>
+            <button class="button button-danger-quiet" id="delete-travel-plan" type="button" hidden>Delete</button>
+          </div>
+        </form>
+      </section>
     </main>
   </div>
 
-  <script type="module" src="travel-planner.js?v=1"></script>
+  <script type="module" src="travel-planner.js?v=2"></script>
 </body>
 </html>

@@ -54,11 +54,14 @@ pinakes-vitae/
 │   ├── literature-analyzer.js — Owns source loading, persistence, comments, and exports.
 │   ├── literature-analyzer-model.mjs — Provides highlight geometry, stored-data validation, and bounded history.
 │   ├── literature-analyzer-model.test.mjs — Verifies highlighting, PDF coordinates, and undo/redo history.
-│   ├── travel-planner.html — Hosts the simple month itinerary calendar.
-│   ├── travel-planner.css — Styles the month grid, plan editor, and day itinerary.
-│   ├── travel-planner.js — Renders and persists local travel plans.
-│   ├── travel-planner-model.mjs — Owns calendar dates and saved-plan validation.
+│   ├── travel-planner.html — Hosts overhead tools, month selection, day pages, and the anchored event editor.
+│   ├── travel-planner.css — Styles the month grid, 24-hour timeline, place results, and event popover.
+│   ├── travel-planner.js — Renders multi-day selection, editing, place search, and local persistence.
+│   ├── travel-planner-config.json — Selects the replaceable Nominatim-compatible place-search endpoint.
+│   ├── travel-planner-model.mjs — Owns calendar dates, selection, 24-hour times, and saved-plan validation.
 │   ├── travel-planner-model.test.mjs — Verifies Travel Planner model behavior.
+│   ├── travel-place-search.mjs — Builds explicit search requests and validates returned places.
+│   ├── travel-place-search.test.mjs — Verifies place-query and result trust boundaries.
 │   ├── architecture.html — Hosts the permanent-root folder structure and aligned notes.
 │   ├── architecture.js — Renders and persists editable tree interactions.
 │   ├── architecture-model.mjs — Owns migration, nesting, movement, and deletion policies.
@@ -198,9 +201,9 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 ### Travel Planner
 
-`travel-planner.html` and `travel-planner.css` provide a simple six-week month calendar, plan editor, and selected-day itinerary. `travel-planner.js` keeps date, time, place, and note entries in local browser storage and offers optional Google Maps search links without adding reminders, notifications, accounts, sync, or calendar integrations.
+`travel-planner.html` and `travel-planner.css` provide overhead Select and Add Event tools, a six-week month calendar, a multi-selected day pager, complete 24-hour timelines, and a calendar-anchored event editor. `travel-planner.js` keeps plans in local browser storage, preserves strict `HH:MM` time display, and performs only explicit user-submitted place searches through the configured endpoint. Search results are rate-limited, cached locally, attributed to OpenStreetMap, and can populate map-ready places without adding reminders, notifications, accounts, sync, or calendar integrations.
 
-`travel-planner-model.mjs` owns date generation, validation, sanitization, ordering, querying, updates, and removal. Its Node test suite covers six-week calendar boundaries, leap dates, malformed persistence, deterministic ordering, and the complete plan lifecycle.
+`travel-planner-model.mjs` owns date generation, validation, multi-day selection, 24-hour time validation, sanitization, ordering, querying, updates, and removal. `travel-place-search.mjs` isolates external query construction and untrusted result validation. Their Node test suites cover calendar boundaries, leap dates, selection order, time limits, malformed persistence, deterministic ordering, the complete plan lifecycle, HTTPS request construction, and returned coordinate bounds.
 
 ### Software Architect
 

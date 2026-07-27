@@ -90,9 +90,9 @@ Websites remain governed by their own embedding policies. Because browsers preve
 
 ### Travel Planner
 
-Provides a simple month calendar for flights, stays, reservations, places, and daily itinerary notes. Each plan can include an optional time, place, and notes; saved places can open directly in Google Maps.
+Provides a month calendar with overhead Select and Add Event tools. Multiple selected dates become paged, arrow-controlled 24-hour day timelines on the right. Add Event keeps the tool active and opens a compact editor above the clicked calendar day; existing events can be reopened there for editing or deletion.
 
-Travel plans stay in the current browser. The tool has no reminders, notifications, accounts, synchronization, or external calendar integration.
+Event titles, strict `HH:MM` 24-hour times, places, and notes stay in the current browser. Address and business searches run only after the Search button is pressed, use a rate-limited configurable Nominatim-compatible endpoint with local result caching and OpenStreetMap attribution, and fill the event's map-ready place field. Search queries leave the browser; saved travel plans do not. The tool has no reminders, notifications, accounts, synchronization, or external calendar integration.
 
 ### Software Architect
 

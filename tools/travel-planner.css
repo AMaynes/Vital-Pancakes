@@ -1,53 +1,143 @@
 /**
- * Month-grid and itinerary styling for the local Travel Planner.
+ * Overview & Purpose
+ * Styles the Travel Planner's overhead tools, month grid, paged day timeline,
+ * and calendar-anchored event editor.
+ *
+ * Architectural Relationships
+ * Called by: travel-planner.html.
+ * Calls: Shared workspace and tool design tokens.
+ *
+ * Notes
+ * The calendar and day page remain side by side on wide screens and stack
+ * below 900px. The event editor is positioned by travel-planner.js.
  */
 
 .travel-planner-workspace {
+  position: relative;
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-columns: minmax(0, 1fr) 310px;
+  grid-template-rows: 42px minmax(0, 1fr);
   background: #fff;
+}
+
+.travel-tool-strip {
+  position: relative;
+  z-index: 18;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 9px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-strong);
+  background:
+    linear-gradient(rgb(23 22 19 / 3%) 1px, transparent 1px),
+    #ece7dc;
+  background-size: 24px 24px;
+}
+
+.travel-mode-controls,
+.travel-month-controls,
+.travel-selection-tools,
+.travel-day-page-controls,
+.travel-place-search-row {
+  display: flex;
+  align-items: center;
+}
+
+.travel-mode-controls {
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.travel-mode-button {
+  display: inline-flex;
+  min-height: 29px;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font: 700 9px/1 var(--font-body);
+  cursor: pointer;
+}
+
+.travel-mode-button:hover {
+  border-color: var(--line);
+  background: rgb(255 255 255 / 55%);
+}
+
+.travel-mode-button.is-active {
+  border-color: var(--forest);
+  background: #edf1ed;
+  color: var(--forest);
+  box-shadow: inset 0 -2px 0 var(--forest);
+}
+
+.travel-mode-button span {
+  font-size: 12px;
+}
+
+.travel-month-controls {
+  flex: 0 0 auto;
+  gap: 7px;
+}
+
+.travel-month-controls h2 {
+  min-width: 150px;
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+.travel-selection-tools {
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.travel-selection-tools > span {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.travel-planner-stage {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 360px;
 }
 
 .travel-calendar-panel {
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: 54px 28px 1fr;
+  grid-template-rows: 34px 28px minmax(0, 1fr);
   border-right: 1px solid var(--line-strong);
 }
 
 .travel-calendar-header {
   display: flex;
+  min-width: 0;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 7px 12px;
+  padding: 0 11px;
+  overflow: hidden;
   border-bottom: 1px solid var(--line);
-  background:
-    linear-gradient(rgb(23 22 19 / 3%) 1px, transparent 1px),
-    var(--card);
-  background-size: 24px 24px;
+  background: var(--card);
 }
 
 .travel-calendar-header p {
   margin: 0;
+  overflow: hidden;
   color: var(--ink-faint);
   font-size: 9px;
-}
-
-.travel-month-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.travel-month-controls h2 {
-  min-width: 168px;
-  margin: 0;
-  font-size: 20px;
-  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .travel-weekdays {
@@ -88,12 +178,26 @@
   cursor: pointer;
 }
 
+.travel-day-cell:hover {
+  background: #fbfaf6;
+}
+
 .travel-day-cell.is-outside-month {
   background: #f5f2eb;
 }
 
 .travel-day-cell.is-selected {
-  box-shadow: inset 0 0 0 2px var(--coral);
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px #ac7770;
+}
+
+.travel-day-cell.is-active-page {
+  box-shadow: inset 0 0 0 3px var(--coral);
+}
+
+.travel-day-cell.is-editor-anchor {
+  overflow: visible;
+  box-shadow: inset 0 0 0 3px var(--forest);
 }
 
 .travel-day-header {
@@ -171,50 +275,226 @@
   font-weight: 700;
 }
 
-.travel-planner-sidebar {
+.travel-day-pages {
+  display: grid;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
+  grid-template-rows: 52px minmax(0, 1fr);
   background:
     linear-gradient(rgb(23 22 19 / 3%) 1px, transparent 1px),
     var(--paper);
   background-size: 100% 28px;
 }
 
-.travel-editor-panel,
-.travel-agenda-panel {
-  padding: 13px;
-}
-
-.travel-editor-panel {
+.travel-day-page-header {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
   border-bottom: 1px solid var(--line-strong);
-  background: rgb(251 250 246 / 88%);
+  background: rgb(251 250 246 / 94%);
 }
 
-.travel-sidebar-heading {
+.travel-day-page-controls {
+  min-width: 0;
+  gap: 7px;
+}
+
+.travel-day-page-controls h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#selected-travel-page {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.travel-day-page-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.travel-day-page-empty {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  align-content: center;
+  padding: 24px;
+  color: var(--ink-faint);
+  font-size: 10px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.travel-day-page-empty strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.travel-all-day {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  min-height: 46px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(255 255 255 / 48%);
+}
+
+.travel-all-day-label,
+.travel-hour-label {
+  padding: 8px 7px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.travel-all-day-events,
+.travel-hour-events {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 5px 7px;
+  border-left: 1px solid var(--line);
+}
+
+.travel-day-timeline {
+  display: grid;
+}
+
+.travel-hour-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  min-height: 44px;
+  border-bottom: 1px solid rgb(36 35 31 / 10%);
+  background: rgb(255 255 255 / 42%);
+}
+
+.travel-hour-row:nth-child(2n) {
+  background: rgb(247 244 236 / 58%);
+}
+
+.travel-timeline-event {
+  padding: 6px 7px;
+  border: 1px solid #d7bbb6;
+  border-left: 3px solid var(--coral);
+  background: #fff;
+}
+
+.travel-timeline-event header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 7px;
 }
 
-.travel-sidebar-heading h2,
-.travel-agenda-panel h2 {
+.travel-timeline-event h3 {
   margin: 0;
-  font-size: 17px;
+  font-size: 11px;
 }
 
-.travel-sidebar-heading > span {
+.travel-timeline-event time {
+  flex: 0 0 auto;
   color: var(--coral);
   font-size: 8px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
-.travel-sidebar-kicker {
-  margin: 0 0 3px;
+.travel-timeline-place,
+.travel-timeline-notes {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.travel-timeline-place {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.travel-timeline-place a {
+  flex: 0 0 auto;
+  color: var(--coral);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.travel-timeline-edit {
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.travel-event-popover {
+  position: fixed;
+  z-index: 100;
+  width: min(370px, calc(100vw - 24px));
+  max-height: min(620px, calc(100vh - 24px));
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  background: #fbfaf6;
+  box-shadow: 0 18px 46px rgb(23 22 19 / 24%);
+}
+
+.travel-event-popover.is-opening {
+  animation: travel-event-popover-in 170ms ease-out both;
+}
+
+@keyframes travel-event-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.travel-event-popover-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.travel-event-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.travel-event-heading > p:last-child {
+  margin: 3px 0 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+}
+
+.travel-event-kicker {
+  margin: 0 0 2px;
   color: var(--ink-faint);
   font-size: 7px;
   font-weight: 800;
@@ -224,7 +504,7 @@
 
 #travel-plan-form {
   display: grid;
-  gap: 9px;
+  gap: 8px;
 }
 
 #travel-plan-form label {
@@ -259,10 +539,58 @@
   resize: vertical;
 }
 
-.travel-form-row {
+.travel-place-search-row {
+  gap: 5px;
+}
+
+.travel-place-search-status {
+  min-height: 12px;
+  margin: -2px 0 0;
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.travel-place-search-status.has-error {
+  color: var(--coral);
+}
+
+.travel-place-results {
   display: grid;
-  grid-template-columns: 1fr 0.78fr;
-  gap: 7px;
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.travel-place-result {
+  padding: 7px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-soft);
+  font: 500 9px/1.4 var(--font-body);
+  text-align: left;
+}
+
+.travel-place-result:last-child {
+  border-bottom: 0;
+}
+
+.travel-place-result:hover,
+.travel-place-result:focus-visible {
+  background: #edf1ed;
+  color: var(--ink);
+}
+
+.travel-place-attribution {
+  margin: -2px 0 0;
+  color: var(--ink-faint);
+  font-size: 7px;
+  line-height: 1.4;
+}
+
+.travel-place-attribution a {
+  color: inherit;
 }
 
 .travel-form-actions {
@@ -271,116 +599,52 @@
   gap: 6px;
 }
 
-.travel-agenda-panel h2 {
-  margin-bottom: 10px;
-}
-
-.travel-agenda {
-  display: grid;
-  gap: 7px;
-}
-
-.travel-agenda-empty {
-  margin: 0;
-  padding: 14px;
-  border: 1px dashed var(--line);
-  background: rgb(255 255 255 / 58%);
-  color: var(--ink-faint);
-  font-size: 9px;
-  line-height: 1.45;
-  text-align: center;
-}
-
-.travel-agenda-entry {
-  padding: 9px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--coral);
-  background: #fff;
-}
-
-.travel-agenda-entry header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.travel-agenda-entry h3 {
-  margin: 0;
-  font-size: 13px;
-}
-
-.travel-agenda-entry time {
+#travel-status.has-error {
   color: var(--coral);
-  font-size: 8px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.travel-agenda-place,
-.travel-agenda-notes {
-  margin: 6px 0 0;
-  color: var(--ink-soft);
-  font-size: 9px;
-  line-height: 1.4;
-}
-
-.travel-agenda-place {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 7px;
-}
-
-.travel-agenda-place a {
-  flex: 0 0 auto;
-  color: var(--coral);
-  font-size: 8px;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.travel-agenda-edit {
-  margin-top: 7px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--ink-faint);
-  font-size: 8px;
-  font-weight: 800;
-  text-decoration: underline;
 }
 
 @media (max-width: 900px) {
   .travel-planner-workspace {
     overflow-y: auto;
+    grid-template-rows: auto auto;
+  }
+
+  .travel-tool-strip {
+    justify-content: flex-start;
+  }
+
+  .travel-selection-tools {
+    margin-left: auto;
+  }
+
+  .travel-planner-stage {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(610px, 72vh) auto;
+    grid-template-rows: minmax(610px, 72vh) minmax(520px, 70vh);
   }
 
   .travel-calendar-panel {
     border-right: 0;
     border-bottom: 1px solid var(--line-strong);
   }
-
-  .travel-planner-sidebar {
-    overflow: visible;
-  }
 }
 
 @media (max-width: 620px) {
-  .travel-calendar-header p {
+  .travel-tool-strip {
+    gap: 7px;
+  }
+
+  .travel-selection-tools > span,
+  #clear-travel-selection {
     display: none;
   }
 
-  .travel-month-controls {
-    width: 100%;
-    justify-content: space-between;
+  .travel-month-controls h2 {
+    min-width: 112px;
+    font-size: 12px;
   }
 
-  .travel-month-controls h2 {
-    min-width: 0;
-    font-size: 17px;
+  #travel-today {
+    display: none;
   }
 
   .travel-calendar-grid {
@@ -399,5 +663,9 @@
 
   .travel-calendar-plan time {
     display: none;
+  }
+
+  .travel-day-pages {
+    grid-template-rows: 48px minmax(0, 1fr);
   }
 }
