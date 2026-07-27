@@ -2,11 +2,11 @@
  * Folder-structure workspace with inline names, notes, and drag-to-nest.
  *
  * The permanent root node and every descendant are stored locally under the
- * established architecture key. Individual deletion is intentionally ungated;
- * only clearing the complete workspace requires the shared delete password.
+ * established architecture key. Destructive actions use confirmation prompts
+ * without requiring credentials.
  */
 
-import { createId, isDeletePasswordValid } from "../app/store.js";
+import { createId } from "../app/store.js";
 import {
   DEFAULT_FILE_NAME,
   DEFAULT_FOLDER_NAME,
@@ -351,12 +351,11 @@ function deleteNode(node) {
 }
 
 function clearWorkspace() {
-  const password = window.prompt("Enter the delete password to clear the entire architecture workspace.");
-  if (password === null) return;
-  if (!isDeletePasswordValid(password)) {
-    window.alert("That password is not correct.");
-    return;
-  }
+  const confirmed = window.confirm(
+    "Clear the entire architecture workspace? This cannot be undone.",
+  );
+  if (!confirmed) return;
+
   architecture = createEmptyArchitecture();
   selectedId = ROOT_NODE_ID;
   saveArchitecture();

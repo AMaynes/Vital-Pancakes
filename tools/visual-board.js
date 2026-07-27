@@ -3,7 +3,7 @@
  * dropped images. Every board item remains an editable vector-style object.
  */
 
-import { createId, isDeletePasswordValid } from "../app/store.js";
+import { createId } from "../app/store.js";
 import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=2";
 import {
   createEditableVertexNetwork,
@@ -2181,12 +2181,9 @@ snapToggle.addEventListener("click", () => {
 });
 
 document.querySelector("#clear-board").addEventListener("click", () => {
-  const password = window.prompt("Enter the delete password to clear this board.");
-  if (password === null) return;
-  if (!isDeletePasswordValid(password)) {
-    window.alert("That password is not correct.");
-    return;
-  }
+  const confirmed = window.confirm("Clear the entire board? This cannot be undone.");
+  if (!confirmed) return;
+
   checkpoint();
   board.objects = [];
   selectedObjects = [];

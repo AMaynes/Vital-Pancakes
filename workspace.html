@@ -59,29 +59,7 @@
     </form>
   </dialog>
 
-  <dialog class="app-dialog app-dialog-compact" id="password-dialog">
-    <form method="dialog" id="password-form">
-      <div class="dialog-heading">
-        <div>
-          <p class="eyebrow">CONFIRM DELETE</p>
-          <h2 id="password-dialog-title">Delete this item?</h2>
-        </div>
-        <button class="icon-button dialog-close" type="button" data-dialog-close aria-label="Close">×</button>
-      </div>
-      <p class="dialog-copy">Enter the delete password to continue.</p>
-      <label>
-        Password
-        <input name="password" type="password" required autocomplete="off">
-      </label>
-      <p class="form-error" id="password-error" role="alert"></p>
-      <div class="dialog-actions">
-        <button class="button button-quiet" type="button" data-dialog-close>Cancel</button>
-        <button class="button button-danger" type="submit" value="default">Delete</button>
-      </div>
-    </form>
-  </dialog>
-
   <div class="toast-region" id="toast-region" aria-live="polite"></div>
-  <script type="module" src="app/main.js"></script>
+  <script type="module" src="app/main.js?v=1"></script>
 </body>
 </html>

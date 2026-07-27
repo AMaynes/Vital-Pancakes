@@ -2647,21 +2647,9 @@ Practice progress and review queues are stored locally in the browser.
       return div.innerHTML;
     }
 
-    // Password for deletion
-    const DELETE_PASSWORD = 'Pfm314159265!';
-
-    // Check password for deletion
-    function checkDeletePassword() {
-      const entered = prompt('Enter password to delete:');
-      return entered === DELETE_PASSWORD;
-    }
-
     // Delete a single review
     function deleteReview(index) {
-      if (!checkDeletePassword()) {
-        alert('Incorrect password.');
-        return;
-      }
+      if (!confirm('Delete this pending flashcard submission?')) return;
       pendingReviews.splice(index, 1);
       savePendingReviews();
       renderReviews();
@@ -2669,10 +2657,6 @@ Practice progress and review queues are stored locally in the browser.
 
     // Clear all reviews
     function clearAllReviews() {
-      if (!checkDeletePassword()) {
-        alert('Incorrect password.');
-        return;
-      }
       if (confirm('Delete all pending flashcard submissions?')) {
         pendingReviews = [];
         savePendingReviews();

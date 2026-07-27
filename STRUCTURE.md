@@ -168,7 +168,7 @@ Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the 
 
 ### `app/store.js`
 
-Defines the browser-local data schema, permanent empty core libraries, Protocols-to-Personal-Routines migration, persistence, identifiers, entry operations, and the local delete-password policy. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
+Defines the browser-local data schema, permanent empty core libraries, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
 
 ### `assets/`
 
@@ -204,7 +204,7 @@ Shares responsive full-screen layouts, controls, panels, canvas surfaces, signat
 
 ### Architecture Designer
 
-`architecture.html` hosts a single permanent-root file tree with notes aligned across from every row. `architecture.js` supports inline renaming and notes, folder collapsing, immediate blank file or folder creation, drag-to-nest behavior, ungated node deletion, password-gated complete clearing, local persistence, and JSON export.
+`architecture.html` hosts a single permanent-root file tree with notes aligned across from every row. `architecture.js` supports inline renaming and notes, folder collapsing, immediate blank file or folder creation, drag-to-nest behavior, confirmation-only deletion and complete clearing, local persistence, and JSON export.
 
 `architecture-model.mjs` isolates model migration and tree policies so the permanent root, valid folder parents, descendant-aware movement, and recursive deletion can be tested without the browser. Legacy file nodes migrate beneath `root/`; legacy system scopes are retained inside `MigratedScopes/`.
 

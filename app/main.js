@@ -22,20 +22,16 @@ import {
   getSection,
   getWorkspace,
   isCoreSectionId,
-  isDeletePasswordValid,
   updateItem,
 } from "./store.js";
 
 const appMain = document.querySelector("#app-main");
 const itemDialog = document.querySelector("#item-dialog");
 const itemForm = document.querySelector("#item-form");
-const passwordDialog = document.querySelector("#password-dialog");
-const passwordForm = document.querySelector("#password-form");
 const animationTimers = new Set();
 
 let activeSectionId = null;
 let editingItemId = null;
-let pendingDeleteAction = null;
 
 const SECTION_LABELS = {
   "cooking-guide": "COOKING GUIDE",
@@ -1167,7 +1163,7 @@ function readItemForm(section) {
 }
 
 /**
- * Requests password confirmation before deleting a section.
+ * Confirms before deleting a section.
  *
  * @param {object} section Section to delete.
  */
@@ -1177,40 +1173,25 @@ function confirmSectionDelete(section) {
     return;
   }
 
-  openPasswordDialog(`Delete “${section.title}”?`, () => {
-    deleteSection(section.id);
-    location.hash = `area=${getAreaForSection(section)}`;
-    showToast("Section deleted from this device.");
-  });
+  if (!window.confirm(`Delete “${section.title}”?`)) return;
+
+  deleteSection(section.id);
+  location.hash = `area=${getAreaForSection(section)}`;
+  showToast("Section deleted from this device.");
 }
 
 /**
- * Requests password confirmation before deleting one entry.
+ * Confirms before deleting one entry.
  *
  * @param {object} section Parent section.
  * @param {object} item Entry to delete.
  */
 function confirmItemDelete(section, item) {
-  openPasswordDialog(`Delete “${item.title}”?`, () => {
-    deleteItem(section.id, item.id);
-    renderWorkspace();
-    showToast("Entry deleted.");
-  });
-}
+  if (!window.confirm(`Delete “${item.title}”?`)) return;
 
-/**
- * Opens the shared password gate around a pending destructive action.
- *
- * @param {string} title Dialog title.
- * @param {Function} action Action to run after a correct password.
- */
-function openPasswordDialog(title, action) {
-  pendingDeleteAction = action;
-  passwordForm.reset();
-  document.querySelector("#password-error").textContent = "";
-  document.querySelector("#password-dialog-title").textContent = title;
-  passwordDialog.showModal();
-  window.setTimeout(() => passwordForm.elements.password.focus(), 0);
+  deleteItem(section.id, item.id);
+  renderWorkspace();
+  showToast("Entry deleted.");
 }
 
 /**
@@ -1241,19 +1222,6 @@ itemForm.addEventListener("submit", (event) => {
   itemDialog.close();
   renderWorkspace();
   showToast(editingItemId ? "Entry updated." : "Entry added.");
-});
-
-passwordForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const password = String(new FormData(passwordForm).get("password") ?? "");
-  if (!isDeletePasswordValid(password)) {
-    document.querySelector("#password-error").textContent = "That password is not correct.";
-    passwordForm.elements.password.select();
-    return;
-  }
-  passwordDialog.close();
-  pendingDeleteAction?.();
-  pendingDeleteAction = null;
 });
 
 document.querySelectorAll("[data-dialog-close]").forEach((button) => {

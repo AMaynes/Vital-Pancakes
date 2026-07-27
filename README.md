@@ -62,7 +62,7 @@ The editable areas use eight empty, permanent core libraries:
 - **Algorithms** — Use cases, explanations, complexity notes, and user-authored animated frames.
 - **Projects** — Problems, solutions, languages, and live relationships to Algorithm entries.
 
-These eight core libraries cannot be added, renamed, or deleted. Their entries remain editable and can be deleted using the requested password `password`. Because this is a static local-first site, the password is a convenience guard and not secure access control. Saved entries from the former Protocols area migrate into an optional Personal Routines library instead of being discarded.
+These eight core libraries cannot be added, renamed, or deleted. Their entries remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library instead of being discarded.
 
 User-created entries, boards, travel plans, and architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 
@@ -96,7 +96,7 @@ Travel plans stay in the current browser. The tool has no reminders, notificatio
 
 ### Architecture Designer
 
-Provides a permanent `root/` folder and an editable file-tree workspace with aligned notes for every item. Folders and files spawn with blank placeholder names, can be renamed inline, and can be dragged into other folders. Individual nodes can be removed without a password; clearing the complete workspace retains the shared delete-password safeguard.
+Provides a permanent `root/` folder and an editable file-tree workspace with aligned notes for every item. Folders and files spawn with blank placeholder names, can be renamed inline, and can be dragged into other folders. Individual nodes and the complete workspace can be cleared after a standard confirmation, with no password requirement.
 
 Architecture data saves locally, preserves legacy file nodes and system scopes through migration, and can be exported as JSON.
 

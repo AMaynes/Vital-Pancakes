@@ -10,12 +10,10 @@
  * localStorage key "artificially-neuroscience-workspace-v1".
  *
  * Notes
- * State is intentionally device-local. The delete password is a UI safeguard,
- * not a security boundary, because this is a client-only static application.
+ * State is intentionally device-local.
  */
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
-export const DELETE_PASSWORD = "password";
 const CURRENT_WORKSPACE_VERSION = 5;
 const EVERYDAY_AREA = "everyday";
 
@@ -343,16 +341,6 @@ export function deleteItem(sectionId, itemId) {
   }
   saveWorkspace(workspace);
   return true;
-}
-
-/**
- * Performs the deliberately simple local delete-password comparison.
- *
- * @param {string} candidate User-entered password.
- * @returns {boolean} Whether deletion may proceed.
- */
-export function isDeletePasswordValid(candidate) {
-  return candidate === DELETE_PASSWORD;
 }
 
 /**
