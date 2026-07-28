@@ -10,6 +10,10 @@ import {
   retainShapeToolChoice,
 } from "./visual-board-shape-tools.mjs?v=1";
 import {
+  getDefaultTextboxSize,
+  getTextWorldFontSize,
+} from "./visual-board-text.mjs?v=1";
+import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
   setVertexNetworkPosition,
@@ -41,8 +45,6 @@ const MAX_ZOOM = 4;
 const MIN_SHAPE_SIZE = 16;
 const HANDLE_SIZE = 6;
 const ROTATION_HANDLE_OFFSET = 28;
-const DEFAULT_TEXTBOX_WIDTH = 210;
-const DEFAULT_TEXTBOX_HEIGHT = 72;
 const MAX_IMAGE_DIMENSION = 1800;
 const VERTEX_TOUCH_TOLERANCE = 0.01;
 const DASH_PATTERNS = new Set(["solid", "dashed", "dotted", "dash-dot", "long-dash"]);
@@ -137,10 +139,11 @@ function loadBoard() {
     const savedBoard = JSON.parse(localStorage.getItem(BOARD_KEY));
     const rawObjects = Array.isArray(savedBoard?.objects) ? savedBoard.objects : [];
     const snapToGrid = savedBoard?.settings?.snap ?? false;
+    const savedZoom = clamp(finiteNumber(savedBoard?.view?.zoom, 1), MIN_ZOOM, MAX_ZOOM);
     return {
       version: BOARD_VERSION,
       objects: rawObjects
-        .map((object) => normalizeObject(object, { snapToGrid }))
+        .map((object) => normalizeObject(object, { snapToGrid, textZoom: savedZoom }))
         .filter(Boolean),
       assets: savedBoard?.assets && typeof savedBoard.assets === "object"
         ? savedBoard.assets
@@ -152,7 +155,7 @@ function loadBoard() {
       view: {
         x: finiteNumber(savedBoard?.view?.x, 0),
         y: finiteNumber(savedBoard?.view?.y, 0),
-        zoom: clamp(finiteNumber(savedBoard?.view?.zoom, 1), MIN_ZOOM, MAX_ZOOM),
+        zoom: savedZoom,
       },
     };
   } catch (error) {
@@ -260,15 +263,17 @@ function normalizeObject(rawObject, options = {}) {
     const fontFamily = Object.hasOwn(TEXT_FONT_FAMILIES, rawObject.fontFamily)
       ? rawObject.fontFamily
       : "serif";
+    const fontSize = clamp(finiteNumber(rawObject.fontSize, 18), 8, 96);
+    const defaultSize = getDefaultTextboxSize(fontSize, options.textZoom);
     return normalizeShape({
       ...common,
       x: finiteNumber(rawObject.x, 0),
       y: finiteNumber(rawObject.y, 0),
-      w: finiteNumber(rawObject.w ?? rawObject.noteWidth, DEFAULT_TEXTBOX_WIDTH),
-      h: finiteNumber(rawObject.h ?? rawObject.noteHeight, DEFAULT_TEXTBOX_HEIGHT),
+      w: finiteNumber(rawObject.w ?? rawObject.noteWidth, defaultSize.width),
+      h: finiteNumber(rawObject.h ?? rawObject.noteHeight, defaultSize.height),
       rotation: finiteNumber(rawObject.rotation, 0),
       text: typeof rawObject.text === "string" ? rawObject.text : "",
-      fontSize: clamp(finiteNumber(rawObject.fontSize, 18), 8, 96),
+      fontSize,
       fontFamily,
     });
   }
@@ -561,15 +566,16 @@ function drawTextbox(object) {
   const text = object.text.trim() ? object.text : "blank textbox";
   const isPlaceholder = !object.text.trim();
   const padding = 6;
+  const worldFontSize = getTextWorldFontSize(object.fontSize, viewport.zoom);
   context.save();
   context.beginPath();
   context.rect(object.x, object.y, object.w, object.h);
   context.clip();
   context.fillStyle = isPlaceholder ? "#a7a7a7" : object.color;
-  context.font = `${object.fontSize}px ${getTextFontCss(object.fontFamily)}`;
+  context.font = `${worldFontSize}px ${getTextFontCss(object.fontFamily)}`;
   context.textBaseline = "top";
   const lines = wrapText(text, Math.max(20, object.w - padding * 2));
-  const lineHeight = object.fontSize * 1.25;
+  const lineHeight = worldFontSize * 1.25;
   lines.forEach((line, index) => {
     context.fillText(line, object.x + padding, object.y + padding + index * lineHeight);
   });
@@ -1228,8 +1234,9 @@ function commitWorkingObject() {
 
   if (SHAPE_TYPES.has(object.type)) object = alignCubeToGrid(normalizeShape(object));
   if (object.type === "textbox" && (object.w < 8 || object.h < 8)) {
-    object.w = DEFAULT_TEXTBOX_WIDTH;
-    object.h = DEFAULT_TEXTBOX_HEIGHT;
+    const defaultSize = getDefaultTextboxSize(object.fontSize, viewport.zoom);
+    object.w = defaultSize.width;
+    object.h = defaultSize.height;
   }
 
   const bounds = getObjectBounds(object);
@@ -1991,7 +1998,10 @@ function positionTextEditor() {
   editor.style.top = `${screenPosition.y}px`;
   editor.style.width = `${Math.max(40, object.w * viewport.zoom)}px`;
   editor.style.height = `${Math.max(28, object.h * viewport.zoom)}px`;
-  editor.style.fontSize = `${Math.max(8, object.fontSize * viewport.zoom)}px`;
+  editor.style.fontSize = `${Math.max(
+    8,
+    getTextWorldFontSize(object.fontSize, viewport.zoom) * viewport.zoom,
+  )}px`;
   editor.style.fontFamily = getTextFontCss(object.fontFamily);
   editor.style.color = object.color;
   editor.style.transform = `rotate(${object.rotation ?? 0}rad)`;
