@@ -419,6 +419,21 @@ export function objectIntersectsRectangle(object, rectangle) {
   return rectanglesIntersect(getObjectBounds(object), rectangle);
 }
 
+/**
+ * Finds objects touched by a marquee, optionally treating locked objects as
+ * non-interactive background content.
+ */
+export function getMarqueeSelectionCandidates(
+  objects,
+  rectangle,
+  { includeLocked = true } = {},
+) {
+  return objects.filter((object) => (
+    (includeLocked || !object.locked)
+    && objectIntersectsRectangle(object, rectangle)
+  ));
+}
+
 function segmentIntersectsRectangle(start, end, rectangle, padding = 0) {
   const left = rectangle.x - padding;
   const right = rectangle.x + rectangle.width + padding;

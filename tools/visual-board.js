@@ -34,17 +34,17 @@ import {
   clamp,
   distanceBetween,
   getLineSelectionCorners,
+  getMarqueeSelectionCandidates,
   getObjectBounds,
   getObjectSegments,
   getShapeCenter,
   getShapeCorners,
   isExplodableObject,
   normalizeShape,
-  objectIntersectsRectangle,
   pointHitsObject,
   resizeShapeFromCorner,
   snapValue,
-} from "./visual-board-geometry.mjs?v=6";
+} from "./visual-board-geometry.mjs?v=7";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_VERSION = 7;
@@ -55,6 +55,7 @@ const MAX_ZOOM = 4;
 const MIN_SHAPE_SIZE = 16;
 const HANDLE_SIZE = 6;
 const ROTATION_HANDLE_OFFSET = 28;
+const MARQUEE_DRAG_THRESHOLD = 3;
 const MAX_IMAGE_DIMENSION = 1800;
 const VERTEX_TOUCH_TOLERANCE = 0.01;
 const DASH_PATTERNS = new Set(["solid", "dashed", "dotted", "dash-dot", "long-dash"]);
@@ -693,6 +694,7 @@ function getCachedImage(object) {
 
 function drawMarquee() {
   if (interaction?.kind !== "marquee") return;
+  if (interaction.lockedClickSelection && !interaction.dragging) return;
   const rectangle = getRectangleFromPoints(interaction.startWorld, interaction.currentWorld);
   context.save();
   context.fillStyle = "rgb(123 33 26 / 8%)";
@@ -1007,20 +1009,22 @@ function startSelectionInteraction(event, screenPoint, worldPoint) {
   const hitObject = findObjectAt(worldPoint);
   if (hitObject) {
     const selectionUnit = getSelectionUnit(hitObject);
-    if (event.shiftKey) {
-      const unitIsSelected = selectionUnit.every((object) => selectedObjects.includes(object));
-      if (unitIsSelected) {
-        const unitIds = new Set(selectionUnit.map((object) => object.id));
-        selectedObjects = selectedObjects.filter((object) => !unitIds.has(object.id));
-        updateSelectionControls();
-        drawBoard();
-        return;
-      }
-      selectedObjects = [...new Set([...selectedObjects, ...selectionUnit])];
-    } else if (!selectionUnit.every((object) => selectedObjects.includes(object))) {
-      selectedObjects = selectionUnit;
+    if (hitObject.locked) {
+      interaction = {
+        kind: "marquee",
+        pointerId: event.pointerId,
+        startScreen: screenPoint,
+        startWorld: worldPoint,
+        currentWorld: worldPoint,
+        baseSelection: event.shiftKey ? [...selectedObjects] : [],
+        lockedClickSelection: selectionUnit,
+        extendSelection: event.shiftKey,
+        dragging: false,
+      };
+      return;
     }
 
+    applySelectionUnit(selectionUnit, event.shiftKey);
     const movableObjects = selectedObjects.filter((object) => !object.locked);
     updateSelectionControls();
     drawBoard();
@@ -1044,12 +1048,28 @@ function startSelectionInteraction(event, screenPoint, worldPoint) {
   interaction = {
     kind: "marquee",
     pointerId: event.pointerId,
+    startScreen: screenPoint,
     startWorld: worldPoint,
     currentWorld: worldPoint,
     baseSelection,
+    dragging: true,
   };
   updateSelectionControls();
   drawBoard();
+}
+
+function applySelectionUnit(selectionUnit, extendSelection) {
+  const unitIsSelected = selectionUnit.every((object) => selectedObjects.includes(object));
+  if (!extendSelection) {
+    if (!unitIsSelected) selectedObjects = selectionUnit;
+    return;
+  }
+  if (unitIsSelected) {
+    const unitIds = new Set(selectionUnit.map((object) => object.id));
+    selectedObjects = selectedObjects.filter((object) => !unitIds.has(object.id));
+    return;
+  }
+  selectedObjects = [...new Set([...selectedObjects, ...selectionUnit])];
 }
 
 function createWorkingObject(type, startPoint) {
@@ -1156,9 +1176,20 @@ function handlePointerMove(event) {
     interaction.changed = eraseBetween(interaction.lastWorld, worldPoint) || interaction.changed;
     interaction.lastWorld = worldPoint;
   } else if (interaction.kind === "marquee") {
+    if (
+      interaction.lockedClickSelection
+      && distanceBetween(interaction.startScreen, screenPoint) < MARQUEE_DRAG_THRESHOLD
+    ) {
+      return;
+    }
+    interaction.dragging = true;
     interaction.currentWorld = worldPoint;
     const rectangle = getRectangleFromPoints(interaction.startWorld, interaction.currentWorld);
-    const enclosed = board.objects.filter((object) => objectIntersectsRectangle(object, rectangle));
+    const enclosed = getMarqueeSelectionCandidates(
+      board.objects,
+      rectangle,
+      { includeLocked: !interaction.lockedClickSelection },
+    );
     selectedObjects = expandGroupedObjects([...new Set([...interaction.baseSelection, ...enclosed])]);
     updateSelectionControls();
   }
@@ -1269,6 +1300,16 @@ function finishPointerInteraction(event, cancelled) {
   } else if (["move", "resize", "rotate", "endpoint", "network-vertex"]
     .includes(finishedInteraction.kind)) {
     if (finishedInteraction.changed) saveBoard();
+  } else if (
+    finishedInteraction.kind === "marquee"
+    && !cancelled
+    && finishedInteraction.lockedClickSelection
+    && !finishedInteraction.dragging
+  ) {
+    applySelectionUnit(
+      finishedInteraction.lockedClickSelection,
+      finishedInteraction.extendSelection,
+    );
   } else if (finishedInteraction.kind === "pan") {
     saveBoard();
   }

@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 
 import {
   distanceBetween,
-  getObjectSegments,
-  getObjectBounds,
   getLineSelectionCorners,
+  getMarqueeSelectionCandidates,
+  getObjectBounds,
+  getObjectSegments,
   getShapeCorners,
   isExplodableObject,
   normalizeShape,
@@ -66,6 +67,48 @@ test("marquee intersection and grid snapping use world coordinates", () => {
   );
   assert.equal(snapValue(47, 32), 32);
   assert.equal(snapValue(50, 32), 64);
+});
+
+test("a marquee over locked content can select only unlocked objects", () => {
+  const lockedBackground = {
+    id: "background",
+    type: "rectangle",
+    x: 0,
+    y: 0,
+    w: 500,
+    h: 500,
+    rotation: 0,
+    locked: true,
+  };
+  const first = {
+    id: "first",
+    type: "rectangle",
+    x: 100,
+    y: 100,
+    w: 40,
+    h: 40,
+    rotation: 0,
+    locked: false,
+  };
+  const second = {
+    id: "second",
+    type: "line",
+    x: 180,
+    y: 180,
+    endX: 220,
+    endY: 220,
+    strokeWidth: 3,
+    locked: false,
+  };
+
+  assert.deepEqual(
+    getMarqueeSelectionCandidates(
+      [lockedBackground, first, second],
+      { x: 80, y: 80, width: 180, height: 180 },
+      { includeLocked: false },
+    ).map((object) => object.id),
+    ["first", "second"],
+  );
 });
 
 test("a marquee inside a diagonal line's bounds does not select the distant line", () => {
