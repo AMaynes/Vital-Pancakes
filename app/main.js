@@ -40,6 +40,7 @@ let activeSectionId = null;
 let editingItemId = null;
 const activeSectionSearchFilters = new Map();
 const activeSectionTagFilters = new Map();
+const activeWorkoutMuscleFilters = new Map();
 
 const SECTION_LABELS = {
   "cooking-guide": "COOKING GUIDE",
@@ -183,6 +184,32 @@ const WORKOUT_CATEGORIES = Object.freeze([
     description: "Quad, hamstring, glute, and calf movements built around squatting, hinging, and locomotion.",
   },
 ]);
+const WORKOUT_MUSCLE_FILTERS = Object.freeze({
+  push: [
+    { id: "chest", label: "Chest", terms: ["chest", "pectoral", "pectoralis"] },
+    { id: "upper-chest", label: "Upper chest", terms: ["upper chest", "incline"] },
+    { id: "anterior-deltoids", label: "Front delts", terms: ["anterior deltoid", "front delt"] },
+    { id: "lateral-deltoids", label: "Side delts", terms: ["lateral deltoid", "side delt"] },
+    { id: "triceps", label: "Triceps", terms: ["triceps", "long head", "lateral head", "medial head"] },
+    { id: "serratus-anterior", label: "Serratus", terms: ["serratus"] },
+  ],
+  pull: [
+    { id: "lats", label: "Lats", terms: ["lat", "latissimus"] },
+    { id: "upper-back", label: "Upper back", terms: ["upper back", "rhomboid", "teres"] },
+    { id: "traps", label: "Traps", terms: ["trap", "trapezius"] },
+    { id: "rear-deltoids", label: "Rear delts", terms: ["rear delt", "posterior deltoid"] },
+    { id: "biceps", label: "Biceps", terms: ["biceps", "brachialis"] },
+    { id: "forearms", label: "Forearms", terms: ["forearm", "grip"] },
+  ],
+  legs: [
+    { id: "quads", label: "Quads", terms: ["quad", "quadriceps"] },
+    { id: "hamstrings", label: "Hamstrings", terms: ["hamstring"] },
+    { id: "glutes", label: "Glutes", terms: ["glute"] },
+    { id: "calves", label: "Calves", terms: ["calf", "calves", "gastrocnemius", "soleus"] },
+    { id: "adductors", label: "Adductors", terms: ["adductor"] },
+    { id: "abductors", label: "Abductors", terms: ["abductor"] },
+  ],
+});
 
 /**
  * Creates an element with optional class and text without parsing user HTML.
@@ -289,6 +316,94 @@ function buildWorkoutHash(categoryId, itemId = null) {
   const parameters = new URLSearchParams({ section: "workouts", category: categoryId });
   if (itemId) parameters.set("item", itemId);
   return `#${parameters.toString()}`;
+}
+
+/**
+ * Returns normalized text used for workout muscle matching.
+ *
+ * @param {object} item Workout entry.
+ * @returns {string} Searchable text.
+ */
+function getWorkoutSearchText(item) {
+  return [
+    item.title,
+    item.summary,
+    item.goal,
+    ...(item.tags ?? []),
+  ].join(" ").toLocaleLowerCase();
+}
+
+/**
+ * Finds configured muscle filters that apply to a workout entry.
+ *
+ * @param {object} item Workout entry.
+ * @param {string} categoryId Workout category identifier.
+ * @returns {Array<string>} Matching muscle filter ids.
+ */
+function getWorkoutMuscleIds(item, categoryId) {
+  const searchableText = getWorkoutSearchText(item);
+  return (WORKOUT_MUSCLE_FILTERS[categoryId] ?? [])
+    .filter((muscle) => muscle.terms.some((term) => searchableText.includes(term)))
+    .map((muscle) => muscle.id);
+}
+
+/**
+ * Builds toggleable workout muscle filters for the current category page.
+ *
+ * @param {object} section Workout category section.
+ * @param {Array<object>} entries Category entries before filtering.
+ * @returns {{element: HTMLElement|null, filteredItems: Array<object>, selectedIds: Set<string>}} Filter UI and result.
+ */
+function createWorkoutMuscleFilterBar(section, entries) {
+  const categoryId = section.workoutCategory;
+  const muscles = WORKOUT_MUSCLE_FILTERS[categoryId] ?? [];
+  const availableMuscles = muscles.filter((muscle) => (
+    entries.some((item) => getWorkoutMuscleIds(item, categoryId).includes(muscle.id))
+  ));
+  const selectedIds = new Set(
+    [...(activeWorkoutMuscleFilters.get(categoryId) ?? [])]
+      .filter((muscleId) => availableMuscles.some((muscle) => muscle.id === muscleId)),
+  );
+  activeWorkoutMuscleFilters.set(categoryId, selectedIds);
+
+  const filteredItems = selectedIds.size
+    ? entries.filter((item) => getWorkoutMuscleIds(item, categoryId).some((muscleId) => selectedIds.has(muscleId)))
+    : entries;
+
+  if (!availableMuscles.length) {
+    return { element: null, filteredItems, selectedIds };
+  }
+
+  const bar = createElement("section", "workout-filter-bar");
+  bar.append(createElement("span", "tag-label", "Muscle filters"));
+  const controls = createElement("div", "workout-filter-tags");
+  availableMuscles.forEach((muscle) => {
+    const button = createElement("button", "workout-filter-tag", muscle.label);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(selectedIds.has(muscle.id)));
+    button.addEventListener("click", () => {
+      const nextFilters = new Set(activeWorkoutMuscleFilters.get(categoryId) ?? []);
+      if (nextFilters.has(muscle.id)) {
+        nextFilters.delete(muscle.id);
+      } else {
+        nextFilters.add(muscle.id);
+      }
+      activeWorkoutMuscleFilters.set(categoryId, nextFilters);
+      renderWorkspace();
+    });
+    controls.append(button);
+  });
+  if (selectedIds.size) {
+    const clearButton = createElement("button", "workout-filter-clear", "Clear");
+    clearButton.type = "button";
+    clearButton.addEventListener("click", () => {
+      activeWorkoutMuscleFilters.set(categoryId, new Set());
+      renderWorkspace();
+    });
+    controls.append(clearButton);
+  }
+  bar.append(controls);
+  return { element: bar, filteredItems, selectedIds };
 }
 
 /**
@@ -641,10 +756,13 @@ function renderSection(section) {
     appMain.dataset.sectionTitle = `Workout Types / ${category.title}`;
   }
 
-  const sectionFilters = section.type === "cooking-guide"
-    ? createTagSearchFilterBar(section, section.items)
+  const workoutFilters = section.workoutCategory
+    ? createWorkoutMuscleFilterBar(section, section.items)
     : null;
-  const visibleItems = sectionFilters?.filteredItems ?? section.items;
+  const sectionFilters = section.type === "cooking-guide"
+    ? createTagSearchFilterBar(section, workoutFilters?.filteredItems ?? section.items)
+    : null;
+  const visibleItems = sectionFilters?.filteredItems ?? workoutFilters?.filteredItems ?? section.items;
   const heading = createElement("section", "page-heading section-page-heading");
   const headingCopy = createElement("div");
   headingCopy.append(
@@ -679,7 +797,7 @@ function renderSection(section) {
     createElement("span", "", `${section.items.filter((item) => item.isSample).length} editable examples`),
     createElement("span", "", "Stored on this device"),
   );
-  if (sectionFilters?.isActive) {
+  if (workoutFilters?.selectedIds.size || sectionFilters?.isActive) {
     meta.prepend(createElement("span", "", `${visibleItems.length} of ${section.items.length} shown`));
   }
 
@@ -704,6 +822,7 @@ function renderSection(section) {
   }
 
   appMain.append(heading);
+  if (workoutFilters?.element) appMain.append(workoutFilters.element);
   if (sectionFilters?.element) appMain.append(sectionFilters.element);
   appMain.append(meta, grid);
 }

@@ -516,6 +516,16 @@ h3 {
   letter-spacing: 0.09em;
 }
 
+.workout-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 7px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line);
+}
+
 .section-filter-bar {
   display: grid;
   grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
@@ -571,6 +581,38 @@ h3 {
 }
 
 .section-filter-clear {
+  border-color: transparent;
+  background: transparent;
+  color: var(--coral);
+}
+
+.workout-filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.workout-filter-tag,
+.workout-filter-clear {
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  background: rgb(251 250 246 / 75%);
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workout-filter-tag[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.workout-filter-clear {
   border-color: transparent;
   background: transparent;
   color: var(--coral);
@@ -2234,6 +2276,12 @@ h3 {
 
   .workout-category-card {
     min-height: 300px;
+  }
+
+  .workout-filter-bar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .section-filter-bar {
