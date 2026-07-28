@@ -23,7 +23,7 @@ import {
   getWorkspace,
   isCoreSectionId,
   updateItem,
-} from "./store.js";
+} from "./store.js?v=12";
 import {
   buildContentHash,
   CONTENT_VIEWS,
@@ -34,7 +34,7 @@ import {
   collectEntryTags,
   filterItemsByTags,
   normalizeEntryTags,
-} from "./tag-filter.mjs";
+} from "./tag-filter.mjs?v=1";
 
 const appMain = document.querySelector("#app-main");
 const itemDialog = document.querySelector("#item-dialog");
