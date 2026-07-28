@@ -65,10 +65,10 @@ The editable areas use nine permanent core libraries. A new or previously empty 
 - **Studies** — Inquiry dossiers that keep the research question, prediction, method, evidence, findings, limitations, and next test distinct.
 - **Questions & Ideas** — An investigation board for prompts, possible directions, provisional positions, and development status.
 - **Programming Languages** — Return-to-language sheets covering problem fit, execution model, runnable syntax, durable patterns, and gotchas.
-- **Algorithms** — Interactive labs that connect problem shape, invariant, pseudocode, complexity, and user-authored animated traces.
+- **Algorithms** — Separate Personal, Traditional, and Advanced labs with clickable topic filters, problem shape, invariants, pseudocode, complexity, and animated traces. The starter curriculum includes seventeen traditional and five advanced algorithms.
 - **Projects** — Decision-oriented case studies preserving the problem, approach, outcome, next move, languages, and live Algorithm relationships.
 
-These nine core libraries cannot be added, renamed, or deleted. Their entries—including every starter example—remain editable and can be deleted after a standard confirmation, with no password requirement. The version 7 data migration seeds only empty core libraries and leaves populated libraries untouched. Saved entries from the former Protocols area migrate into an optional Personal Routines library instead of being discarded.
+These nine core libraries cannot be added, renamed, or deleted. Their entries—including every starter example—remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library, while existing user-authored algorithms migrate into Personal Algorithms without being discarded.
 
 User-created entries, boards, literature curations, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 

@@ -23,7 +23,7 @@ import {
   getWorkspace,
   isCoreSectionId,
   updateItem,
-} from "./store.js?v=12";
+} from "./store.js?v=13";
 import {
   buildContentHash,
   CONTENT_VIEWS,
@@ -228,6 +228,23 @@ const CLEANING_CATEGORIES = Object.freeze([
     description: "Personal hygiene, grooming, laundry, linens, and clothing-care routines kept practical and repeatable.",
   },
 ]);
+const ALGORITHM_CATEGORIES = Object.freeze([
+  {
+    id: "personal",
+    title: "Personal Algorithms",
+    description: "Your own reusable procedures, problem-solving methods, and algorithms developed through projects.",
+  },
+  {
+    id: "traditional",
+    title: "Traditional Algorithms",
+    description: "Classic searching, sorting, traversal, graph, sequence, and mathematical foundations.",
+  },
+  {
+    id: "advanced",
+    title: "Advanced Algorithms",
+    description: "More specialized techniques for optimization, pathfinding, connectivity, and pattern matching.",
+  },
+]);
 
 /**
  * Creates an element with optional class and text without parsing user HTML.
@@ -345,6 +362,19 @@ function getRouteCleaningCategory() {
 
 function buildCleaningHash(categoryId, itemId = null) {
   const parameters = new URLSearchParams({ section: "cleaning", category: categoryId });
+  if (itemId) parameters.set("item", itemId);
+  return `#${parameters.toString()}`;
+}
+
+function getRouteAlgorithmCategory() {
+  const requestedCategory = new URLSearchParams(location.hash.slice(1)).get("category");
+  return ALGORITHM_CATEGORIES.some((category) => category.id === requestedCategory)
+    ? requestedCategory
+    : null;
+}
+
+function buildAlgorithmHash(categoryId, itemId = null) {
+  const parameters = new URLSearchParams({ section: "algorithms", category: categoryId });
   if (itemId) parameters.set("item", itemId);
   return `#${parameters.toString()}`;
 }
@@ -808,12 +838,17 @@ function renderSection(section) {
     const cleaningCategory = section.type === "cleaning"
       ? CLEANING_CATEGORIES.find((candidate) => candidate.id === routeItem.category)
       : null;
+    const algorithmCategory = section.type === "algorithm"
+      ? ALGORITHM_CATEGORIES.find((candidate) => candidate.id === routeItem.category)
+      : null;
     renderEntryDetail(
       workoutCategory
         ? { ...section, workoutCategory: workoutCategory.id, title: workoutCategory.title }
         : cleaningCategory
           ? { ...section, cleaningCategory: cleaningCategory.id, title: cleaningCategory.title }
-          : section,
+          : algorithmCategory
+            ? { ...section, algorithmCategory: algorithmCategory.id, title: algorithmCategory.title }
+            : section,
       routeItem,
     );
     return;
@@ -853,10 +888,27 @@ function renderSection(section) {
     appMain.dataset.sectionTitle = `Cleaning / ${category.title}`;
   }
 
+  if (section.type === "algorithm") {
+    const categoryId = getRouteAlgorithmCategory();
+    if (!categoryId) {
+      renderAlgorithmCategoryIndex(section);
+      return;
+    }
+    const category = ALGORITHM_CATEGORIES.find((candidate) => candidate.id === categoryId);
+    section = {
+      ...section,
+      algorithmCategory: category.id,
+      title: category.title,
+      description: category.description,
+      items: section.items.filter((item) => item.category === category.id),
+    };
+    appMain.dataset.sectionTitle = `Algorithms / ${category.title}`;
+  }
+
   const workoutFilters = section.workoutCategory
     ? createWorkoutMuscleFilterBar(section, section.items)
     : null;
-  const sectionFilters = section.type === "cooking-guide"
+  const sectionFilters = ["cooking-guide", "algorithm"].includes(section.type)
     ? createTagSearchFilterBar(section, workoutFilters?.filteredItems ?? section.items)
     : null;
   const cleaningFilters = section.cleaningCategory
@@ -932,7 +984,7 @@ function renderSection(section) {
 }
 
 /**
- * Builds static search and tag filters for the cooking guide section.
+ * Builds search and clickable tag filters for content-heavy libraries.
  *
  * @param {object} section Section model.
  * @param {Array<object>} entries Entries before filtering.
@@ -949,12 +1001,14 @@ function createTagSearchFilterBar(section, entries) {
 
   const normalizedSearch = searchText.trim().toLocaleLowerCase();
   const filteredItems = entries.filter((item) => {
-    if (normalizedSearch && !getCookingGuideSearchText(item).includes(normalizedSearch)) {
+    if (normalizedSearch && !getSectionSearchText(item).includes(normalizedSearch)) {
       return false;
     }
     if (!selectedTags.size) return true;
-    const itemTags = new Set(item.tags ?? []);
-    return [...selectedTags].every((tag) => itemTags.has(tag));
+    const itemTags = new Set(normalizeEntryTags(item.tags));
+    return section.type === "algorithm"
+      ? [...selectedTags].some((tag) => itemTags.has(tag))
+      : [...selectedTags].every((tag) => itemTags.has(tag));
   });
 
   if (!entries.length || (!tags.length && entries.length <= 4)) {
@@ -966,7 +1020,9 @@ function createTagSearchFilterBar(section, entries) {
   searchLabel.append(createElement("span", "tag-label", "Search"));
   const searchInput = document.createElement("input");
   searchInput.type = "search";
-  searchInput.placeholder = "Search cooking methods";
+  searchInput.placeholder = section.type === "algorithm"
+    ? "Search algorithms"
+    : "Search cooking methods";
   searchInput.value = searchText;
   searchInput.addEventListener("input", () => {
     const cursorPosition = searchInput.selectionStart ?? searchInput.value.length;
@@ -1015,23 +1071,17 @@ function createTagSearchFilterBar(section, entries) {
 }
 
 /**
- * Returns normalized text used for cooking guide search.
+ * Returns normalized text used for collection search.
  *
  * @param {object} item Cooking guide entry.
  * @returns {string} Searchable text.
  */
-function getCookingGuideSearchText(item) {
-  return [
-    item.title,
-    item.summary,
-    item.heat,
-    item.signals,
-    item.principles,
-    item.essentials,
-    item.mistakes,
-    ...(item.steps ?? []),
-    ...(item.tags ?? []),
-  ].join(" ").toLocaleLowerCase();
+function getSectionSearchText(item) {
+  return Object.values(item)
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .filter((value) => typeof value === "string")
+    .join(" ")
+    .toLocaleLowerCase();
 }
 
 /**
@@ -1106,6 +1156,40 @@ function renderCleaningCategoryIndex(section) {
 }
 
 /**
+ * Renders Algorithms as Personal, Traditional, and Advanced libraries.
+ *
+ * @param {object} section Algorithms section.
+ */
+function renderAlgorithmCategoryIndex(section) {
+  const heading = createElement("section", "page-heading section-page-heading");
+  const headingCopy = createElement("div");
+  headingCopy.append(
+    createElement("p", "eyebrow", `${section.icon} ALGORITHM LAB`),
+    createElement("h1", "", section.title),
+    createElement("p", "page-description", section.description),
+  );
+  heading.append(headingCopy);
+
+  const categoryGrid = createElement("div", "algorithm-category-grid");
+  ALGORITHM_CATEGORIES.forEach((category, index) => {
+    const entries = section.items.filter((item) => item.category === category.id);
+    const card = createElement("a", `algorithm-category-card algorithm-category-${category.id}`);
+    card.href = buildAlgorithmHash(category.id);
+    const marker = createElement("span", "algorithm-category-marker", String(index + 1).padStart(2, "0"));
+    const copy = createElement("div", "algorithm-category-copy");
+    copy.append(
+      createElement("span", "card-kicker", `${entries.length} ${entries.length === 1 ? "ALGORITHM" : "ALGORITHMS"}`),
+      createElement("h2", "", category.title),
+      createElement("p", "", category.description),
+    );
+    card.append(marker, copy, createElement("span", "card-arrow", "↗"));
+    categoryGrid.append(card);
+  });
+
+  appMain.append(heading, categoryGrid);
+}
+
+/**
  * Reads a collection's retained list/grid preference.
  *
  * @param {string} sectionId Collection identifier.
@@ -1159,7 +1243,9 @@ function createEntryIndexCard(section, item, index) {
     ? buildWorkoutHash(section.workoutCategory, item.id)
     : section.cleaningCategory
       ? buildCleaningHash(section.cleaningCategory, item.id)
-      : buildContentHash(section.id, item.id);
+      : section.algorithmCategory
+        ? buildAlgorithmHash(section.algorithmCategory, item.id)
+        : buildContentHash(section.id, item.id);
   link.setAttribute("aria-label", `Open ${item.title}`);
 
   const copy = createElement("div", "entry-index-copy");
@@ -1208,7 +1294,9 @@ function renderEntryDetail(section, item) {
     ? buildWorkoutHash(section.workoutCategory)
     : section.cleaningCategory
       ? buildCleaningHash(section.cleaningCategory)
-      : buildContentHash(section.id);
+      : section.algorithmCategory
+        ? buildAlgorithmHash(section.algorithmCategory)
+        : buildContentHash(section.id);
   headingCopy.append(
     backLink,
     createElement(
@@ -1705,6 +1793,7 @@ function createAlgorithmBody(item) {
   if (frames.length) {
     body.append(createAlgorithmAnimation(frames));
   }
+  appendTagGroup(body, "Tags", normalizeEntryTags(item.tags));
   return body;
 }
 
@@ -1977,6 +2066,12 @@ function createItemFields(section, item) {
     );
   } else if (section.type === "algorithm") {
     fields.push(
+      createSelectField(
+        "Algorithm subsection",
+        "category",
+        item?.category ?? section.algorithmCategory ?? "personal",
+        ["personal", "traditional", "advanced"],
+      ),
       createField("Use cases", "useCases", "textarea", item?.useCases ?? "", false, "What kind of problem is this good for?"),
       createField("Invariant", "invariant", "textarea", item?.invariant ?? "", false, "What remains true after every step?"),
       createField("How it works", "explanation", "textarea", item?.explanation ?? "", false, "Explain it in your own words"),
@@ -1990,6 +2085,7 @@ function createItemFields(section, item) {
         false,
         "Use > between nodes, then add another line for the next frame",
       ),
+      createField("Filter tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "e.g. graph, sorting, dynamic programming"),
     );
   } else if (section.type === "project") {
     fields.push(
@@ -2221,12 +2317,16 @@ function readItemForm(section) {
   if (section.type === "algorithm") {
     return {
       ...base,
+      category: ["personal", "traditional", "advanced"].includes(String(formData.get("category")))
+        ? String(formData.get("category"))
+        : "personal",
       useCases: String(formData.get("useCases") ?? "").trim(),
       invariant: String(formData.get("invariant") ?? "").trim(),
       explanation: String(formData.get("explanation") ?? "").trim(),
       pseudocode: String(formData.get("pseudocode") ?? "").trim(),
       complexity: String(formData.get("complexity") ?? "").trim(),
       visualFrames: lineList("visualFrames"),
+      tags: commaList("tags").map((tag) => tag.toLocaleLowerCase()),
     };
   }
   if (section.type === "project") {

@@ -195,7 +195,11 @@ Provides pure collection-view normalization, per-collection preference keys, and
 
 ### `app/store.js`
 
-Defines the browser-local data schema, nine permanent core libraries, deterministic editable starter entries, the one-time version 7 empty-library seeding migration, Questions & Ideas migration, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. Populated libraries are never overwritten, and examples remain deleted after the migrated workspace is saved. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
+Defines the browser-local data schema, nine permanent core libraries, deterministic editable starter entries, versioned additive content migrations, Questions & Ideas migration, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. User-authored content is preserved during migrations. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
+
+### `app/algorithm-samples.mjs`
+
+Contains the editable Traditional and Advanced algorithm curriculum. `store.js` adds stable sample metadata and migrates older user-authored algorithm records into the Personal subsection.
 
 ### `assets/`
 

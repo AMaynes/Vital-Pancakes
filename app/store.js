@@ -13,8 +13,10 @@
  * State is intentionally device-local.
  */
 
+import { ALGORITHM_SAMPLES } from "./algorithm-samples.mjs?v=1";
+
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
-const CURRENT_WORKSPACE_VERSION = 12;
+const CURRENT_WORKSPACE_VERSION = 13;
 const EVERYDAY_AREA = "everyday";
 const SAMPLE_DATE = "2026-07-28T12:00:00.000Z";
 const LEGACY_WORKOUT_SAMPLE_IDS = new Set([
@@ -1574,39 +1576,10 @@ const DEFAULT_SECTIONS = [
   {
     id: "algorithms",
     title: "Algorithms",
-    description: "Use cases, reasoning, complexity, and animated visual explanations.",
+    description: "Personal methods, traditional foundations, and advanced techniques with clickable topic tags.",
     icon: "⌬",
     type: "algorithm",
-    items: [
-      createSample("sample-algorithm-binary-search", {
-        title: "Binary search",
-        summary: "Discard half of an ordered search space after every comparison.",
-        useCases: "Finding a boundary in sorted data, locating insertion points, or searching any monotonic true/false condition.",
-        invariant: "If the target exists, it remains inside the active interval after every update.",
-        explanation: "Compare the middle element with the target. Keep only the half that can still contain the answer. For boundary searches, define precisely whether the interval is closed or half-open and what happens on equality.",
-        pseudocode: "lo = 0; hi = length\nwhile lo < hi:\n  mid = lo + floor((hi - lo) / 2)\n  if values[mid] < target: lo = mid + 1\n  else: hi = mid\nreturn lo",
-        complexity: "Time O(log n) · Space O(1) iteratively",
-        visualFrames: [
-          "[1 3 5 7 9 11 13] > mid=7 > target=11",
-          "[9 11 13] > mid=11 > match",
-          "index 5 > done",
-        ],
-      }),
-      createSample("sample-algorithm-breadth-first-search", {
-        title: "Breadth-first search",
-        summary: "Explore a graph one distance layer at a time using a queue.",
-        useCases: "Shortest paths in unweighted graphs, degrees of separation, flood fill, and level-order tree traversal.",
-        invariant: "When a node leaves the queue, its recorded distance is the shortest number of edges from the start.",
-        explanation: "Mark the start visited and enqueue it. Repeatedly remove the oldest node, then enqueue each unseen neighbor. Mark neighbors when enqueuing—not when removing—to prevent duplicates.",
-        pseudocode: "queue = [start]\nvisited = {start}\nwhile queue not empty:\n  node = queue.pop_front()\n  for neighbor in graph[node]:\n    if neighbor not in visited:\n      visited.add(neighbor)\n      queue.push_back(neighbor)",
-        complexity: "Time O(V + E) · Space O(V)",
-        visualFrames: [
-          "A > frontier: B C",
-          "B C > frontier: D E",
-          "D E > goal E found",
-        ],
-      }),
-    ],
+    items: ALGORITHM_SAMPLES.map(({ id, ...fields }) => createSample(id, fields)),
   },
   {
     id: "projects",
@@ -1775,6 +1748,35 @@ function getCleaningTags(item, category) {
 }
 
 /**
+ * Places older algorithm records into the new three-part library. User-created
+ * records become Personal; bundled examples remain part of the curriculum.
+ *
+ * @param {object} item Algorithm entry.
+ * @returns {"personal"|"traditional"|"advanced"} Supported category.
+ */
+function getAlgorithmCategory(item) {
+  if (["personal", "traditional", "advanced"].includes(item.category)) {
+    return item.category;
+  }
+  return item.isSample ? "traditional" : "personal";
+}
+
+/**
+ * Normalizes saved algorithm tags and restores tags for legacy starter records.
+ *
+ * @param {object} item Algorithm entry.
+ * @param {"personal"|"traditional"|"advanced"} category Algorithm category.
+ * @param {Map<string, object>} defaultItems Bundled algorithms by identifier.
+ * @returns {Array<string>} Clickable filter tags.
+ */
+function getAlgorithmTags(item, category, defaultItems) {
+  if (Array.isArray(item.tags) && item.tags.length) {
+    return [...new Set(item.tags.map((tag) => String(tag).trim().toLocaleLowerCase()).filter(Boolean))];
+  }
+  return [...(defaultItems.get(item.id)?.tags ?? [category])];
+}
+
+/**
  * Restores every fixed core library and moves saved Protocol entries into an
  * optional Personal Routines library. Empty legacy Protocols are discarded.
  *
@@ -1908,6 +1910,31 @@ function migrateWorkspace(workspace) {
       const newCookingSamples = cloneDefaultSection(defaultCookingSection).items
         .filter((item) => !existingIds.has(item.id));
       cookingSection.items = [...preservedItems, ...newCookingSamples];
+      changed = true;
+    }
+  }
+
+  if (previousVersion < 13) {
+    const algorithmSection = workspace.sections.find((section) => section.id === "algorithms");
+    const defaultAlgorithmSection = DEFAULT_SECTIONS.find((section) => section.id === "algorithms");
+    if (algorithmSection && defaultAlgorithmSection) {
+      algorithmSection.title = defaultAlgorithmSection.title;
+      algorithmSection.description = defaultAlgorithmSection.description;
+      const defaultItems = new Map(
+        defaultAlgorithmSection.items.map((item) => [item.id, item]),
+      );
+      const preservedItems = (algorithmSection.items ?? []).map((item) => {
+        const category = getAlgorithmCategory(item);
+        return {
+          ...item,
+          category,
+          tags: getAlgorithmTags(item, category, defaultItems),
+        };
+      });
+      const existingIds = new Set(preservedItems.map((item) => item.id));
+      const newAlgorithmSamples = cloneDefaultSection(defaultAlgorithmSection).items
+        .filter((item) => !existingIds.has(item.id));
+      algorithmSection.items = [...preservedItems, ...newAlgorithmSamples];
       changed = true;
     }
   }
