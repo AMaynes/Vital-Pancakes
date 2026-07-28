@@ -205,6 +205,9 @@
   z-index: 14;
   top: 46px;
   right: 12px;
+  max-width: calc(100% - 24px);
+  flex-wrap: wrap;
+  justify-content: flex-end;
   padding: 5px 6px;
   border: 1px solid var(--line-strong) !important;
   border-radius: 10px;

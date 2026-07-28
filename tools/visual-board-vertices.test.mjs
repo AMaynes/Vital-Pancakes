@@ -92,3 +92,40 @@ test("closely spaced curve vertices remain distinct unless they touch", () => {
   assert.equal(network.objects[0].endVertexId, network.objects[1].startVertexId);
   assert.notEqual(network.objects[1].startVertexId, network.objects[1].endVertexId);
 });
+
+test("crossing lines split at one shared editable joint", () => {
+  const network = createEditableVertexNetwork([
+    { id: "horizontal", type: "line", x: 0, y: 50, endX: 100, endY: 50 },
+    { id: "vertical", type: "line", x: 50, y: 0, endX: 50, endY: 100 },
+  ], identifierFactory(), 0.01);
+
+  assert.equal(network.objects.length, 4);
+  assert.equal(network.vertices.length, 5);
+  const centerVertices = network.objects.flatMap((object) => [
+    object.startVertexId,
+    object.endVertexId,
+  ]).filter((vertexId) => {
+    const vertex = network.vertices.find((candidate) => candidate.id === vertexId);
+    return vertex.x === 50 && vertex.y === 50;
+  });
+  assert.equal(new Set(centerVertices).size, 1);
+  assert.equal(centerVertices.length, 4);
+});
+
+test("a line endpoint touching another line creates a T-junction", () => {
+  const network = createEditableVertexNetwork([
+    { id: "horizontal", type: "line", x: 0, y: 50, endX: 100, endY: 50 },
+    { id: "vertical", type: "line", x: 50, y: 0, endX: 50, endY: 50 },
+  ], identifierFactory(), 0.01);
+
+  assert.equal(network.objects.length, 3);
+  assert.equal(network.vertices.length, 4);
+  const joint = network.vertices.find((vertex) => vertex.x === 50 && vertex.y === 50);
+  assert.ok(joint);
+  assert.equal(
+    network.objects.filter((object) => (
+      object.startVertexId === joint.id || object.endVertexId === joint.id
+    )).length,
+    3,
+  );
+});

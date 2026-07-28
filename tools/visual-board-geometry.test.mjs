@@ -216,3 +216,38 @@ test("diagonal line selection uses a narrow rotated rectangle", () => {
   assert.ok(corners[0].y > line.y);
   assert.ok(corners[3].y < line.y);
 });
+
+test("three-point arcs use their curved outline for bounds and hit testing", () => {
+  const arc = {
+    type: "arc",
+    x: 0,
+    y: 50,
+    midX: 50,
+    midY: 0,
+    endX: 100,
+    endY: 50,
+    strokeWidth: 3,
+  };
+
+  const bounds = getObjectBounds(arc);
+  assert.deepEqual(bounds, { x: 0, y: 0, width: 100, height: 50 });
+  assert.equal(pointHitsObject(arc, { x: 50, y: 0 }, 1), true);
+  assert.equal(pointHitsObject(arc, { x: 50, y: 40 }, 1), false);
+});
+
+test("filled trace paths can be selected from their interior", () => {
+  const trace = {
+    type: "trace",
+    paths: [[
+      { x: 10, y: 10 },
+      { x: 40, y: 10 },
+      { x: 40, y: 40 },
+      { x: 10, y: 40 },
+    ]],
+    strokeWidth: 1,
+  };
+
+  assert.deepEqual(getObjectBounds(trace), { x: 10, y: 10, width: 30, height: 30 });
+  assert.equal(pointHitsObject(trace, { x: 20, y: 20 }, 0), true);
+  assert.equal(pointHitsObject(trace, { x: 50, y: 50 }, 0), false);
+});

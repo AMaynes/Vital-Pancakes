@@ -27,9 +27,15 @@ import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
   setVertexNetworkPosition,
-} from "./visual-board-vertices.mjs?v=1";
+} from "./visual-board-vertices.mjs?v=2";
+import {
+  getQuadraticControlPoint,
+  getQuadraticCurvePoints,
+} from "./visual-board-curves.mjs?v=1";
+import { traceBlackAndWhiteImage } from "./visual-board-tracing.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
+  CURVE_TYPES,
   LINE_TYPES,
   SHAPE_TYPES,
   clamp,
@@ -44,11 +50,12 @@ import {
   normalizeShape,
   pointHitsObject,
   resizeShapeFromCorner,
+  rotatePoint,
   snapValue,
-} from "./visual-board-geometry.mjs?v=7";
+} from "./visual-board-geometry.mjs?v=8";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
-const BOARD_VERSION = 7;
+const BOARD_VERSION = 8;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -58,6 +65,7 @@ const HANDLE_SIZE = 6;
 const ROTATION_HANDLE_OFFSET = 28;
 const MARQUEE_DRAG_THRESHOLD = 3;
 const MAX_IMAGE_DIMENSION = 1800;
+const MAX_TRACE_DIMENSION = 800;
 const VERTEX_TOUCH_TOLERANCE = 0.01;
 const DASH_PATTERNS = new Set(["solid", "dashed", "dotted", "dash-dot", "long-dash"]);
 const TEXT_FONT_FAMILIES = Object.freeze({
@@ -93,11 +101,15 @@ const textColorInput = document.querySelector("#text-color");
 const shape2dControl = document.querySelector("#shape-2d-control");
 const shape3dControl = document.querySelector("#shape-3d-control");
 const drawingTools = document.querySelector("#drawing-tools");
+const importImagesButton = document.querySelector("#import-images");
+const imageFileInput = document.querySelector("#image-file-input");
 const selectionActions = document.querySelector("#selection-actions");
 const selectionCount = document.querySelector("#selection-count");
 const lockSelectionButton = document.querySelector("#lock-selection");
 const groupSelectionButton = document.querySelector("#group-selection");
+const traceImageButton = document.querySelector("#trace-image");
 const mergeVerticesButton = document.querySelector("#merge-vertices");
+const curveVerticesButton = document.querySelector("#curve-vertices");
 const ungroupSelectionButton = document.querySelector("#ungroup-selection");
 const explodeSelectionButton = document.querySelector("#explode-selection");
 const reassembleSelectionButton = document.querySelector("#reassemble-selection");
@@ -123,6 +135,7 @@ let spaceHeld = false;
 let widthChangeActive = false;
 let colorChangeActive = false;
 let textColorChangeActive = false;
+let traceInProgress = false;
 let objectClipboard = [];
 let pasteGeneration = 0;
 let shapeToolChoices = {
@@ -214,6 +227,43 @@ function normalizeObject(rawObject, options = {}) {
         .map((point) => ({ x: point.x, y: point.y }))
       : [];
     return points.length ? { ...common, points } : null;
+  }
+
+  if (CURVE_TYPES.has(type)) {
+    const startX = finiteNumber(rawObject.x, 0);
+    const startY = finiteNumber(rawObject.y, 0);
+    const endX = finiteNumber(rawObject.endX, startX);
+    const endY = finiteNumber(rawObject.endY, startY);
+    return {
+      ...common,
+      x: startX,
+      y: startY,
+      midX: finiteNumber(rawObject.midX, (startX + endX) / 2),
+      midY: finiteNumber(rawObject.midY, (startY + endY) / 2),
+      endX,
+      endY,
+    };
+  }
+
+  if (type === "trace") {
+    const paths = Array.isArray(rawObject.paths)
+      ? rawObject.paths
+        .map((path) => (
+          Array.isArray(path)
+            ? path
+              .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y))
+              .map((point) => ({ x: point.x, y: point.y }))
+            : []
+        ))
+        .filter((path) => path.length >= 3)
+      : [];
+    return paths.length
+      ? {
+        ...common,
+        paths,
+        name: typeof rawObject.name === "string" ? rawObject.name : "Traced image",
+      }
+      : null;
   }
 
   if (LINE_TYPES.has(type)) {
@@ -479,8 +529,12 @@ function drawObject(object) {
 
   if (object.type === "pen") {
     drawPenStroke(object.points);
+  } else if (object.type === "trace") {
+    drawTracedImage(object);
   } else if (object.type === "line") {
     drawLine(object);
+  } else if (object.type === "arc") {
+    drawArc(object);
   } else if (LINE_TYPES.has(object.type)) {
     drawConnector(object);
   } else if (object.type === "shape") {
@@ -535,6 +589,29 @@ function drawLine(object) {
   context.moveTo(object.x, object.y);
   context.lineTo(object.endX, object.endY);
   context.stroke();
+}
+
+function drawArc(object) {
+  const control = getQuadraticControlPoint(object);
+  context.beginPath();
+  context.moveTo(object.x, object.y);
+  context.quadraticCurveTo(
+    control.x,
+    control.y,
+    object.endX,
+    object.endY,
+  );
+  context.stroke();
+}
+
+function drawTracedImage(object) {
+  context.beginPath();
+  object.paths.forEach((path) => {
+    context.moveTo(path[0].x, path[0].y);
+    path.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+    context.closePath();
+  });
+  context.fill("evenodd");
 }
 
 function drawSegments(segments) {
@@ -733,6 +810,15 @@ function drawObjectSelection(object, showHandles) {
       context.stroke();
       drawHandle(rotationHandle, true);
     }
+  } else if (CURVE_TYPES.has(object.type)) {
+    const bounds = getObjectBounds(object);
+    context.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+    if (showHandles && !object.locked) {
+      context.setLineDash([]);
+      drawHandle({ x: object.x, y: object.y });
+      drawHandle({ x: object.midX, y: object.midY });
+      drawHandle({ x: object.endX, y: object.endY });
+    }
   } else if (LINE_TYPES.has(object.type)) {
     const padding = Math.max(8 / viewport.zoom, object.strokeWidth / 2 + 4 / viewport.zoom);
     strokeSelectionPolygon(getLineSelectionCorners(object, padding));
@@ -905,6 +991,18 @@ function findSelectionHandle(point) {
     if (corner) return { kind: "resize", object, corner: corner[0] };
   }
 
+  if (CURVE_TYPES.has(object.type)) {
+    if (distanceBetween(point, { x: object.midX, y: object.midY }) <= hitRadius) {
+      return { kind: "curve-middle", object };
+    }
+    if (distanceBetween(point, { x: object.x, y: object.y }) <= hitRadius) {
+      return { kind: "endpoint", object, endpoint: "start" };
+    }
+    if (distanceBetween(point, { x: object.endX, y: object.endY }) <= hitRadius) {
+      return { kind: "endpoint", object, endpoint: "end" };
+    }
+  }
+
   if (LINE_TYPES.has(object.type)) {
     if (distanceBetween(point, { x: object.x, y: object.y }) <= hitRadius) {
       return { kind: "endpoint", object, endpoint: "start" };
@@ -1074,6 +1172,17 @@ function createWorkingObject(type, startPoint) {
     locked: false,
   };
   if (type === "pen") return { ...common, points: [startPoint] };
+  if (type === "arc") {
+    return {
+      ...common,
+      x: startPoint.x,
+      y: startPoint.y,
+      midX: startPoint.x,
+      midY: startPoint.y,
+      endX: startPoint.x,
+      endY: startPoint.y,
+    };
+  }
   if (type === "line" || type === "connector") {
     return { ...common, x: startPoint.x, y: startPoint.y, endX: startPoint.x, endY: startPoint.y };
   }
@@ -1155,6 +1264,12 @@ function handlePointerMove(event) {
       interaction.object.endY = point.y;
     }
     interaction.changed = true;
+  } else if (interaction.kind === "curve-middle") {
+    ensureInteractionCheckpoint();
+    const point = getSnappedPoint(worldPoint);
+    interaction.object.midX = point.x;
+    interaction.object.midY = point.y;
+    interaction.changed = true;
   } else if (interaction.kind === "network-vertex") {
     ensureInteractionCheckpoint();
     restoreInteractionOriginals();
@@ -1201,7 +1316,17 @@ function updateWorkingObject(worldPoint) {
   }
 
   const point = getSnappedPoint(worldPoint);
-  if (LINE_TYPES.has(workingObject.type)) {
+  if (CURVE_TYPES.has(workingObject.type)) {
+    workingObject.endX = point.x;
+    workingObject.endY = point.y;
+    const deltaX = point.x - interaction.startWorld.x;
+    const deltaY = point.y - interaction.startWorld.y;
+    const length = Math.hypot(deltaX, deltaY);
+    workingObject.midX = interaction.startWorld.x + deltaX / 2
+      + (length ? deltaY / length : 0) * length * 0.24;
+    workingObject.midY = interaction.startWorld.y + deltaY / 2
+      - (length ? deltaX / length : 0) * length * 0.24;
+  } else if (LINE_TYPES.has(workingObject.type)) {
     workingObject.endX = point.x;
     workingObject.endY = point.y;
   } else {
@@ -1255,9 +1380,21 @@ function moveObject(object, deltaX, deltaY) {
     });
     return;
   }
+  if (object.type === "trace") {
+    object.paths.flat().forEach((point) => {
+      point.x += deltaX;
+      point.y += deltaY;
+    });
+    return;
+  }
   object.x += deltaX;
   object.y += deltaY;
-  if (LINE_TYPES.has(object.type)) {
+  if (CURVE_TYPES.has(object.type)) {
+    object.midX += deltaX;
+    object.midY += deltaY;
+    object.endX += deltaX;
+    object.endY += deltaY;
+  } else if (LINE_TYPES.has(object.type)) {
     object.endX += deltaX;
     object.endY += deltaY;
   }
@@ -1289,7 +1426,7 @@ function finishPointerInteraction(event, cancelled) {
       history.pop();
       updateHistoryControls();
     }
-  } else if (["move", "resize", "rotate", "endpoint", "network-vertex"]
+  } else if (["move", "resize", "rotate", "endpoint", "curve-middle", "network-vertex"]
     .includes(finishedInteraction.kind)) {
     if (finishedInteraction.changed) saveBoard();
   } else if (
@@ -1336,6 +1473,7 @@ function commitWorkingObject() {
   updateSelectionControls();
   const keepsCreationToolActive = object.type === "pen"
     || LINE_TYPES.has(object.type)
+    || CURVE_TYPES.has(object.type)
     || ["rectangle", "ellipse", "shape"].includes(object.type);
   if (!keepsCreationToolActive) setActiveTool("select");
 
@@ -1514,7 +1652,9 @@ function updateSelectionControls() {
   lockSelectionButton.querySelector(".tool-button-label").textContent = allLocked ? "Unlock" : "Lock";
   deleteSelectionButton.disabled = allLocked;
   groupSelectionButton.disabled = !canGroupSelection(selectedObjects);
+  traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
   mergeVerticesButton.disabled = !canCreateVertexNetwork(selectedObjects);
+  curveVerticesButton.disabled = !canConvertCurveSelection(selectedObjects);
   ungroupSelectionButton.disabled = anyLocked
     || !selectedObjects.some((object) => Boolean(object.groupId));
   explodeSelectionButton.disabled = anyLocked
@@ -1564,10 +1704,109 @@ function groupSelection() {
   announceStatus(`${selectedObjects.length} objects grouped`);
 }
 
+function canTraceSelection(objects) {
+  return objects.length > 0
+    && objects.every((object) => object.type === "image" && !object.locked);
+}
+
+async function traceSelectedImages() {
+  if (!canTraceSelection(selectedObjects) || traceInProgress) return;
+  const sourceImages = [...selectedObjects];
+  traceInProgress = true;
+  updateSelectionControls();
+  announceStatus("Tracing image into black-and-white paths...");
+  await new Promise((resolve) => window.requestAnimationFrame(resolve));
+
+  try {
+    const replacements = new Map();
+    for (const imageObject of sourceImages) {
+      const tracedObject = await createTracedImageObject(imageObject);
+      if (tracedObject) replacements.set(imageObject, tracedObject);
+    }
+    if (!replacements.size) {
+      announceStatus("No dark outlines were detected");
+      return;
+    }
+
+    checkpoint();
+    board.objects = board.objects.flatMap((object) => (
+      replacements.has(object) ? [replacements.get(object)] : [object]
+    ));
+    selectedObjects = [...replacements.values()];
+    saveBoard();
+    drawBoard();
+    const pathCount = selectedObjects.reduce(
+      (total, object) => total + object.paths.length,
+      0,
+    );
+    announceStatus(
+      `${pathCount} traced path${pathCount === 1 ? "" : "s"} ready for Create vertices`,
+    );
+  } catch (error) {
+    console.error("Unable to trace the selected image.", error);
+    announceStatus("Image tracing failed");
+  } finally {
+    traceInProgress = false;
+    updateSelectionControls();
+  }
+}
+
+async function createTracedImageObject(imageObject) {
+  const asset = board.assets[imageObject.assetId];
+  if (!asset?.dataUrl) return null;
+  const image = await loadImageSource(asset.dataUrl);
+  const scale = Math.min(
+    1,
+    MAX_TRACE_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight),
+  );
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const stagingCanvas = document.createElement("canvas");
+  stagingCanvas.width = width;
+  stagingCanvas.height = height;
+  const stagingContext = stagingCanvas.getContext("2d", { willReadFrequently: true });
+  stagingContext.fillStyle = "#ffffff";
+  stagingContext.fillRect(0, 0, width, height);
+  stagingContext.drawImage(image, 0, 0, width, height);
+  const traced = traceBlackAndWhiteImage(
+    stagingContext.getImageData(0, 0, width, height),
+  );
+  if (!traced.paths.length) return null;
+
+  const center = getShapeCenter(imageObject);
+  const paths = traced.paths.map((path) => path.map((point) => rotatePoint({
+    x: imageObject.x + point.x / width * imageObject.w,
+    y: imageObject.y + point.y / height * imageObject.h,
+  }, center, imageObject.rotation ?? 0)));
+  return {
+    id: createId(),
+    type: "trace",
+    paths,
+    name: `${imageObject.name || asset.name || "Image"} trace`,
+    color: "#000000",
+    strokeWidth: 1,
+    dashPattern: "solid",
+    locked: false,
+  };
+}
+
+function loadImageSource(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image), { once: true });
+    image.addEventListener("error", reject, { once: true });
+    image.src = source;
+  });
+}
+
 function canCreateVertexNetwork(objects) {
   return objects.length > 0
     && objects.every((object) => (
-      !object.locked && (LINE_TYPES.has(object.type) || isExplodableObject(object))
+      !object.locked
+      && (
+        LINE_TYPES.has(object.type)
+        || ["rectangle", "ellipse", "shape", "pen", "trace"].includes(object.type)
+      )
     ));
 }
 
@@ -1601,6 +1840,12 @@ function mergeSelectionVertices() {
 
 function createVertexCandidateLines(object) {
   if (LINE_TYPES.has(object.type)) return [cloneValue(object)];
+  if (object.type === "pen") {
+    return createLinesFromPaths([object.points], object, false);
+  }
+  if (object.type === "trace") {
+    return createLinesFromPaths(object.paths, object, true);
+  }
   return getObjectSegments(object).map(([start, end]) => ({
     id: createId(),
     type: "line",
@@ -1613,6 +1858,70 @@ function createVertexCandidateLines(object) {
     dashPattern: object.dashPattern ?? "solid",
     locked: false,
   }));
+}
+
+function createLinesFromPaths(paths, source, closed) {
+  return paths.flatMap((path) => {
+    const lines = path.slice(1).map((end, index) => (
+      createStyledLine(path[index], end, source)
+    ));
+    if (closed && path.length > 2) {
+      lines.push(createStyledLine(path.at(-1), path[0], source));
+    }
+    return lines;
+  });
+}
+
+function createStyledLine(start, end, source) {
+  return {
+    id: createId(),
+    type: "line",
+    x: start.x,
+    y: start.y,
+    endX: end.x,
+    endY: end.y,
+    color: source.color,
+    strokeWidth: source.strokeWidth,
+    dashPattern: source.dashPattern ?? "solid",
+    locked: false,
+  };
+}
+
+function canConvertCurveSelection(objects) {
+  return objects.length > 0
+    && objects.every((object) => !object.locked && CURVE_TYPES.has(object.type));
+}
+
+function convertCurveSelectionToVertices() {
+  if (!canConvertCurveSelection(selectedObjects)) return;
+  const targets = new Set(selectedObjects);
+  const sourceLines = selectedObjects.flatMap((object) => {
+    const points = getQuadraticCurvePoints(object, {
+      tolerance: 1,
+      maximumSegmentLength: 36,
+    });
+    return createLinesFromPaths([points], object, false);
+  });
+  const network = createEditableVertexNetwork(
+    sourceLines,
+    createId,
+    VERTEX_TOUCH_TOLERANCE,
+  );
+  if (!network) return;
+
+  checkpoint();
+  let insertedNetwork = false;
+  board.objects = board.objects.flatMap((object) => {
+    if (!targets.has(object)) return [object];
+    if (insertedNetwork) return [];
+    insertedNetwork = true;
+    return network.objects;
+  });
+  selectedObjects = network.objects;
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  announceStatus(`Curve converted to ${network.vertices.length} editable vertices`);
 }
 
 function releaseSelection() {
@@ -2048,7 +2357,9 @@ function updateCanvasCursor(worldPoint = hoverPoint) {
 
   const handle = worldPoint ? findSelectionHandle(worldPoint) : null;
   if (handle?.kind === "rotate") canvas.style.cursor = "crosshair";
-  else if (["endpoint", "network-vertex"].includes(handle?.kind)) canvas.style.cursor = "move";
+  else if (["endpoint", "curve-middle", "network-vertex"].includes(handle?.kind)) {
+    canvas.style.cursor = "move";
+  }
   else if (handle?.kind === "resize") {
     canvas.style.cursor = ["nw", "se"].includes(handle.corner) ? "nwse-resize" : "nesw-resize";
   } else if (worldPoint && selectedObjects.includes(findObjectAt(worldPoint))) {
@@ -2262,6 +2573,22 @@ async function handleImageDrop(event) {
   if (!files.length) return;
 
   const dropPoint = screenToWorld(getCanvasPoint(event));
+  await addImageFiles(files, dropPoint);
+}
+
+async function handleImageFileSelection(event) {
+  const files = [...(event.target.files ?? [])].filter((file) => file.type.startsWith("image/"));
+  if (!files.length) return;
+  const bounds = canvas.getBoundingClientRect();
+  const placementPoint = screenToWorld({
+    x: bounds.width / 2,
+    y: bounds.height / 2,
+  });
+  await addImageFiles(files, placementPoint);
+  imageFileInput.value = "";
+}
+
+async function addImageFiles(files, placementPoint) {
   const preparedImages = [];
   for (const file of files) {
     try {
@@ -2286,8 +2613,8 @@ async function handleImageDrop(event) {
     const object = {
       id: createId(),
       type: "image",
-      x: dropPoint.x + index * 24 / viewport.zoom,
-      y: dropPoint.y + index * 24 / viewport.zoom,
+      x: placementPoint.x + index * 24 / viewport.zoom,
+      y: placementPoint.y + index * 24 / viewport.zoom,
       w: prepared.width * displayScale,
       h: prepared.height * displayScale,
       rotation: 0,
@@ -2343,6 +2670,8 @@ drawingTools.addEventListener("click", (event) => {
   const button = event.target.closest("[data-tool]");
   if (button) setActiveTool(button.dataset.tool);
 });
+importImagesButton.addEventListener("click", () => imageFileInput.click());
+imageFileInput.addEventListener("change", handleImageFileSelection);
 
 canvas.addEventListener("pointerdown", handlePointerDown);
 canvas.addEventListener("pointermove", handlePointerMove);
@@ -2402,7 +2731,9 @@ pasteSelectionButton.addEventListener("click", pasteSelection);
 deleteSelectionButton.addEventListener("click", deleteSelection);
 lockSelectionButton.addEventListener("click", toggleSelectionLock);
 groupSelectionButton.addEventListener("click", groupSelection);
+traceImageButton.addEventListener("click", traceSelectedImages);
 mergeVerticesButton.addEventListener("click", mergeSelectionVertices);
+curveVerticesButton.addEventListener("click", convertCurveSelectionToVertices);
 ungroupSelectionButton.addEventListener("click", releaseSelection);
 explodeSelectionButton.addEventListener("click", divideSelection);
 reassembleSelectionButton.addEventListener("click", reassembleSelection);
