@@ -255,7 +255,7 @@ function getExportDimensions(images) {
 }
 
 function makeEvenDimension(value) {
-  return Math.max(2, Math.round(value / 2) * 2);
+  return Math.max(16, Math.round(value / 2) * 2);
 }
 
 function getVideoBitRate(width, height) {

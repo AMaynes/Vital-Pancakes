@@ -51,7 +51,7 @@ import {
   AnimationExportError,
   createAnimationExportFilename,
   recordAnimationVideo,
-} from "./visual-board-export.mjs?v=1";
+} from "./visual-board-export.mjs?v=2";
 import {
   getSelectionBounds,
   getSelectionUnits,
