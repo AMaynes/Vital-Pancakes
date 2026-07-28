@@ -61,6 +61,8 @@ test("a new workspace starts with nine permanent libraries and editable examples
   assert.ok(coreSections.every((section) => section.items.every((item) => item.isSample === true)));
   assert.equal(new Set(sampleIds).size, sampleIds.length);
   assert.equal(workspace.sections.find((section) => section.id === "studies").type, "study");
+  assert.ok(workspace.sections.find((section) => section.id === "how-to-cook").items.length >= 16);
+  assert.ok(workspace.sections.find((section) => section.id === "how-to-cook").items.every((item) => item.tags?.length));
   assert.equal(isCoreSectionId("questions-ideas"), true);
   assert.equal(workspace.sections.some((section) => section.id === "protocols"), false);
 });
@@ -160,6 +162,37 @@ test("existing workspaces gain examples in empty libraries without losing saved 
   assert.ok(questionsAndIdeas.items.every((item) => item.isSample === true));
   assert.equal(questionsAndIdeas.type, "question");
   assert.equal(isCoreSectionId(questionsAndIdeas.id), true);
+});
+
+test("version 9 workspaces receive the expanded cooking guide samples", () => {
+  useStorage({
+    version: 9,
+    sections: [
+      {
+        id: "how-to-cook",
+        title: "How to Cook",
+        description: "Existing cooking notes",
+        icon: "⌁",
+        type: "cooking-guide",
+        area: "everyday",
+        items: [
+          {
+            id: "user-cook-note",
+            title: "My house sauce",
+            updatedAt: "2026-01-01",
+            tags: ["sauce"],
+          },
+        ],
+      },
+    ],
+  });
+
+  const cooking = getWorkspace().sections.find((section) => section.id === "how-to-cook");
+
+  assert.equal(getWorkspace().version, 10);
+  assert.ok(cooking.items.some((item) => item.id === "user-cook-note"));
+  assert.ok(cooking.items.some((item) => item.id === "sample-cook-knife-prep"));
+  assert.ok(cooking.items.some((item) => item.tags?.includes("heat control")));
 });
 
 test("a version 6 workspace preserves populated libraries and seeds only empty core libraries", () => {
