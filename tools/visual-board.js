@@ -10,6 +10,12 @@ import {
   retainShapeToolChoice,
 } from "./visual-board-shape-tools.mjs?v=1";
 import {
+  applyTextColorRange,
+  getTextColorSegments,
+  sanitizeTextColorRanges,
+  updateTextColorRangesForEdit,
+} from "./visual-board-rich-text.mjs?v=1";
+import {
   getDefaultTextboxSize,
   getTextWorldFontSize,
 } from "./visual-board-text.mjs?v=1";
@@ -37,7 +43,7 @@ import {
 } from "./visual-board-geometry.mjs?v=6";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
-const BOARD_VERSION = 6;
+const BOARD_VERSION = 7;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -265,6 +271,7 @@ function normalizeObject(rawObject, options = {}) {
       : "serif";
     const fontSize = clamp(finiteNumber(rawObject.fontSize, 18), 8, 96);
     const defaultSize = getDefaultTextboxSize(fontSize, options.textZoom);
+    const text = typeof rawObject.text === "string" ? rawObject.text : "";
     return normalizeShape({
       ...common,
       x: finiteNumber(rawObject.x, 0),
@@ -272,7 +279,8 @@ function normalizeObject(rawObject, options = {}) {
       w: finiteNumber(rawObject.w ?? rawObject.noteWidth, defaultSize.width),
       h: finiteNumber(rawObject.h ?? rawObject.noteHeight, defaultSize.height),
       rotation: finiteNumber(rawObject.rotation, 0),
-      text: typeof rawObject.text === "string" ? rawObject.text : "",
+      text,
+      colorRanges: sanitizeTextColorRanges(rawObject.colorRanges, text.length),
       fontSize,
       fontFamily,
     });
@@ -571,13 +579,32 @@ function drawTextbox(object) {
   context.beginPath();
   context.rect(object.x, object.y, object.w, object.h);
   context.clip();
-  context.fillStyle = isPlaceholder ? "#a7a7a7" : object.color;
   context.font = `${worldFontSize}px ${getTextFontCss(object.fontFamily)}`;
   context.textBaseline = "top";
-  const lines = wrapText(text, Math.max(20, object.w - padding * 2));
+  const lines = wrapTextTokens(text, Math.max(20, object.w - padding * 2));
   const lineHeight = worldFontSize * 1.25;
   lines.forEach((line, index) => {
-    context.fillText(line, object.x + padding, object.y + padding + index * lineHeight);
+    let cursorX = object.x + padding;
+    line.tokens.forEach((token, tokenIndex) => {
+      if (tokenIndex > 0) {
+        cursorX = drawColoredText(
+          " ",
+          token.start - 1,
+          cursorX,
+          object.y + padding + index * lineHeight,
+          object,
+          isPlaceholder,
+        );
+      }
+      cursorX = drawColoredText(
+        token.text,
+        token.start,
+        cursorX,
+        object.y + padding + index * lineHeight,
+        object,
+        isPlaceholder,
+      );
+    });
   });
   context.restore();
 }
@@ -586,28 +613,47 @@ function getTextFontCss(fontFamily) {
   return TEXT_FONT_FAMILIES[fontFamily] ?? TEXT_FONT_FAMILIES.serif;
 }
 
-function wrapText(text, maximumWidth) {
+function wrapTextTokens(text, maximumWidth) {
   const paragraphs = text.split(/\n/);
   const lines = [];
+  let paragraphStart = 0;
   paragraphs.forEach((paragraph) => {
-    const words = paragraph.split(/\s+/).filter(Boolean);
-    if (!words.length) {
-      lines.push("");
+    const tokens = [...paragraph.matchAll(/\S+/g)].map((match) => ({
+      text: match[0],
+      start: paragraphStart + match.index,
+    }));
+    if (!tokens.length) {
+      lines.push({ tokens: [] });
+      paragraphStart += paragraph.length + 1;
       return;
     }
-    let currentLine = "";
-    words.forEach((word) => {
-      const candidate = currentLine ? `${currentLine} ${word}` : word;
-      if (context.measureText(candidate).width > maximumWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
+    let currentLine = [];
+    tokens.forEach((token) => {
+      const candidate = [...currentLine, token].map((item) => item.text).join(" ");
+      if (context.measureText(candidate).width > maximumWidth && currentLine.length) {
+        lines.push({ tokens: currentLine });
+        currentLine = [token];
       } else {
-        currentLine = candidate;
+        currentLine.push(token);
       }
     });
-    lines.push(currentLine);
+    lines.push({ tokens: currentLine });
+    paragraphStart += paragraph.length + 1;
   });
   return lines;
+}
+
+function drawColoredText(text, textStart, x, y, object, isPlaceholder) {
+  const segments = isPlaceholder
+    ? [{ text, color: "#a7a7a7" }]
+    : getTextColorSegments(text, textStart, object.colorRanges, object.color);
+  let cursorX = x;
+  segments.forEach((segment) => {
+    context.fillStyle = segment.color;
+    context.fillText(segment.text, cursorX, y);
+    cursorX += context.measureText(segment.text).width;
+  });
+  return cursorX;
 }
 
 function drawImageObject(object) {
@@ -1745,9 +1791,21 @@ function applySelectedTextColor() {
   const targets = getEditableSelectedTextboxes();
   colorInput.value = textColorInput.value;
   if (!targets.length) return;
+  const editorRange = textEditorSession?.pendingColorRange;
   if (!textColorChangeActive) {
-    checkpoint();
+    if (!textEditorSession) checkpoint();
     textColorChangeActive = true;
+  }
+  if (textEditorSession && editorRange?.end > editorRange?.start) {
+    textEditorSession.object.colorRanges = applyTextColorRange(
+      textEditorSession.object.colorRanges,
+      textEditorSession.object.text.length,
+      editorRange.start,
+      editorRange.end,
+      textColorInput.value,
+    );
+    drawBoard();
+    return;
   }
   targets.forEach((object) => {
     object.color = textColorInput.value;
@@ -1756,9 +1814,15 @@ function applySelectedTextColor() {
 }
 
 function finishTextColorChange() {
-  if (!textColorChangeActive) return;
+  const pendingEditorRange = textEditorSession?.pendingColorRange;
+  if (!textColorChangeActive && !pendingEditorRange) return;
+  const changed = textColorChangeActive;
   textColorChangeActive = false;
-  saveBoard();
+  if (changed) saveBoard();
+  if (pendingEditorRange) {
+    textEditorSession.pendingColorRange = null;
+    closeTextEditor();
+  }
 }
 
 function applySelectedStrokeWidth() {
@@ -1965,12 +2029,22 @@ function openTextEditor(object, checkpointBeforeEdit = true) {
     editor,
     object,
     originalText: object.text,
+    originalColor: object.color,
+    originalColorRanges: cloneValue(object.colorRanges ?? []),
     historyLength,
     checkpointBeforeEdit,
+    pendingColorRange: null,
   };
 
   editor.addEventListener("input", () => {
-    object.text = editor.value;
+    const nextText = editor.value;
+    object.colorRanges = updateTextColorRangesForEdit(
+      object.colorRanges,
+      object.text,
+      nextText,
+    );
+    object.text = nextText;
+    textEditorSession.pendingColorRange = null;
     drawBoard();
   });
   editor.addEventListener("keydown", (event) => {
@@ -1984,7 +2058,16 @@ function openTextEditor(object, checkpointBeforeEdit = true) {
       closeTextEditor();
     }
   });
-  editor.addEventListener("blur", () => closeTextEditor(), { once: true });
+  editor.addEventListener("blur", (event) => {
+    if (textEditorSession?.editor !== editor) return;
+    if (
+      textEditorSession.pendingColorRange
+      || event.relatedTarget === textColorInput
+    ) {
+      return;
+    }
+    closeTextEditor();
+  });
   positionTextEditor();
   editor.focus();
   editor.select();
@@ -2012,8 +2095,15 @@ function closeTextEditor(cancel = false) {
   const session = textEditorSession;
   textEditorSession = null;
 
-  if (cancel) session.object.text = session.originalText;
-  const changed = session.object.text !== session.originalText;
+  if (cancel) {
+    session.object.text = session.originalText;
+    session.object.color = session.originalColor;
+    session.object.colorRanges = cloneValue(session.originalColorRanges);
+  }
+  const changed = session.object.text !== session.originalText
+    || session.object.color !== session.originalColor
+    || JSON.stringify(session.object.colorRanges ?? [])
+      !== JSON.stringify(session.originalColorRanges);
   if (session.checkpointBeforeEdit && (!changed || cancel)) {
     history.splice(session.historyLength);
     updateHistoryControls();
@@ -2021,6 +2111,16 @@ function closeTextEditor(cancel = false) {
   session.editor.remove();
   if (changed && !cancel) saveBoard();
   drawBoard();
+}
+
+function captureActiveTextColorSelection() {
+  if (!textEditorSession) return;
+  const { selectionStart, selectionEnd } = textEditorSession.editor;
+  if (selectionEnd <= selectionStart) return;
+  textEditorSession.pendingColorRange = {
+    start: selectionStart,
+    end: selectionEnd,
+  };
 }
 
 function handleDoubleClick(event) {
@@ -2268,6 +2368,8 @@ widthInput.addEventListener("blur", finishWidthChange);
 patternInput.addEventListener("change", applySelectedStrokePattern);
 textFontInput.addEventListener("change", applySelectedTextFont);
 textSizeInput.addEventListener("change", applySelectedTextSize);
+textColorInput.addEventListener("pointerdown", captureActiveTextColorSelection);
+textColorInput.addEventListener("focus", captureActiveTextColorSelection);
 textColorInput.addEventListener("input", applySelectedTextColor);
 textColorInput.addEventListener("change", finishTextColorChange);
 textColorInput.addEventListener("blur", finishTextColorChange);

@@ -29,6 +29,7 @@ test("copying multiple objects preserves their layout and remaps their group", (
       h: 60,
       groupId: "group-1",
       locked: false,
+      colorRanges: [{ start: 6, end: 10, color: "#ff0000" }],
     },
   ];
 
@@ -44,6 +45,8 @@ test("copying multiple objects preserves their layout and remaps their group", (
     [42, 84, 142, 134],
   );
   assert.deepEqual([copies[1].x, copies[1].y], [172, 94]);
+  assert.deepEqual(copies[1].colorRanges, source[1].colorRanges);
+  assert.notEqual(copies[1].colorRanges, source[1].colorRanges);
   assert.equal(copies[0].locked, false);
   assert.deepEqual([source[0].x, source[0].y], [10, 20]);
 });
