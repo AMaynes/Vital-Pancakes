@@ -104,6 +104,8 @@ function getTrail() {
 function getWorkspaceTrail() {
   const parameters = new URLSearchParams(location.hash.slice(1));
   const requestedArea = parameters.get("area");
+  const sectionId = parameters.get("section");
+  const itemId = parameters.get("item");
   const activeLink = document.querySelector("[data-site-area][aria-current='page']");
   const activeArea = requestedArea || activeLink?.dataset.siteArea || "tools";
   const areaLabel = {
@@ -112,7 +114,30 @@ function getWorkspaceTrail() {
     studies: "studies-and-projects",
     tools: "workspace",
   }[activeArea] || "workspace";
-  return [segment(areaLabel)];
+  const trail = [
+    segment(
+      areaLabel,
+      sectionId ? `workspace.html#area=${encodeURIComponent(activeArea)}` : null,
+    ),
+  ];
+
+  if (sectionId) {
+    const workspaceMain = document.querySelector("#app-main");
+    const sectionTitle = workspaceMain?.dataset.sectionTitle || sectionId;
+    trail.push(
+      segment(
+        slugify(sectionTitle),
+        itemId ? `workspace.html#section=${encodeURIComponent(sectionId)}` : null,
+      ),
+    );
+  }
+
+  if (sectionId && itemId) {
+    const workspaceMain = document.querySelector("#app-main");
+    const itemTitle = workspaceMain?.dataset.itemTitle || itemId;
+    trail.push(segment(slugify(itemTitle)));
+  }
+  return trail;
 }
 
 function slugify(value) {

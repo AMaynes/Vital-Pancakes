@@ -24,6 +24,8 @@ vital-pancakes/
 ├── sw.js — Caches the workspace, public archive, and tools for offline use.
 ├── genericListLoader.js — Renders repository-managed text lists.
 ├── app/
+│   ├── content-view.mjs — Normalizes retained List/Grid preferences and creates collection deep links.
+│   ├── content-view.test.mjs — Verifies collection view preferences and encoded entry routes.
 │   ├── main.js — Renders workspace routes, libraries, and editors.
 │   ├── download-app.js — Connects the install page to supported PWA prompts.
 │   ├── store.test.mjs — Verifies permanent libraries, one-time samples, and safe legacy migration.
@@ -161,11 +163,11 @@ The compact install destination with animated archival diagrams, phone preview s
 
 ### `workspace.html`
 
-The accessible application shell for three hash-routed areas. Everyday Life owns separate Cooking, Gym, and Cleaning libraries; Studies & Projects owns editable knowledge libraries and notecards; Workspace displays tools only. Every core library opens into a subject-specific working surface instead of a generic list.
+The accessible application shell for three hash-routed areas. Everyday Life owns separate Cooking, Gym, and Cleaning libraries; Studies & Projects owns editable knowledge libraries and notecards; Workspace displays tools only. Its area dashboards remain compact overviews, while every content collection opens into a retained List/Grid index and every item has a deep-linked subject page.
 
 ### `workspace.css`
 
-The public-site-aligned archival workspace tokens, full-width responsive shell, ruled cards, editors, dialogs, toasts, and tool-compatible styles. It also defines distinct technique-atlas, recipe-book, training-log, care-manual, study-dossier, idea-board, language-reference, algorithm-lab, and project-casebook layouts.
+The public-site-aligned archival workspace tokens, full-width responsive shell, ruled cards, editors, dialogs, toasts, and tool-compatible styles. It defines the shared responsive List/Grid indexes, animated subject previews, dedicated entry-page composition, and distinct technique-atlas, recipe-book, training-log, care-manual, study-dossier, idea-board, language-reference, algorithm-lab, and project-casebook layouts.
 
 ### `manifest.webmanifest`
 
@@ -183,7 +185,11 @@ Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sor
 
 ### `app/main.js`
 
-Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns the nine subject-specific library presentations, type-aware records and editors, Questions & Ideas records, relationships, dialogs, and local notices.
+Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; preserves the overview dashboards; and owns shared collection indexes, dedicated entry pages, subject animations, the nine type-aware record layouts and editors, Questions & Ideas records, relationships, dialogs, and local notices.
+
+### `app/content-view.mjs`
+
+Provides pure collection-view normalization, per-collection preference keys, and encoded section or entry hash routes. Its adjacent Node test verifies safe fallback behavior and stable deep links.
 
 ### `app/store.js`
 

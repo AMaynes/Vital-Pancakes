@@ -24,6 +24,12 @@ import {
   isCoreSectionId,
   updateItem,
 } from "./store.js";
+import {
+  buildContentHash,
+  CONTENT_VIEWS,
+  getContentViewStorageKey,
+  normalizeContentView,
+} from "./content-view.mjs";
 
 const appMain = document.querySelector("#app-main");
 const itemDialog = document.querySelector("#item-dialog");
@@ -282,6 +288,8 @@ function renderTopNavigation(area) {
 function renderDashboard(area) {
   appMain.replaceChildren();
   delete appMain.dataset.sectionType;
+  delete appMain.dataset.sectionTitle;
+  delete appMain.dataset.itemTitle;
   const workspace = getWorkspace();
 
   if (area === AREA_TOOLS) {
@@ -553,7 +561,18 @@ function createToolCard(tool) {
 function renderSection(section) {
   appMain.replaceChildren();
   appMain.dataset.sectionType = section.type;
+  appMain.dataset.sectionTitle = section.title;
+  delete appMain.dataset.itemTitle;
   activeSectionId = section.id;
+
+  const routeItemId = getRouteItemId();
+  const routeItem = routeItemId
+    ? section.items.find((item) => item.id === routeItemId)
+    : null;
+  if (routeItem) {
+    renderEntryDetail(section, routeItem);
+    return;
+  }
 
   const heading = createElement("section", "page-heading section-page-heading");
   const headingCopy = createElement("div");
@@ -563,10 +582,18 @@ function renderSection(section) {
     createElement("p", "page-description", section.description || "A flexible space for your notes."),
   );
   const actions = createElement("div", "page-actions");
+  const view = getSavedContentView(section.id);
+  const viewSwitcher = createElement("div", "view-switcher");
+  viewSwitcher.setAttribute("role", "group");
+  viewSwitcher.setAttribute("aria-label", "Entry layout");
+  viewSwitcher.append(
+    createContentViewButton(section, CONTENT_VIEWS.LIST, view),
+    createContentViewButton(section, CONTENT_VIEWS.GRID, view),
+  );
   const addButton = createElement("button", "button button-primary", `+ Add ${getSingularLabel(section)}`);
   addButton.type = "button";
   addButton.addEventListener("click", () => openItemDialog(section));
-  actions.append(addButton);
+  actions.append(viewSwitcher, addButton);
   if (!isCoreSectionId(section.id)) {
     const deleteButton = createElement("button", "button button-quiet", "Delete section");
     deleteButton.type = "button";
@@ -582,8 +609,7 @@ function renderSection(section) {
     createElement("span", "", "Stored on this device"),
   );
 
-  const presentation = createSectionPresentation(section);
-  const grid = createElement("div", `entry-grid entry-grid-${SECTION_PRESENTATIONS[section.type]?.mode ?? "standard"}`);
+  const grid = createElement("div", `entry-index entry-index-${view}`);
   if (!section.items.length) {
     const empty = createEmptyState(
       `No ${section.title.toLocaleLowerCase()} yet`,
@@ -597,21 +623,244 @@ function renderSection(section) {
   } else {
     section.items
       .slice()
-      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-      .forEach((item) => grid.append(createEntryCard(section, item)));
+      .sort((left, right) => String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? "")))
+      .forEach((item, index) => grid.append(createEntryIndexCard(section, item, index)));
   }
 
-  appMain.append(heading, meta);
-  if (presentation) appMain.append(presentation);
-  appMain.append(grid);
-  const routeItemId = getRouteItemId();
-  if (routeItemId) {
-    window.requestAnimationFrame(() => {
-      const target = document.querySelector(`#entry-${CSS.escape(routeItemId)}`);
-      target?.classList.add("is-targeted");
-      target?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+  appMain.append(heading, meta, grid);
+}
+
+/**
+ * Reads a collection's retained list/grid preference.
+ *
+ * @param {string} sectionId Collection identifier.
+ * @returns {"list"|"grid"} Retained view.
+ */
+function getSavedContentView(sectionId) {
+  try {
+    return normalizeContentView(localStorage.getItem(getContentViewStorageKey(sectionId)));
+  } catch {
+    return CONTENT_VIEWS.LIST;
   }
+}
+
+/**
+ * Creates one button in the collection view switcher.
+ *
+ * @param {object} section Collection model.
+ * @param {"list"|"grid"} targetView View selected by the button.
+ * @param {"list"|"grid"} activeView Current view.
+ * @returns {HTMLButtonElement} View button.
+ */
+function createContentViewButton(section, targetView, activeView) {
+  const label = targetView === CONTENT_VIEWS.LIST ? "☷ List" : "⊞ Grid";
+  const button = createElement("button", "view-button", label);
+  button.type = "button";
+  button.setAttribute("aria-pressed", String(targetView === activeView));
+  button.addEventListener("click", () => {
+    try {
+      localStorage.setItem(getContentViewStorageKey(section.id), targetView);
+    } catch {
+      // The view still changes for this render when storage is unavailable.
+    }
+    renderSection(section);
+  });
+  return button;
+}
+
+/**
+ * Creates one collapsed entry preview for list or grid collection layouts.
+ *
+ * @param {object} section Parent collection.
+ * @param {object} item Entry model.
+ * @param {number} index Entry position in the current sort.
+ * @returns {HTMLElement} Linked preview card.
+ */
+function createEntryIndexCard(section, item, index) {
+  const card = createElement("article", `entry-index-card entry-${section.type}`);
+  const marker = createElement("span", "entry-index-marker", String(index + 1).padStart(2, "0"));
+  const link = createElement("a", "entry-index-link");
+  link.href = buildContentHash(section.id, item.id);
+  link.setAttribute("aria-label", `Open ${item.title}`);
+
+  const copy = createElement("div", "entry-index-copy");
+  copy.append(
+    createElement(
+      "span",
+      "card-kicker",
+      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${SECTION_LABELS[section.type] ?? "ENTRY"}`,
+    ),
+    createElement("h2", "", item.title),
+    createElement("p", "", item.summary || "Open this entry to view its complete record."),
+  );
+  link.append(copy, createEntryVisual(section, item, true));
+
+  const actions = createElement("div", "entry-index-actions");
+  const editButton = createElement("button", "icon-button", "✎");
+  editButton.type = "button";
+  editButton.title = `Edit ${item.title}`;
+  editButton.setAttribute("aria-label", `Edit ${item.title}`);
+  editButton.addEventListener("click", () => openItemDialog(section, item));
+  const deleteButton = createElement("button", "icon-button", "×");
+  deleteButton.type = "button";
+  deleteButton.title = `Delete ${item.title}`;
+  deleteButton.setAttribute("aria-label", `Delete ${item.title}`);
+  deleteButton.addEventListener("click", () => confirmItemDelete(section, item));
+  actions.append(editButton, deleteButton);
+  card.append(marker, link, actions);
+  return card;
+}
+
+/**
+ * Renders an individual entry as a subject-specific page.
+ *
+ * @param {object} section Parent collection.
+ * @param {object} item Entry model.
+ */
+function renderEntryDetail(section, item) {
+  appMain.dataset.itemTitle = item.title;
+
+  const detail = createElement("article", `entry-detail entry-${section.type}`);
+  const heading = createElement("header", "entry-detail-heading");
+  const headingCopy = createElement("div");
+  const backLink = createElement("a", "entry-back-link", `← ${section.title}`);
+  backLink.href = buildContentHash(section.id);
+  headingCopy.append(
+    backLink,
+    createElement(
+      "p",
+      "eyebrow",
+      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${SECTION_LABELS[section.type] ?? "ENTRY"}`,
+    ),
+    createElement("h1", "", item.title),
+    createElement("p", "page-description", item.summary || section.description),
+  );
+  const actions = createElement("div", "page-actions entry-detail-actions");
+  const editButton = createElement("button", "button button-primary", "Edit entry");
+  editButton.type = "button";
+  editButton.addEventListener("click", () => openItemDialog(section, item));
+  const deleteButton = createElement("button", "button button-quiet", "Delete");
+  deleteButton.type = "button";
+  deleteButton.addEventListener("click", () => confirmItemDelete(section, item));
+  actions.append(editButton, deleteButton);
+  heading.append(headingCopy, actions);
+
+  const lead = createElement("div", "entry-detail-lead");
+  const context = createElement("section", "entry-detail-context");
+  const presentation = SECTION_PRESENTATIONS[section.type];
+  context.append(
+    createElement("p", "card-kicker", presentation?.kicker ?? "WORKING RECORD"),
+    createElement(
+      "p",
+      "entry-detail-context-copy",
+      presentation?.introduction ?? section.description ?? "A complete record kept for future use.",
+    ),
+  );
+  if (presentation) {
+    const stages = createElement("ol", "entry-detail-stages");
+    presentation.stages.forEach(([marker, title]) => {
+      const stage = createElement("li");
+      stage.append(
+        createElement("span", "", marker),
+        createElement("strong", "", title),
+      );
+      stages.append(stage);
+    });
+    context.append(stages);
+  }
+  const visualPanel = createElement("aside", "entry-detail-visual-panel");
+  visualPanel.append(
+    createElement("span", "card-kicker", "SUBJECT VIEW"),
+    createEntryVisual(section, item, false),
+  );
+  lead.append(context, visualPanel);
+
+  const body = createElement("section", "entry-detail-content");
+  body.append(createEntryBody(section, item));
+  detail.append(heading, lead, body);
+  appMain.append(detail);
+}
+
+/**
+ * Builds a compact subject animation used in list, grid, and detail views.
+ *
+ * @param {object} section Parent collection.
+ * @param {object} item Entry model.
+ * @param {boolean} compact Whether this visual is a collection preview.
+ * @returns {HTMLElement} Decorative subject visual.
+ */
+function createEntryVisual(section, item, compact) {
+  const visual = createElement(
+    "div",
+    `entry-subject-visual visual-${section.type}${compact ? " is-compact" : ""}`,
+  );
+  visual.setAttribute("aria-hidden", "true");
+
+  const frame = createElement("div", "subject-visual-frame");
+  const symbol = createElement("div", "subject-visual-symbol");
+  const type = section.type;
+  if (type === "cooking-guide" || type === "recipe") {
+    symbol.append(
+      createElement("i", "visual-vessel"),
+      createElement("i", "visual-steam steam-one"),
+      createElement("i", "visual-steam steam-two"),
+      createElement("i", "visual-steam steam-three"),
+    );
+  } else if (type === "workout") {
+    symbol.append(
+      createElement("i", "visual-weight weight-left"),
+      createElement("i", "visual-weight-bar"),
+      createElement("i", "visual-weight weight-right"),
+    );
+  } else if (type === "cleaning") {
+    symbol.append(
+      createElement("i", "visual-room"),
+      createElement("i", "visual-sweep"),
+      createElement("i", "visual-spark spark-one"),
+      createElement("i", "visual-spark spark-two"),
+    );
+  } else if (type === "language") {
+    symbol.append(
+      createElement("i", "visual-code-line line-one"),
+      createElement("i", "visual-code-line line-two"),
+      createElement("i", "visual-code-line line-three"),
+      createElement("i", "visual-cursor"),
+    );
+  } else if (type === "algorithm") {
+    const tokens = (item.visualFrames?.[0] ?? "input > step > result")
+      .split(">")
+      .map((token) => token.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    tokens.forEach((token, index) => {
+      const lastClass = index === tokens.length - 1 ? " is-last" : "";
+      symbol.append(createElement("i", `visual-node node-${index + 1}${lastClass}`, token.slice(0, 2)));
+    });
+  } else if (type === "study" || type === "question") {
+    symbol.append(
+      createElement("i", "visual-orbit"),
+      createElement("i", "visual-orbit-node orbit-one"),
+      createElement("i", "visual-orbit-node orbit-two"),
+      createElement("i", "visual-orbit-node orbit-three"),
+      createElement("i", "visual-core", type === "question" ? "?" : "Q"),
+    );
+  } else if (type === "project") {
+    symbol.append(
+      createElement("i", "visual-route"),
+      createElement("i", "visual-route-node route-one"),
+      createElement("i", "visual-route-node route-two"),
+      createElement("i", "visual-route-node route-three"),
+    );
+  } else {
+    symbol.append(
+      createElement("i", "visual-check-line check-one"),
+      createElement("i", "visual-check-line check-two"),
+      createElement("i", "visual-check-line check-three"),
+    );
+  }
+  frame.append(symbol);
+  visual.append(frame);
+  return visual;
 }
 
 /**
@@ -743,30 +992,29 @@ function createEntryCard(section, item) {
     card.append(createElement("p", "entry-summary", item.summary));
   }
 
-  if (section.type === "cooking-guide") {
-    card.append(createCookingGuideBody(section, item));
-  } else if (section.type === "recipe") {
-    card.append(createRecipeBody(section, item));
-  } else if (section.type === "workout") {
-    card.append(createWorkoutBody(section, item));
-  } else if (section.type === "cleaning") {
-    card.append(createCleaningBody(section, item));
-  } else if (section.type === "routine") {
-    card.append(createRoutineBody(section, item));
-  } else if (section.type === "study") {
-    card.append(createStudyBody(item));
-  } else if (section.type === "language") {
-    card.append(createLanguageBody(item));
-  } else if (section.type === "algorithm") {
-    card.append(createAlgorithmBody(item));
-  } else if (section.type === "project") {
-    card.append(createProjectBody(item));
-  } else if (section.type === "question") {
-    card.append(createQuestionBody(item));
-  } else {
-    card.append(createGenericBody(item));
-  }
+  card.append(createEntryBody(section, item));
   return card;
+}
+
+/**
+ * Dispatches an entry to its subject-specific content renderer.
+ *
+ * @param {object} section Parent collection.
+ * @param {object} item Entry model.
+ * @returns {HTMLElement} Complete entry content.
+ */
+function createEntryBody(section, item) {
+  if (section.type === "cooking-guide") return createCookingGuideBody(section, item);
+  if (section.type === "recipe") return createRecipeBody(section, item);
+  if (section.type === "workout") return createWorkoutBody(section, item);
+  if (section.type === "cleaning") return createCleaningBody(section, item);
+  if (section.type === "routine") return createRoutineBody(section, item);
+  if (section.type === "study") return createStudyBody(item);
+  if (section.type === "language") return createLanguageBody(item);
+  if (section.type === "algorithm") return createAlgorithmBody(item);
+  if (section.type === "project") return createProjectBody(item);
+  if (section.type === "question") return createQuestionBody(item);
+  return createGenericBody(item);
 }
 
 /**

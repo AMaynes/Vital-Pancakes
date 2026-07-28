@@ -26,6 +26,8 @@ The mathematics and arts flashcard applications load subject-specific `flashcard
 
 The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches the workspace, tools, PDF dependencies, and public archive for offline use.
 
+Every editable content collection shares one predictable interior structure without flattening its subject matter. The collection index can switch between a compact list and a visual grid, remembers that choice per collection, and opens each item as a dedicated page. Entry pages pair a subject animation and concise orientation with the complete type-specific record—for example, stove-readable recipe steps, training prescriptions, study evidence, runnable language notes, or algorithm traces.
+
 See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 
 ## Five Top-Level Sections
@@ -153,7 +155,7 @@ Serve the repository locally and run browser acceptance checks against `http://l
 Run every maintained model and geometry test from the repository root:
 
 ```bash
-node --test tools/*.test.mjs
+node --test app/*.test.mjs tools/*.test.mjs
 ```
 
 Production is hosted from the `main` branch with GitHub Pages. Publishing requires committing and pushing the verified static files; there is no build step.
