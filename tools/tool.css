@@ -85,6 +85,10 @@
   grid-template-columns: minmax(0, 1fr) var(--animation-panel-width);
 }
 
+.tool-workspace.is-resizing-animation-panel {
+  transition: none;
+}
+
 .tool-toolbar {
   position: relative;
   z-index: 12;
@@ -420,6 +424,8 @@
 }
 
 .animation-panel {
+  --animation-preview-height: 210px;
+
   position: relative;
   z-index: 13;
   display: flex;
@@ -440,6 +446,36 @@
   visibility: hidden;
 }
 
+.animation-panel-resize-handle {
+  position: absolute;
+  z-index: 8;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  width: 10px;
+  border: 0;
+  outline: none;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.animation-panel-resize-handle::after {
+  position: absolute;
+  top: 0;
+  right: 4px;
+  bottom: 0;
+  width: 1px;
+  background: transparent;
+  content: "";
+}
+
+.animation-panel-resize-handle:hover::after,
+.animation-panel-resize-handle:focus-visible::after,
+.animation-panel-resize-handle.is-resizing::after {
+  width: 2px;
+  background: var(--coral);
+}
+
 .tool-workspace.is-animation-open .animation-panel {
   opacity: 1;
   pointer-events: auto;
@@ -451,10 +487,12 @@
 .animation-frame-actions,
 .animation-playback-controls {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
 }
 
 .animation-panel-header {
+  flex: 0 0 auto;
   min-height: 48px;
   justify-content: space-between;
   padding: 8px 10px;
@@ -478,9 +516,10 @@
   position: relative;
   display: grid;
   width: calc(100% - 20px);
-  aspect-ratio: 4 / 3;
-  max-height: 270px;
-  margin: 10px;
+  height: var(--animation-preview-height);
+  min-height: 120px;
+  flex: 0 0 var(--animation-preview-height);
+  margin: 10px 10px 4px;
   overflow: hidden;
   place-items: center;
   border: 1px solid var(--line-strong);
@@ -498,6 +537,41 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.animation-preview-actions {
+  position: absolute;
+  z-index: 2;
+  top: 7px;
+  right: 7px;
+  display: flex;
+  gap: 5px;
+}
+
+.animation-preview-button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgb(255 255 255 / 92%);
+  color: var(--ink);
+  font: 700 12px/1 var(--font-body);
+}
+
+.animation-preview-button:hover,
+.animation-preview-button:focus-visible,
+.animation-preview-button[aria-pressed="true"] {
+  border-color: var(--coral);
+  outline: none;
+  color: var(--coral);
+}
+
+.animation-preview-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 .animation-preview-empty {
@@ -519,6 +593,78 @@
   font-size: 9px;
   font-variant-numeric: tabular-nums;
   text-align: center;
+}
+
+.animation-preview-resize-handle {
+  position: relative;
+  height: 10px;
+  flex: 0 0 10px;
+  margin: 0 10px 4px;
+  outline: none;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.animation-preview-resize-handle::after {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 44px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--line-strong);
+  content: "";
+  transform: translateX(-50%);
+}
+
+.animation-preview-resize-handle:hover::after,
+.animation-preview-resize-handle:focus-visible::after,
+.animation-preview-resize-handle.is-resizing::after {
+  background: var(--coral);
+}
+
+.animation-preview:fullscreen,
+.animation-preview.is-preview-maximized {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.animation-preview.is-preview-maximized {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+}
+
+.animation-preview:fullscreen .animation-preview-actions,
+.animation-preview.is-preview-maximized .animation-preview-actions {
+  top: 18px;
+  right: 18px;
+}
+
+.animation-preview:fullscreen .animation-preview-button,
+.animation-preview.is-preview-maximized .animation-preview-button {
+  width: 42px;
+  height: 42px;
+  border-color: rgb(255 255 255 / 46%);
+  background: rgb(23 22 19 / 84%);
+  color: #ffffff;
+  font-size: 17px;
+}
+
+.animation-preview:fullscreen .animation-preview-count,
+.animation-preview.is-preview-maximized .animation-preview-count {
+  right: 18px;
+  bottom: 18px;
+  padding: 6px 9px;
+  background: rgb(23 22 19 / 84%);
+  color: #ffffff;
+  font-size: 12px;
 }
 
 .animation-playback-controls {
@@ -616,6 +762,93 @@
   font-size: 8px;
 }
 
+.animation-export-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: end;
+  gap: 7px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(255 255 255 / 28%);
+}
+
+.animation-export-controls label {
+  display: grid;
+  flex: 0 0 76px;
+  gap: 3px;
+}
+
+.animation-export-controls label > span {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.animation-export-controls select {
+  width: 100%;
+  height: 30px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+  font: 700 9px/1 var(--font-body);
+}
+
+.animation-export-controls .button {
+  min-height: 30px;
+  flex: 1;
+}
+
+.animation-export-progress {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+
+.animation-export-progress[hidden] {
+  display: none;
+}
+
+.animation-export-progress > div {
+  display: flex;
+  min-width: 0;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.animation-export-progress progress {
+  width: 100%;
+  height: 8px;
+  align-self: center;
+}
+
+.animation-export-progress .button {
+  min-height: 26px;
+  padding: 4px 8px;
+}
+
+.animation-export-error {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 7px 10px;
+  border-bottom: 1px solid #d8a59f;
+  background: #fff1ef;
+  color: var(--coral);
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .animation-frame-actions {
   gap: 6px;
   padding: 8px 10px;
@@ -635,6 +868,7 @@
 }
 
 .animation-frame-list {
+  flex: 1 1 auto;
   min-height: 0;
   margin: 0;
   padding: 0 10px 12px;
@@ -2057,7 +2291,7 @@
     top: 38px;
     right: 0;
     bottom: 0;
-    width: min(360px, 100%);
+    width: min(var(--animation-panel-width), 100%);
     grid-column: auto;
     grid-row: auto;
     box-shadow: var(--shadow-md);

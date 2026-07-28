@@ -48,6 +48,11 @@ import {
   normalizeIntermediateFrameCount,
 } from "./visual-board-interpolation.mjs?v=1";
 import {
+  AnimationExportError,
+  createAnimationExportFilename,
+  recordAnimationVideo,
+} from "./visual-board-export.mjs?v=1";
+import {
   getSelectionBounds,
   getSelectionUnits,
   resizeSelectionObjects,
@@ -86,6 +91,10 @@ const MARQUEE_DRAG_THRESHOLD = 3;
 const MAX_IMAGE_DIMENSION = 1800;
 const MAX_TRACE_DIMENSION = 800;
 const VERTEX_TOUCH_TOLERANCE = 0.01;
+const ANIMATION_PANEL_WIDTH_KEY = "visual-board-animation-panel-width";
+const ANIMATION_PREVIEW_HEIGHT_KEY = "visual-board-animation-preview-height";
+const MIN_ANIMATION_PANEL_WIDTH = 300;
+const MIN_ANIMATION_PREVIEW_HEIGHT = 120;
 const DASH_PATTERNS = new Set(["solid", "dashed", "dotted", "dash-dot", "long-dash"]);
 const TEXT_FONT_FAMILIES = Object.freeze({
   serif: 'Georgia, "Times New Roman", serif',
@@ -139,10 +148,14 @@ const saveStatus = document.querySelector("#save-status");
 const toolWorkspace = document.querySelector("#tool-main");
 const animationToggleButton = document.querySelector("#toggle-animation");
 const animationPanel = document.querySelector("#animation-panel");
+const animationPanelResizeHandle = document.querySelector("#animation-panel-resize");
 const animationPreview = document.querySelector("#animation-preview");
 const animationPreviewImage = document.querySelector("#animation-preview-image");
 const animationPreviewEmpty = document.querySelector("#animation-preview-empty");
 const animationPreviewCount = document.querySelector("#animation-preview-count");
+const animationPreviewPlayButton = document.querySelector("#animation-preview-play");
+const animationPreviewFullscreenButton = document.querySelector("#animation-preview-fullscreen");
+const animationPreviewResizeHandle = document.querySelector("#animation-preview-resize");
 const animationFrameTotal = document.querySelector("#animation-frame-total");
 const animationFrameList = document.querySelector("#animation-frame-list");
 const animationPlayButton = document.querySelector("#animation-play");
@@ -150,6 +163,14 @@ const animationDurationInput = document.querySelector("#animation-frame-duration
 const animationFpsOutput = document.querySelector("#animation-fps");
 const duplicateAnimationFrameButton = document.querySelector("#duplicate-animation-frame");
 const deleteAnimationFrameButton = document.querySelector("#delete-animation-frame");
+const animationExportFormat = document.querySelector("#animation-export-format");
+const animationExportButton = document.querySelector("#export-animation");
+const animationExportProgress = document.querySelector("#animation-export-progress");
+const animationExportProgressLabel = document.querySelector("#animation-export-progress-label");
+const animationExportProgressValue = document.querySelector("#animation-export-progress-value");
+const animationExportProgressBar = document.querySelector("#animation-export-progress-bar");
+const animationExportCancelButton = document.querySelector("#cancel-animation-export");
+const animationExportError = document.querySelector("#animation-export-error");
 const interpolationDialog = document.querySelector("#interpolation-dialog");
 const interpolationForm = document.querySelector("#interpolation-form");
 const interpolationPairLabel = document.querySelector("#interpolation-pair-label");
@@ -184,6 +205,8 @@ let animationPanelOpen = false;
 let selectedAnimationFrameId = board.animation.frames[0]?.id ?? null;
 let animationPlaybackTimer = null;
 let animationPlaybackIndex = 0;
+let animationExportAbortController = null;
+let animationExportInProgress = false;
 let interpolationRequest = null;
 let interpolationAbortController = null;
 let interpolationInProgress = false;
@@ -1790,7 +1813,10 @@ function handleWheel(event) {
 
 function toggleAnimationPanel(forceOpen = !animationPanelOpen) {
   animationPanelOpen = Boolean(forceOpen);
-  if (!animationPanelOpen) stopAnimationPlayback();
+  if (!animationPanelOpen) {
+    stopAnimationPlayback();
+    exitAnimationPreviewFullscreen();
+  }
   toolWorkspace.classList.toggle("is-animation-open", animationPanelOpen);
   animationPanel.classList.toggle("is-open", animationPanelOpen);
   animationPanel.setAttribute("aria-hidden", String(!animationPanelOpen));
@@ -1802,6 +1828,194 @@ function toggleAnimationPanel(forceOpen = !animationPanelOpen) {
     renderAnimationPanel();
     animationPreview.focus({ preventScroll: true });
   }
+}
+
+function restoreAnimationLayout() {
+  applyAnimationPanelWidth(readLayoutPreference(ANIMATION_PANEL_WIDTH_KEY, 360));
+  applyAnimationPreviewHeight(readLayoutPreference(ANIMATION_PREVIEW_HEIGHT_KEY, 210));
+}
+
+function readLayoutPreference(key, fallback) {
+  try {
+    const savedValue = localStorage.getItem(key);
+    return savedValue === null || savedValue === ""
+      ? fallback
+      : finiteNumber(savedValue, fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+function saveLayoutPreference(key, value) {
+  try {
+    localStorage.setItem(key, String(Math.round(value)));
+  } catch {
+    // The board remains usable when private browsing blocks local preferences.
+  }
+}
+
+function applyAnimationPanelWidth(value, persist = false) {
+  const maximum = Math.max(1, Math.floor(toolWorkspace.getBoundingClientRect().width));
+  const minimum = Math.min(MIN_ANIMATION_PANEL_WIDTH, maximum);
+  const width = clamp(finiteNumber(value, 360), minimum, maximum);
+  toolWorkspace.style.setProperty("--animation-panel-width", `${Math.round(width)}px`);
+  animationPanelResizeHandle.setAttribute("aria-valuemax", String(maximum));
+  animationPanelResizeHandle.setAttribute("aria-valuenow", String(Math.round(width)));
+  if (persist) saveLayoutPreference(ANIMATION_PANEL_WIDTH_KEY, width);
+  return width;
+}
+
+function applyAnimationPreviewHeight(value, persist = false) {
+  const panelHeight = Math.floor(animationPanel.getBoundingClientRect().height);
+  const maximum = Math.max(
+    MIN_ANIMATION_PREVIEW_HEIGHT,
+    panelHeight > 0 ? panelHeight - 210 : 420,
+  );
+  const height = clamp(
+    finiteNumber(value, 210),
+    MIN_ANIMATION_PREVIEW_HEIGHT,
+    maximum,
+  );
+  animationPanel.style.setProperty("--animation-preview-height", `${Math.round(height)}px`);
+  animationPreviewResizeHandle.setAttribute("aria-valuemax", String(maximum));
+  animationPreviewResizeHandle.setAttribute("aria-valuenow", String(Math.round(height)));
+  if (persist) saveLayoutPreference(ANIMATION_PREVIEW_HEIGHT_KEY, height);
+  return height;
+}
+
+function getCurrentAnimationPanelWidth() {
+  return animationPanel.getBoundingClientRect().width
+    || finiteNumber(animationPanelResizeHandle.getAttribute("aria-valuenow"), 360);
+}
+
+function getCurrentAnimationPreviewHeight() {
+  return animationPreview.getBoundingClientRect().height
+    || finiteNumber(animationPreviewResizeHandle.getAttribute("aria-valuenow"), 210);
+}
+
+function beginAnimationPanelResize(event) {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  const startX = event.clientX;
+  const startWidth = getCurrentAnimationPanelWidth();
+  toolWorkspace.classList.add("is-resizing-animation-panel");
+  animationPanelResizeHandle.classList.add("is-resizing");
+  animationPanelResizeHandle.setPointerCapture?.(event.pointerId);
+
+  const resize = (moveEvent) => {
+    applyAnimationPanelWidth(startWidth + startX - moveEvent.clientX);
+  };
+  const finish = (upEvent) => {
+    const finalWidth = finiteNumber(
+      animationPanelResizeHandle.getAttribute("aria-valuenow"),
+      startWidth,
+    );
+    saveLayoutPreference(ANIMATION_PANEL_WIDTH_KEY, finalWidth);
+    toolWorkspace.classList.remove("is-resizing-animation-panel");
+    animationPanelResizeHandle.classList.remove("is-resizing");
+    window.removeEventListener("pointermove", resize);
+    window.removeEventListener("pointerup", finish);
+    window.removeEventListener("pointercancel", finish);
+    window.removeEventListener("mouseup", finish);
+    if (
+      Number.isInteger(upEvent.pointerId)
+      && animationPanelResizeHandle.hasPointerCapture?.(upEvent.pointerId)
+    ) {
+      animationPanelResizeHandle.releasePointerCapture(upEvent.pointerId);
+    }
+  };
+  window.addEventListener("pointermove", resize);
+  window.addEventListener("pointerup", finish);
+  window.addEventListener("pointercancel", finish);
+  window.addEventListener("mouseup", finish);
+}
+
+function beginAnimationPreviewResize(event) {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  const startY = event.clientY;
+  const startHeight = getCurrentAnimationPreviewHeight();
+  animationPreviewResizeHandle.classList.add("is-resizing");
+  animationPreviewResizeHandle.setPointerCapture?.(event.pointerId);
+
+  const resize = (moveEvent) => {
+    applyAnimationPreviewHeight(startHeight + moveEvent.clientY - startY);
+  };
+  const finish = (upEvent) => {
+    animationPreviewResizeHandle.classList.remove("is-resizing");
+    window.removeEventListener("pointermove", resize);
+    window.removeEventListener("pointerup", finish);
+    window.removeEventListener("pointercancel", finish);
+    window.removeEventListener("mouseup", finish);
+    if (
+      Number.isInteger(upEvent.pointerId)
+      && animationPreviewResizeHandle.hasPointerCapture?.(upEvent.pointerId)
+    ) {
+      animationPreviewResizeHandle.releasePointerCapture(upEvent.pointerId);
+    }
+    applyAnimationPreviewHeight(getCurrentAnimationPreviewHeight(), true);
+  };
+  window.addEventListener("pointermove", resize);
+  window.addEventListener("pointerup", finish);
+  window.addEventListener("pointercancel", finish);
+  window.addEventListener("mouseup", finish);
+}
+
+function resizeAnimationPanelWithKeyboard(event) {
+  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  event.preventDefault();
+  const direction = event.key === "ArrowLeft" ? 1 : -1;
+  applyAnimationPanelWidth(getCurrentAnimationPanelWidth() + direction * 24, true);
+}
+
+function resizeAnimationPreviewWithKeyboard(event) {
+  if (!["ArrowUp", "ArrowDown"].includes(event.key)) return;
+  event.preventDefault();
+  const direction = event.key === "ArrowDown" ? 1 : -1;
+  applyAnimationPreviewHeight(getCurrentAnimationPreviewHeight() + direction * 20, true);
+}
+
+async function toggleAnimationPreviewFullscreen() {
+  if (
+    document.fullscreenElement === animationPreview
+    || animationPreview.classList.contains("is-preview-maximized")
+  ) {
+    exitAnimationPreviewFullscreen();
+    return;
+  }
+
+  try {
+    if (typeof animationPreview.requestFullscreen === "function") {
+      await animationPreview.requestFullscreen();
+    } else {
+      animationPreview.classList.add("is-preview-maximized");
+      updateAnimationFullscreenButton();
+    }
+  } catch {
+    animationPreview.classList.add("is-preview-maximized");
+    updateAnimationFullscreenButton();
+  }
+}
+
+function exitAnimationPreviewFullscreen() {
+  animationPreview.classList.remove("is-preview-maximized");
+  if (document.fullscreenElement === animationPreview) {
+    document.exitFullscreen?.()?.catch?.(() => {});
+  }
+  updateAnimationFullscreenButton();
+}
+
+function updateAnimationFullscreenButton() {
+  const isFullscreen = document.fullscreenElement === animationPreview
+    || animationPreview.classList.contains("is-preview-maximized");
+  animationPreviewFullscreenButton.textContent = isFullscreen ? "×" : "⛶";
+  animationPreviewFullscreenButton.setAttribute(
+    "aria-label",
+    isFullscreen ? "Exit fullscreen preview" : "View preview fullscreen",
+  );
+  animationPreviewFullscreenButton.title = isFullscreen
+    ? "Exit fullscreen preview"
+    : "View preview fullscreen";
 }
 
 function ensureSelectedAnimationFrame() {
@@ -1824,6 +2038,8 @@ function renderAnimationPanel() {
   animationDurationInput.value = String(board.animation.frameDurationMs);
   animationFpsOutput.textContent = `${formatFramesPerSecond(board.animation.frameDurationMs)} FPS`;
   animationPlayButton.disabled = playableFrames.length < 2;
+  animationPreviewPlayButton.disabled = playableFrames.length < 2;
+  animationExportButton.disabled = animationExportInProgress || playableFrames.length < 2;
   duplicateAnimationFrameButton.disabled = !getSelectedAnimationFrame()
     || frameCount >= MAX_ANIMATION_FRAMES;
   deleteAnimationFrameButton.disabled = !getSelectedAnimationFrame();
@@ -1997,10 +2213,7 @@ function toggleAnimationPlayback() {
     (frame) => frame.id === selectedAnimationFrameId,
   );
   animationPlaybackIndex = selectedIndex >= 0 ? selectedIndex : 0;
-  animationPlayButton.textContent = "■";
-  animationPlayButton.setAttribute("aria-label", "Stop animation");
-  animationPlayButton.title = "Stop animation";
-  animationPlayButton.setAttribute("aria-pressed", "true");
+  setAnimationPlaybackButtonState(true);
   showAnimationPreview(playableFrames[animationPlaybackIndex]);
   scheduleAnimationPlayback();
 }
@@ -2022,11 +2235,17 @@ function scheduleAnimationPlayback() {
 function stopAnimationPlayback() {
   window.clearTimeout(animationPlaybackTimer);
   animationPlaybackTimer = null;
-  animationPlayButton.textContent = "▶";
-  animationPlayButton.setAttribute("aria-label", "Play animation");
-  animationPlayButton.title = "Play animation";
-  animationPlayButton.setAttribute("aria-pressed", "false");
+  setAnimationPlaybackButtonState(false);
   showAnimationPreview(getSelectedAnimationFrame());
+}
+
+function setAnimationPlaybackButtonState(isPlaying) {
+  for (const button of [animationPlayButton, animationPreviewPlayButton]) {
+    button.textContent = isPlaying ? "■" : "▶";
+    button.setAttribute("aria-label", isPlaying ? "Stop animation" : "Play animation");
+    button.title = isPlaying ? "Stop animation" : "Play animation";
+    button.setAttribute("aria-pressed", String(isPlaying));
+  }
 }
 
 function setAnimationFrameDuration(value) {
@@ -2035,6 +2254,101 @@ function setAnimationFrameDuration(value) {
   animationFpsOutput.textContent = `${formatFramesPerSecond(board.animation.frameDurationMs)} FPS`;
   saveBoard();
   if (animationPlaybackTimer !== null) scheduleAnimationPlayback();
+}
+
+async function exportAnimation() {
+  if (animationExportInProgress) return;
+  const playableFrames = getPlayableFrames(board.animation.frames);
+  if (playableFrames.length < 2) {
+    showAnimationExportError("Add at least two image frames before saving an animation.");
+    return;
+  }
+
+  stopAnimationPlayback();
+  animationExportInProgress = true;
+  animationExportAbortController = new AbortController();
+  animationExportError.hidden = true;
+  animationExportProgress.hidden = false;
+  animationExportProgressLabel.textContent = "Preparing frames";
+  animationExportProgressValue.textContent = "";
+  animationExportProgressBar.removeAttribute("value");
+  setAnimationExportBusy(true);
+  renderAnimationPanel();
+
+  try {
+    const result = await recordAnimationVideo({
+      frames: playableFrames,
+      frameDurationMs: board.animation.frameDurationMs,
+      format: animationExportFormat.value,
+      signal: animationExportAbortController.signal,
+      onProgress: updateAnimationExportProgress,
+    });
+    downloadAnimationBlob(
+      result.blob,
+      createAnimationExportFilename(result.extension),
+    );
+    animationExportProgress.hidden = true;
+    announceStatus(`${result.extension.toUpperCase()} animation saved`);
+  } catch (error) {
+    if (error instanceof AnimationExportError && error.code === "CANCELLED") {
+      animationExportProgress.hidden = true;
+      announceStatus("Animation export cancelled");
+    } else {
+      console.error("Unable to export animation.", error);
+      animationExportProgress.hidden = true;
+      showAnimationExportError(
+        error instanceof AnimationExportError
+          ? error.message
+          : "The animation could not be saved. Try WebM or reduce the frame size.",
+      );
+    }
+  } finally {
+    animationExportInProgress = false;
+    animationExportAbortController = null;
+    setAnimationExportBusy(false);
+    renderAnimationPanel();
+  }
+}
+
+function updateAnimationExportProgress(progress) {
+  animationExportProgress.hidden = false;
+  animationExportProgressLabel.textContent = progress.phase === "loading"
+    ? "Preparing frames"
+    : "Rendering video";
+  animationExportProgressBar.max = progress.total;
+  animationExportProgressBar.value = progress.completed;
+  animationExportProgressValue.textContent = `${progress.completed} / ${progress.total}`;
+}
+
+function setAnimationExportBusy(isBusy) {
+  animationExportFormat.disabled = isBusy;
+  animationExportButton.textContent = isBusy ? "Saving…" : "Save animation";
+  animationExportCancelButton.disabled = !isBusy;
+}
+
+function cancelAnimationExport() {
+  if (!animationExportInProgress) return;
+  animationExportProgressLabel.textContent = "Cancelling";
+  animationExportProgressValue.textContent = "";
+  animationExportProgressBar.removeAttribute("value");
+  animationExportCancelButton.disabled = true;
+  animationExportAbortController?.abort();
+}
+
+function showAnimationExportError(message) {
+  animationExportError.textContent = message;
+  animationExportError.hidden = false;
+}
+
+function downloadAnimationBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 async function addAnimationImageFiles(files, targetFrameId = selectedAnimationFrameId) {
@@ -3194,6 +3508,17 @@ function handleKeyDown(event) {
     }
     return;
   }
+  if (event.key === "Escape" && animationPreview.classList.contains("is-preview-maximized")) {
+    event.preventDefault();
+    exitAnimationPreviewFullscreen();
+    animationPreview.focus({ preventScroll: true });
+    return;
+  }
+  if (event.key === "Escape" && animationExportInProgress) {
+    event.preventDefault();
+    cancelAnimationExport();
+    return;
+  }
   const commandKey = event.metaKey || event.ctrlKey;
   if (event.key === "Escape") {
     event.preventDefault();
@@ -3446,6 +3771,14 @@ document.querySelector("#add-animation-frame").addEventListener("click", addBlan
 duplicateAnimationFrameButton.addEventListener("click", duplicateSelectedAnimationFrame);
 deleteAnimationFrameButton.addEventListener("click", deleteSelectedAnimationFrame);
 animationPlayButton.addEventListener("click", toggleAnimationPlayback);
+animationPreviewPlayButton.addEventListener("click", toggleAnimationPlayback);
+animationPreviewFullscreenButton.addEventListener("click", toggleAnimationPreviewFullscreen);
+animationPanelResizeHandle.addEventListener("pointerdown", beginAnimationPanelResize);
+animationPanelResizeHandle.addEventListener("keydown", resizeAnimationPanelWithKeyboard);
+animationPreviewResizeHandle.addEventListener("pointerdown", beginAnimationPreviewResize);
+animationPreviewResizeHandle.addEventListener("keydown", resizeAnimationPreviewWithKeyboard);
+animationExportButton.addEventListener("click", exportAnimation);
+animationExportCancelButton.addEventListener("click", cancelAnimationExport);
 animationDurationInput.addEventListener("change", () => {
   setAnimationFrameDuration(animationDurationInput.value);
 });
@@ -3487,11 +3820,12 @@ interpolationDialog.addEventListener("cancel", (event) => {
 });
 interpolationDialog.addEventListener("close", restoreInterpolationFocus);
 animationPreview.addEventListener("keydown", (event) => {
-  if (event.code !== "Space") return;
+  if (event.target !== animationPreview || event.code !== "Space") return;
   event.preventDefault();
   event.stopPropagation();
   toggleAnimationPlayback();
 });
+document.addEventListener("fullscreenchange", updateAnimationFullscreenButton);
 animationPanel.addEventListener("dragenter", (event) => {
   if ([...(event.dataTransfer?.items ?? [])].some((item) => item.type.startsWith("image/"))) {
     event.preventDefault();
@@ -3567,11 +3901,18 @@ document.querySelector("#clear-board").addEventListener("click", () => {
 document.addEventListener("keydown", handleKeyDown);
 document.addEventListener("keyup", handleKeyUp);
 document.addEventListener("paste", handleClipboardPaste);
-window.addEventListener("resize", resizeCanvas);
+window.addEventListener("resize", () => {
+  applyAnimationPanelWidth(getCurrentAnimationPanelWidth());
+  applyAnimationPreviewHeight(getCurrentAnimationPreviewHeight());
+  resizeCanvas();
+});
 new ResizeObserver(resizeCanvas).observe(canvasFrame);
 
 initializeShapePickers();
+restoreAnimationLayout();
 animationPanel.inert = true;
+setAnimationExportBusy(false);
+updateAnimationFullscreenButton();
 renderAnimationPanel();
 updateHistoryControls();
 updateSelectionControls();

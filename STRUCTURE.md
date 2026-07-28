@@ -44,8 +44,12 @@ vital-pancakes/
 │   ├── tool.css — Shares full-screen and windowed tool layouts and controls.
 │   ├── visual-board.html — Hosts diagramming and painting.
 │   ├── visual-board.js — Coordinates the infinite canvas, tools, persistence, and export.
+│   ├── visual-board-animation.mjs — Normalizes animation frames and playback timing.
+│   ├── visual-board-animation.test.mjs — Verifies animation state, timing, and playable frames.
 │   ├── visual-board-clipboard.mjs — Duplicates selected board objects while preserving internal relationships.
 │   ├── visual-board-clipboard.test.mjs — Verifies multi-object clipboard duplication and identifier remapping.
+│   ├── visual-board-export.mjs — Encodes local animation frames into MP4 or WebM video.
+│   ├── visual-board-export.test.mjs — Verifies export formats, frame ordering, timing, and cancellation.
 │   ├── visual-board-geometry.mjs — Provides pure hit-testing, bounds, rotation, and resizing math.
 │   ├── visual-board-geometry.test.mjs — Verifies Visual Board geometry with Node's test runner.
 │   ├── visual-board-history.mjs — Snapshots board content together with selection state for undo and redo.
@@ -87,6 +91,7 @@ vital-pancakes/
 │   ├── architecture-model.mjs — Owns migration, nesting, movement, and deletion policies.
 │   └── architecture-model.test.mjs — Verifies Software Architect model behavior.
 ├── vendor/
+│   ├── mediabunny-1.51.0.min.mjs — Pinned browser-native MP4 and WebM encoding runtime.
 │   ├── pdf.min.js — Bundled PDF.js viewer runtime.
 │   ├── pdf.worker.min.js — Bundled PDF.js worker.
 │   └── pdf-lib.min.js — Bundled PDF-Lib editing runtime.
@@ -255,7 +260,7 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 ### `vendor/`
 
-Contains pinned minified PDF.js 3.11.174 and PDF-Lib 1.17.1 browser assets so viewing and signing do not depend on a network CDN.
+Contains pinned minified Mediabunny 1.51.0, PDF.js 3.11.174, and PDF-Lib 1.17.1 browser assets so animation export, viewing, and signing do not depend on a network CDN.
 
 ## Public Archive
 

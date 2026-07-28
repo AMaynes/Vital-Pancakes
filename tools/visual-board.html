@@ -9,7 +9,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=18">
-  <link rel="stylesheet" href="tool.css?v=28">
+  <link rel="stylesheet" href="tool.css?v=29">
   <link rel="stylesheet" href="../site-navigation.css?v=20">
   <script type="module" src="../site-navigation.js?v=5"></script>
 </head>
@@ -243,6 +243,15 @@
         </div>
       </section>
       <aside class="animation-panel" id="animation-panel" aria-label="Animation frames" aria-hidden="true">
+        <div
+          class="animation-panel-resize-handle"
+          id="animation-panel-resize"
+          role="separator"
+          tabindex="0"
+          aria-label="Resize animation panel"
+          aria-orientation="vertical"
+          aria-valuemin="300"
+        ></div>
         <header class="animation-panel-header">
           <div>
             <h2>Animation</h2>
@@ -254,8 +263,35 @@
         <div class="animation-preview" id="animation-preview" tabindex="0" aria-label="Animation preview">
           <img id="animation-preview-image" alt="Selected animation frame" hidden>
           <span class="animation-preview-empty" id="animation-preview-empty">Empty frame</span>
+          <div class="animation-preview-actions">
+            <button
+              class="animation-preview-button"
+              id="animation-preview-play"
+              type="button"
+              aria-label="Play animation"
+              title="Play animation"
+              aria-pressed="false"
+              disabled
+            >▶</button>
+            <button
+              class="animation-preview-button"
+              id="animation-preview-fullscreen"
+              type="button"
+              aria-label="View preview fullscreen"
+              title="View preview fullscreen"
+            >⛶</button>
+          </div>
           <output class="animation-preview-count" id="animation-preview-count" aria-live="polite">0 / 0</output>
         </div>
+        <div
+          class="animation-preview-resize-handle"
+          id="animation-preview-resize"
+          role="separator"
+          tabindex="0"
+          aria-label="Resize animation preview"
+          aria-orientation="horizontal"
+          aria-valuemin="120"
+        ></div>
 
         <div class="animation-playback-controls">
           <button class="animation-play-button" id="animation-play" type="button" aria-label="Play animation" title="Play animation" aria-pressed="false" disabled>▶</button>
@@ -279,6 +315,26 @@
             <output id="animation-fps">10 FPS</output>
           </div>
         </div>
+
+        <div class="animation-export-controls">
+          <label for="animation-export-format">
+            <span>Format</span>
+            <select id="animation-export-format" aria-label="Animation file format">
+              <option value="mp4">MP4</option>
+              <option value="webm">WebM</option>
+            </select>
+          </label>
+          <button class="button button-quiet" id="export-animation" type="button" disabled>Save animation</button>
+        </div>
+        <div class="animation-export-progress" id="animation-export-progress" hidden>
+          <div>
+            <span id="animation-export-progress-label">Preparing frames</span>
+            <output id="animation-export-progress-value"></output>
+          </div>
+          <progress id="animation-export-progress-bar"></progress>
+          <button class="button button-quiet" id="cancel-animation-export" type="button">Cancel</button>
+        </div>
+        <p class="animation-export-error" id="animation-export-error" role="alert" hidden></p>
 
         <div class="animation-frame-actions">
           <button class="button button-primary" id="add-animation-frame" type="button">+ Add frame</button>
@@ -339,6 +395,6 @@
       </footer>
     </form>
   </dialog>
-  <script type="module" src="visual-board.js?v=23"></script>
+  <script type="module" src="visual-board.js?v=24"></script>
 </body>
 </html>
