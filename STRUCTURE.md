@@ -26,7 +26,7 @@ vital-pancakes/
 ├── app/
 │   ├── main.js — Renders workspace routes, libraries, and editors.
 │   ├── download-app.js — Connects the install page to supported PWA prompts.
-│   ├── store.test.mjs — Verifies permanent libraries and legacy data migration.
+│   ├── store.test.mjs — Verifies permanent libraries, one-time samples, and safe legacy migration.
 │   └── store.js — Owns browser-local data, persistence, and deletion policy.
 ├── assets/
 │   ├── vital-pancakes-logo-transparent-black.png — Active black transparent site mark and light-mode favicon.
@@ -153,11 +153,11 @@ The compact install destination with animated archival diagrams, phone preview s
 
 ### `workspace.html`
 
-The accessible application shell for three hash-routed areas. Everyday Life owns separate Cooking, Gym, and Cleaning libraries; Studies & Projects owns editable knowledge libraries and notecards; Workspace displays tools only.
+The accessible application shell for three hash-routed areas. Everyday Life owns separate Cooking, Gym, and Cleaning libraries; Studies & Projects owns editable knowledge libraries and notecards; Workspace displays tools only. Every core library opens into a subject-specific working surface instead of a generic list.
 
 ### `workspace.css`
 
-The public-site-aligned archival workspace tokens, full-width responsive shell, ruled cards, editors, dialogs, toasts, and tool-compatible styles.
+The public-site-aligned archival workspace tokens, full-width responsive shell, ruled cards, editors, dialogs, toasts, and tool-compatible styles. It also defines distinct technique-atlas, recipe-book, training-log, care-manual, study-dossier, idea-board, language-reference, algorithm-lab, and project-casebook layouts.
 
 ### `manifest.webmanifest`
 
@@ -175,11 +175,11 @@ Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sor
 
 ### `app/main.js`
 
-Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns core-library entries, Questions & Ideas records, relationships, dialogs, and local notices.
+Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns the nine subject-specific library presentations, type-aware records and editors, Questions & Ideas records, relationships, dialogs, and local notices.
 
 ### `app/store.js`
 
-Defines the browser-local data schema, nine permanent empty core libraries, Questions & Ideas migration, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
+Defines the browser-local data schema, nine permanent core libraries, deterministic editable starter entries, the one-time version 7 empty-library seeding migration, Questions & Ideas migration, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. Populated libraries are never overwritten, and examples remain deleted after the migrated workspace is saved. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
 
 ### `assets/`
 

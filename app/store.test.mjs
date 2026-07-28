@@ -40,24 +40,32 @@ function useStorage(initialWorkspace = null) {
   }
 }
 
-test("a new workspace starts with four permanent Everyday Life libraries", () => {
+test("a new workspace starts with nine permanent libraries and editable examples", () => {
   useStorage();
 
   const workspace = getWorkspace();
   const everydaySections = workspace.sections.filter((section) => section.area === "everyday");
+  const coreSections = workspace.sections.filter((section) => (
+    [...EVERYDAY_SECTION_IDS, ...STUDIES_SECTION_IDS].includes(section.id)
+  ));
+  const sampleIds = coreSections.flatMap((section) => section.items.map((item) => item.id));
 
-  assert.equal(workspace.version, 6);
+  assert.equal(workspace.version, 7);
   assert.deepEqual(everydaySections.map((section) => section.id), EVERYDAY_SECTION_IDS);
   assert.deepEqual(
     workspace.sections.filter((section) => section.area !== "everyday").map((section) => section.id),
     STUDIES_SECTION_IDS,
   );
   assert.ok(everydaySections.every((section) => isCoreSectionId(section.id)));
+  assert.ok(coreSections.every((section) => section.items.length >= 2));
+  assert.ok(coreSections.every((section) => section.items.every((item) => item.isSample === true)));
+  assert.equal(new Set(sampleIds).size, sampleIds.length);
+  assert.equal(workspace.sections.find((section) => section.id === "studies").type, "study");
   assert.equal(isCoreSectionId("questions-ideas"), true);
   assert.equal(workspace.sections.some((section) => section.id === "protocols"), false);
 });
 
-test("an empty legacy Protocols library is replaced without adding example content", () => {
+test("an empty legacy Protocols library is replaced while core examples are restored", () => {
   useStorage({
     version: 4,
     sections: [
@@ -121,10 +129,12 @@ test("saved Protocol entries migrate into an Everyday Life routines library", ()
   assert.deepEqual(routines.items, [savedRoutine]);
 });
 
-test("existing workspaces gain Questions & Ideas without losing saved studies", () => {
+test("existing workspaces gain examples in empty libraries without losing saved studies", () => {
   const savedStudy = {
     id: "study-1",
     title: "Existing study",
+    notes: "Legacy notes remain available to the specialized study editor.",
+    tags: ["memory"],
     updatedAt: "2026-01-01",
   };
   useStorage({
@@ -144,9 +154,67 @@ test("existing workspaces gain Questions & Ideas without losing saved studies", 
   const workspace = getWorkspace();
   const questionsAndIdeas = workspace.sections.find((section) => section.id === "questions-ideas");
 
-  assert.equal(workspace.version, 6);
+  assert.equal(workspace.version, 7);
   assert.deepEqual(workspace.sections.find((section) => section.id === "studies").items, [savedStudy]);
-  assert.deepEqual(questionsAndIdeas.items, []);
+  assert.ok(questionsAndIdeas.items.length >= 2);
+  assert.ok(questionsAndIdeas.items.every((item) => item.isSample === true));
   assert.equal(questionsAndIdeas.type, "question");
   assert.equal(isCoreSectionId(questionsAndIdeas.id), true);
+});
+
+test("a version 6 workspace preserves populated libraries and seeds only empty core libraries", () => {
+  const savedAlgorithm = {
+    id: "algorithm-user",
+    title: "My algorithm",
+    updatedAt: "2026-01-01",
+  };
+  useStorage({
+    version: 6,
+    sections: [
+      {
+        id: "algorithms",
+        title: "Algorithms",
+        description: "Existing algorithms",
+        icon: "⌬",
+        type: "algorithm",
+        items: [savedAlgorithm],
+      },
+      {
+        id: "recipes",
+        title: "Recipes",
+        description: "Existing recipes",
+        icon: "◫",
+        type: "recipe",
+        area: "everyday",
+        items: [],
+      },
+    ],
+  });
+
+  const workspace = getWorkspace();
+
+  assert.deepEqual(workspace.sections.find((section) => section.id === "algorithms").items, [savedAlgorithm]);
+  assert.ok(workspace.sections.find((section) => section.id === "recipes").items.length >= 2);
+});
+
+test("deleted examples do not reappear after a version 7 workspace has been saved", () => {
+  useStorage({
+    version: 7,
+    sections: [
+      {
+        id: "recipes",
+        title: "Recipes",
+        description: "User cleared this library",
+        icon: "◫",
+        type: "recipe",
+        area: "everyday",
+        items: [],
+      },
+    ],
+  });
+
+  const workspace = getWorkspace();
+
+  assert.deepEqual(workspace.sections.find((section) => section.id === "recipes").items, []);
+  assert.ok(workspace.sections.find((section) => section.id === "algorithms").items.length >= 2);
 });

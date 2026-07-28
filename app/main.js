@@ -39,6 +39,7 @@ const SECTION_LABELS = {
   workout: "WORKOUT",
   cleaning: "CLEANING AREA",
   routine: "ROUTINE",
+  study: "STUDY",
   language: "LANGUAGE",
   algorithm: "ALGORITHM",
   project: "PROJECT",
@@ -52,11 +53,105 @@ const SECTION_ACCENTS = {
   workout: "blue",
   cleaning: "sage",
   routine: "violet",
+  study: "coral",
   language: "blue",
   algorithm: "violet",
   project: "ochre",
   question: "sage",
   custom: "coral",
+};
+
+const SECTION_PRESENTATIONS = {
+  "cooking-guide": {
+    mode: "technique-atlas",
+    kicker: "TECHNIQUE ATLAS",
+    introduction: "Learn the transferable method—not only one dish. Each guide pairs heat, sensory signals, a repeatable sequence, and failure recovery.",
+    stages: [
+      ["1", "Understand", "Know what physical change you are trying to create."],
+      ["2", "Observe", "Use sound, smell, color, and texture as live feedback."],
+      ["3", "Correct", "Change heat, time, moisture, or movement before guessing."],
+    ],
+  },
+  recipe: {
+    mode: "recipe-book",
+    kicker: "WORKING RECIPE BOOK",
+    introduction: "Recipes are formatted for use at the stove: yield and timing first, mise en place beside the ordered method, and adjustment notes where they matter.",
+    stages: [
+      ["01", "Prepare", "Read the whole method and arrange ingredients by use."],
+      ["02", "Cook", "Follow the order while watching the food, not only the clock."],
+      ["03", "Revise", "Record the change that would make the next attempt better."],
+    ],
+  },
+  workout: {
+    mode: "training-log",
+    kicker: "TRAINING TEMPLATES",
+    introduction: "Each entry is a reusable session blueprint organized around purpose, dosage, equipment, movement order, and an explicit progression rule.",
+    stages: [
+      ["G", "Goal", "Choose the adaptation the session is supposed to produce."],
+      ["D", "Dose", "Set frequency, duration, sets, reps, and effort."],
+      ["P", "Progress", "Change one variable only after the current dose is owned."],
+    ],
+  },
+  cleaning: {
+    mode: "care-manual",
+    kicker: "HOUSE CARE MANUAL",
+    introduction: "Treat the house as zones and materials. Each route names the supplies, safety limits, frequency, and clean-to-dirty order.",
+    stages: [
+      ["Z", "Zone", "Define the exact surfaces included in this pass."],
+      ["S", "Supply", "Use the least aggressive product that fits the material."],
+      ["R", "Route", "Work high to low and clean to dirty without backtracking."],
+    ],
+  },
+  study: {
+    mode: "study-dossier",
+    kicker: "INQUIRY DOSSIERS",
+    introduction: "Studies separate the question, prediction, method, observations, conclusion, and limitations so a convincing story cannot outrun the evidence.",
+    stages: [
+      ["Q", "Question", "State something specific enough to be wrong."],
+      ["E", "Evidence", "Decide what would change your mind before collecting it."],
+      ["N", "Next test", "End with the smallest useful follow-up, not false closure."],
+    ],
+  },
+  question: {
+    mode: "idea-board",
+    kicker: "QUESTION & IDEA BOARD",
+    introduction: "Keep uncertainty visible. Prompts, investigation branches, and a provisional position stay together while status shows what deserves attention next.",
+    stages: [
+      ["?", "Prompt", "Capture the observation or tension that opened the question."],
+      ["↗", "Branches", "List distinct paths to investigate, test, or build."],
+      ["≈", "Position", "Say what you think now without disguising uncertainty."],
+    ],
+  },
+  language: {
+    mode: "language-reference",
+    kicker: "RETURN-TO-LANGUAGE SHEETS",
+    introduction: "These are re-entry references: when to choose the language, how to think in it, syntax worth recalling, durable patterns, and dangerous edges.",
+    stages: [
+      ["M", "Model", "Recover the language’s execution and data model."],
+      ["S", "Syntax", "Keep a compact, runnable reminder of common work."],
+      ["!", "Gotchas", "Record the mistakes that survive ordinary tutorials."],
+    ],
+  },
+  algorithm: {
+    mode: "algorithm-lab",
+    kicker: "ALGORITHM LAB",
+    introduction: "Each algorithm begins with the problem shape and invariant, then exposes pseudocode, cost, and a small playable trace.",
+    stages: [
+      ["P", "Problem", "Recognize the structure before reaching for a named method."],
+      ["I", "Invariant", "Name what remains true through every step."],
+      ["C", "Cost", "State time, space, and the trade-off that earns them."],
+    ],
+  },
+  project: {
+    mode: "project-casebook",
+    kicker: "PROJECT CASEBOOK",
+    introduction: "Projects are decision records rather than galleries: preserve the problem, chosen approach, outcome, relationships, and next meaningful move.",
+    stages: [
+      ["01", "Problem", "Explain the constraint or tension worth solving."],
+      ["02", "Decision", "Preserve why this approach beat the alternatives."],
+      ["03", "Result", "Record the outcome and what should happen next."],
+    ],
+  },
 };
 
 const AREA_EVERYDAY = "everyday";
@@ -186,6 +281,7 @@ function renderTopNavigation(area) {
  */
 function renderDashboard(area) {
   appMain.replaceChildren();
+  delete appMain.dataset.sectionType;
   const workspace = getWorkspace();
 
   if (area === AREA_TOOLS) {
@@ -241,7 +337,7 @@ function renderStudiesDashboard(workspace) {
   );
   const sectionHeading = createSectionHeading(
     "Studies and project libraries",
-    "Add knowledge when it becomes useful. Nothing is prefilled.",
+    "Begin with the editable examples, then reshape or remove them as this becomes your own working archive.",
   );
   const libraryGrid = createElement("div", "library-grid");
   getSectionsForArea(workspace, AREA_STUDIES).forEach((section) => libraryGrid.append(createLibraryCard(section)));
@@ -456,6 +552,7 @@ function createToolCard(tool) {
  */
 function renderSection(section) {
   appMain.replaceChildren();
+  appMain.dataset.sectionType = section.type;
   activeSectionId = section.id;
 
   const heading = createElement("section", "page-heading section-page-heading");
@@ -481,10 +578,12 @@ function renderSection(section) {
   const meta = createElement("div", "section-meta");
   meta.append(
     createElement("span", "", `${section.items.length} ${section.items.length === 1 ? "entry" : "entries"}`),
+    createElement("span", "", `${section.items.filter((item) => item.isSample).length} editable examples`),
     createElement("span", "", "Stored on this device"),
   );
 
-  const grid = createElement("div", "entry-grid");
+  const presentation = createSectionPresentation(section);
+  const grid = createElement("div", `entry-grid entry-grid-${SECTION_PRESENTATIONS[section.type]?.mode ?? "standard"}`);
   if (!section.items.length) {
     const empty = createEmptyState(
       `No ${section.title.toLocaleLowerCase()} yet`,
@@ -502,7 +601,9 @@ function renderSection(section) {
       .forEach((item) => grid.append(createEntryCard(section, item)));
   }
 
-  appMain.append(heading, meta, grid);
+  appMain.append(heading, meta);
+  if (presentation) appMain.append(presentation);
+  appMain.append(grid);
   const routeItemId = getRouteItemId();
   if (routeItemId) {
     window.requestAnimationFrame(() => {
@@ -511,6 +612,36 @@ function renderSection(section) {
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
   }
+}
+
+/**
+ * Builds the subject-specific orientation strip shown before a library.
+ *
+ * @param {object} section Section model.
+ * @returns {HTMLElement|null} Presentation strip for specialized core sections.
+ */
+function createSectionPresentation(section) {
+  const presentation = SECTION_PRESENTATIONS[section.type];
+  if (!presentation) return null;
+
+  const panel = createElement("section", `section-presentation presentation-${presentation.mode}`);
+  const introduction = createElement("div", "presentation-introduction");
+  introduction.append(
+    createElement("p", "card-kicker", presentation.kicker),
+    createElement("p", "presentation-copy", presentation.introduction),
+  );
+  const stages = createElement("div", "presentation-stages");
+  presentation.stages.forEach(([marker, title, copy]) => {
+    const stage = createElement("article", "presentation-stage");
+    stage.append(
+      createElement("span", "presentation-marker", marker),
+      createElement("strong", "", title),
+      createElement("p", "", copy),
+    );
+    stages.append(stage);
+  });
+  panel.append(introduction, stages);
+  return panel;
 }
 
 /**
@@ -543,6 +674,7 @@ function getEmptyMessage(section) {
     workout: "Add a type of workout with its purpose, frequency, and exercise structure.",
     cleaning: "Add one room, surface, or part of the house with the order and supplies needed to clean it.",
     routine: "Turn a recurring task into a clear trigger and a checklist you can follow without re-planning it.",
+    study: "Frame a question, decide what evidence matters, record the method, and keep limitations beside the findings.",
     language: "Add a language when you need a refresher. Capture syntax, mental models, and the mistakes you want to avoid.",
     algorithm: "Add algorithms as you encounter them, including use cases and visual frames you can play back.",
     project: "Document a project’s interesting problem, your approach, and its language and algorithm relationships.",
@@ -565,6 +697,7 @@ function getSingularLabel(section) {
     workout: "workout type",
     cleaning: "cleaning area",
     routine: "routine",
+    study: "study",
     language: "language",
     algorithm: "algorithm",
     project: "project",
@@ -586,7 +719,11 @@ function createEntryCard(section, item) {
   const header = createElement("div", "entry-card-header");
   const titleGroup = createElement("div");
   titleGroup.append(
-    createElement("span", "card-kicker", SECTION_LABELS[section.type] ?? "ENTRY"),
+    createElement(
+      "span",
+      "card-kicker",
+      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${SECTION_LABELS[section.type] ?? "ENTRY"}`,
+    ),
     createElement("h2", "", item.title),
   );
   const cardActions = createElement("div", "entry-card-actions");
@@ -616,6 +753,8 @@ function createEntryCard(section, item) {
     card.append(createCleaningBody(section, item));
   } else if (section.type === "routine") {
     card.append(createRoutineBody(section, item));
+  } else if (section.type === "study") {
+    card.append(createStudyBody(item));
   } else if (section.type === "language") {
     card.append(createLanguageBody(item));
   } else if (section.type === "algorithm") {
@@ -655,7 +794,11 @@ function createRoutineBody(section, item) {
  */
 function createCookingGuideBody(section, item) {
   const body = createElement("div", "entry-body");
-  const details = createElement("div", "two-column-details");
+  const sensoryGuide = createElement("div", "sensory-guide");
+  if (item.heat) sensoryGuide.append(createDefinition("Heat plan", item.heat));
+  if (item.signals) sensoryGuide.append(createDefinition("Look · listen · smell", item.signals));
+  if (sensoryGuide.childElementCount) body.append(sensoryGuide);
+  const details = createElement("div", "technique-details");
   if (item.principles) details.append(createDefinition("What to understand", item.principles));
   if (item.essentials) details.append(createDefinition("Tools and essentials", item.essentials));
   if (item.mistakes) details.append(createDefinition("Common mistakes", item.mistakes));
@@ -672,14 +815,16 @@ function createCookingGuideBody(section, item) {
  * @returns {HTMLElement} Recipe content.
  */
 function createRecipeBody(section, item) {
-  const body = createElement("div", "entry-body");
-  const details = createElement("div", "two-column-details");
+  const body = createElement("div", "entry-body recipe-spread");
+  const details = createElement("div", "recipe-facts");
   if (item.servings) details.append(createDefinition("Servings", item.servings));
   if (item.timing) details.append(createDefinition("Time", item.timing));
-  if (item.notes) details.append(createDefinition("Notes", item.notes));
   if (details.childElementCount) body.append(details);
-  appendPersistentChecklist(body, section, item, "Ingredients", item.ingredients, "checkedIngredients");
-  appendPersistentChecklist(body, section, item, "Method", item.steps, "checkedSteps");
+  const columns = createElement("div", "recipe-columns");
+  appendPersistentChecklist(columns, section, item, "Mise en place", item.ingredients, "checkedIngredients");
+  appendPersistentChecklist(columns, section, item, "Method", item.steps, "checkedSteps");
+  body.append(columns);
+  if (item.notes) body.append(createDefinition("Adjustment notes", item.notes));
   return body;
 }
 
@@ -692,12 +837,15 @@ function createRecipeBody(section, item) {
  */
 function createWorkoutBody(section, item) {
   const body = createElement("div", "entry-body");
-  const details = createElement("div", "two-column-details");
+  const details = createElement("div", "workout-prescription");
   if (item.goal) details.append(createDefinition("Purpose", item.goal));
   if (item.frequency) details.append(createDefinition("Frequency", item.frequency));
-  if (item.notes) details.append(createDefinition("Notes", item.notes));
+  if (item.duration) details.append(createDefinition("Session length", item.duration));
+  if (item.equipment) details.append(createDefinition("Equipment", item.equipment));
   if (details.childElementCount) body.append(details);
-  appendPersistentChecklist(body, section, item, "Exercises", item.exercises, "checkedExercises");
+  appendPersistentChecklist(body, section, item, "Session sequence", item.exercises, "checkedExercises");
+  if (item.progression) body.append(createDefinition("Progression rule", item.progression));
+  if (item.notes) body.append(createDefinition("Coaching notes", item.notes));
   return body;
 }
 
@@ -710,12 +858,47 @@ function createWorkoutBody(section, item) {
  */
 function createCleaningBody(section, item) {
   const body = createElement("div", "entry-body");
-  const details = createElement("div", "two-column-details");
+  const details = createElement("div", "cleaning-scope");
+  if (item.zone) details.append(createDefinition("Zone", item.zone));
   if (item.frequency) details.append(createDefinition("When to clean it", item.frequency));
-  if (item.notes) details.append(createDefinition("Notes", item.notes));
   if (details.childElementCount) body.append(details);
-  appendPersistentChecklist(body, section, item, "Supplies", item.supplies, "checkedSupplies");
-  appendPersistentChecklist(body, section, item, "Cleaning order", item.steps, "checkedSteps");
+  const route = createElement("div", "cleaning-route");
+  appendPersistentChecklist(route, section, item, "Supply bench", item.supplies, "checkedSupplies");
+  appendPersistentChecklist(route, section, item, "Cleaning route", item.steps, "checkedSteps");
+  body.append(route);
+  if (item.warnings) body.append(createDefinition("Material and safety limits", item.warnings));
+  if (item.notes) body.append(createDefinition("Maintenance notes", item.notes));
+  return body;
+}
+
+/**
+ * Renders one study as an inquiry dossier rather than a generic note.
+ *
+ * @param {object} item Study record.
+ * @returns {HTMLElement} Study content.
+ */
+function createStudyBody(item) {
+  const body = createElement("div", "entry-body study-dossier");
+  const premise = createElement("div", "study-premise");
+  if (item.researchQuestion) premise.append(createDefinition("Research question", item.researchQuestion));
+  if (item.hypothesis) premise.append(createDefinition("Prediction", item.hypothesis));
+  if (premise.childElementCount) body.append(premise);
+  if (item.method) body.append(createDefinition("Method", item.method));
+  if (item.evidence?.length) {
+    const evidence = createElement("section", "evidence-register");
+    evidence.append(createElement("h3", "", "Evidence to collect"));
+    const list = createElement("ul");
+    item.evidence.forEach((value) => list.append(createElement("li", "", value)));
+    evidence.append(list);
+    body.append(evidence);
+  }
+  const evaluation = createElement("div", "study-evaluation");
+  if (item.findings) evaluation.append(createDefinition("Findings", item.findings));
+  if (item.limitations) evaluation.append(createDefinition("Limitations", item.limitations));
+  if (item.nextSteps) evaluation.append(createDefinition("Next test", item.nextSteps));
+  if (evaluation.childElementCount) body.append(evaluation);
+  if (item.notes) body.append(createDefinition("Supporting notes", item.notes));
+  appendTagGroup(body, "Tags", item.tags);
   return body;
 }
 
@@ -760,9 +943,18 @@ function appendPersistentChecklist(parent, section, item, labelText, values = []
  * @returns {HTMLElement} Language content.
  */
 function createLanguageBody(item) {
-  const body = createElement("div", "entry-body two-column-details");
+  const body = createElement("div", "entry-body language-sheet");
+  if (item.useWhen) body.append(createDefinition("Reach for it when", item.useWhen));
   if (item.mentalModel) body.append(createDefinition("Mental model", item.mentalModel));
   if (item.syntax) body.append(createCodeDefinition("Syntax refresher", item.syntax));
+  if (item.patterns?.length) {
+    const patterns = createElement("section", "language-patterns");
+    patterns.append(createElement("h3", "", "Durable patterns"));
+    const list = createElement("ul");
+    item.patterns.forEach((pattern) => list.append(createElement("li", "", pattern)));
+    patterns.append(list);
+    body.append(patterns);
+  }
   if (item.gotchas) body.append(createDefinition("Gotchas", item.gotchas));
   return body;
 }
@@ -778,8 +970,10 @@ function createAlgorithmBody(item) {
   const details = createElement("div", "two-column-details");
   if (item.useCases) details.append(createDefinition("Use when", item.useCases));
   if (item.complexity) details.append(createDefinition("Complexity", item.complexity));
-  if (item.explanation) details.append(createDefinition("How it works", item.explanation));
   body.append(details);
+  if (item.invariant) body.append(createDefinition("Invariant", item.invariant));
+  if (item.explanation) body.append(createDefinition("How it works", item.explanation));
+  if (item.pseudocode) body.append(createCodeDefinition("Pseudocode", item.pseudocode));
 
   const frames = item.visualFrames ?? [];
   if (frames.length) {
@@ -845,13 +1039,18 @@ function createAlgorithmAnimation(frames) {
  * @returns {HTMLElement} Project content.
  */
 function createProjectBody(item) {
-  const body = createElement("div", "entry-body");
-  const details = createElement("div", "two-column-details");
-  if (item.problem) details.append(createDefinition("Interesting problem", item.problem));
-  if (item.solution) details.append(createDefinition("How I solved it", item.solution));
-  body.append(details);
+  const body = createElement("div", "entry-body project-case-study");
+  if (item.status) {
+    body.append(createElement("span", `project-status status-${item.status.toLowerCase().replaceAll(" ", "-")}`, item.status));
+  }
+  const sequence = createElement("div", "project-sequence");
+  if (item.problem) sequence.append(createDefinition("01 · Problem", item.problem));
+  if (item.solution) sequence.append(createDefinition("02 · Decision", item.solution));
+  if (item.outcome) sequence.append(createDefinition("03 · Outcome", item.outcome));
+  body.append(sequence);
   appendTagGroup(body, "Languages", item.languages);
   appendTagGroup(body, "Algorithms", resolveAlgorithmNames(item.algorithmIds));
+  if (item.nextStep) body.append(createDefinition("Next meaningful move", item.nextStep));
   return body;
 }
 
@@ -863,9 +1062,9 @@ function createProjectBody(item) {
  */
 function createQuestionBody(item) {
   const body = createElement("div", "entry-body");
-  const details = createElement("div", "two-column-details");
-  if (item.kind) details.append(createDefinition("Kind", item.kind));
-  if (item.status) details.append(createDefinition("Status", item.status));
+  const details = createElement("div", "question-state");
+  if (item.kind) details.append(createElement("span", "question-kind", item.kind));
+  if (item.status) details.append(createElement("span", "question-status", item.status));
   if (details.childElementCount) body.append(details);
   if (item.context) body.append(createDefinition("What prompted it", item.context));
   if (item.directions?.length) {
@@ -977,6 +1176,8 @@ function createItemFields(section, item) {
 
   if (section.type === "cooking-guide") {
     fields.push(
+      createField("Heat plan", "heat", "text", item?.heat ?? "", false, "How should the heat change through the method?"),
+      createField("Sensory signals", "signals", "textarea", item?.signals ?? "", false, "What should you see, hear, smell, or feel?"),
       createField("What to understand", "principles", "textarea", item?.principles ?? "", false, "The principles behind this method"),
       createField("Tools and essentials", "essentials", "textarea", item?.essentials ?? "", false, "Equipment, ingredients, heat, or setup"),
       createField("Method · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write the method in the order you use it"),
@@ -994,14 +1195,19 @@ function createItemFields(section, item) {
     fields.push(
       createField("Purpose", "goal", "textarea", item?.goal ?? "", false, "What this kind of workout develops"),
       createField("Frequency and structure", "frequency", "text", item?.frequency ?? "", false, "How often, duration, sets, or intensity"),
+      createField("Session length", "duration", "text", item?.duration ?? "", false, "Including warm-up and cool-down"),
+      createField("Equipment", "equipment", "text", item?.equipment ?? "", false, "What must be available"),
       createField("Exercises · one per line", "exercises", "textarea", (item?.exercises ?? []).join("\n"), false, "List the movements in order"),
+      createField("Progression rule", "progression", "textarea", item?.progression ?? "", false, "Exactly when and how should the workload change?"),
       createField("Notes", "notes", "textarea", item?.notes ?? "", false, "Progression, recovery, equipment, or form cues"),
     );
   } else if (section.type === "cleaning") {
     fields.push(
+      createField("Zone and surfaces", "zone", "text", item?.zone ?? "", false, "What is included in this route?"),
       createField("Frequency", "frequency", "text", item?.frequency ?? "", false, "Daily, weekly, monthly, or as needed"),
       createField("Supplies · one per line", "supplies", "textarea", (item?.supplies ?? []).join("\n"), false, "Only what this part of the house needs"),
       createField("Cleaning order · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Work from the first action to the last"),
+      createField("Material and safety limits", "warnings", "textarea", item?.warnings ?? "", false, "Chemical combinations, delicate materials, or ventilation"),
       createField("Notes", "notes", "textarea", item?.notes ?? "", false, "Warnings, material care, or shortcuts"),
     );
   } else if (section.type === "routine") {
@@ -1009,16 +1215,32 @@ function createItemFields(section, item) {
       createField("Trigger", "trigger", "textarea", item?.trigger ?? "", false, "When should you use this routine?"),
       createField("Steps · one per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write only the steps you actually need"),
     );
+  } else if (section.type === "study") {
+    fields.push(
+      createField("Research question", "researchQuestion", "textarea", item?.researchQuestion ?? "", false, "Specific enough that evidence could answer it"),
+      createField("Prediction or hypothesis", "hypothesis", "textarea", item?.hypothesis ?? "", false, "What do you expect, and why?"),
+      createField("Method", "method", "textarea", item?.method ?? "", false, "How will the question be investigated?"),
+      createField("Evidence to collect · one per line", "evidence", "textarea", (item?.evidence ?? []).join("\n"), false, "Measurements, observations, sources, or comparison points"),
+      createField("Findings", "findings", "textarea", item?.findings ?? "", false, "What does the evidence presently support?"),
+      createField("Limitations", "limitations", "textarea", item?.limitations ?? "", false, "What weakens, narrows, or complicates the conclusion?"),
+      createField("Next test", "nextSteps", "textarea", item?.nextSteps ?? "", false, "The smallest useful follow-up"),
+      createField("Supporting notes", "notes", "textarea", item?.notes ?? "", false, "Context that does not belong in the evidence or conclusion"),
+      createField("Tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "Optional subject labels"),
+    );
   } else if (section.type === "language") {
     fields.push(
+      createField("Reach for it when", "useWhen", "textarea", item?.useWhen ?? "", false, "The problem shapes this language fits"),
       createField("Mental model", "mentalModel", "textarea", item?.mentalModel ?? "", false, "How should you think in this language?"),
       createField("Syntax refresher", "syntax", "textarea", item?.syntax ?? "", false, "Keep your most useful syntax here"),
+      createField("Durable patterns · one per line", "patterns", "textarea", (item?.patterns ?? []).join("\n"), false, "Practices worth carrying between projects"),
       createField("Gotchas", "gotchas", "textarea", item?.gotchas ?? "", false, "Mistakes, edge cases, and conventions"),
     );
   } else if (section.type === "algorithm") {
     fields.push(
       createField("Use cases", "useCases", "textarea", item?.useCases ?? "", false, "What kind of problem is this good for?"),
+      createField("Invariant", "invariant", "textarea", item?.invariant ?? "", false, "What remains true after every step?"),
       createField("How it works", "explanation", "textarea", item?.explanation ?? "", false, "Explain it in your own words"),
+      createField("Pseudocode", "pseudocode", "textarea", item?.pseudocode ?? "", false, "Language-neutral steps"),
       createField("Complexity", "complexity", "text", item?.complexity ?? "", false, "Time, space, and trade-offs"),
       createField(
         "Animation frames · one per line",
@@ -1031,8 +1253,11 @@ function createItemFields(section, item) {
     );
   } else if (section.type === "project") {
     fields.push(
+      createSelectField("Status", "status", item?.status ?? "Active", ["Concept", "Active", "Paused", "Complete", "Archived"]),
       createField("Interesting problem", "problem", "textarea", item?.problem ?? "", false, "What made this problem worth solving?"),
       createField("How I solved it", "solution", "textarea", item?.solution ?? "", false, "Capture the approach and the useful insight"),
+      createField("Outcome", "outcome", "textarea", item?.outcome ?? "", false, "What exists or changed because of the work?"),
+      createField("Next meaningful move", "nextStep", "textarea", item?.nextStep ?? "", false, "The next action that changes the project"),
       createField("Languages · comma separated", "languages", "text", (item?.languages ?? []).join(", "), false, "e.g. Python, Rust"),
       createAlgorithmPicker(item?.algorithmIds ?? []),
     );
@@ -1177,6 +1402,8 @@ function readItemForm(section) {
   if (section.type === "cooking-guide") {
     return {
       ...base,
+      heat: String(formData.get("heat") ?? "").trim(),
+      signals: String(formData.get("signals") ?? "").trim(),
       principles: String(formData.get("principles") ?? "").trim(),
       essentials: String(formData.get("essentials") ?? "").trim(),
       steps: lineList("steps"),
@@ -1198,27 +1425,48 @@ function readItemForm(section) {
       ...base,
       goal: String(formData.get("goal") ?? "").trim(),
       frequency: String(formData.get("frequency") ?? "").trim(),
+      duration: String(formData.get("duration") ?? "").trim(),
+      equipment: String(formData.get("equipment") ?? "").trim(),
       exercises: lineList("exercises"),
+      progression: String(formData.get("progression") ?? "").trim(),
       notes: String(formData.get("notes") ?? "").trim(),
     };
   }
   if (section.type === "cleaning") {
     return {
       ...base,
+      zone: String(formData.get("zone") ?? "").trim(),
       frequency: String(formData.get("frequency") ?? "").trim(),
       supplies: lineList("supplies"),
       steps: lineList("steps"),
+      warnings: String(formData.get("warnings") ?? "").trim(),
       notes: String(formData.get("notes") ?? "").trim(),
     };
   }
   if (section.type === "routine") {
     return { ...base, trigger: String(formData.get("trigger") ?? "").trim(), steps: lineList("steps") };
   }
+  if (section.type === "study") {
+    return {
+      ...base,
+      researchQuestion: String(formData.get("researchQuestion") ?? "").trim(),
+      hypothesis: String(formData.get("hypothesis") ?? "").trim(),
+      method: String(formData.get("method") ?? "").trim(),
+      evidence: lineList("evidence"),
+      findings: String(formData.get("findings") ?? "").trim(),
+      limitations: String(formData.get("limitations") ?? "").trim(),
+      nextSteps: String(formData.get("nextSteps") ?? "").trim(),
+      notes: String(formData.get("notes") ?? "").trim(),
+      tags: commaList("tags"),
+    };
+  }
   if (section.type === "language") {
     return {
       ...base,
+      useWhen: String(formData.get("useWhen") ?? "").trim(),
       mentalModel: String(formData.get("mentalModel") ?? "").trim(),
       syntax: String(formData.get("syntax") ?? "").trim(),
+      patterns: lineList("patterns"),
       gotchas: String(formData.get("gotchas") ?? "").trim(),
     };
   }
@@ -1226,7 +1474,9 @@ function readItemForm(section) {
     return {
       ...base,
       useCases: String(formData.get("useCases") ?? "").trim(),
+      invariant: String(formData.get("invariant") ?? "").trim(),
       explanation: String(formData.get("explanation") ?? "").trim(),
+      pseudocode: String(formData.get("pseudocode") ?? "").trim(),
       complexity: String(formData.get("complexity") ?? "").trim(),
       visualFrames: lineList("visualFrames"),
     };
@@ -1234,8 +1484,11 @@ function readItemForm(section) {
   if (section.type === "project") {
     return {
       ...base,
+      status: String(formData.get("status") ?? "Active"),
       problem: String(formData.get("problem") ?? "").trim(),
       solution: String(formData.get("solution") ?? "").trim(),
+      outcome: String(formData.get("outcome") ?? "").trim(),
+      nextStep: String(formData.get("nextStep") ?? "").trim(),
       languages: commaList("languages"),
       algorithmIds: formData.getAll("algorithmIds").map(String),
     };

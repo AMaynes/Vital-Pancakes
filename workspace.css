@@ -504,6 +504,7 @@ h3 {
 
 .section-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 7px;
   padding: 5px 0;
@@ -515,10 +516,114 @@ h3 {
   letter-spacing: 0.09em;
 }
 
+.section-presentation {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.7fr);
+  gap: 14px;
+  margin-bottom: 10px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  background: rgb(251 250 246 / 68%);
+}
+
+.presentation-introduction {
+  align-self: center;
+}
+
+.presentation-introduction .card-kicker {
+  margin-bottom: 7px;
+}
+
+.presentation-copy {
+  margin: 0;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.presentation-stages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-left: 1px solid var(--line);
+}
+
+.presentation-stage {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto 1fr;
+  column-gap: 7px;
+  align-content: start;
+  padding: 3px 10px;
+  border-right: 1px solid var(--line);
+}
+
+.presentation-stage:last-child {
+  border-right: 0;
+}
+
+.presentation-marker {
+  grid-row: 1 / span 2;
+  color: var(--coral);
+  font: 600 17px/1 var(--font-display);
+}
+
+.presentation-stage strong {
+  font: 600 11px/1.1 var(--font-body);
+}
+
+.presentation-stage p {
+  margin: 4px 0 0;
+  color: var(--ink-faint);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.presentation-technique-atlas {
+  border-left-color: var(--ochre);
+}
+
+.presentation-recipe-book,
+.presentation-study-dossier {
+  border-left-color: var(--coral);
+}
+
+.presentation-training-log,
+.presentation-language-reference {
+  border-left-color: var(--blue);
+}
+
+.presentation-care-manual,
+.presentation-idea-board {
+  border-left-color: var(--sage);
+}
+
+.presentation-algorithm-lab {
+  border-left-color: var(--violet);
+}
+
+.presentation-project-casebook {
+  border-left-color: var(--ochre);
+}
+
 .entry-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 9px;
+}
+
+.entry-grid-recipe-book,
+.entry-grid-study-dossier,
+.entry-grid-language-reference,
+.entry-grid-algorithm-lab,
+.entry-grid-project-casebook {
+  grid-template-columns: 1fr;
+}
+
+.entry-grid-care-manual {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
 }
 
 .entry-card {
@@ -554,6 +659,30 @@ h3 {
   border-top-color: var(--ochre);
 }
 
+.entry-study {
+  border-top-color: var(--coral);
+}
+
+.entry-language {
+  border-top-color: var(--blue);
+}
+
+.entry-algorithm {
+  border-top-color: var(--violet);
+}
+
+.entry-project {
+  border-top-color: var(--ochre);
+}
+
+.entry-grid-recipe-book .entry-card,
+.entry-grid-study-dossier .entry-card,
+.entry-grid-language-reference .entry-card,
+.entry-grid-algorithm-lab .entry-card,
+.entry-grid-project-casebook .entry-card {
+  padding: 14px;
+}
+
 .entry-card.is-targeted {
   border-color: var(--ochre);
   box-shadow: 0 0 0 3px rgb(215 181 109 / 22%), var(--shadow-sm);
@@ -586,6 +715,173 @@ h3 {
 .entry-body {
   display: grid;
   gap: 7px;
+}
+
+.sensory-guide,
+.study-premise,
+.study-evaluation,
+.cleaning-scope {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.technique-details {
+  display: grid;
+  gap: 7px;
+}
+
+.technique-details .entry-definition:first-child {
+  border-left-color: var(--ochre);
+}
+
+.recipe-facts {
+  display: flex;
+  gap: 7px;
+}
+
+.recipe-facts .entry-definition {
+  flex: 1 1 0;
+  padding-block: 8px;
+}
+
+.recipe-columns,
+.cleaning-route {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.35fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.recipe-columns .life-list-group,
+.cleaning-route .life-list-group {
+  height: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: #f6f3ec;
+}
+
+.recipe-columns .life-list-group + .life-list-group,
+.cleaning-route .life-list-group + .life-list-group {
+  border-top: 1px solid var(--line);
+}
+
+.recipe-columns .life-checklist label,
+.cleaning-route .life-checklist label {
+  border: 0;
+  border-bottom: 1px dotted var(--line);
+  padding: 7px 2px;
+}
+
+.workout-prescription {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.workout-prescription .entry-definition {
+  padding: 9px 10px;
+  border-top: 2px solid var(--blue);
+  border-left: 0;
+}
+
+.study-dossier {
+  counter-reset: dossier;
+}
+
+.study-premise .entry-definition {
+  border-top: 2px solid var(--coral);
+  border-left: 0;
+}
+
+.evidence-register,
+.language-patterns {
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  background: #f6f3ec;
+}
+
+.evidence-register h3,
+.language-patterns h3 {
+  margin: 0 0 7px;
+  color: var(--ink-faint);
+  font-family: var(--font-body);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.evidence-register ul,
+.language-patterns ul {
+  display: grid;
+  margin: 0;
+  padding-left: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 5px 18px;
+}
+
+.evidence-register li,
+.language-patterns li {
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.study-evaluation {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.study-evaluation .entry-definition:last-child {
+  border-left-color: var(--coral);
+  background: var(--coral-soft);
+}
+
+.language-sheet {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.language-sheet .entry-code-definition,
+.language-sheet .language-patterns {
+  grid-column: 1 / -1;
+}
+
+.language-sheet .entry-code-definition {
+  border-left-color: var(--blue);
+  background: #eeece6;
+}
+
+.project-status,
+.question-kind,
+.question-status {
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-soft);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.project-sequence {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.project-sequence .entry-definition {
+  border-top: 2px solid var(--ochre);
+  border-left: 0;
+}
+
+.question-state {
+  display: flex;
+  gap: 6px;
+}
+
+.question-status {
+  border-color: var(--ochre);
+  background: var(--ochre-soft);
 }
 
 .two-column-details {
@@ -630,6 +926,11 @@ h3 {
   white-space: pre-wrap;
   color: #29443c;
   font: 11px/1.6 "SFMono-Regular", Consolas, monospace;
+}
+
+.entry-algorithm .entry-code-definition {
+  border-left-color: var(--violet);
+  background: #eeeceb;
 }
 
 .life-list-group {
@@ -1084,6 +1385,21 @@ h3 {
     align-items: flex-start;
     gap: 18px;
   }
+
+  .section-presentation {
+    grid-template-columns: 1fr;
+  }
+
+  .presentation-stages {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    padding-top: 9px;
+  }
+
+  .workout-prescription,
+  .project-sequence {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -1145,8 +1461,41 @@ h3 {
   }
 
   .two-column-details,
-  .relation-grid {
+  .relation-grid,
+  .sensory-guide,
+  .study-premise,
+  .study-evaluation,
+  .cleaning-scope,
+  .recipe-columns,
+  .cleaning-route,
+  .workout-prescription,
+  .language-sheet,
+  .project-sequence {
     grid-template-columns: 1fr;
+  }
+
+  .presentation-stages {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .presentation-stage {
+    padding: 6px 2px;
+    border-right: 0;
+    border-bottom: 1px dotted var(--line);
+  }
+
+  .presentation-stage:last-child {
+    border-bottom: 0;
+  }
+
+  .entry-grid-care-manual {
+    grid-template-columns: 1fr;
+  }
+
+  .language-sheet .entry-code-definition,
+  .language-sheet .language-patterns {
+    grid-column: auto;
   }
 
   .app-dialog form {

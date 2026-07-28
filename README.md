@@ -32,7 +32,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 
 - **Everyday Life** — Separate Cooking, Gym, and Cleaning areas for practical knowledge used at home.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
-- **Studies & Projects** — Empty personal libraries for questions and ideas, studies, programming languages, algorithms, and projects, plus the existing notecard and educational collections.
+- **Studies & Projects** — Subject-specific working libraries for questions and ideas, structured studies, programming-language refreshers, algorithm labs, and project case studies, plus the existing notecard and educational collections.
 - **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Literature Curation, Travel Planner, and Software Architect without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
@@ -54,19 +54,19 @@ The primary logo combines a skull with a forest-like brain, neural-chip circuitr
 
 ## Personal Libraries
 
-The editable areas use nine empty, permanent core libraries:
+The editable areas use nine permanent core libraries. A new or previously empty library receives a small set of fully editable starter entries once; those examples can be rewritten or deleted and do not return after deletion.
 
-- **How to Cook** — Cooking methods, principles, tools, steps, and common mistakes.
-- **Recipes** — Ingredients, timing, method, and notes for meals worth repeating.
-- **Workout Types** — Training organized by purpose, frequency, exercises, and form notes.
-- **House Cleaning** — Rooms and surfaces divided into supplies, frequency, and ordered cleaning steps.
-- **Studies** — Concept breakdowns, visual explanations, essays, and developing notes.
-- **Questions & Ideas** — Open questions, emerging ideas, possible explanations, and directions worth pursuing.
-- **Programming Languages** — Mental models, syntax refreshers, and personal gotchas.
-- **Algorithms** — Use cases, explanations, complexity notes, and user-authored animated frames.
-- **Projects** — Problems, solutions, languages, and live relationships to Algorithm entries.
+- **How to Cook** — A technique atlas organized around heat, sensory signals, underlying principles, ordered methods, and failure recovery.
+- **Recipes** — Stove-readable recipe spreads with timing, yield, ingredient preparation, method, and post-cook adjustment notes.
+- **Workout Types** — Reusable training prescriptions with purpose, dose, equipment, movement order, coaching notes, and explicit progression rules.
+- **House Cleaning** — A care manual that divides the house into zones and material-safe, clean-to-dirty routes.
+- **Studies** — Inquiry dossiers that keep the research question, prediction, method, evidence, findings, limitations, and next test distinct.
+- **Questions & Ideas** — An investigation board for prompts, possible directions, provisional positions, and development status.
+- **Programming Languages** — Return-to-language sheets covering problem fit, execution model, runnable syntax, durable patterns, and gotchas.
+- **Algorithms** — Interactive labs that connect problem shape, invariant, pseudocode, complexity, and user-authored animated traces.
+- **Projects** — Decision-oriented case studies preserving the problem, approach, outcome, next move, languages, and live Algorithm relationships.
 
-These nine core libraries cannot be added, renamed, or deleted. Their entries remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library instead of being discarded.
+These nine core libraries cannot be added, renamed, or deleted. Their entries—including every starter example—remain editable and can be deleted after a standard confirmation, with no password requirement. The version 7 data migration seeds only empty core libraries and leaves populated libraries untouched. Saved entries from the former Protocols area migrate into an optional Personal Routines library instead of being discarded.
 
 User-created entries, boards, literature curations, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 
