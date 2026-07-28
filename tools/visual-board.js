@@ -6,6 +6,10 @@
 import { createId } from "../app/store.js";
 import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=2";
 import {
+  getShapeToolFamily,
+  retainShapeToolChoice,
+} from "./visual-board-shape-tools.mjs?v=1";
+import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
   setVertexNetworkPosition,
@@ -72,8 +76,8 @@ const textStyleControls = document.querySelector("#text-style-controls");
 const textFontInput = document.querySelector("#text-font");
 const textSizeInput = document.querySelector("#text-font-size");
 const textColorInput = document.querySelector("#text-color");
-const shape2dInput = document.querySelector("#shape-2d");
-const shape3dInput = document.querySelector("#shape-3d");
+const shape2dControl = document.querySelector("#shape-2d-control");
+const shape3dControl = document.querySelector("#shape-3d-control");
 const drawingTools = document.querySelector("#drawing-tools");
 const selectionActions = document.querySelector("#selection-actions");
 const selectionCount = document.querySelector("#selection-count");
@@ -107,6 +111,10 @@ let colorChangeActive = false;
 let textColorChangeActive = false;
 let objectClipboard = [];
 let pasteGeneration = 0;
+let shapeToolChoices = {
+  "2d": shape2dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
+  "3d": shape3dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
+};
 
 const imageCache = new Map();
 
@@ -863,6 +871,7 @@ function handlePointerDown(event) {
   if (event.button !== 0 && event.button !== 1) return;
   event.preventDefault();
   closeTextEditor();
+  canvas.focus({ preventScroll: true });
 
   const screenPoint = getCanvasPoint(event);
   const worldPoint = screenToWorld(screenPoint);
@@ -1794,18 +1803,107 @@ function updateViewControls() {
   snapToggle.setAttribute("aria-pressed", String(board.settings.snap));
 }
 
+/**
+ * Synchronizes one split button with its retained shape choice.
+ *
+ * @param {"2d"|"3d"} family Shape family.
+ * @param {string} tool Shape tool identifier.
+ */
+function updateShapePickerChoice(family, tool) {
+  const control = family === "2d" ? shape2dControl : shape3dControl;
+  const primary = control.querySelector("[data-shape-primary]");
+  const option = document.querySelector(
+    `#shape-${family}-menu [data-shape-option="${CSS.escape(tool)}"]`,
+  );
+  if (!option) return;
+
+  const label = option.textContent.trim();
+  primary.dataset.shapeTool = tool;
+  primary.querySelector("[data-shape-label]").textContent = label;
+  primary.title = `Use ${label}`;
+  document.querySelectorAll(`#shape-${family}-menu [data-shape-option]`).forEach((candidate) => {
+    candidate.setAttribute("aria-checked", String(candidate === option));
+  });
+}
+
+/**
+ * Places a top-layer shape menu directly beneath its split button.
+ *
+ * @param {HTMLElement} control Split-button control.
+ * @param {HTMLElement} menu Popover menu.
+ */
+function positionShapePickerMenu(control, menu) {
+  const bounds = control.getBoundingClientRect();
+  menu.style.minWidth = `${Math.max(132, bounds.width)}px`;
+  menu.style.left = `${Math.max(8, Math.min(bounds.left, window.innerWidth - 180))}px`;
+  menu.style.top = `${bounds.bottom + 4}px`;
+}
+
+function closeShapePickerMenu(menu) {
+  if (typeof menu.hidePopover === "function") {
+    if (menu.matches(":popover-open")) menu.hidePopover();
+    return;
+  }
+  menu.hidden = true;
+}
+
+function toggleShapePickerMenu(control, menu) {
+  positionShapePickerMenu(control, menu);
+  const isPopover = typeof menu.showPopover === "function";
+  const isOpen = isPopover ? menu.matches(":popover-open") : !menu.hidden;
+  document.querySelectorAll(".shape-picker-menu").forEach((candidate) => {
+    if (candidate !== menu) closeShapePickerMenu(candidate);
+  });
+  if (isOpen) {
+    closeShapePickerMenu(menu);
+    return;
+  }
+
+  if (isPopover) menu.showPopover();
+  else menu.hidden = false;
+  menu.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
+}
+
+/**
+ * Connects each split button so its primary side reuses the retained shape and
+ * only its arrow opens the option menu.
+ */
+function initializeShapePickers() {
+  document.querySelectorAll("[data-shape-picker]").forEach((control) => {
+    const family = control.dataset.shapePicker;
+    const primary = control.querySelector("[data-shape-primary]");
+    const toggle = control.querySelector("[data-shape-toggle]");
+    const menu = document.querySelector(`#shape-${family}-menu`);
+    if (typeof menu.showPopover !== "function") menu.hidden = true;
+
+    primary.addEventListener("click", () => setActiveTool(primary.dataset.shapeTool));
+    toggle.addEventListener("click", () => toggleShapePickerMenu(control, menu));
+    menu.addEventListener("toggle", () => {
+      toggle.setAttribute("aria-expanded", String(menu.matches(":popover-open")));
+    });
+    menu.querySelectorAll("[data-shape-option]").forEach((option) => {
+      option.addEventListener("click", () => {
+        const tool = option.dataset.shapeOption;
+        shapeToolChoices = retainShapeToolChoice(shapeToolChoices, tool);
+        updateShapePickerChoice(family, tool);
+        setActiveTool(tool);
+        closeShapePickerMenu(menu);
+        primary.focus({ preventScroll: true });
+      });
+    });
+  });
+}
+
 function setActiveTool(nextTool) {
   activeTool = nextTool;
+  shapeToolChoices = retainShapeToolChoice(shapeToolChoices, activeTool);
+  const shapeFamily = getShapeToolFamily(activeTool);
+  if (shapeFamily) updateShapePickerChoice(shapeFamily, activeTool);
   drawingTools.querySelectorAll("[data-tool]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.tool === activeTool);
   });
-  const is2dShape = ["rectangle", "ellipse", "shape:triangle", "shape:diamond", "shape:hexagon"]
-    .includes(activeTool);
-  const is3dShape = activeTool.startsWith("shape:") && !is2dShape;
-  document.querySelector("#shape-2d-control").classList.toggle("is-active", is2dShape);
-  document.querySelector("#shape-3d-control").classList.toggle("is-active", is3dShape);
-  if (!is2dShape) shape2dInput.value = "";
-  if (!is3dShape) shape3dInput.value = "";
+  shape2dControl.classList.toggle("is-active", shapeFamily === "2d");
+  shape3dControl.classList.toggle("is-active", shapeFamily === "3d");
   closeTextEditor();
   updateTextStyleControls();
   updateCanvasCursor();
@@ -1924,18 +2022,20 @@ function handleDoubleClick(event) {
   openTextEditor(object);
 }
 
+function isEditingControl(target) {
+  return target instanceof HTMLElement
+    && target.matches("input, textarea, select, [contenteditable='true']");
+}
+
 function handleKeyDown(event) {
   if (textEditorSession) return;
   const commandKey = event.metaKey || event.ctrlKey;
-  const eventTarget = event.target;
-  const isEditingControl = eventTarget instanceof HTMLElement
-    && eventTarget.matches("input, textarea, select, [contenteditable='true']");
   if (event.key === "Escape") {
     event.preventDefault();
     returnToSelectionMode();
     return;
   }
-  if (isEditingControl) return;
+  if (isEditingControl(event.target)) return;
 
   if (commandKey && event.key.toLowerCase() === "c") {
     if (!selectedObjects.length) return;
@@ -2086,12 +2186,6 @@ drawingTools.addEventListener("click", (event) => {
   const button = event.target.closest("[data-tool]");
   if (button) setActiveTool(button.dataset.tool);
 });
-shape2dInput.addEventListener("change", () => {
-  if (shape2dInput.value) setActiveTool(shape2dInput.value);
-});
-shape3dInput.addEventListener("change", () => {
-  if (shape3dInput.value) setActiveTool(shape3dInput.value);
-});
 
 canvas.addEventListener("pointerdown", handlePointerDown);
 canvas.addEventListener("pointermove", handlePointerMove);
@@ -2198,6 +2292,7 @@ document.addEventListener("keyup", handleKeyUp);
 window.addEventListener("resize", resizeCanvas);
 new ResizeObserver(resizeCanvas).observe(canvasFrame);
 
+initializeShapePickers();
 updateHistoryControls();
 updateSelectionControls();
 updateViewControls();

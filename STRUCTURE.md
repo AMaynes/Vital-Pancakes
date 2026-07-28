@@ -46,6 +46,8 @@ vital-pancakes/
 │   ├── visual-board-clipboard.test.mjs — Verifies multi-object clipboard duplication and identifier remapping.
 │   ├── visual-board-geometry.mjs — Provides pure hit-testing, bounds, rotation, and resizing math.
 │   ├── visual-board-geometry.test.mjs — Verifies Visual Board geometry with Node's test runner.
+│   ├── visual-board-shape-tools.mjs — Retains the independent 2D and 3D split-button choices.
+│   ├── visual-board-shape-tools.test.mjs — Verifies shape families and retained-option behavior.
 │   ├── visual-board-vertices.mjs — Builds and reshapes grouped line networks with shared editable vertices.
 │   ├── visual-board-vertices.test.mjs — Verifies vertex merging, preservation, and connected-line reshaping.
 │   ├── pdf-signer.html — Hosts local PDF viewing and signing.

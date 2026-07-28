@@ -254,6 +254,7 @@
   display: inline-flex;
   border: 1px solid transparent;
   border-radius: 8px;
+  overflow: hidden;
 }
 
 .shape-picker.is-active {
@@ -262,18 +263,94 @@
   box-shadow: var(--shadow-sm);
 }
 
-.shape-select {
-  min-width: 84px;
-  max-width: 112px;
-  border-color: transparent;
+.shape-picker-primary,
+.shape-picker-toggle {
+  min-height: 26px;
+  border: 0;
   background: transparent;
+  color: var(--ink-soft);
   font-size: 9px;
   font-weight: 700;
 }
 
-.shape-picker:hover .shape-select,
-.shape-picker.is-active .shape-select {
+.shape-picker-primary {
+  min-width: 72px;
+  max-width: 112px;
+  padding: 4px 7px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shape-picker-toggle {
+  width: 23px;
+  padding: 3px 6px;
+  border-left: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.shape-picker:hover,
+.shape-picker:focus-within,
+.shape-picker.is-active {
   background: var(--card);
+}
+
+.shape-picker-primary:hover,
+.shape-picker-toggle:hover,
+.shape-picker-primary:focus-visible,
+.shape-picker-toggle:focus-visible {
+  outline: none;
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.shape-picker-toggle[aria-expanded="true"] {
+  background: var(--sage-soft);
+}
+
+.shape-picker-menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 132px;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: var(--shadow-md);
+}
+
+.shape-picker-menu:not(:popover-open) {
+  display: none;
+}
+
+.shape-picker-menu button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 10px;
+  text-align: left;
+}
+
+.shape-picker-menu button:hover,
+.shape-picker-menu button:focus-visible {
+  outline: none;
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.shape-picker-menu button[aria-checked="true"] {
+  background: var(--sage-soft);
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .pattern-select {
@@ -325,9 +402,15 @@
   display: block;
   width: 100%;
   height: 100%;
+  outline: none;
   background: #ffffff;
   touch-action: none;
   user-select: none;
+}
+
+#visual-board:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: -2px;
 }
 
 .board-text-editor {

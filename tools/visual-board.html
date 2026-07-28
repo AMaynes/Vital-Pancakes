@@ -8,8 +8,8 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="../workspace.css?v=17">
-  <link rel="stylesheet" href="tool.css?v=22">
+  <link rel="stylesheet" href="../workspace.css?v=18">
+  <link rel="stylesheet" href="tool.css?v=25">
   <link rel="stylesheet" href="../site-navigation.css?v=20">
   <script type="module" src="../site-navigation.js?v=5"></script>
 </head>
@@ -63,26 +63,48 @@
           <button class="tool-button" data-tool="connector" type="button" title="Arrow connector">
             ↗ <span class="tool-button-label">Arrow</span>
           </button>
-          <label class="shape-picker" id="shape-2d-control" title="Choose an outlined 2D shape">
-            <select class="tool-select shape-select" id="shape-2d" aria-label="Choose a 2D shape">
-              <option value="">2D shape…</option>
-              <option value="rectangle">Rectangle</option>
-              <option value="ellipse">Ellipse</option>
-              <option value="shape:triangle">Triangle</option>
-              <option value="shape:diamond">Diamond</option>
-              <option value="shape:hexagon">Hexagon</option>
-            </select>
-          </label>
-          <label class="shape-picker" id="shape-3d-control" title="Choose an outlined 3D shape">
-            <select class="tool-select shape-select" id="shape-3d" aria-label="Choose a 3D shape">
-              <option value="">3D shape…</option>
-              <option value="shape:cube">Cube</option>
-              <option value="shape:pyramid">Pyramid</option>
-              <option value="shape:triangular-prism">Triangular prism</option>
-              <option value="shape:cylinder">Cylinder</option>
-              <option value="shape:cone">Cone</option>
-            </select>
-          </label>
+          <div class="shape-picker" id="shape-2d-control" data-shape-picker="2d">
+            <button
+              class="shape-picker-primary"
+              type="button"
+              data-shape-primary
+              data-shape-tool="rectangle"
+              title="Use Rectangle"
+            >
+              <span data-shape-label>Rectangle</span>
+            </button>
+            <button
+              class="shape-picker-toggle"
+              type="button"
+              data-shape-toggle
+              aria-label="Choose a different 2D shape"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="shape-2d-menu"
+              title="Choose a different 2D shape"
+            >⌄</button>
+          </div>
+          <div class="shape-picker" id="shape-3d-control" data-shape-picker="3d">
+            <button
+              class="shape-picker-primary"
+              type="button"
+              data-shape-primary
+              data-shape-tool="shape:cube"
+              title="Use Cube"
+            >
+              <span data-shape-label>Cube</span>
+            </button>
+            <button
+              class="shape-picker-toggle"
+              type="button"
+              data-shape-toggle
+              aria-label="Choose a different 3D shape"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="shape-3d-menu"
+              title="Choose a different 3D shape"
+            >⌄</button>
+          </div>
           <button class="tool-button" data-tool="textbox" type="button" title="Click and drag to create a textbox">
             T <span class="tool-button-label">Text</span>
           </button>
@@ -143,8 +165,8 @@
         </div>
 
         <div class="toolbar-group board-history-group" role="toolbar" aria-label="History and zoom">
-          <button class="tool-button" id="copy-selection" type="button" title="Copy selection" aria-label="Copy selection" disabled>⧉</button>
-          <button class="tool-button" id="paste-selection" type="button" title="Paste copied objects" aria-label="Paste copied objects" disabled>▣</button>
+          <button class="tool-button" id="copy-selection" type="button" title="Copy selection · ⌘/Ctrl+C" aria-label="Copy selection" disabled>⧉</button>
+          <button class="tool-button" id="paste-selection" type="button" title="Paste copied objects · ⌘/Ctrl+V" aria-label="Paste copied objects" disabled>▣</button>
           <span class="toolbar-divider"></span>
           <button class="tool-button" id="undo-board" type="button" title="Undo" aria-label="Undo">↶</button>
           <button class="tool-button" id="redo-board" type="button" title="Redo" aria-label="Redo">↷</button>
@@ -153,6 +175,20 @@
           <span class="zoom-value" id="zoom-value">100%</span>
           <button class="tool-button" id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button>
         </div>
+      </div>
+      <div class="shape-picker-menu" id="shape-2d-menu" role="menu" popover>
+        <button type="button" role="menuitemradio" aria-checked="true" data-shape-option="rectangle">Rectangle</button>
+        <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="ellipse">Ellipse</button>
+        <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:triangle">Triangle</button>
+        <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:diamond">Diamond</button>
+        <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:hexagon">Hexagon</button>
+      </div>
+      <div class="shape-picker-menu" id="shape-3d-menu" role="menu" popover>
+        <button type="button" role="menuitemradio" aria-checked="true" data-shape-option="shape:cube">Cube</button>
+        <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:pyramid">Pyramid</button>
+        <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:triangular-prism">Triangular prism</button>
+        <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:cylinder">Cylinder</button>
+        <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:cone">Cone</button>
       </div>
       <div class="toolbar-group selection-actions" id="selection-actions" aria-label="Selection actions" hidden>
         <span class="selection-count" id="selection-count" aria-live="polite">1 selected</span>
@@ -186,13 +222,13 @@
         </button>
       </div>
       <section class="canvas-frame">
-        <canvas id="visual-board" aria-label="Diagram and paint canvas"></canvas>
+        <canvas id="visual-board" tabindex="0" aria-label="Diagram and paint canvas"></canvas>
         <div class="floating-help">
           Drop an image anywhere to mark it up. Drag with Pan—or use two fingers—to travel; pinch to zoom. Double-click text to edit. Everything stays on this device.
         </div>
       </section>
     </main>
   </div>
-  <script type="module" src="visual-board.js?v=10"></script>
+  <script type="module" src="visual-board.js?v=11"></script>
 </body>
 </html>
