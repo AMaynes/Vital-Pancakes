@@ -14,14 +14,16 @@ function cloneValue(value) {
  *
  * @param {Array<object>} objects Current board objects.
  * @param {Array<object>} selectedObjects Current selected object references.
- * @returns {{objects: Array<object>, selectedIds: Array<string>}}
+ * @param {object} rig Current rigid-body joints and dimension locks.
+ * @returns {{objects: Array<object>, selectedIds: Array<string>, rig: object}}
  */
-export function createBoardHistoryEntry(objects, selectedObjects) {
+export function createBoardHistoryEntry(objects, selectedObjects, rig = null) {
   return {
     objects: cloneValue(objects),
     selectedIds: selectedObjects
       .map((object) => object?.id)
       .filter((id) => typeof id === "string" && id.length > 0),
+    rig: cloneValue(rig),
   };
 }
 
@@ -31,7 +33,7 @@ export function createBoardHistoryEntry(objects, selectedObjects) {
  *
  * @param {{objects?: Array<object>, selectedIds?: Array<string>}} entry History entry.
  * @param {(object: object) => object | null} normalizeObject Object migration callback.
- * @returns {{objects: Array<object>, selectedObjects: Array<object>}}
+ * @returns {{objects: Array<object>, selectedObjects: Array<object>, rig: object}}
  */
 export function restoreBoardHistoryEntry(entry, normalizeObject = (object) => object) {
   const objects = (Array.isArray(entry?.objects) ? cloneValue(entry.objects) : [])
@@ -42,5 +44,5 @@ export function restoreBoardHistoryEntry(entry, normalizeObject = (object) => ob
     .map((id) => objectsById.get(id))
     .filter(Boolean);
 
-  return { objects, selectedObjects };
+  return { objects, selectedObjects, rig: cloneValue(entry?.rig) };
 }

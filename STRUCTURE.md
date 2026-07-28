@@ -46,6 +46,8 @@ vital-pancakes/
 │   ├── visual-board.js — Coordinates the infinite canvas, tools, persistence, and export.
 │   ├── visual-board-animation.mjs — Normalizes animation frames and playback timing.
 │   ├── visual-board-animation.test.mjs — Verifies animation state, timing, and playable frames.
+│   ├── visual-board-character.mjs — Exports and restores portable characters with embedded assets and rig settings.
+│   ├── visual-board-character.test.mjs — Verifies character relationship remapping and placement.
 │   ├── visual-board-clipboard.mjs — Duplicates selected board objects while preserving internal relationships.
 │   ├── visual-board-clipboard.test.mjs — Verifies multi-object clipboard duplication and identifier remapping.
 │   ├── visual-board-export.mjs — Encodes local animation frames into MP4 or WebM video.
@@ -56,6 +58,8 @@ vital-pancakes/
 │   ├── visual-board-history.test.mjs — Verifies selection-aware history snapshots and restoration.
 │   ├── visual-board-rich-text.mjs — Stores, edits, and renders per-range textbox colors.
 │   ├── visual-board-rich-text.test.mjs — Verifies highlighted color ranges and edit preservation.
+│   ├── visual-board-rigging.mjs — Detects shared group joints and solves dimension-locked joint movement.
+│   ├── visual-board-rigging.test.mjs — Verifies external joints, exact constraints, and rigid transforms.
 │   ├── visual-board-shape-tools.mjs — Retains the independent 2D and 3D split-button choices.
 │   ├── visual-board-shape-tools.test.mjs — Verifies shape families and retained-option behavior.
 │   ├── visual-board-strokes.mjs — Defines stable, width-aware Canvas dash and dot patterns.
@@ -226,9 +230,9 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 ### Visual Board
 
-`visual-board.html` hosts the organized creation, selection, view, history, and style controls, including persistent 2D and 3D shape menus, copy and paste tools, contextual textbox typography, and grouping actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, repeated line, arrow, and shape placement, Escape-to-Select behavior, freehand drawing, brush erasing, straight lines, arrows with editable start and tip handles, inline textboxes, tight per-object selection outlines, marquee selection, multi-object copy and paste, locking, stroke patterns, guarded object grouping, editable shared-vertex networks, shape division and reassembly, grid snapping, 300-action undo and redo history, local autosave, and PNG export. Dropped images are compressed and retained as local board assets; they are never uploaded.
+`visual-board.html` hosts the organized creation, selection, view, history, and style controls, including persistent 2D and 3D shape menus, copy and paste tools, contextual textbox typography, grouping, rigging, and character export actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, repeated line, arrow, and shape placement, Escape-to-Select behavior, freehand drawing, brush erasing, straight lines, arrows with editable start and tip handles, inline textboxes, tight per-object selection outlines, marquee selection, multi-object copy and paste, locking, stroke patterns, rigid grouping, editable shared-vertex networks, external group joints, dimension-locked joint dragging, shape division and reassembly, grid snapping, 300-action undo and redo history, local autosave, animation, and local video export. Dropped images and portable character files remain on the device.
 
-`visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps group, divided-shape, and vertex-network identifiers without mutating the originals. Its adjacent test file verifies those relationships. `visual-board-geometry.mjs` isolates the pure geometry used for reusable 2D and 3D segment outlines, world bounds, tight rotated line selections, rotated handles, hit testing, outline-aware marquee intersection, grid snapping, corner-based resizing, and shape division. `visual-board-geometry.test.mjs` exercises those contracts with Node's built-in test runner. `visual-board-strokes.mjs` centralizes width-aware Canvas dash spacing and uses finite dotted ink so dots remain stable across stroke widths, directions, and browser pixel alignment. `visual-board-vertices.mjs` merges touching endpoints into shared controls and applies vertex movement to every incident line; its test file covers both merged and independent vertices.
+`visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps group, divided-shape, and vertex-network identifiers without mutating the originals. `visual-board-character.mjs` packages selected connected artwork, embedded images, groups, internal vertices, external joints, and both lock types into a remapped `.vp-character.json` file that can be dropped back onto the board. `visual-board-rigging.mjs` creates only the contact joint shared by selected rigid groups and solves the closest exact position allowed by locked distances. `visual-board-geometry.mjs` isolates reusable geometry, while `visual-board-vertices.mjs` retains the internal editable-line network used after a group is released.
 
 ### PDF Signer
 

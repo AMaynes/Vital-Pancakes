@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v25";
+const CACHE_NAME = "vital-pancakes-app-v28";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -45,18 +45,20 @@ const APP_SHELL = [
   "./app/algorithm-analysis-samples.mjs?v=1",
   "./app/algorithm-code-examples.mjs?v=1",
   "./app/download-app.js",
-  "./tools/tool.css?v=29",
+  "./tools/tool.css?v=30",
   "./tools/visual-board.html",
-  "./tools/visual-board.js?v=25",
+  "./tools/visual-board.js?v=28",
   "./tools/visual-board-animation.mjs?v=1",
+  "./tools/visual-board-character.mjs?v=1",
   "./tools/visual-board-clipboard.mjs?v=2",
   "./tools/visual-board-curves.mjs?v=1",
   "./tools/visual-board-export.mjs?v=2",
   "./tools/visual-board-geometry.mjs?v=8",
-  "./tools/visual-board-groups.mjs?v=1",
-  "./tools/visual-board-history.mjs?v=1",
+  "./tools/visual-board-groups.mjs?v=2",
+  "./tools/visual-board-history.mjs?v=2",
   "./tools/visual-board-interpolation.mjs?v=1",
   "./tools/visual-board-rich-text.mjs?v=1",
+  "./tools/visual-board-rigging.mjs?v=1",
   "./tools/visual-board-rife.mjs?v=1",
   "./tools/visual-board-shape-tools.mjs?v=1",
   "./tools/visual-board-strokes.mjs?v=1",

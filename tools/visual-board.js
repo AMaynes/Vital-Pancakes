@@ -6,6 +6,12 @@
 import { createId } from "../app/store.js";
 import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=2";
 import {
+  CharacterFileError,
+  createCharacterFilename,
+  createCharacterPackage,
+  instantiateCharacter,
+} from "./visual-board-character.mjs?v=1";
+import {
   getShapeToolFamily,
   retainShapeToolChoice,
 } from "./visual-board-shape-tools.mjs?v=1";
@@ -18,7 +24,7 @@ import {
 import {
   createBoardHistoryEntry,
   restoreBoardHistoryEntry,
-} from "./visual-board-history.mjs?v=1";
+} from "./visual-board-history.mjs?v=2";
 import {
   getDefaultTextboxSize,
   getTextWorldFontSize,
@@ -57,7 +63,18 @@ import {
   getSelectionUnits,
   resizeSelectionObjects,
   rotateSelectionObjects,
-} from "./visual-board-groups.mjs?v=1";
+} from "./visual-board-groups.mjs?v=2";
+import {
+  createEmptyRig,
+  createSharedGroupJoints,
+  dragRigJoint,
+  getConnectedRigBodyIds,
+  getRigJointsForBodyIds,
+  normalizeRig,
+  removeRigBodies,
+  resolveConstrainedPoint,
+  setRigBodyDimensionLock,
+} from "./visual-board-rigging.mjs?v=1";
 import {
   CURVE_TYPES,
   LINE_TYPES,
@@ -79,7 +96,7 @@ import {
 } from "./visual-board-geometry.mjs?v=8";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
-const BOARD_VERSION = 9;
+const BOARD_VERSION = 10;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -132,6 +149,7 @@ const drawingTools = document.querySelector("#drawing-tools");
 const selectionActions = document.querySelector("#selection-actions");
 const selectionCount = document.querySelector("#selection-count");
 const lockSelectionButton = document.querySelector("#lock-selection");
+const lockDimensionsButton = document.querySelector("#lock-dimensions");
 const groupSelectionButton = document.querySelector("#group-selection");
 const traceImageButton = document.querySelector("#trace-image");
 const mergeVerticesButton = document.querySelector("#merge-vertices");
@@ -142,6 +160,7 @@ const reassembleSelectionButton = document.querySelector("#reassemble-selection"
 const deleteSelectionButton = document.querySelector("#delete-selection");
 const copySelectionButton = document.querySelector("#copy-selection");
 const pasteSelectionButton = document.querySelector("#paste-selection");
+const exportCharacterButton = document.querySelector("#export-character");
 const gridToggle = document.querySelector("#toggle-grid");
 const snapToggle = document.querySelector("#toggle-snap");
 const saveStatus = document.querySelector("#save-status");
@@ -238,14 +257,16 @@ function loadBoard() {
     const rawObjects = Array.isArray(savedBoard?.objects) ? savedBoard.objects : [];
     const snapToGrid = savedBoard?.settings?.snap ?? false;
     const savedZoom = clamp(finiteNumber(savedBoard?.view?.zoom, 1), MIN_ZOOM, MAX_ZOOM);
+    const objects = rawObjects
+      .map((object) => normalizeObject(object, { snapToGrid, textZoom: savedZoom }))
+      .filter(Boolean);
     return {
       version: BOARD_VERSION,
-      objects: rawObjects
-        .map((object) => normalizeObject(object, { snapToGrid, textZoom: savedZoom }))
-        .filter(Boolean),
+      objects,
       assets: savedBoard?.assets && typeof savedBoard.assets === "object"
         ? savedBoard.assets
         : {},
+      rig: normalizeRig(savedBoard?.rig, objects),
       animation: normalizeAnimation(savedBoard?.animation),
       settings: {
         grid: savedBoard?.settings?.grid ?? true,
@@ -268,6 +289,7 @@ function createEmptyBoard() {
     version: BOARD_VERSION,
     objects: [],
     assets: {},
+    rig: createEmptyRig(),
     animation: normalizeAnimation(),
     settings: { grid: true, snap: false },
     view: { x: 0, y: 0, zoom: 1 },
@@ -290,8 +312,13 @@ function normalizeObject(rawObject, options = {}) {
     strokeWidth,
     dashPattern: DASH_PATTERNS.has(rawObject.dashPattern) ? rawObject.dashPattern : "solid",
     locked: Boolean(rawObject.locked),
+    dimensionsLocked: Boolean(rawObject.dimensionsLocked),
     ...(typeof rawObject.groupId === "string" && rawObject.groupId
       ? { groupId: rawObject.groupId }
+      : {}),
+    ...(rawObject.rigidGroup === true
+      || (rawObject.groupId && !rawObject.vertexNetworkId)
+      ? { rigidGroup: true }
       : {}),
   };
 
@@ -462,7 +489,7 @@ function announceStatus(message) {
 }
 
 function checkpoint() {
-  history.push(createBoardHistoryEntry(board.objects, selectedObjects));
+  history.push(createBoardHistoryEntry(board.objects, selectedObjects, board.rig));
   if (history.length > HISTORY_LIMIT) history.shift();
   future = [];
   updateHistoryControls();
@@ -871,6 +898,11 @@ function drawSelection() {
       drawGroupSelection(unit, selectionUnits.length === 1);
     }
   });
+  const rigJoints = getSelectedRigJoints();
+  if (rigJoints.length && !selectedObjects.some((object) => object.locked)) {
+    context.setLineDash([]);
+    rigJoints.forEach(drawRigJointHandle);
+  }
   if (vertexNetwork && !vertexNetwork.objects.some((object) => object.locked)) {
     context.setLineDash([]);
     vertexNetwork.vertices.forEach((vertex) => drawHandle(vertex));
@@ -891,8 +923,9 @@ function drawGroupSelection(objects, showHandles) {
   strokeSelectionPolygon(Object.values(corners));
   if (!showHandles || objects.some((object) => object.locked)) return;
 
+  const dimensionsLocked = isGroupDimensionsLocked(objects[0].groupId);
   context.setLineDash([]);
-  Object.values(corners).forEach((point) => drawHandle(point));
+  if (!dimensionsLocked) Object.values(corners).forEach((point) => drawHandle(point));
   const rotationHandle = getRotationHandlePoint(frame);
   context.beginPath();
   context.moveTo(corners.ne.x, corners.ne.y);
@@ -900,6 +933,21 @@ function drawGroupSelection(objects, showHandles) {
   context.strokeStyle = "#7b211a";
   context.stroke();
   drawHandle(rotationHandle, true);
+}
+
+function drawRigJointHandle(point) {
+  const radius = (HANDLE_SIZE + 2) / viewport.zoom;
+  context.beginPath();
+  context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+  context.fillStyle = "#ffffff";
+  context.fill();
+  context.strokeStyle = "#7b211a";
+  context.lineWidth = 2 / viewport.zoom;
+  context.stroke();
+  context.beginPath();
+  context.arc(point.x, point.y, 2 / viewport.zoom, 0, Math.PI * 2);
+  context.fillStyle = "#7b211a";
+  context.fill();
 }
 
 function drawObjectSelection(object, showHandles) {
@@ -1039,6 +1087,7 @@ function expandGroupedObjects(objects) {
 }
 
 function getSelectedVertexNetwork() {
+  if (selectedObjects.some((object) => object.rigidGroup)) return null;
   const networkIds = new Set(
     selectedObjects.map((object) => object.vertexNetworkId).filter(Boolean),
   );
@@ -1054,8 +1103,70 @@ function getSelectedVertexNetwork() {
   };
 }
 
+function getConstrainedNetworkVertexPoint(objects, vertexId, target) {
+  if (!objects.some((object) => object.dimensionsLocked)) return target;
+  const original = getVertexNetworkVertices(objects)
+    .find((vertex) => vertex.id === vertexId);
+  if (!original) return target;
+  const constraints = objects.flatMap((object) => {
+    if (object.startVertexId === vertexId) {
+      return [{
+        x: object.endX,
+        y: object.endY,
+        radius: distanceBetween(original, { x: object.endX, y: object.endY }),
+      }];
+    }
+    if (object.endVertexId === vertexId) {
+      return [{
+        x: object.x,
+        y: object.y,
+        radius: distanceBetween(original, { x: object.x, y: object.y }),
+      }];
+    }
+    return [];
+  });
+  return resolveConstrainedPoint(target, original, constraints);
+}
+
+function getSelectedRigidBodyIds(objects = selectedObjects) {
+  return new Set(
+    objects
+      .filter((object) => object.rigidGroup && object.groupId)
+      .map((object) => object.groupId),
+  );
+}
+
+function getSelectedRigJoints(objects = selectedObjects) {
+  return getRigJointsForBodyIds(board.rig, getSelectedRigidBodyIds(objects));
+}
+
+function getConnectedRigObjects(objects) {
+  const selectedBodyIds = getSelectedRigidBodyIds(objects);
+  if (!selectedBodyIds.size) return objects;
+  const connectedBodyIds = getConnectedRigBodyIds(board.rig, selectedBodyIds);
+  const connectedObjects = board.objects.filter((object) => (
+    object.groupId && connectedBodyIds.has(object.groupId)
+  ));
+  const ungroupedObjects = objects.filter((object) => !object.groupId);
+  return [...new Set([...connectedObjects, ...ungroupedObjects])];
+}
+
+function isGroupDimensionsLocked(groupId) {
+  return Boolean(
+    groupId
+    && board.rig.bodies.find((body) => body.id === groupId)?.dimensionsLocked
+  );
+}
+
 function findSelectionHandle(point) {
   const hitRadius = 11 / viewport.zoom;
+  const rigJoint = getSelectedRigJoints().find((joint) => (
+    distanceBetween(point, joint) <= hitRadius
+  ));
+  if (rigJoint && !selectedObjects.some((object) => object.locked)) {
+    return { kind: "rig-joint", jointId: rigJoint.id };
+  }
+
   const selectionUnits = getSelectionUnits(selectedObjects);
   const selectedUnit = selectionUnits.length === 1 ? selectionUnits[0] : null;
   if (
@@ -1074,9 +1185,11 @@ function findSelectionHandle(point) {
     if (distanceBetween(point, rotationHandle) <= hitRadius) {
       return { kind: "group-rotate", objects: selectedUnit, bounds };
     }
-    const corner = Object.entries(getShapeCorners(frame)).find(([, handle]) => (
-      distanceBetween(point, handle) <= hitRadius
-    ));
+    const corner = isGroupDimensionsLocked(selectedUnit[0].groupId)
+      ? null
+      : Object.entries(getShapeCorners(frame)).find(([, handle]) => (
+        distanceBetween(point, handle) <= hitRadius
+      ));
     if (corner) {
       return {
         kind: "group-resize",
@@ -1194,6 +1307,18 @@ function handlePointerDown(event) {
 function startSelectionInteraction(event, screenPoint, worldPoint) {
   const handle = findSelectionHandle(worldPoint);
   if (handle) {
+    if (handle.kind === "rig-joint") {
+      interaction = {
+        ...handle,
+        pointerId: event.pointerId,
+        startWorld: worldPoint,
+        initialObjects: cloneValue(board.objects),
+        initialRig: cloneValue(board.rig),
+        checkpointed: false,
+        changed: false,
+      };
+      return;
+    }
     if (["group-resize", "group-rotate"].includes(handle.kind)) {
       const center = {
         x: handle.bounds.x + handle.bounds.width / 2,
@@ -1261,7 +1386,8 @@ function startSelectionInteraction(event, screenPoint, worldPoint) {
     }
 
     applySelectionUnit(selectionUnit, event.shiftKey);
-    const movableObjects = selectedObjects.filter((object) => !object.locked);
+    const movableObjects = getConnectedRigObjects(selectedObjects)
+      .filter((object) => !object.locked);
     updateSelectionControls();
     drawBoard();
     if (!movableObjects.length) return;
@@ -1272,7 +1398,13 @@ function startSelectionInteraction(event, screenPoint, worldPoint) {
       startScreen: screenPoint,
       startWorld: worldPoint,
       initialBounds: getSelectionBounds(movableObjects),
+      objects: movableObjects,
       originals: new Map(movableObjects.map((object) => [object.id, cloneValue(object)])),
+      initialRig: cloneValue(board.rig),
+      movingBodyIds: getConnectedRigBodyIds(
+        board.rig,
+        getSelectedRigidBodyIds(selectedObjects),
+      ),
       checkpointed: false,
       changed: false,
     };
@@ -1443,11 +1575,27 @@ function handlePointerMove(event) {
   } else if (interaction.kind === "network-vertex") {
     ensureInteractionCheckpoint();
     restoreInteractionOriginals();
+    const target = getSnappedPoint(worldPoint);
     setVertexNetworkPosition(
       interaction.objects,
       interaction.vertexId,
+      getConstrainedNetworkVertexPoint(
+        interaction.objects,
+        interaction.vertexId,
+        target,
+      ),
+    );
+    interaction.changed = true;
+  } else if (interaction.kind === "rig-joint") {
+    ensureInteractionCheckpoint();
+    const result = dragRigJoint(
+      interaction.initialObjects,
+      interaction.initialRig,
+      interaction.jointId,
       getSnappedPoint(worldPoint),
     );
+    replaceInteractionObjects(result.objects);
+    board.rig = result.rig;
     interaction.changed = true;
   } else if (interaction.kind === "erase") {
     interaction.changed = eraseBetween(interaction.lastWorld, worldPoint) || interaction.changed;
@@ -1510,6 +1658,7 @@ function updateMoveInteraction(screenPoint, worldPoint) {
   if (screenDistance < 2 && !interaction.changed) return;
   ensureInteractionCheckpoint();
   restoreInteractionOriginals();
+  board.rig = cloneValue(interaction.initialRig);
 
   let deltaX = worldPoint.x - interaction.startWorld.x;
   let deltaY = worldPoint.y - interaction.startWorld.y;
@@ -1518,8 +1667,13 @@ function updateMoveInteraction(screenPoint, worldPoint) {
     deltaY = snapValue(interaction.initialBounds.y + deltaY, GRID_SIZE) - interaction.initialBounds.y;
   }
 
-  selectedObjects.filter((object) => !object.locked).forEach((object) => {
+  interaction.objects.filter((object) => !object.locked).forEach((object) => {
     moveObject(object, deltaX, deltaY);
+  });
+  board.rig.joints.forEach((joint) => {
+    if (!joint.bodyIds.some((bodyId) => interaction.movingBodyIds.has(bodyId))) return;
+    joint.x += deltaX;
+    joint.y += deltaY;
   });
   interaction.changed = true;
 }
@@ -1612,6 +1766,7 @@ function finishPointerInteraction(event, cancelled) {
     "endpoint",
     "curve-middle",
     "network-vertex",
+    "rig-joint",
   ]
     .includes(finishedInteraction.kind)) {
     if (finishedInteraction.changed) saveBoard();
@@ -1744,9 +1899,10 @@ function undo() {
   closeTextEditor();
   const snapshot = history.pop();
   if (!snapshot) return;
-  future.push(createBoardHistoryEntry(board.objects, selectedObjects));
+  future.push(createBoardHistoryEntry(board.objects, selectedObjects, board.rig));
   const restored = restoreBoardHistoryEntry(snapshot, normalizeObject);
   board.objects = restored.objects;
+  board.rig = normalizeRig(restored.rig, board.objects);
   selectedObjects = restored.selectedObjects;
   resetPendingStyleChanges();
   saveBoard();
@@ -1759,9 +1915,10 @@ function redo() {
   closeTextEditor();
   const snapshot = future.pop();
   if (!snapshot) return;
-  history.push(createBoardHistoryEntry(board.objects, selectedObjects));
+  history.push(createBoardHistoryEntry(board.objects, selectedObjects, board.rig));
   const restored = restoreBoardHistoryEntry(snapshot, normalizeObject);
   board.objects = restored.objects;
+  board.rig = normalizeRig(restored.rig, board.objects);
   selectedObjects = restored.selectedObjects;
   resetPendingStyleChanges();
   saveBoard();
@@ -2351,6 +2508,32 @@ function downloadAnimationBlob(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function exportSelectedCharacter() {
+  if (!selectedObjects.length) return;
+  const characterName = selectedObjects.find((object) => object.name)?.name
+    ?.replace(/\s+trace$/i, "")
+    || "Visual Board character";
+  try {
+    const character = createCharacterPackage(
+      board.objects,
+      board.assets,
+      board.rig,
+      selectedObjects.map((object) => object.id),
+      characterName,
+    );
+    downloadAnimationBlob(
+      new Blob([JSON.stringify(character, null, 2)], { type: "application/json" }),
+      createCharacterFilename(character.name),
+    );
+    announceStatus("Character saved with groups, joints, and locks");
+  } catch (error) {
+    console.error("Unable to save the selected character.", error);
+    announceStatus(
+      error instanceof CharacterFileError ? error.message : "Character could not be saved",
+    );
+  }
+}
+
 async function addAnimationImageFiles(files, targetFrameId = selectedAnimationFrameId) {
   const imageFiles = files.filter((file) => file?.type?.startsWith("image/"));
   if (!imageFiles.length) return;
@@ -2652,6 +2835,16 @@ function updateSelectionControls() {
   lockSelectionButton.setAttribute("aria-pressed", String(anyLocked));
   lockSelectionButton.title = allLocked ? "Unlock selection" : "Lock selection";
   lockSelectionButton.querySelector(".tool-button-label").textContent = allLocked ? "Unlock" : "Lock";
+  const dimensionState = getSelectedDimensionLockState();
+  lockDimensionsButton.disabled = dimensionState.targets.length === 0 || anyLocked;
+  lockDimensionsButton.classList.toggle("is-active", dimensionState.anyLocked);
+  lockDimensionsButton.setAttribute("aria-pressed", String(dimensionState.anyLocked));
+  lockDimensionsButton.title = dimensionState.allLocked
+    ? "Allow joint distances and group dimensions to change"
+    : "Keep joint distances and group dimensions fixed";
+  lockDimensionsButton.querySelector(".tool-button-label").textContent = dimensionState.allLocked
+    ? "Unlock size"
+    : "Lock size";
   deleteSelectionButton.disabled = allLocked;
   groupSelectionButton.disabled = !canGroupSelection(selectedObjects);
   mergeVerticesButton.disabled = !canCreateVertexNetwork(selectedObjects);
@@ -2661,6 +2854,7 @@ function updateSelectionControls() {
   explodeSelectionButton.disabled = anyLocked
     || !selectedObjects.some((object) => object.type !== "line" && isExplodableObject(object));
   reassembleSelectionButton.disabled = !getSelectedCompleteAssemblies().length;
+  exportCharacterButton.disabled = selectedObjects.length === 0;
 
   const styleObject = selectedObjects.find((object) => (
     object.type !== "image" && object.type !== "textbox"
@@ -2686,18 +2880,25 @@ function updateTextStyleControls() {
 function canGroupSelection(objects) {
   if (objects.length < 2 || objects.some((object) => object.locked)) return false;
   const existingGroupId = objects[0].groupId;
-  const isAlreadyGrouped = Boolean(existingGroupId)
-    && objects.every((object) => object.groupId === existingGroupId);
-  return !isAlreadyGrouped;
+  const isAlreadyRigidGroup = Boolean(existingGroupId)
+    && objects.every((object) => (
+      object.groupId === existingGroupId && object.rigidGroup
+    ));
+  return !isAlreadyRigidGroup;
 }
 
 function groupSelection() {
   if (!canGroupSelection(selectedObjects)) return;
   checkpoint();
+  const previousGroupIds = new Set(
+    selectedObjects.map((object) => object.groupId).filter(Boolean),
+  );
   const groupId = createId();
   selectedObjects.forEach((object) => {
     object.groupId = groupId;
+    object.rigidGroup = true;
   });
+  board.rig = removeRigBodies(board.rig, previousGroupIds);
   saveBoard();
   updateSelectionControls();
   drawBoard();
@@ -2803,7 +3004,20 @@ function loadImageSource(source) {
   });
 }
 
-function canCreateVertexNetwork(objects) {
+function canCreateGroupJoints(objects) {
+  const units = getSelectionUnits(objects);
+  return units.length >= 2
+    && objects.every((object) => !object.locked)
+    && units.every((unit) => (
+      unit.length > 0
+      && typeof unit[0].groupId === "string"
+      && unit.every((object) => object.groupId === unit[0].groupId)
+      && unit.some((object) => object.rigidGroup)
+    ));
+}
+
+function canCreateLineVertexNetwork(objects) {
+  if (objects.some((object) => object.rigidGroup)) return false;
   return objects.length > 0
     && objects.every((object) => (
       !object.locked
@@ -2814,8 +3028,34 @@ function canCreateVertexNetwork(objects) {
     ));
 }
 
+function canCreateVertexNetwork(objects) {
+  return canCreateGroupJoints(objects) || canCreateLineVertexNetwork(objects);
+}
+
 function mergeSelectionVertices() {
   if (!canCreateVertexNetwork(selectedObjects)) return;
+  if (canCreateGroupJoints(selectedObjects)) {
+    const result = createSharedGroupJoints(
+      getSelectionUnits(selectedObjects),
+      board.rig,
+      createId,
+      24 / viewport.zoom,
+    );
+    if (!result.addedJoints.length) {
+      announceStatus("These groups do not share a joint yet");
+      return;
+    }
+    checkpoint();
+    board.rig = result.rig;
+    saveBoard();
+    updateSelectionControls();
+    drawBoard();
+    announceStatus(
+      `${result.addedJoints.length} shared joint${result.addedJoints.length === 1 ? "" : "s"} created`,
+    );
+    return;
+  }
+
   const targets = new Set(selectedObjects);
   const sourceLines = selectedObjects.flatMap(createVertexCandidateLines);
   const network = createEditableVertexNetwork(
@@ -2930,6 +3170,9 @@ function convertCurveSelectionToVertices() {
 
 function releaseSelection() {
   const groupIds = new Set(selectedObjects.map((object) => object.groupId).filter(Boolean));
+  const rigidGroupIds = new Set(
+    selectedObjects.filter((object) => object.rigidGroup).map((object) => object.groupId),
+  );
   const vertexNetworkIds = new Set(
     selectedObjects.map((object) => object.vertexNetworkId).filter(Boolean),
   );
@@ -2937,13 +3180,19 @@ function releaseSelection() {
     || selectedObjects.some((object) => object.locked)) return;
   checkpoint();
   board.objects.forEach((object) => {
-    if (groupIds.has(object.groupId)) delete object.groupId;
-    if (vertexNetworkIds.has(object.vertexNetworkId)) {
+    const releasedRigidGroup = rigidGroupIds.has(object.groupId);
+    if (groupIds.has(object.groupId)) {
+      delete object.groupId;
+      delete object.rigidGroup;
+    }
+    if (!releasedRigidGroup && vertexNetworkIds.has(object.vertexNetworkId)) {
       delete object.vertexNetworkId;
       delete object.startVertexId;
       delete object.endVertexId;
+      delete object.dimensionsLocked;
     }
   });
+  board.rig = removeRigBodies(board.rig, groupIds);
   saveBoard();
   updateSelectionControls();
   drawBoard();
@@ -3055,6 +3304,7 @@ function deleteSelection() {
   checkpoint();
   const deletedIds = new Set(deletableObjects.map((object) => object.id));
   board.objects = board.objects.filter((object) => !deletedIds.has(object.id));
+  board.rig = normalizeRig(board.rig, board.objects);
   selectedObjects = selectedObjects.filter((object) => !deletedIds.has(object.id));
   closeTextEditor();
   saveBoard();
@@ -3102,6 +3352,49 @@ function toggleSelectionLock() {
   saveBoard();
   updateSelectionControls();
   drawBoard();
+}
+
+function getSelectedDimensionLockState() {
+  const vertexNetwork = getSelectedVertexNetwork();
+  const selectedBodyIds = getSelectedRigidBodyIds();
+  const rigBodies = board.rig.bodies.filter((body) => selectedBodyIds.has(body.id));
+  const targets = [
+    ...(vertexNetwork ? [{ kind: "network", objects: vertexNetwork.objects }] : []),
+    ...rigBodies.map((body) => ({ kind: "body", body })),
+  ];
+  const lockStates = targets.map((target) => (
+    target.kind === "network"
+      ? target.objects.every((object) => object.dimensionsLocked)
+      : target.body.dimensionsLocked
+  ));
+  return {
+    targets,
+    anyLocked: lockStates.some(Boolean),
+    allLocked: lockStates.length > 0 && lockStates.every(Boolean),
+  };
+}
+
+function toggleSelectionDimensionLock() {
+  const state = getSelectedDimensionLockState();
+  if (!state.targets.length || selectedObjects.some((object) => object.locked)) return;
+  const shouldLock = !state.allLocked;
+  checkpoint();
+  state.targets.forEach((target) => {
+    if (target.kind === "network") {
+      target.objects.forEach((object) => {
+        object.dimensionsLocked = shouldLock;
+      });
+    }
+  });
+  board.rig = setRigBodyDimensionLock(
+    board.rig,
+    getSelectedRigidBodyIds(),
+    shouldLock,
+  );
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  announceStatus(shouldLock ? "Dimensions locked" : "Dimensions unlocked");
 }
 
 function applySelectedColor() {
@@ -3361,7 +3654,7 @@ function updateCanvasCursor(worldPoint = hoverPoint) {
 
   const handle = worldPoint ? findSelectionHandle(worldPoint) : null;
   if (["rotate", "group-rotate"].includes(handle?.kind)) canvas.style.cursor = "crosshair";
-  else if (["endpoint", "curve-middle", "network-vertex"].includes(handle?.kind)) {
+  else if (["endpoint", "curve-middle", "network-vertex", "rig-joint"].includes(handle?.kind)) {
     canvas.style.cursor = "move";
   }
   else if (["resize", "group-resize"].includes(handle?.kind)) {
@@ -3591,11 +3884,52 @@ function handleKeyUp(event) {
 async function handleImageDrop(event) {
   event.preventDefault();
   canvasFrame.classList.remove("is-drop-target");
-  const files = [...(event.dataTransfer?.files ?? [])].filter((file) => file.type.startsWith("image/"));
-  if (!files.length) return;
-
+  const files = [...(event.dataTransfer?.files ?? [])];
+  const characterFiles = files.filter(isCharacterFile);
+  const imageFiles = files.filter((file) => file.type.startsWith("image/"));
   const dropPoint = screenToWorld(getCanvasPoint(event));
-  await addImageFiles(files, dropPoint);
+  for (let index = 0; index < characterFiles.length; index += 1) {
+    await importCharacterFile(characterFiles[index], {
+      x: dropPoint.x + index * 24 / viewport.zoom,
+      y: dropPoint.y + index * 24 / viewport.zoom,
+    });
+  }
+  if (imageFiles.length) await addImageFiles(imageFiles, dropPoint);
+}
+
+function isCharacterFile(file) {
+  return typeof file?.name === "string"
+    && file.name.toLowerCase().endsWith(".vp-character.json");
+}
+
+async function importCharacterFile(file, placementPoint) {
+  try {
+    const rawCharacter = JSON.parse(await file.text());
+    const imported = instantiateCharacter(rawCharacter, createId, placementPoint);
+    const importedObjects = imported.objects.map(normalizeObject).filter(Boolean);
+    if (!importedObjects.length) {
+      throw new CharacterFileError("The character does not contain usable artwork.");
+    }
+    checkpoint();
+    Object.assign(board.assets, imported.assets);
+    board.objects.push(...importedObjects);
+    board.rig = normalizeRig({
+      bodies: [...board.rig.bodies, ...imported.rig.bodies],
+      joints: [...board.rig.joints, ...imported.rig.joints],
+    }, board.objects);
+    selectedObjects = importedObjects;
+    saveBoard();
+    updateSelectionControls();
+    drawBoard();
+    announceStatus(`${imported.name} added with its joints and locks`);
+  } catch (error) {
+    console.error(`Unable to import ${file.name}.`, error);
+    announceStatus(
+      error instanceof CharacterFileError
+        ? error.message
+        : "Character file could not be read",
+    );
+  }
 }
 
 async function handleClipboardPaste(event) {
@@ -3847,6 +4181,7 @@ copySelectionButton.addEventListener("click", copySelection);
 pasteSelectionButton.addEventListener("click", pasteSelection);
 deleteSelectionButton.addEventListener("click", deleteSelection);
 lockSelectionButton.addEventListener("click", toggleSelectionLock);
+lockDimensionsButton.addEventListener("click", toggleSelectionDimensionLock);
 groupSelectionButton.addEventListener("click", groupSelection);
 traceImageButton.addEventListener("click", traceSelectedImages);
 mergeVerticesButton.addEventListener("click", mergeSelectionVertices);
@@ -3854,6 +4189,7 @@ curveVerticesButton.addEventListener("click", convertCurveSelectionToVertices);
 ungroupSelectionButton.addEventListener("click", releaseSelection);
 explodeSelectionButton.addEventListener("click", divideSelection);
 reassembleSelectionButton.addEventListener("click", reassembleSelection);
+exportCharacterButton.addEventListener("click", exportSelectedCharacter);
 colorInput.addEventListener("input", applySelectedColor);
 colorInput.addEventListener("change", finishColorChange);
 colorInput.addEventListener("blur", finishColorChange);
@@ -3887,6 +4223,7 @@ document.querySelector("#clear-board").addEventListener("click", () => {
 
   checkpoint();
   board.objects = [];
+  board.rig = createEmptyRig();
   board.animation = normalizeAnimation();
   selectedAnimationFrameId = null;
   selectedObjects = [];

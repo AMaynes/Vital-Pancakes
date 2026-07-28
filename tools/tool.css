@@ -1180,7 +1180,7 @@
   border: 2px dashed var(--coral);
   background: rgb(255 255 255 / 88%);
   color: var(--coral);
-  content: "DROP IMAGE TO PLACE IT ON THE BOARD";
+  content: "DROP IMAGE OR CHARACTER ONTO THE BOARD";
   font: 800 12px/1 var(--font-body);
   letter-spacing: 0.12em;
   pointer-events: none;

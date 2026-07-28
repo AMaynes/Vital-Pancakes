@@ -76,6 +76,35 @@ export function rotateSelectionObjects(objects, center, angle) {
   ));
 }
 
+export function transformSelectionObjects(
+  objects,
+  origin,
+  {
+    scale = 1,
+    rotation = 0,
+    translation = { x: 0, y: 0 },
+  } = {},
+) {
+  const transformPoint = (point) => {
+    const scaled = {
+      x: origin.x + (point.x - origin.x) * scale,
+      y: origin.y + (point.y - origin.y) * scale,
+    };
+    const rotated = rotatePoint(scaled, origin, rotation);
+    return {
+      x: rotated.x + translation.x,
+      y: rotated.y + translation.y,
+    };
+  };
+  return objects.map((object) => transformObject(
+    object,
+    transformPoint,
+    scale,
+    scale,
+    rotation,
+  ));
+}
+
 function getResizedBounds(bounds, corner, point, minimumSize) {
   const left = bounds.x;
   const top = bounds.y;

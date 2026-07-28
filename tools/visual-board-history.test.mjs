@@ -22,6 +22,25 @@ test("history entries preserve selection without sharing live object references"
   assert.notEqual(restored.objects[1], objects[1]);
 });
 
+test("history entries preserve rigid joints and dimension locks", () => {
+  const rig = {
+    bodies: [{
+      id: "upper-arm",
+      objectIds: ["line-1"],
+      jointIds: ["elbow"],
+      dimensionsLocked: true,
+    }],
+    joints: [{ id: "elbow", x: 20, y: 30, bodyIds: ["upper-arm", "lower-arm"] }],
+  };
+  const entry = createBoardHistoryEntry([], [], rig);
+  rig.joints[0].x = 99;
+  const restored = restoreBoardHistoryEntry(entry);
+
+  assert.equal(restored.rig.joints[0].x, 20);
+  assert.equal(restored.rig.bodies[0].dimensionsLocked, true);
+  assert.notEqual(restored.rig, rig);
+});
+
 test("history restoration keeps selected order and omits missing objects", () => {
   const restored = restoreBoardHistoryEntry({
     objects: [

@@ -9,7 +9,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=18">
-  <link rel="stylesheet" href="tool.css?v=29">
+  <link rel="stylesheet" href="tool.css?v=30">
   <link rel="stylesheet" href="../site-navigation.css?v=20">
   <script type="module" src="../site-navigation.js?v=5"></script>
 </head>
@@ -208,6 +208,12 @@
           </svg>
           <span class="tool-button-label">Lock</span>
         </button>
+        <button class="tool-button" id="lock-dimensions" type="button" aria-pressed="false" title="Keep joint distances and group dimensions fixed">
+          <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M7 7h10v10H7zM3 7h4M17 7h4M3 17h4M17 17h4M7 3v4M17 3v4M7 17v4M17 17v4"></path>
+          </svg>
+          <span class="tool-button-label">Lock size</span>
+        </button>
         <button class="tool-button" id="group-selection" type="button" title="Group selected objects into one movable piece">
           ⛓ <span class="tool-button-label">Group</span>
         </button>
@@ -228,6 +234,12 @@
         </button>
         <button class="tool-button" id="reassemble-selection" type="button" title="Reassemble divided lines into their original shape">
           ⤡ <span class="tool-button-label">Reassemble</span>
+        </button>
+        <button class="tool-button" id="export-character" type="button" title="Save this character with its groups, joints, and locks">
+          <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 3v12M7 10l5 5 5-5M4 20h16"></path>
+          </svg>
+          <span class="tool-button-label">Save character</span>
         </button>
         <button class="tool-button delete-selection" id="delete-selection" type="button" title="Delete selection">
           <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
@@ -395,6 +407,6 @@
       </footer>
     </form>
   </dialog>
-  <script type="module" src="visual-board.js?v=25"></script>
+  <script type="module" src="visual-board.js?v=28"></script>
 </body>
 </html>
