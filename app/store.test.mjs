@@ -50,7 +50,7 @@ test("a new workspace starts with nine permanent libraries and editable examples
   ));
   const sampleIds = coreSections.flatMap((section) => section.items.map((item) => item.id));
 
-  assert.equal(workspace.version, 7);
+  assert.equal(workspace.version, 8);
   assert.deepEqual(everydaySections.map((section) => section.id), EVERYDAY_SECTION_IDS);
   assert.deepEqual(
     workspace.sections.filter((section) => section.area !== "everyday").map((section) => section.id),
@@ -154,7 +154,7 @@ test("existing workspaces gain examples in empty libraries without losing saved 
   const workspace = getWorkspace();
   const questionsAndIdeas = workspace.sections.find((section) => section.id === "questions-ideas");
 
-  assert.equal(workspace.version, 7);
+  assert.equal(workspace.version, 8);
   assert.deepEqual(workspace.sections.find((section) => section.id === "studies").items, [savedStudy]);
   assert.ok(questionsAndIdeas.items.length >= 2);
   assert.ok(questionsAndIdeas.items.every((item) => item.isSample === true));
@@ -197,7 +197,7 @@ test("a version 6 workspace preserves populated libraries and seeds only empty c
   assert.ok(workspace.sections.find((section) => section.id === "recipes").items.length >= 2);
 });
 
-test("deleted examples do not reappear after a version 7 workspace has been saved", () => {
+test("deleted examples do not reappear when a version 7 workspace is upgraded", () => {
   useStorage({
     version: 7,
     sections: [
@@ -217,4 +217,48 @@ test("deleted examples do not reappear after a version 7 workspace has been save
 
   assert.deepEqual(workspace.sections.find((section) => section.id === "recipes").items, []);
   assert.ok(workspace.sections.find((section) => section.id === "algorithms").items.length >= 2);
+});
+
+test("Workout Types is seeded as a Push library while Pull and Legs begin empty", () => {
+  useStorage();
+
+  const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
+  const pushExercises = workouts.items.filter((item) => item.category === "push");
+
+  assert.ok(pushExercises.length >= 12);
+  assert.equal(workouts.items.some((item) => item.category === "pull"), false);
+  assert.equal(workouts.items.some((item) => item.category === "legs"), false);
+  assert.ok(pushExercises.some((item) => item.title === "Barbell bench press"));
+  assert.ok(pushExercises.some((item) => item.title === "Standing overhead press"));
+  assert.ok(pushExercises.some((item) => item.title === "Cable triceps pushdown"));
+});
+
+test("version 7 workout samples are replaced without losing categorized user entries", () => {
+  const savedPullExercise = {
+    id: "user-row",
+    title: "Chest-supported row",
+    category: "pull",
+    updatedAt: "2026-07-27",
+  };
+  useStorage({
+    version: 7,
+    sections: [
+      {
+        id: "workouts",
+        title: "Workout Types",
+        type: "workout",
+        area: "everyday",
+        items: [
+          { id: "sample-workout-full-body", title: "Old sample", isSample: true },
+          savedPullExercise,
+        ],
+      },
+    ],
+  });
+
+  const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
+
+  assert.equal(workouts.items.some((item) => item.id === "sample-workout-full-body"), false);
+  assert.deepEqual(workouts.items.find((item) => item.id === savedPullExercise.id), savedPullExercise);
+  assert.ok(workouts.items.some((item) => item.id === "sample-push-barbell-bench-press"));
 });

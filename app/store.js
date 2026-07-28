@@ -14,9 +14,13 @@
  */
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
-const CURRENT_WORKSPACE_VERSION = 7;
+const CURRENT_WORKSPACE_VERSION = 8;
 const EVERYDAY_AREA = "everyday";
 const SAMPLE_DATE = "2026-07-28T12:00:00.000Z";
+const LEGACY_WORKOUT_SAMPLE_IDS = new Set([
+  "sample-workout-full-body",
+  "sample-workout-zone-two",
+]);
 
 /**
  * Marks a deterministic, fully editable starter entry.
@@ -138,42 +142,248 @@ const DEFAULT_SECTIONS = [
   {
     id: "workouts",
     title: "Workout Types",
-    description: "Different kinds of training organized by purpose, structure, exercises, and frequency.",
+    description: "Push, pull, and legs exercise libraries organized by movement pattern and target muscle.",
     icon: "⌇",
     type: "workout",
     area: EVERYDAY_AREA,
     items: [
-      createSample("sample-workout-full-body", {
-        title: "Full-body strength A",
-        summary: "A repeatable squat, push, pull, hinge, and carry session with simple progression.",
-        goal: "Build general strength while practicing the major movement patterns.",
-        frequency: "2–3 sessions weekly · 50–65 minutes · leave at least one recovery day",
-        duration: "About 60 minutes including warm-up",
-        equipment: "Barbell or dumbbells, bench, pull-up bar, and a heavy carry implement.",
+      createSample("sample-push-barbell-bench-press", {
+        category: "push",
+        title: "Barbell bench press",
+        summary: "The primary horizontal press for building the chest, front delts, and triceps with heavy, repeatable loading.",
+        goal: "Chest · anterior deltoids · triceps",
+        frequency: "3–5 working sets · 3–8 reps",
+        duration: "Rest 2–4 minutes between hard sets",
+        equipment: "Barbell, flat bench, rack, plates, and safeties or a spotter.",
         exercises: [
-          "Goblet or back squat · 3 × 5–8",
-          "Bench press or push-up · 3 × 6–10",
-          "Romanian deadlift · 3 × 6–10",
-          "Pull-up or cable row · 3 × 6–12",
-          "Farmer carry · 3 × 30–45 seconds",
+          "Set eyes under the bar, plant the feet, and pull the shoulder blades down and together.",
+          "Unrack over the shoulders with straight wrists and locked elbows.",
+          "Lower under control to the lower chest while keeping forearms nearly vertical.",
+          "Press up and slightly back until the bar is stacked over the shoulders.",
         ],
-        progression: "When every set reaches the top of its range with two clean reps in reserve, add the smallest available load next session.",
-        notes: "Warm up the movement, not fatigue: two to four increasingly heavy practice sets before the first work set.",
+        progression: "Add 1–2.5 kg when every prescribed rep is clean with one or two reps still available.",
+        notes: "Keep the upper back fixed to the bench. Do not bounce the bar or let the elbows flare directly sideways.",
       }),
-      createSample("sample-workout-zone-two", {
-        title: "Aerobic base session",
-        summary: "Low-intensity cardiovascular work that is easy enough to repeat and hard enough to build capacity.",
-        goal: "Improve aerobic efficiency, recovery, and the ability to sustain work without accumulating excessive fatigue.",
-        frequency: "2–4 sessions weekly · 30–60 minutes",
-        duration: "Start at 30 minutes and build by five minutes per week",
-        equipment: "Incline treadmill, bike, rower, or an outdoor route with steady terrain.",
+      createSample("sample-push-incline-barbell-press", {
+        category: "push",
+        title: "Incline barbell bench press",
+        summary: "A stable upper-chest press that also loads the front delts without becoming a full overhead press.",
+        goal: "Upper chest · anterior deltoids · triceps",
+        frequency: "3–4 working sets · 5–10 reps",
+        duration: "Rest 2–3 minutes",
+        equipment: "Barbell, adjustable bench set around 20–35°, rack, and plates.",
         exercises: [
-          "5 minutes easy warm-up",
-          "25–50 minutes at conversational pace",
-          "5 minutes progressively easier cool-down",
+          "Set the bench low enough that the chest remains the main driver.",
+          "Pin the shoulder blades to the pad and keep the feet firmly planted.",
+          "Lower toward the upper chest with wrists stacked above elbows.",
+          "Press upward and slightly back without lifting the shoulders.",
         ],
-        progression: "Increase duration before intensity. Once 45–60 minutes feels stable, add one separate short interval day rather than turning every session hard.",
-        notes: "The talk test is more useful than chasing a universal heart-rate number: speak a full sentence without gasping.",
+        progression: "Reach the top of the rep range across all sets before adding the smallest load.",
+        notes: "A steep incline shifts the exercise toward the shoulders. Avoid turning it into a 60–75° press.",
+      }),
+      createSample("sample-push-dumbbell-bench-press", {
+        category: "push",
+        title: "Dumbbell bench press",
+        summary: "A horizontal press with independent arms, a long range of motion, and easier joint positioning than a fixed bar.",
+        goal: "Chest · anterior deltoids · triceps",
+        frequency: "3–4 working sets · 6–12 reps",
+        duration: "Rest 90–150 seconds",
+        equipment: "Flat bench and matched dumbbells.",
+        exercises: [
+          "Kick the dumbbells into position and anchor the shoulder blades.",
+          "Lower beside the chest with the elbows slightly tucked.",
+          "Keep the forearms vertical and wrists neutral.",
+          "Press the dumbbells up without crashing them together.",
+        ],
+        progression: "Add reps until all sets reach the upper limit, then move to the next dumbbell pair.",
+        notes: "Stop the descent before the shoulder rolls forward. A neutral or semi-neutral grip is often more comfortable.",
+      }),
+      createSample("sample-push-incline-dumbbell-press", {
+        category: "push",
+        title: "Incline dumbbell press",
+        summary: "An upper-chest press with independent arm paths and a larger stretch than the barbell variation.",
+        goal: "Upper chest · anterior deltoids · triceps",
+        frequency: "3–4 working sets · 8–12 reps",
+        duration: "Rest 90–150 seconds",
+        equipment: "Adjustable bench set around 20–35° and matched dumbbells.",
+        exercises: [
+          "Set the shoulders down and back before the first repetition.",
+          "Lower the dumbbells outside the upper chest with a slight elbow tuck.",
+          "Pause briefly in the stretched position without relaxing.",
+          "Drive upward while preserving the same forearm angle.",
+        ],
+        progression: "Use double progression: add reps within the range, then increase both dumbbells.",
+        notes: "Keep the incline modest and the lower back controlled against excessive arching.",
+      }),
+      createSample("sample-push-overhead-press", {
+        category: "push",
+        title: "Standing overhead press",
+        summary: "The main vertical press for shoulder strength, triceps strength, and whole-body bracing.",
+        goal: "Anterior and lateral deltoids · triceps · upper chest",
+        frequency: "3–5 working sets · 3–8 reps",
+        duration: "Rest 2–4 minutes",
+        equipment: "Barbell, rack, and plates.",
+        exercises: [
+          "Set the bar on the upper chest with wrists stacked over elbows.",
+          "Brace the glutes and abdomen before every repetition.",
+          "Move the head back just enough for a straight bar path.",
+          "Press overhead, then finish with the head through and bar over mid-foot.",
+        ],
+        progression: "Add the smallest available load after completing all reps without leaning back or using leg drive.",
+        notes: "Squeeze the glutes to prevent the ribs and pelvis from opening into a standing incline press.",
+      }),
+      createSample("sample-push-dumbbell-shoulder-press", {
+        category: "push",
+        title: "Seated dumbbell shoulder press",
+        summary: "A shoulder-focused vertical press with independent arms and less balance demand than standing work.",
+        goal: "Anterior and lateral deltoids · triceps",
+        frequency: "3–4 working sets · 6–12 reps",
+        duration: "Rest 90–150 seconds",
+        equipment: "High-backed adjustable bench and matched dumbbells.",
+        exercises: [
+          "Brace against the back pad with feet planted.",
+          "Start with forearms vertical and elbows slightly forward of the torso.",
+          "Press upward without shrugging early.",
+          "Lower until the upper arms reach a comfortable depth.",
+        ],
+        progression: "Add repetitions first; increase weight only when the last reps remain controlled.",
+        notes: "Do not force the dumbbells to touch overhead. Preserve a natural arm path.",
+      }),
+      createSample("sample-push-dips", {
+        category: "push",
+        title: "Parallel-bar dip",
+        summary: "A closed-chain press that heavily loads the lower chest and triceps through a deep range.",
+        goal: "Chest · triceps · anterior deltoids",
+        frequency: "3–4 working sets · 5–12 reps",
+        duration: "Rest 2–3 minutes",
+        equipment: "Stable dip bars; belt and plates for weighted work.",
+        exercises: [
+          "Support the body with shoulders held down away from the ears.",
+          "Lean slightly forward for more chest or stay upright for more triceps.",
+          "Descend only as far as the shoulder remains controlled.",
+          "Drive the bars down and finish with locked elbows.",
+        ],
+        progression: "Build to clean sets of 10–12, then add a small external load.",
+        notes: "Use assistance if needed. Avoid sinking passively into the bottom or letting the shoulders roll forward.",
+      }),
+      createSample("sample-push-push-up", {
+        category: "push",
+        title: "Push-up",
+        summary: "A scalable horizontal press that trains the chest, triceps, serratus, and trunk without equipment.",
+        goal: "Chest · triceps · anterior deltoids · serratus anterior",
+        frequency: "3–5 working sets · 8–25 reps",
+        duration: "Rest 60–120 seconds",
+        equipment: "Floor; handles, rings, a vest, or plates are optional.",
+        exercises: [
+          "Set hands just outside shoulder width and make a rigid line from head to heel.",
+          "Lower the chest between the hands while keeping elbows roughly 30–60° from the torso.",
+          "Reach a controlled bottom position without the hips sagging.",
+          "Press the floor away and allow the shoulder blades to move naturally at the top.",
+        ],
+        progression: "Move from incline to floor to feet-elevated or externally loaded variations as the rep range becomes easy.",
+        notes: "Count only repetitions that preserve trunk position and reach the same depth.",
+      }),
+      createSample("sample-push-cable-fly", {
+        category: "push",
+        title: "Cable chest fly",
+        summary: "A chest isolation movement with continuous tension and an adjustable line of pull.",
+        goal: "Pectoralis major",
+        frequency: "2–4 working sets · 10–20 reps",
+        duration: "Rest 60–90 seconds",
+        equipment: "Dual adjustable cable station and handles.",
+        exercises: [
+          "Take a staggered stance and set the shoulder blades gently back.",
+          "Keep a small, fixed bend in the elbows.",
+          "Sweep the upper arms across the chest rather than pressing with the hands.",
+          "Return slowly until the chest is stretched without the shoulders rolling forward.",
+        ],
+        progression: "Increase repetitions before adding one cable increment.",
+        notes: "Do not turn the movement into a press by repeatedly bending and straightening the elbows.",
+      }),
+      createSample("sample-push-lateral-raise", {
+        category: "push",
+        title: "Dumbbell lateral raise",
+        summary: "The standard isolation movement for building the side delts and shoulder width.",
+        goal: "Lateral deltoids",
+        frequency: "3–5 working sets · 12–25 reps",
+        duration: "Rest 45–90 seconds",
+        equipment: "Light dumbbells.",
+        exercises: [
+          "Stand tall with the weights slightly in front of the thighs.",
+          "Lead the elbows outward in the scapular plane.",
+          "Raise to roughly shoulder height without aggressively shrugging.",
+          "Lower under control and keep tension between repetitions.",
+        ],
+        progression: "Add reps with consistent height and tempo before using heavier dumbbells.",
+        notes: "Use less weight than expected. Momentum should not replace delt tension.",
+      }),
+      createSample("sample-push-cable-lateral-raise", {
+        category: "push",
+        title: "Single-arm cable lateral raise",
+        summary: "A side-delt isolation exercise that stays loaded near the bottom where dumbbells are easiest.",
+        goal: "Lateral deltoids",
+        frequency: "3–4 working sets · 12–20 reps per side",
+        duration: "Rest 30–60 seconds between sides",
+        equipment: "Low cable and single handle or cuff.",
+        exercises: [
+          "Stand side-on with the cable crossing slightly behind the body.",
+          "Keep the torso still and elbow softly bent.",
+          "Lead the elbow outward until the arm approaches shoulder height.",
+          "Return slowly without letting the stack slam.",
+        ],
+        progression: "Add controlled reps, then use the smallest cable increase.",
+        notes: "A cuff removes grip from the exercise and often improves the line of pull.",
+      }),
+      createSample("sample-push-triceps-pushdown", {
+        category: "push",
+        title: "Cable triceps pushdown",
+        summary: "A stable triceps isolation exercise that is easy to load, control, and recover from.",
+        goal: "Triceps, especially lateral and medial heads",
+        frequency: "3–4 working sets · 10–20 reps",
+        duration: "Rest 60–90 seconds",
+        equipment: "High cable with rope, straight bar, or angled attachment.",
+        exercises: [
+          "Pin the upper arms beside the torso.",
+          "Extend the elbows without rocking the shoulders.",
+          "Reach full extension and briefly contract the triceps.",
+          "Let the forearms return while the upper arms remain still.",
+        ],
+        progression: "Reach the top of the range with strict elbows before increasing the stack.",
+        notes: "Choose the attachment that keeps wrists comfortable; the elbow motion matters more than the handle.",
+      }),
+      createSample("sample-push-overhead-triceps-extension", {
+        category: "push",
+        title: "Overhead cable triceps extension",
+        summary: "A lengthened-position triceps exercise that emphasizes the long head.",
+        goal: "Triceps long head",
+        frequency: "3–4 working sets · 10–20 reps",
+        duration: "Rest 60–90 seconds",
+        equipment: "Cable station with rope or two handles.",
+        exercises: [
+          "Face away from the cable and brace in a staggered stance.",
+          "Keep the upper arms angled overhead and ribs down.",
+          "Bend only at the elbows until the triceps are fully stretched.",
+          "Extend to straight arms without moving the shoulders.",
+        ],
+        progression: "Add reps while preserving the stretched bottom position, then raise the load slightly.",
+        notes: "Lower the weight if the elbows drift or the lower back arches to finish repetitions.",
+      }),
+      createSample("sample-push-skull-crusher", {
+        category: "push",
+        title: "EZ-bar skull crusher",
+        summary: "A free-weight triceps extension that combines heavy loading with a long eccentric range.",
+        goal: "Triceps, with strong long-head involvement",
+        frequency: "2–4 working sets · 8–15 reps",
+        duration: "Rest 90–120 seconds",
+        equipment: "Flat bench and EZ-curl bar or dumbbells.",
+        exercises: [
+          "Start with the arms angled slightly behind vertical.",
+          "Keep the upper arms fixed while bending the elbows.",
+          "Lower the bar behind the forehead toward the top of the head.",
+          "Extend the elbows without letting the shoulders turn the rep into a pullover.",
+        ],
+        progression: "Add repetitions first, then use small weight increases to protect the elbows.",
+        notes: "An EZ bar or dumbbells usually permits a friendlier wrist angle than a straight bar.",
       }),
     ],
   },
@@ -458,6 +668,40 @@ function cloneDefaultSection(section) {
 }
 
 /**
+ * Places older user-authored workout entries into one of the three training
+ * libraries. Explicit categories win; the fallback keeps every entry visible
+ * and editable instead of dropping it during migration.
+ *
+ * @param {object} item Workout entry.
+ * @returns {"push"|"pull"|"legs"} Supported workout category.
+ */
+function getWorkoutCategory(item) {
+  if (["push", "pull", "legs"].includes(item.category)) {
+    return item.category;
+  }
+
+  const searchableText = [
+    item.title,
+    item.summary,
+    item.goal,
+    ...(item.exercises ?? []),
+  ].join(" ").toLocaleLowerCase();
+  const categoryTerms = {
+    pull: ["pull", "row", "curl", "lat", "back", "biceps", "rear delt"],
+    legs: ["squat", "deadlift", "hinge", "leg", "quad", "hamstring", "glute", "calf", "lunge"],
+  };
+  const scores = Object.fromEntries(
+    Object.entries(categoryTerms).map(([category, terms]) => [
+      category,
+      terms.filter((term) => searchableText.includes(term)).length,
+    ]),
+  );
+  if (scores.legs > scores.pull && scores.legs > 0) return "legs";
+  if (scores.pull > 0) return "pull";
+  return "push";
+}
+
+/**
  * Restores every fixed core library and moves saved Protocol entries into an
  * optional Personal Routines library. Empty legacy Protocols are discarded.
  *
@@ -466,6 +710,7 @@ function cloneDefaultSection(section) {
  */
 function migrateWorkspace(workspace) {
   let changed = false;
+  const previousVersion = workspace.version ?? 1;
   let sections = workspace.sections;
 
   const legacyProtocolSections = sections.filter((section) => (
@@ -499,12 +744,12 @@ function migrateWorkspace(workspace) {
   }
 
   const shouldRestoreCoreSections = (
-    (workspace.version ?? 1) < CURRENT_WORKSPACE_VERSION
+    previousVersion < CURRENT_WORKSPACE_VERSION
     || DEFAULT_SECTIONS.some((section) => !sections.some((candidate) => candidate.id === section.id))
   );
   if (shouldRestoreCoreSections) {
     const existingSections = new Map(sections.map((section) => [section.id, section]));
-    const shouldSeedSamples = (workspace.version ?? 1) < CURRENT_WORKSPACE_VERSION;
+    const shouldSeedSamples = previousVersion < 7;
     const coreSections = DEFAULT_SECTIONS.map((section) => {
       const existingSection = existingSections.get(section.id);
       if (!existingSection) {
@@ -529,7 +774,22 @@ function migrateWorkspace(workspace) {
     workspace.sections = sections;
   }
 
-  if ((workspace.version ?? 1) < CURRENT_WORKSPACE_VERSION) {
+  if (previousVersion < 8) {
+    const workoutSection = workspace.sections.find((section) => section.id === "workouts");
+    const defaultWorkoutSection = DEFAULT_SECTIONS.find((section) => section.id === "workouts");
+    if (workoutSection && defaultWorkoutSection) {
+      const preservedItems = (workoutSection.items ?? [])
+        .filter((item) => !LEGACY_WORKOUT_SAMPLE_IDS.has(item.id))
+        .map((item) => ({ ...item, category: getWorkoutCategory(item) }));
+      const existingIds = new Set(preservedItems.map((item) => item.id));
+      const newPushSamples = cloneDefaultSection(defaultWorkoutSection).items
+        .filter((item) => !existingIds.has(item.id));
+      workoutSection.items = [...preservedItems, ...newPushSamples];
+      changed = true;
+    }
+  }
+
+  if (previousVersion < CURRENT_WORKSPACE_VERSION) {
     workspace.version = CURRENT_WORKSPACE_VERSION;
     changed = true;
   }

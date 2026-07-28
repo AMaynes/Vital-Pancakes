@@ -164,6 +164,23 @@ const AREA_EVERYDAY = "everyday";
 const AREA_STUDIES = "studies";
 const AREA_TOOLS = "tools";
 const VALID_AREAS = new Set([AREA_EVERYDAY, AREA_STUDIES, AREA_TOOLS]);
+const WORKOUT_CATEGORIES = Object.freeze([
+  {
+    id: "push",
+    title: "Push",
+    description: "Chest, shoulder, and triceps movements built around pressing and arm extension.",
+  },
+  {
+    id: "pull",
+    title: "Pull",
+    description: "Back, rear-delt, and biceps movements built around rowing, pulling, and arm flexion.",
+  },
+  {
+    id: "legs",
+    title: "Legs",
+    description: "Quad, hamstring, glute, and calf movements built around squatting, hinging, and locomotion.",
+  },
+]);
 
 /**
  * Creates an element with optional class and text without parsing user HTML.
@@ -245,6 +262,31 @@ function getSectionsForArea(workspace, area) {
 function getRouteItemId() {
   const parameters = new URLSearchParams(location.hash.slice(1));
   return parameters.get("item");
+}
+
+/**
+ * Returns the active Push/Pull/Legs route when one is present.
+ *
+ * @returns {"push"|"pull"|"legs"|null} Supported category or null.
+ */
+function getRouteWorkoutCategory() {
+  const requestedCategory = new URLSearchParams(location.hash.slice(1)).get("category");
+  return WORKOUT_CATEGORIES.some((category) => category.id === requestedCategory)
+    ? requestedCategory
+    : null;
+}
+
+/**
+ * Builds a workout category or exercise deep link.
+ *
+ * @param {string} categoryId Workout category identifier.
+ * @param {string|null} itemId Optional exercise identifier.
+ * @returns {string} Encoded hash.
+ */
+function buildWorkoutHash(categoryId, itemId = null) {
+  const parameters = new URLSearchParams({ section: "workouts", category: categoryId });
+  if (itemId) parameters.set("item", itemId);
+  return `#${parameters.toString()}`;
 }
 
 /**
@@ -570,8 +612,31 @@ function renderSection(section) {
     ? section.items.find((item) => item.id === routeItemId)
     : null;
   if (routeItem) {
-    renderEntryDetail(section, routeItem);
+    const category = section.type === "workout"
+      ? WORKOUT_CATEGORIES.find((candidate) => candidate.id === routeItem.category)
+      : null;
+    renderEntryDetail(
+      category ? { ...section, workoutCategory: category.id, title: category.title } : section,
+      routeItem,
+    );
     return;
+  }
+
+  if (section.type === "workout") {
+    const categoryId = getRouteWorkoutCategory();
+    if (!categoryId) {
+      renderWorkoutCategoryIndex(section);
+      return;
+    }
+    const category = WORKOUT_CATEGORIES.find((candidate) => candidate.id === categoryId);
+    section = {
+      ...section,
+      workoutCategory: category.id,
+      title: category.title,
+      description: category.description,
+      items: section.items.filter((item) => item.category === category.id),
+    };
+    appMain.dataset.sectionTitle = `Workout Types / ${category.title}`;
   }
 
   const heading = createElement("section", "page-heading section-page-heading");
@@ -631,6 +696,42 @@ function renderSection(section) {
 }
 
 /**
+ * Renders Workout Types as three persistent training libraries before showing
+ * the exercises inside an individual category.
+ *
+ * @param {object} section Workout Types section.
+ */
+function renderWorkoutCategoryIndex(section) {
+  const heading = createElement("section", "page-heading section-page-heading");
+  const headingCopy = createElement("div");
+  headingCopy.append(
+    createElement("p", "eyebrow", `${section.icon} TRAINING LIBRARY`),
+    createElement("h1", "", section.title),
+    createElement("p", "page-description", section.description),
+  );
+  heading.append(headingCopy);
+
+  const categoryGrid = createElement("div", "workout-category-grid");
+  WORKOUT_CATEGORIES.forEach((category) => {
+    const entries = section.items.filter((item) => item.category === category.id);
+    const card = createElement("a", "workout-category-card");
+    card.href = buildWorkoutHash(category.id);
+    const copy = createElement("div", "workout-category-copy");
+    copy.append(
+      createElement("span", "card-kicker", `${entries.length} ${entries.length === 1 ? "EXERCISE" : "EXERCISES"}`),
+      createElement("h2", "", category.title),
+      createElement("p", "", category.description),
+    );
+    const blankVisual = createElement("div", "workout-category-visual");
+    blankVisual.setAttribute("aria-hidden", "true");
+    card.append(copy, blankVisual, createElement("span", "card-arrow", "↗"));
+    categoryGrid.append(card);
+  });
+
+  appMain.append(heading, categoryGrid);
+}
+
+/**
  * Reads a collection's retained list/grid preference.
  *
  * @param {string} sectionId Collection identifier.
@@ -680,7 +781,9 @@ function createEntryIndexCard(section, item, index) {
   const card = createElement("article", `entry-index-card entry-${section.type}`);
   const marker = createElement("span", "entry-index-marker", String(index + 1).padStart(2, "0"));
   const link = createElement("a", "entry-index-link");
-  link.href = buildContentHash(section.id, item.id);
+  link.href = section.workoutCategory
+    ? buildWorkoutHash(section.workoutCategory, item.id)
+    : buildContentHash(section.id, item.id);
   link.setAttribute("aria-label", `Open ${item.title}`);
 
   const copy = createElement("div", "entry-index-copy");
@@ -724,7 +827,9 @@ function renderEntryDetail(section, item) {
   const heading = createElement("header", "entry-detail-heading");
   const headingCopy = createElement("div");
   const backLink = createElement("a", "entry-back-link", `← ${section.title}`);
-  backLink.href = buildContentHash(section.id);
+  backLink.href = section.workoutCategory
+    ? buildWorkoutHash(section.workoutCategory)
+    : buildContentHash(section.id);
   headingCopy.append(
     backLink,
     createElement(
@@ -799,18 +904,17 @@ function createEntryVisual(section, item, compact) {
   const frame = createElement("div", "subject-visual-frame");
   const symbol = createElement("div", "subject-visual-symbol");
   const type = section.type;
+  if (type === "workout") {
+    visual.classList.add("is-blank");
+    visual.append(frame);
+    return visual;
+  }
   if (type === "cooking-guide" || type === "recipe") {
     symbol.append(
       createElement("i", "visual-vessel"),
       createElement("i", "visual-steam steam-one"),
       createElement("i", "visual-steam steam-two"),
       createElement("i", "visual-steam steam-three"),
-    );
-  } else if (type === "workout") {
-    symbol.append(
-      createElement("i", "visual-weight weight-left"),
-      createElement("i", "visual-weight-bar"),
-      createElement("i", "visual-weight weight-right"),
     );
   } else if (type === "cleaning") {
     symbol.append(
@@ -943,7 +1047,7 @@ function getSingularLabel(section) {
   return {
     "cooking-guide": "cooking guide",
     recipe: "recipe",
-    workout: "workout type",
+    workout: "exercise",
     cleaning: "cleaning area",
     routine: "routine",
     study: "study",
@@ -1086,12 +1190,12 @@ function createRecipeBody(section, item) {
 function createWorkoutBody(section, item) {
   const body = createElement("div", "entry-body");
   const details = createElement("div", "workout-prescription");
-  if (item.goal) details.append(createDefinition("Purpose", item.goal));
-  if (item.frequency) details.append(createDefinition("Frequency", item.frequency));
-  if (item.duration) details.append(createDefinition("Session length", item.duration));
+  if (item.goal) details.append(createDefinition("Primary muscles", item.goal));
+  if (item.frequency) details.append(createDefinition("Working sets", item.frequency));
+  if (item.duration) details.append(createDefinition("Rest", item.duration));
   if (item.equipment) details.append(createDefinition("Equipment", item.equipment));
   if (details.childElementCount) body.append(details);
-  appendPersistentChecklist(body, section, item, "Session sequence", item.exercises, "checkedExercises");
+  appendPersistentChecklist(body, section, item, "Execution", item.exercises, "checkedExercises");
   if (item.progression) body.append(createDefinition("Progression rule", item.progression));
   if (item.notes) body.append(createDefinition("Coaching notes", item.notes));
   return body;
@@ -1441,13 +1545,19 @@ function createItemFields(section, item) {
     );
   } else if (section.type === "workout") {
     fields.push(
-      createField("Purpose", "goal", "textarea", item?.goal ?? "", false, "What this kind of workout develops"),
-      createField("Frequency and structure", "frequency", "text", item?.frequency ?? "", false, "How often, duration, sets, or intensity"),
-      createField("Session length", "duration", "text", item?.duration ?? "", false, "Including warm-up and cool-down"),
+      createSelectField(
+        "Training category",
+        "category",
+        item?.category ?? section.workoutCategory ?? "push",
+        ["push", "pull", "legs"],
+      ),
+      createField("Primary muscles", "goal", "textarea", item?.goal ?? "", false, "The muscles this movement mainly trains"),
+      createField("Working sets and reps", "frequency", "text", item?.frequency ?? "", false, "e.g. 3–4 working sets · 6–12 reps"),
+      createField("Rest", "duration", "text", item?.duration ?? "", false, "e.g. Rest 90–150 seconds"),
       createField("Equipment", "equipment", "text", item?.equipment ?? "", false, "What must be available"),
-      createField("Exercises · one per line", "exercises", "textarea", (item?.exercises ?? []).join("\n"), false, "List the movements in order"),
+      createField("Execution · one cue per line", "exercises", "textarea", (item?.exercises ?? []).join("\n"), false, "List the setup and movement cues in order"),
       createField("Progression rule", "progression", "textarea", item?.progression ?? "", false, "Exactly when and how should the workload change?"),
-      createField("Notes", "notes", "textarea", item?.notes ?? "", false, "Progression, recovery, equipment, or form cues"),
+      createField("Coaching notes", "notes", "textarea", item?.notes ?? "", false, "Important form, comfort, or safety notes"),
     );
   } else if (section.type === "cleaning") {
     fields.push(
@@ -1671,6 +1781,9 @@ function readItemForm(section) {
   if (section.type === "workout") {
     return {
       ...base,
+      category: ["push", "pull", "legs"].includes(String(formData.get("category")))
+        ? String(formData.get("category"))
+        : "push",
       goal: String(formData.get("goal") ?? "").trim(),
       frequency: String(formData.get("frequency") ?? "").trim(),
       duration: String(formData.get("duration") ?? "").trim(),
