@@ -54,6 +54,8 @@ vital-pancakes/
 │   ├── visual-board-rich-text.test.mjs — Verifies highlighted color ranges and edit preservation.
 │   ├── visual-board-shape-tools.mjs — Retains the independent 2D and 3D split-button choices.
 │   ├── visual-board-shape-tools.test.mjs — Verifies shape families and retained-option behavior.
+│   ├── visual-board-strokes.mjs — Defines stable, width-aware Canvas dash and dot patterns.
+│   ├── visual-board-strokes.test.mjs — Verifies finite dotted ink and established dash spacing.
 │   ├── visual-board-text.mjs — Keeps declared font sizes readable at overview zoom.
 │   ├── visual-board-text.test.mjs — Verifies zoom-aware text rendering and click-created dimensions.
 │   ├── visual-board-vertices.mjs — Builds and reshapes grouped line networks with shared editable vertices.
@@ -209,7 +211,7 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 `visual-board.html` hosts the organized creation, selection, view, history, and style controls, including persistent 2D and 3D shape menus, copy and paste tools, contextual textbox typography, and grouping actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, repeated line, arrow, and shape placement, Escape-to-Select behavior, freehand drawing, brush erasing, straight lines, arrows with editable start and tip handles, inline textboxes, tight per-object selection outlines, marquee selection, multi-object copy and paste, locking, stroke patterns, guarded object grouping, editable shared-vertex networks, shape division and reassembly, grid snapping, 300-action undo and redo history, local autosave, and PNG export. Dropped images are compressed and retained as local board assets; they are never uploaded.
 
-`visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps group, divided-shape, and vertex-network identifiers without mutating the originals. Its adjacent test file verifies those relationships. `visual-board-geometry.mjs` isolates the pure geometry used for reusable 2D and 3D segment outlines, world bounds, tight rotated line selections, rotated handles, hit testing, outline-aware marquee intersection, grid snapping, corner-based resizing, and shape division. `visual-board-geometry.test.mjs` exercises those contracts with Node's built-in test runner. `visual-board-vertices.mjs` merges touching endpoints into shared controls and applies vertex movement to every incident line; its test file covers both merged and independent vertices.
+`visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps group, divided-shape, and vertex-network identifiers without mutating the originals. Its adjacent test file verifies those relationships. `visual-board-geometry.mjs` isolates the pure geometry used for reusable 2D and 3D segment outlines, world bounds, tight rotated line selections, rotated handles, hit testing, outline-aware marquee intersection, grid snapping, corner-based resizing, and shape division. `visual-board-geometry.test.mjs` exercises those contracts with Node's built-in test runner. `visual-board-strokes.mjs` centralizes width-aware Canvas dash spacing and uses finite dotted ink so dots remain stable across stroke widths, directions, and browser pixel alignment. `visual-board-vertices.mjs` merges touching endpoints into shared controls and applies vertex movement to every incident line; its test file covers both merged and independent vertices.
 
 ### PDF Signer
 

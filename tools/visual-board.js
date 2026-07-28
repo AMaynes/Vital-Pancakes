@@ -28,6 +28,7 @@ import {
   getVertexNetworkVertices,
   setVertexNetworkPosition,
 } from "./visual-board-vertices.mjs?v=1";
+import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
   LINE_TYPES,
   SHAPE_TYPES,
@@ -474,7 +475,7 @@ function drawObject(object) {
   context.lineWidth = object.strokeWidth;
   context.lineCap = "round";
   context.lineJoin = "round";
-  context.setLineDash(getDashArray(object.dashPattern, object.strokeWidth));
+  context.setLineDash(getStrokeDashArray(object.dashPattern, object.strokeWidth));
 
   if (object.type === "pen") {
     drawPenStroke(object.points);
@@ -508,15 +509,6 @@ function drawObject(object) {
     });
   }
   context.restore();
-}
-
-function getDashArray(pattern = "solid", strokeWidth = 1) {
-  const unit = Math.max(1, strokeWidth);
-  if (pattern === "dashed") return [unit * 5, unit * 3.2];
-  if (pattern === "dotted") return [0.01, unit * 2.8];
-  if (pattern === "dash-dot") return [unit * 6, unit * 2.6, 0.01, unit * 2.6];
-  if (pattern === "long-dash") return [unit * 9, unit * 3.5];
-  return [];
 }
 
 function withShapeTransform(object, callback) {
