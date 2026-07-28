@@ -35,6 +35,14 @@ import {
 import { traceBlackAndWhiteImage } from "./visual-board-tracing.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
+  MAX_ANIMATION_FRAMES,
+  createAnimationFrame,
+  getPlayableFrames,
+  normalizeAnimation,
+  normalizeFrameDuration,
+  replaceAnimationFrame,
+} from "./visual-board-animation.mjs?v=1";
+import {
   getSelectionBounds,
   getSelectionUnits,
   resizeSelectionObjects,
@@ -61,7 +69,7 @@ import {
 } from "./visual-board-geometry.mjs?v=8";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
-const BOARD_VERSION = 8;
+const BOARD_VERSION = 9;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -123,6 +131,20 @@ const pasteSelectionButton = document.querySelector("#paste-selection");
 const gridToggle = document.querySelector("#toggle-grid");
 const snapToggle = document.querySelector("#toggle-snap");
 const saveStatus = document.querySelector("#save-status");
+const toolWorkspace = document.querySelector("#tool-main");
+const animationToggleButton = document.querySelector("#toggle-animation");
+const animationPanel = document.querySelector("#animation-panel");
+const animationPreview = document.querySelector("#animation-preview");
+const animationPreviewImage = document.querySelector("#animation-preview-image");
+const animationPreviewEmpty = document.querySelector("#animation-preview-empty");
+const animationPreviewCount = document.querySelector("#animation-preview-count");
+const animationFrameTotal = document.querySelector("#animation-frame-total");
+const animationFrameList = document.querySelector("#animation-frame-list");
+const animationPlayButton = document.querySelector("#animation-play");
+const animationDurationInput = document.querySelector("#animation-frame-duration");
+const animationFpsOutput = document.querySelector("#animation-fps");
+const duplicateAnimationFrameButton = document.querySelector("#duplicate-animation-frame");
+const deleteAnimationFrameButton = document.querySelector("#delete-animation-frame");
 
 let board = loadBoard();
 let viewport = { ...board.view };
@@ -142,6 +164,10 @@ let textColorChangeActive = false;
 let traceInProgress = false;
 let objectClipboard = [];
 let pasteGeneration = 0;
+let animationPanelOpen = false;
+let selectedAnimationFrameId = board.animation.frames[0]?.id ?? null;
+let animationPlaybackTimer = null;
+let animationPlaybackIndex = 0;
 let shapeToolChoices = {
   "2d": shape2dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
   "3d": shape3dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
@@ -177,6 +203,7 @@ function loadBoard() {
       assets: savedBoard?.assets && typeof savedBoard.assets === "object"
         ? savedBoard.assets
         : {},
+      animation: normalizeAnimation(savedBoard?.animation),
       settings: {
         grid: savedBoard?.settings?.grid ?? true,
         snap: savedBoard?.settings?.snap ?? false,
@@ -198,6 +225,7 @@ function createEmptyBoard() {
     version: BOARD_VERSION,
     objects: [],
     assets: {},
+    animation: normalizeAnimation(),
     settings: { grid: true, snap: false },
     view: { x: 0, y: 0, zoom: 1 },
   };
@@ -1740,13 +1768,289 @@ function handleWheel(event) {
   drawBoard();
 }
 
-function exportBoard() {
-  drawBoard(false);
-  const link = document.createElement("a");
-  link.download = `visual-board-${new Date().toISOString().slice(0, 10)}.png`;
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-  drawBoard();
+function toggleAnimationPanel(forceOpen = !animationPanelOpen) {
+  animationPanelOpen = Boolean(forceOpen);
+  if (!animationPanelOpen) stopAnimationPlayback();
+  toolWorkspace.classList.toggle("is-animation-open", animationPanelOpen);
+  animationPanel.classList.toggle("is-open", animationPanelOpen);
+  animationPanel.setAttribute("aria-hidden", String(!animationPanelOpen));
+  animationPanel.inert = !animationPanelOpen;
+  animationToggleButton.setAttribute("aria-expanded", String(animationPanelOpen));
+  animationToggleButton.classList.toggle("is-active", animationPanelOpen);
+  if (animationPanelOpen) {
+    ensureSelectedAnimationFrame();
+    renderAnimationPanel();
+    animationPreview.focus({ preventScroll: true });
+  }
+}
+
+function ensureSelectedAnimationFrame() {
+  if (board.animation.frames.some((frame) => frame.id === selectedAnimationFrameId)) return;
+  selectedAnimationFrameId = board.animation.frames[0]?.id ?? null;
+}
+
+function getSelectedAnimationFrame() {
+  return board.animation.frames.find((frame) => frame.id === selectedAnimationFrameId) ?? null;
+}
+
+function renderAnimationPanel() {
+  ensureSelectedAnimationFrame();
+  renderAnimationTimeline();
+  showAnimationPreview(getSelectedAnimationFrame());
+
+  const frameCount = board.animation.frames.length;
+  const playableFrames = getPlayableFrames(board.animation.frames);
+  animationFrameTotal.textContent = `${frameCount} frame${frameCount === 1 ? "" : "s"}`;
+  animationDurationInput.value = String(board.animation.frameDurationMs);
+  animationFpsOutput.textContent = `${formatFramesPerSecond(board.animation.frameDurationMs)} FPS`;
+  animationPlayButton.disabled = playableFrames.length < 2;
+  duplicateAnimationFrameButton.disabled = !getSelectedAnimationFrame()
+    || frameCount >= MAX_ANIMATION_FRAMES;
+  deleteAnimationFrameButton.disabled = !getSelectedAnimationFrame();
+}
+
+function renderAnimationTimeline() {
+  animationFrameList.replaceChildren();
+  board.animation.frames.forEach((frame, index) => {
+    const item = document.createElement("li");
+    item.className = "animation-frame-item";
+    item.dataset.frameId = frame.id;
+    item.classList.toggle("is-selected", frame.id === selectedAnimationFrameId);
+
+    const button = document.createElement("button");
+    button.className = "animation-frame-select";
+    button.type = "button";
+    button.dataset.frameId = frame.id;
+    button.setAttribute("aria-label", `Select frame ${index + 1}: ${frame.name}`);
+    if (frame.id === selectedAnimationFrameId) button.setAttribute("aria-current", "true");
+
+    const number = document.createElement("span");
+    number.className = "animation-frame-number";
+    number.textContent = String(index + 1).padStart(2, "0");
+
+    const thumbnail = document.createElement("span");
+    thumbnail.className = "animation-frame-thumbnail";
+    if (frame.dataUrl) {
+      const image = document.createElement("img");
+      image.src = frame.dataUrl;
+      image.alt = "";
+      thumbnail.append(image);
+    } else {
+      const empty = document.createElement("span");
+      empty.textContent = "EMPTY";
+      thumbnail.append(empty);
+    }
+
+    const name = document.createElement("span");
+    name.className = "animation-frame-name";
+    name.textContent = frame.name;
+    button.append(number, thumbnail, name);
+    item.append(button);
+    animationFrameList.append(item);
+  });
+}
+
+function showAnimationPreview(frame) {
+  const frameIndex = frame
+    ? board.animation.frames.findIndex((candidate) => candidate.id === frame.id)
+    : -1;
+  if (frame?.dataUrl) {
+    animationPreviewImage.src = frame.dataUrl;
+    animationPreviewImage.alt = frame.name;
+    animationPreviewImage.hidden = false;
+    animationPreviewEmpty.hidden = true;
+  } else {
+    animationPreviewImage.removeAttribute("src");
+    animationPreviewImage.alt = "Selected animation frame";
+    animationPreviewImage.hidden = true;
+    animationPreviewEmpty.hidden = false;
+    animationPreviewEmpty.textContent = frame ? "Empty frame" : "No frames";
+  }
+  animationPreview.dataset.frameId = frame?.id ?? "";
+  animationPreviewCount.textContent = frameIndex >= 0
+    ? `${frameIndex + 1} / ${board.animation.frames.length}`
+    : `0 / ${board.animation.frames.length}`;
+}
+
+function formatFramesPerSecond(frameDurationMs) {
+  const framesPerSecond = 1000 / frameDurationMs;
+  return framesPerSecond >= 10
+    ? String(Math.round(framesPerSecond))
+    : framesPerSecond.toFixed(1);
+}
+
+function addBlankAnimationFrame() {
+  if (board.animation.frames.length >= MAX_ANIMATION_FRAMES) {
+    announceStatus(`Animation is limited to ${MAX_ANIMATION_FRAMES} frames`);
+    return;
+  }
+  stopAnimationPlayback();
+  const frame = createAnimationFrame(
+    createId(),
+    board.animation.frames.length,
+  );
+  board.animation.frames.push(frame);
+  selectedAnimationFrameId = frame.id;
+  saveBoard();
+  renderAnimationPanel();
+}
+
+function duplicateSelectedAnimationFrame() {
+  const selectedFrame = getSelectedAnimationFrame();
+  if (!selectedFrame || board.animation.frames.length >= MAX_ANIMATION_FRAMES) return;
+  stopAnimationPlayback();
+  const selectedIndex = board.animation.frames.indexOf(selectedFrame);
+  const duplicate = {
+    ...selectedFrame,
+    id: createId(),
+    name: `${selectedFrame.name} copy`,
+  };
+  board.animation.frames.splice(selectedIndex + 1, 0, duplicate);
+  selectedAnimationFrameId = duplicate.id;
+  saveBoard();
+  renderAnimationPanel();
+}
+
+function deleteSelectedAnimationFrame() {
+  const selectedIndex = board.animation.frames.findIndex(
+    (frame) => frame.id === selectedAnimationFrameId,
+  );
+  if (selectedIndex < 0) return;
+  stopAnimationPlayback();
+  board.animation.frames.splice(selectedIndex, 1);
+  selectedAnimationFrameId = board.animation.frames[
+    Math.min(selectedIndex, board.animation.frames.length - 1)
+  ]?.id ?? null;
+  saveBoard();
+  renderAnimationPanel();
+}
+
+function selectAnimationFrame(frameId) {
+  if (!board.animation.frames.some((frame) => frame.id === frameId)) return;
+  stopAnimationPlayback();
+  selectedAnimationFrameId = frameId;
+  renderAnimationPanel();
+}
+
+function toggleAnimationPlayback() {
+  if (animationPlaybackTimer !== null) {
+    stopAnimationPlayback();
+    return;
+  }
+  const playableFrames = getPlayableFrames(board.animation.frames);
+  if (playableFrames.length < 2) return;
+  const selectedIndex = playableFrames.findIndex(
+    (frame) => frame.id === selectedAnimationFrameId,
+  );
+  animationPlaybackIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  animationPlayButton.textContent = "■";
+  animationPlayButton.setAttribute("aria-label", "Stop animation");
+  animationPlayButton.title = "Stop animation";
+  animationPlayButton.setAttribute("aria-pressed", "true");
+  showAnimationPreview(playableFrames[animationPlaybackIndex]);
+  scheduleAnimationPlayback();
+}
+
+function scheduleAnimationPlayback() {
+  window.clearTimeout(animationPlaybackTimer);
+  animationPlaybackTimer = window.setTimeout(() => {
+    const playableFrames = getPlayableFrames(board.animation.frames);
+    if (playableFrames.length < 2) {
+      stopAnimationPlayback();
+      return;
+    }
+    animationPlaybackIndex = (animationPlaybackIndex + 1) % playableFrames.length;
+    showAnimationPreview(playableFrames[animationPlaybackIndex]);
+    scheduleAnimationPlayback();
+  }, board.animation.frameDurationMs);
+}
+
+function stopAnimationPlayback() {
+  window.clearTimeout(animationPlaybackTimer);
+  animationPlaybackTimer = null;
+  animationPlayButton.textContent = "▶";
+  animationPlayButton.setAttribute("aria-label", "Play animation");
+  animationPlayButton.title = "Play animation";
+  animationPlayButton.setAttribute("aria-pressed", "false");
+  showAnimationPreview(getSelectedAnimationFrame());
+}
+
+function setAnimationFrameDuration(value) {
+  board.animation.frameDurationMs = normalizeFrameDuration(value);
+  animationDurationInput.value = String(board.animation.frameDurationMs);
+  animationFpsOutput.textContent = `${formatFramesPerSecond(board.animation.frameDurationMs)} FPS`;
+  saveBoard();
+  if (animationPlaybackTimer !== null) scheduleAnimationPlayback();
+}
+
+async function addAnimationImageFiles(files, targetFrameId = selectedAnimationFrameId) {
+  const imageFiles = files.filter((file) => file?.type?.startsWith("image/"));
+  if (!imageFiles.length) return;
+  const availableSlots = MAX_ANIMATION_FRAMES - board.animation.frames.length;
+  const canReplace = board.animation.frames.some((frame) => frame.id === targetFrameId);
+  const maximumImages = Math.max(0, availableSlots + (canReplace ? 1 : 0));
+  if (!maximumImages) {
+    announceStatus(`Animation is limited to ${MAX_ANIMATION_FRAMES} frames`);
+    return;
+  }
+
+  const preparedImages = [];
+  for (const file of imageFiles.slice(0, maximumImages)) {
+    try {
+      preparedImages.push(await prepareImage(file));
+    } catch (error) {
+      console.error(`Unable to read ${file.name}.`, error);
+    }
+  }
+  if (!preparedImages.length) {
+    announceStatus("Animation frame could not be read");
+    return;
+  }
+
+  stopAnimationPlayback();
+  const previousFrames = cloneValue(board.animation.frames);
+  let addedFrameCount = 0;
+  let insertionIndex = board.animation.frames.findIndex((frame) => frame.id === targetFrameId);
+  if (insertionIndex >= 0) {
+    board.animation.frames = replaceAnimationFrame(
+      board.animation.frames,
+      targetFrameId,
+      preparedImages.shift(),
+    );
+    selectedAnimationFrameId = targetFrameId;
+    insertionIndex += 1;
+    addedFrameCount += 1;
+  } else {
+    insertionIndex = board.animation.frames.length;
+  }
+
+  const newFrames = preparedImages.map((image, offset) => createAnimationFrame(
+    createId(),
+    insertionIndex + offset,
+    image,
+  ));
+  board.animation.frames.splice(insertionIndex, 0, ...newFrames);
+  addedFrameCount += newFrames.length;
+  if (newFrames.length) selectedAnimationFrameId = newFrames.at(-1).id;
+
+  if (!saveBoard()) {
+    board.animation.frames = previousFrames;
+    ensureSelectedAnimationFrame();
+  } else {
+    announceStatus(`${addedFrameCount} animation frame${addedFrameCount === 1 ? "" : "s"} added`);
+  }
+  renderAnimationPanel();
+}
+
+async function handleAnimationDrop(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  animationPanel.classList.remove("is-drop-target");
+  const files = [...(event.dataTransfer?.files ?? [])];
+  const target = event.target instanceof Element
+    ? event.target.closest("[data-frame-id]")
+    : null;
+  await addAnimationImageFiles(files, target?.dataset.frameId || selectedAnimationFrameId);
 }
 
 function updateSelectionControls() {
@@ -2620,6 +2924,11 @@ function handleKeyDown(event) {
   const commandKey = event.metaKey || event.ctrlKey;
   if (event.key === "Escape") {
     event.preventDefault();
+    if (animationPanelOpen) {
+      toggleAnimationPanel(false);
+      animationToggleButton.focus({ preventScroll: true });
+      return;
+    }
     returnToSelectionMode();
     return;
   }
@@ -2634,6 +2943,7 @@ function handleKeyDown(event) {
     redo();
     return;
   }
+  if (event.target instanceof HTMLButtonElement && event.code === "Space") return;
   if (isEditingControl(event.target)) return;
 
   if (commandKey && event.key.toLowerCase() === "c") {
@@ -2698,9 +3008,14 @@ async function handleClipboardPaste(event) {
     .filter(Boolean);
   if (imageFiles.length) {
     event.preventDefault();
-    await addImageFiles(imageFiles, getCanvasCenterWorldPoint());
+    if (animationPanelOpen) {
+      await addAnimationImageFiles(imageFiles);
+    } else {
+      await addImageFiles(imageFiles, getCanvasCenterWorldPoint());
+    }
     return;
   }
+  if (animationPanelOpen) return;
   if (objectClipboard.length) {
     event.preventDefault();
     pasteSelection();
@@ -2849,7 +3164,53 @@ document.querySelector("#undo-board").addEventListener("click", undo);
 document.querySelector("#redo-board").addEventListener("click", redo);
 document.querySelector("#zoom-in").addEventListener("click", () => setZoom(viewport.zoom + 0.1));
 document.querySelector("#zoom-out").addEventListener("click", () => setZoom(viewport.zoom - 0.1));
-document.querySelector("#export-board").addEventListener("click", exportBoard);
+animationToggleButton.addEventListener("click", () => toggleAnimationPanel());
+document.querySelector("#close-animation").addEventListener("click", () => {
+  toggleAnimationPanel(false);
+  animationToggleButton.focus({ preventScroll: true });
+});
+document.querySelector("#add-animation-frame").addEventListener("click", addBlankAnimationFrame);
+duplicateAnimationFrameButton.addEventListener("click", duplicateSelectedAnimationFrame);
+deleteAnimationFrameButton.addEventListener("click", deleteSelectedAnimationFrame);
+animationPlayButton.addEventListener("click", toggleAnimationPlayback);
+animationDurationInput.addEventListener("change", () => {
+  setAnimationFrameDuration(animationDurationInput.value);
+});
+document.querySelector("#animation-slower").addEventListener("click", () => {
+  setAnimationFrameDuration(board.animation.frameDurationMs + 25);
+});
+document.querySelector("#animation-faster").addEventListener("click", () => {
+  setAnimationFrameDuration(board.animation.frameDurationMs - 25);
+});
+animationFrameList.addEventListener("click", (event) => {
+  const button = event.target instanceof Element
+    ? event.target.closest("[data-frame-id]")
+    : null;
+  if (button) selectAnimationFrame(button.dataset.frameId);
+});
+animationPreview.addEventListener("keydown", (event) => {
+  if (event.code !== "Space") return;
+  event.preventDefault();
+  event.stopPropagation();
+  toggleAnimationPlayback();
+});
+animationPanel.addEventListener("dragenter", (event) => {
+  if ([...(event.dataTransfer?.items ?? [])].some((item) => item.type.startsWith("image/"))) {
+    event.preventDefault();
+    animationPanel.classList.add("is-drop-target");
+  }
+});
+animationPanel.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  animationPanel.classList.add("is-drop-target");
+});
+animationPanel.addEventListener("dragleave", (event) => {
+  if (!animationPanel.contains(event.relatedTarget)) {
+    animationPanel.classList.remove("is-drop-target");
+  }
+});
+animationPanel.addEventListener("drop", handleAnimationDrop);
 copySelectionButton.addEventListener("click", copySelection);
 pasteSelectionButton.addEventListener("click", pasteSelection);
 deleteSelectionButton.addEventListener("click", deleteSelection);
@@ -2894,9 +3255,13 @@ document.querySelector("#clear-board").addEventListener("click", () => {
 
   checkpoint();
   board.objects = [];
+  board.animation = normalizeAnimation();
+  selectedAnimationFrameId = null;
   selectedObjects = [];
+  stopAnimationPlayback();
   closeTextEditor();
   saveBoard();
+  renderAnimationPanel();
   updateSelectionControls();
   drawBoard();
 });
@@ -2908,6 +3273,8 @@ window.addEventListener("resize", resizeCanvas);
 new ResizeObserver(resizeCanvas).observe(canvasFrame);
 
 initializeShapePickers();
+animationPanel.inert = true;
+renderAnimationPanel();
 updateHistoryControls();
 updateSelectionControls();
 updateViewControls();

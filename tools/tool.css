@@ -71,10 +71,18 @@
 }
 
 .tool-workspace {
+  --animation-panel-width: min(360px, 34vw);
+
   position: relative;
   display: grid;
   min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 0;
   grid-template-rows: auto 1fr;
+  transition: grid-template-columns 180ms ease;
+}
+
+.tool-workspace.is-animation-open {
+  grid-template-columns: minmax(0, 1fr) var(--animation-panel-width);
 }
 
 .tool-toolbar {
@@ -89,6 +97,10 @@
   overflow-x: auto;
   border-bottom: 1px solid var(--line);
   background: #ece7dc;
+}
+
+.tool-workspace > .tool-toolbar {
+  grid-column: 1 / -1;
 }
 
 .board-toolbar {
@@ -399,10 +411,321 @@
 
 .canvas-frame {
   position: relative;
+  grid-column: 1;
+  grid-row: 2;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   background: #ffffff;
+}
+
+.animation-panel {
+  position: relative;
+  z-index: 13;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  grid-column: 2;
+  grid-row: 2;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--line-strong);
+  background: #f7f4ec;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(24px);
+  transition:
+    opacity 140ms ease,
+    transform 180ms ease;
+  visibility: hidden;
+}
+
+.tool-workspace.is-animation-open .animation-panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.animation-panel-header,
+.animation-frame-actions,
+.animation-playback-controls {
+  display: flex;
+  align-items: center;
+}
+
+.animation-panel-header {
+  min-height: 48px;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+
+.animation-panel-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.animation-panel-header span {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-faint);
+  font-size: 9px;
+}
+
+.animation-preview {
+  position: relative;
+  display: grid;
+  width: calc(100% - 20px);
+  aspect-ratio: 4 / 3;
+  max-height: 270px;
+  margin: 10px;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  outline: none;
+  background: #ffffff;
+}
+
+.animation-preview:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+.animation-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.animation-preview-empty {
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.animation-preview-count {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  min-width: 38px;
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgb(255 255 255 / 92%);
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.animation-playback-controls {
+  gap: 10px;
+  padding: 0 10px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.animation-play-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--forest);
+  font-size: 13px;
+}
+
+.animation-play-button:hover,
+.animation-play-button[aria-pressed="true"] {
+  border-color: var(--forest);
+  background: var(--sage-soft);
+}
+
+.animation-play-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.animation-timing {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  grid-template-columns: 1fr auto;
+  gap: 3px 8px;
+}
+
+.animation-timing > span {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.animation-timing > output {
+  align-self: center;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  color: var(--coral);
+  font-size: 9px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.animation-stepper {
+  display: grid;
+  width: 156px;
+  grid-template-columns: 28px minmax(48px, 1fr) 26px 28px;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+
+.animation-stepper button {
+  height: 27px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.animation-stepper button:hover {
+  background: var(--sage-soft);
+  color: var(--forest);
+}
+
+.animation-stepper input {
+  width: 100%;
+  min-width: 0;
+  height: 27px;
+  padding: 0 3px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 700 10px/1 var(--font-body);
+  text-align: right;
+}
+
+.animation-stepper span {
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.animation-frame-actions {
+  gap: 6px;
+  padding: 8px 10px;
+}
+
+.animation-frame-actions .button {
+  min-height: 30px;
+  flex: 1;
+}
+
+.animation-frame-actions .tool-button {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-color: var(--line);
+  background: var(--card);
+}
+
+.animation-frame-list {
+  min-height: 0;
+  margin: 0;
+  padding: 0 10px 12px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.animation-frame-item {
+  min-height: 62px;
+  border-top: 1px solid var(--line);
+}
+
+.animation-frame-item:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.animation-frame-item.is-selected {
+  background: #eee7f4;
+}
+
+.animation-frame-number {
+  color: var(--coral);
+  font-size: 9px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.animation-frame-select {
+  display: grid;
+  width: 100%;
+  min-height: 62px;
+  padding: 0;
+  grid-template-columns: 25px 70px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.animation-frame-select:hover {
+  background: rgb(255 255 255 / 55%);
+}
+
+.animation-frame-thumbnail {
+  display: grid;
+  width: 70px;
+  height: 48px;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.animation-frame-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.animation-frame-thumbnail span {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.animation-frame-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.animation-panel.is-drop-target::after {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  inset: 8px;
+  place-items: center;
+  border: 2px dashed var(--coral);
+  background: rgb(255 255 255 / 90%);
+  color: var(--coral);
+  content: "DROP IMAGE INTO FRAME";
+  font: 800 11px/1 var(--font-body);
+  pointer-events: none;
 }
 
 #visual-board {
@@ -1550,6 +1873,22 @@
 
   .floating-help {
     display: none;
+  }
+
+  .tool-workspace,
+  .tool-workspace.is-animation-open {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .animation-panel {
+    position: absolute;
+    top: 38px;
+    right: 0;
+    bottom: 0;
+    width: min(360px, 100%);
+    grid-column: auto;
+    grid-row: auto;
+    box-shadow: var(--shadow-md);
   }
 
   .pdf-workspace {

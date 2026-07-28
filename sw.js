@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v21";
+const CACHE_NAME = "vital-pancakes-app-v22";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -41,18 +41,21 @@ const APP_SHELL = [
   "./app/algorithm-analysis-samples.mjs?v=1",
   "./app/algorithm-code-examples.mjs?v=1",
   "./app/download-app.js",
-  "./tools/tool.css?v=26",
+  "./tools/tool.css?v=27",
   "./tools/visual-board.html",
-  "./tools/visual-board.js?v=21",
+  "./tools/visual-board.js?v=22",
+  "./tools/visual-board-animation.mjs?v=1",
   "./tools/visual-board-clipboard.mjs?v=2",
-  "./tools/visual-board-geometry.mjs?v=7",
+  "./tools/visual-board-curves.mjs?v=1",
+  "./tools/visual-board-geometry.mjs?v=8",
   "./tools/visual-board-groups.mjs?v=1",
   "./tools/visual-board-history.mjs?v=1",
   "./tools/visual-board-rich-text.mjs?v=1",
   "./tools/visual-board-shape-tools.mjs?v=1",
   "./tools/visual-board-strokes.mjs?v=1",
   "./tools/visual-board-text.mjs?v=1",
-  "./tools/visual-board-vertices.mjs?v=1",
+  "./tools/visual-board-tracing.mjs?v=1",
+  "./tools/visual-board-vertices.mjs?v=2",
   "./tools/pdf-signer.html",
   "./tools/pdf-signer.js?v=3",
   "./tools/pdf-signer-placements.mjs",
