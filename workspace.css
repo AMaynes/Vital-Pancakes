@@ -680,7 +680,7 @@ h3 {
 .entry-index-grid .entry-index-marker {
   position: absolute;
   top: 11px;
-  left: 11px;
+  right: 11px;
   z-index: 1;
   margin: 0;
   background: var(--surface);
@@ -697,8 +697,8 @@ h3 {
 }
 
 .entry-index-grid .entry-index-copy {
-  order: 2;
-  padding: 0 2px;
+  order: 0;
+  padding: 0 34px 0 2px;
 }
 
 .entry-index-grid .entry-index-copy .card-kicker {
@@ -866,6 +866,7 @@ h3 {
 }
 
 .entry-index-grid .entry-subject-visual.is-compact {
+  order: 1;
   width: 100%;
   min-height: 140px;
 }
