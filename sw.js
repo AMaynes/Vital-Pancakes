@@ -14,7 +14,11 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v22";
+const CACHE_NAME = "vital-pancakes-app-v23";
+const RETAINED_CACHE_NAMES = new Set([
+  CACHE_NAME,
+  "vital-pancakes-rife-v1",
+]);
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -41,16 +45,18 @@ const APP_SHELL = [
   "./app/algorithm-analysis-samples.mjs?v=1",
   "./app/algorithm-code-examples.mjs?v=1",
   "./app/download-app.js",
-  "./tools/tool.css?v=27",
+  "./tools/tool.css?v=28",
   "./tools/visual-board.html",
-  "./tools/visual-board.js?v=22",
+  "./tools/visual-board.js?v=23",
   "./tools/visual-board-animation.mjs?v=1",
   "./tools/visual-board-clipboard.mjs?v=2",
   "./tools/visual-board-curves.mjs?v=1",
   "./tools/visual-board-geometry.mjs?v=8",
   "./tools/visual-board-groups.mjs?v=1",
   "./tools/visual-board-history.mjs?v=1",
+  "./tools/visual-board-interpolation.mjs?v=1",
   "./tools/visual-board-rich-text.mjs?v=1",
+  "./tools/visual-board-rife.mjs?v=1",
   "./tools/visual-board-shape-tools.mjs?v=1",
   "./tools/visual-board-strokes.mjs?v=1",
   "./tools/visual-board-text.mjs?v=1",
@@ -127,7 +133,11 @@ function handleInstall(event) {
 function handleActivate(event) {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => !RETAINED_CACHE_NAMES.has(key))
+          .map((key) => caches.delete(key)),
+      ))
       .then(() => self.clients.claim()),
   );
 }

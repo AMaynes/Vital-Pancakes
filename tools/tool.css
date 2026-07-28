@@ -682,6 +682,52 @@
   background: rgb(255 255 255 / 55%);
 }
 
+.animation-frame-gap {
+  position: relative;
+  display: grid;
+  height: 27px;
+  place-items: center;
+}
+
+.animation-frame-gap::before {
+  position: absolute;
+  width: 1px;
+  height: 100%;
+  background: var(--line-strong);
+  content: "";
+}
+
+.animation-chain-button {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--forest);
+  font: 700 12px/1 var(--font-body);
+}
+
+.animation-chain-button:hover,
+.animation-chain-button:focus-visible {
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.animation-chain-button:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+.animation-chain-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
 .animation-frame-thumbnail {
   display: grid;
   width: 70px;
@@ -726,6 +772,132 @@
   content: "DROP IMAGE INTO FRAME";
   font: 800 11px/1 var(--font-body);
   pointer-events: none;
+}
+
+.interpolation-dialog {
+  width: min(420px, calc(100% - 24px));
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #f7f4ec;
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+}
+
+.interpolation-dialog::backdrop {
+  background: rgb(23 22 19 / 46%);
+}
+
+.interpolation-dialog form {
+  display: grid;
+  gap: 0;
+}
+
+.interpolation-dialog header,
+.interpolation-dialog footer,
+.interpolation-progress > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.interpolation-dialog header {
+  min-height: 56px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+
+.interpolation-dialog h2,
+.interpolation-dialog p {
+  margin: 0;
+}
+
+.interpolation-dialog h2 {
+  font-size: 15px;
+}
+
+.interpolation-dialog header p {
+  margin-top: 3px;
+  color: var(--ink-faint);
+  font-size: 9px;
+}
+
+.interpolation-count-control {
+  display: grid;
+  gap: 6px;
+  padding: 14px 12px;
+}
+
+.interpolation-count-control span {
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.interpolation-count-control input {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--ink);
+  font: 700 13px/1 var(--font-body);
+}
+
+.interpolation-count-control input:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+.interpolation-progress {
+  display: grid;
+  gap: 7px;
+  padding: 0 12px 14px;
+}
+
+.interpolation-progress span,
+.interpolation-progress output {
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.interpolation-progress output {
+  color: var(--coral);
+  font-variant-numeric: tabular-nums;
+}
+
+.interpolation-progress progress {
+  width: 100%;
+  height: 7px;
+  accent-color: var(--coral);
+}
+
+.interpolation-error {
+  margin: 0 12px 14px !important;
+  padding: 8px;
+  border-left: 3px solid var(--coral);
+  background: #f3e3df;
+  color: var(--coral);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.interpolation-dialog footer {
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--card);
+}
+
+.interpolation-dialog footer .button {
+  min-width: 96px;
+}
+
+.interpolation-dialog footer .button-primary {
+  margin-left: auto;
 }
 
 #visual-board {

@@ -9,7 +9,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=18">
-  <link rel="stylesheet" href="tool.css?v=27">
+  <link rel="stylesheet" href="tool.css?v=28">
   <link rel="stylesheet" href="../site-navigation.css?v=20">
   <script type="module" src="../site-navigation.js?v=5"></script>
 </head>
@@ -290,6 +290,55 @@
       </aside>
     </main>
   </div>
-  <script type="module" src="visual-board.js?v=22"></script>
+  <dialog
+    class="interpolation-dialog"
+    id="interpolation-dialog"
+    aria-labelledby="interpolation-dialog-title"
+    aria-describedby="interpolation-pair-label"
+  >
+    <form id="interpolation-form">
+      <header>
+        <div>
+          <h2 id="interpolation-dialog-title">Generate in-between frames</h2>
+          <p id="interpolation-pair-label">Between frames</p>
+        </div>
+        <button
+          class="tool-button"
+          id="close-interpolation-dialog"
+          type="button"
+          aria-label="Close frame interpolation"
+          title="Close"
+        >×</button>
+      </header>
+
+      <label class="interpolation-count-control" for="interpolation-frame-count">
+        <span>Intermediate frames</span>
+        <input
+          id="interpolation-frame-count"
+          type="number"
+          min="1"
+          step="1"
+          value="3"
+          inputmode="numeric"
+          required
+        >
+      </label>
+
+      <div class="interpolation-progress" id="interpolation-progress" hidden>
+        <div>
+          <span id="interpolation-progress-label">Preparing</span>
+          <output id="interpolation-progress-value"></output>
+        </div>
+        <progress id="interpolation-progress-bar"></progress>
+      </div>
+      <p class="interpolation-error" id="interpolation-error" role="alert" hidden></p>
+
+      <footer>
+        <button class="button button-quiet" id="cancel-interpolation" type="button">Cancel</button>
+        <button class="button button-primary" id="confirm-interpolation" type="submit">Generate</button>
+      </footer>
+    </form>
+  </dialog>
+  <script type="module" src="visual-board.js?v=23"></script>
 </body>
 </html>

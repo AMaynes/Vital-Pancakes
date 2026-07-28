@@ -43,6 +43,11 @@ import {
   replaceAnimationFrame,
 } from "./visual-board-animation.mjs?v=1";
 import {
+  FrameInterpolationError,
+  insertIntermediateFrames,
+  normalizeIntermediateFrameCount,
+} from "./visual-board-interpolation.mjs?v=1";
+import {
   getSelectionBounds,
   getSelectionUnits,
   resizeSelectionObjects,
@@ -145,6 +150,17 @@ const animationDurationInput = document.querySelector("#animation-frame-duration
 const animationFpsOutput = document.querySelector("#animation-fps");
 const duplicateAnimationFrameButton = document.querySelector("#duplicate-animation-frame");
 const deleteAnimationFrameButton = document.querySelector("#delete-animation-frame");
+const interpolationDialog = document.querySelector("#interpolation-dialog");
+const interpolationForm = document.querySelector("#interpolation-form");
+const interpolationPairLabel = document.querySelector("#interpolation-pair-label");
+const interpolationCountInput = document.querySelector("#interpolation-frame-count");
+const interpolationProgress = document.querySelector("#interpolation-progress");
+const interpolationProgressLabel = document.querySelector("#interpolation-progress-label");
+const interpolationProgressValue = document.querySelector("#interpolation-progress-value");
+const interpolationProgressBar = document.querySelector("#interpolation-progress-bar");
+const interpolationError = document.querySelector("#interpolation-error");
+const confirmInterpolationButton = document.querySelector("#confirm-interpolation");
+const cancelInterpolationButton = document.querySelector("#cancel-interpolation");
 
 let board = loadBoard();
 let viewport = { ...board.view };
@@ -168,6 +184,10 @@ let animationPanelOpen = false;
 let selectedAnimationFrameId = board.animation.frames[0]?.id ?? null;
 let animationPlaybackTimer = null;
 let animationPlaybackIndex = 0;
+let interpolationRequest = null;
+let interpolationAbortController = null;
+let interpolationInProgress = false;
+let interpolationReturnFocus = null;
 let shapeToolChoices = {
   "2d": shape2dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
   "3d": shape3dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
@@ -1847,7 +1867,41 @@ function renderAnimationTimeline() {
     button.append(number, thumbnail, name);
     item.append(button);
     animationFrameList.append(item);
+
+    const nextFrame = board.animation.frames[index + 1];
+    if (nextFrame) {
+      animationFrameList.append(createInterpolationGap(frame, nextFrame, index));
+    }
   });
+}
+
+function createInterpolationGap(startFrame, endFrame, startIndex) {
+  const gap = document.createElement("li");
+  gap.className = "animation-frame-gap";
+
+  const button = document.createElement("button");
+  button.className = "animation-chain-button";
+  button.type = "button";
+  button.textContent = "⛓";
+  button.dataset.interpolationStart = startFrame.id;
+  button.dataset.interpolationEnd = endFrame.id;
+  button.setAttribute(
+    "aria-label",
+    `Generate in-between frames between frame ${startIndex + 1} and ${startIndex + 2}`,
+  );
+
+  const framesAvailable = MAX_ANIMATION_FRAMES - board.animation.frames.length;
+  const sourcesReady = Boolean(startFrame.dataUrl && endFrame.dataUrl);
+  button.disabled = interpolationInProgress || !sourcesReady || framesAvailable < 1;
+  if (!sourcesReady) {
+    button.title = "Both adjacent frames need images";
+  } else if (framesAvailable < 1) {
+    button.title = "Animation frame limit reached";
+  } else {
+    button.title = "Generate in-between frames";
+  }
+  gap.append(button);
+  return gap;
 }
 
 function showAnimationPreview(frame) {
@@ -2051,6 +2105,218 @@ async function handleAnimationDrop(event) {
     ? event.target.closest("[data-frame-id]")
     : null;
   await addAnimationImageFiles(files, target?.dataset.frameId || selectedAnimationFrameId);
+}
+
+function openInterpolationDialog(startFrameId, endFrameId, returnFocus) {
+  if (interpolationInProgress) return;
+  const startIndex = board.animation.frames.findIndex(
+    (frame) => frame.id === startFrameId,
+  );
+  const startFrame = board.animation.frames[startIndex];
+  const endFrame = board.animation.frames[startIndex + 1];
+  if (
+    startIndex < 0
+    || endFrame?.id !== endFrameId
+    || !startFrame.dataUrl
+    || !endFrame.dataUrl
+  ) {
+    announceStatus("Both adjacent frames need images");
+    return;
+  }
+
+  const framesAvailable = MAX_ANIMATION_FRAMES - board.animation.frames.length;
+  if (framesAvailable < 1) {
+    announceStatus("Animation frame limit reached");
+    return;
+  }
+
+  stopAnimationPlayback();
+  interpolationRequest = { startFrameId, endFrameId };
+  interpolationReturnFocus = returnFocus;
+  interpolationPairLabel.textContent = `Between frame ${startIndex + 1} and ${startIndex + 2}`;
+  interpolationCountInput.max = String(framesAvailable);
+  interpolationCountInput.value = String(Math.min(3, framesAvailable));
+  interpolationCountInput.disabled = false;
+  confirmInterpolationButton.disabled = false;
+  cancelInterpolationButton.disabled = false;
+  interpolationProgress.hidden = true;
+  interpolationError.hidden = true;
+  interpolationError.textContent = "";
+  interpolationDialog.showModal();
+  requestAnimationFrame(() => {
+    interpolationCountInput.focus();
+    interpolationCountInput.select();
+  });
+}
+
+async function generateRequestedIntermediateFrames() {
+  if (!interpolationRequest || interpolationInProgress) return;
+  interpolationError.hidden = true;
+  const startIndex = board.animation.frames.findIndex(
+    (frame) => frame.id === interpolationRequest.startFrameId,
+  );
+  const startFrame = board.animation.frames[startIndex];
+  const endFrame = board.animation.frames[startIndex + 1];
+  const framesAvailable = MAX_ANIMATION_FRAMES - board.animation.frames.length;
+
+  let count;
+  try {
+    if (
+      startIndex < 0
+      || endFrame?.id !== interpolationRequest.endFrameId
+      || !startFrame.dataUrl
+      || !endFrame.dataUrl
+    ) {
+      throw new FrameInterpolationError(
+        "FRAME_PAIR_CHANGED",
+        "Those source frames are no longer available. Choose the pair again.",
+      );
+    }
+    count = normalizeIntermediateFrameCount(
+      interpolationCountInput.value,
+      framesAvailable,
+    );
+  } catch (error) {
+    showInterpolationError(error);
+    return;
+  }
+
+  interpolationInProgress = true;
+  interpolationAbortController = new AbortController();
+  setInterpolationBusy(true);
+  renderAnimationTimeline();
+
+  try {
+    const { interpolateRifeFrames } = await import("./visual-board-rife.mjs?v=1");
+    const images = await interpolateRifeFrames({
+      startFrame,
+      endFrame,
+      count,
+      signal: interpolationAbortController.signal,
+      onProgress: updateInterpolationProgress,
+    });
+    if (images.length !== count) {
+      throw new FrameInterpolationError(
+        "INVALID_GENERATED_FRAME",
+        `RIFE returned ${images.length} of ${count} requested frames.`,
+      );
+    }
+
+    const intermediateFrames = images.map((image, index) => createAnimationFrame(
+      createId(),
+      startIndex + index + 1,
+      image,
+    ));
+    const previousFrames = board.animation.frames;
+    board.animation.frames = insertIntermediateFrames(
+      previousFrames,
+      interpolationRequest.startFrameId,
+      interpolationRequest.endFrameId,
+      intermediateFrames,
+    );
+    selectedAnimationFrameId = intermediateFrames.at(-1).id;
+    if (!saveBoard()) {
+      board.animation.frames = previousFrames;
+      selectedAnimationFrameId = startFrame.id;
+      throw new FrameInterpolationError(
+        "STORAGE_FULL",
+        "The frames were generated, but browser storage is full. No frames were inserted.",
+      );
+    }
+
+    renderAnimationPanel();
+    announceStatus(`${count} in-between frame${count === 1 ? "" : "s"} generated`);
+    interpolationDialog.close("generated");
+  } catch (error) {
+    if (error?.code === "CANCELLED") {
+      announceStatus("Frame generation cancelled");
+      interpolationDialog.close("cancelled");
+    } else {
+      console.error("Unable to generate intermediate frames.", error);
+      showInterpolationError(error);
+    }
+  } finally {
+    interpolationInProgress = false;
+    interpolationAbortController = null;
+    if (interpolationDialog.open) setInterpolationBusy(false);
+    renderAnimationPanel();
+  }
+}
+
+function updateInterpolationProgress(progress) {
+  interpolationProgress.hidden = false;
+  interpolationProgressLabel.textContent = progress.message
+    || "Generating intermediate frames";
+
+  if (progress.phase === "model-download") {
+    if (progress.total > 0) {
+      const percent = Math.min(100, Math.round((progress.loaded / progress.total) * 100));
+      interpolationProgressBar.max = progress.total;
+      interpolationProgressBar.value = progress.loaded;
+      interpolationProgressValue.textContent = `${percent}%`;
+    } else {
+      interpolationProgressBar.removeAttribute("value");
+      interpolationProgressValue.textContent = progress.loaded > 0
+        ? `${(progress.loaded / (1024 * 1024)).toFixed(1)} MB`
+        : "";
+    }
+    return;
+  }
+  if (progress.phase === "model-ready") {
+    interpolationProgressBar.max = 1;
+    interpolationProgressBar.value = 1;
+    interpolationProgressValue.textContent = "Ready";
+    return;
+  }
+  if (progress.phase === "interpolation") {
+    interpolationProgressLabel.textContent = "Generating intermediate frames";
+    interpolationProgressBar.max = progress.total;
+    interpolationProgressBar.value = progress.completed;
+    interpolationProgressValue.textContent = `${progress.completed} / ${progress.total}`;
+    return;
+  }
+
+  interpolationProgressBar.removeAttribute("value");
+  interpolationProgressValue.textContent = "";
+}
+
+function setInterpolationBusy(isBusy) {
+  interpolationCountInput.disabled = isBusy;
+  confirmInterpolationButton.disabled = isBusy;
+  cancelInterpolationButton.disabled = false;
+  cancelInterpolationButton.textContent = "Cancel";
+}
+
+function cancelFrameInterpolation() {
+  if (!interpolationInProgress) {
+    interpolationDialog.close("cancelled");
+    return;
+  }
+  interpolationAbortController?.abort();
+  interpolationProgress.hidden = false;
+  interpolationProgressLabel.textContent = "Cancelling after current frame";
+  interpolationProgressValue.textContent = "";
+  interpolationProgressBar.removeAttribute("value");
+  cancelInterpolationButton.disabled = true;
+}
+
+function showInterpolationError(error) {
+  interpolationProgress.hidden = true;
+  interpolationError.textContent = error instanceof FrameInterpolationError
+    ? error.message
+    : "The interpolation tools could not be loaded. Check your connection and try again.";
+  interpolationError.hidden = false;
+}
+
+function restoreInterpolationFocus() {
+  const returnFocus = interpolationReturnFocus;
+  interpolationRequest = null;
+  interpolationReturnFocus = null;
+  if (returnFocus?.isConnected) {
+    returnFocus.focus({ preventScroll: true });
+  } else if (animationPanelOpen) {
+    animationPreview.focus({ preventScroll: true });
+  }
 }
 
 function updateSelectionControls() {
@@ -2921,6 +3187,13 @@ function isEditingControl(target) {
 
 function handleKeyDown(event) {
   if (textEditorSession) return;
+  if (interpolationDialog.open) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelFrameInterpolation();
+    }
+    return;
+  }
   const commandKey = event.metaKey || event.ctrlKey;
   if (event.key === "Escape") {
     event.preventDefault();
@@ -3183,11 +3456,36 @@ document.querySelector("#animation-faster").addEventListener("click", () => {
   setAnimationFrameDuration(board.animation.frameDurationMs - 25);
 });
 animationFrameList.addEventListener("click", (event) => {
-  const button = event.target instanceof Element
-    ? event.target.closest("[data-frame-id]")
+  const target = event.target instanceof Element ? event.target : null;
+  const interpolationButton = target?.closest("[data-interpolation-start]");
+  if (interpolationButton) {
+    openInterpolationDialog(
+      interpolationButton.dataset.interpolationStart,
+      interpolationButton.dataset.interpolationEnd,
+      interpolationButton,
+    );
+    return;
+  }
+  const button = target
+    ? target.closest("[data-frame-id]")
     : null;
   if (button) selectAnimationFrame(button.dataset.frameId);
 });
+interpolationForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  generateRequestedIntermediateFrames();
+});
+cancelInterpolationButton.addEventListener("click", cancelFrameInterpolation);
+document.querySelector("#close-interpolation-dialog").addEventListener(
+  "click",
+  cancelFrameInterpolation,
+);
+interpolationDialog.addEventListener("cancel", (event) => {
+  if (!interpolationInProgress) return;
+  event.preventDefault();
+  cancelFrameInterpolation();
+});
+interpolationDialog.addEventListener("close", restoreInterpolationFocus);
 animationPreview.addEventListener("keydown", (event) => {
   if (event.code !== "Space") return;
   event.preventDefault();
