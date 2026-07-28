@@ -50,7 +50,7 @@ test("a new workspace starts with nine permanent libraries and editable examples
   ));
   const sampleIds = coreSections.flatMap((section) => section.items.map((item) => item.id));
 
-  assert.equal(workspace.version, 11);
+  assert.equal(workspace.version, 12);
   assert.deepEqual(everydaySections.map((section) => section.id), EVERYDAY_SECTION_IDS);
   assert.deepEqual(
     workspace.sections.filter((section) => section.area !== "everyday").map((section) => section.id),
@@ -61,6 +61,8 @@ test("a new workspace starts with nine permanent libraries and editable examples
   assert.ok(coreSections.every((section) => section.items.every((item) => item.isSample === true)));
   assert.equal(new Set(sampleIds).size, sampleIds.length);
   assert.equal(workspace.sections.find((section) => section.id === "studies").type, "study");
+  assert.ok(workspace.sections.find((section) => section.id === "how-to-cook").items.length >= 16);
+  assert.ok(workspace.sections.find((section) => section.id === "how-to-cook").items.every((item) => item.tags?.length));
   assert.equal(isCoreSectionId("questions-ideas"), true);
   assert.equal(workspace.sections.some((section) => section.id === "protocols"), false);
 });
@@ -154,12 +156,43 @@ test("existing workspaces gain examples in empty libraries without losing saved 
   const workspace = getWorkspace();
   const questionsAndIdeas = workspace.sections.find((section) => section.id === "questions-ideas");
 
-  assert.equal(workspace.version, 11);
+  assert.equal(workspace.version, 12);
   assert.deepEqual(workspace.sections.find((section) => section.id === "studies").items, [savedStudy]);
   assert.ok(questionsAndIdeas.items.length >= 2);
   assert.ok(questionsAndIdeas.items.every((item) => item.isSample === true));
   assert.equal(questionsAndIdeas.type, "question");
   assert.equal(isCoreSectionId(questionsAndIdeas.id), true);
+});
+
+test("version 11 workspaces receive the expanded cooking guide samples", () => {
+  useStorage({
+    version: 11,
+    sections: [
+      {
+        id: "how-to-cook",
+        title: "How to Cook",
+        description: "Existing cooking notes",
+        icon: "⌁",
+        type: "cooking-guide",
+        area: "everyday",
+        items: [
+          {
+            id: "user-cook-note",
+            title: "My house sauce",
+            updatedAt: "2026-01-01",
+            tags: ["sauce"],
+          },
+        ],
+      },
+    ],
+  });
+
+  const cooking = getWorkspace().sections.find((section) => section.id === "how-to-cook");
+
+  assert.equal(getWorkspace().version, 12);
+  assert.ok(cooking.items.some((item) => item.id === "user-cook-note"));
+  assert.ok(cooking.items.some((item) => item.id === "sample-cook-knife-prep"));
+  assert.ok(cooking.items.some((item) => item.tags?.includes("heat control")));
 });
 
 test("a version 6 workspace preserves populated libraries and seeds only empty core libraries", () => {
@@ -271,7 +304,7 @@ test("version 9 workout libraries receive Pull and Legs samples without losing u
 
   const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
 
-  assert.equal(getWorkspace().version, 11);
+  assert.equal(getWorkspace().version, 12);
   assert.deepEqual(workouts.items.find((item) => item.id === savedExercise.id), savedExercise);
   assert.ok(workouts.items.some((item) => item.id === "sample-pull-pull-up"));
   assert.ok(workouts.items.some((item) => item.id === "sample-legs-back-squat"));
