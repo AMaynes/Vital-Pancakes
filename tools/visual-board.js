@@ -101,8 +101,6 @@ const textColorInput = document.querySelector("#text-color");
 const shape2dControl = document.querySelector("#shape-2d-control");
 const shape3dControl = document.querySelector("#shape-3d-control");
 const drawingTools = document.querySelector("#drawing-tools");
-const importImagesButton = document.querySelector("#import-images");
-const imageFileInput = document.querySelector("#image-file-input");
 const selectionActions = document.querySelector("#selection-actions");
 const selectionCount = document.querySelector("#selection-count");
 const lockSelectionButton = document.querySelector("#lock-selection");
@@ -1638,6 +1636,7 @@ function updateSelectionControls() {
   selectionActions.hidden = selectedObjects.length === 0;
   copySelectionButton.disabled = selectedObjects.length === 0;
   pasteSelectionButton.disabled = objectClipboard.length === 0;
+  traceImageButton.hidden = !isImageSelection(selectedObjects);
   traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
   selectionCount.textContent = selectedObjects.length === 1
     ? "1 selected"
@@ -1705,8 +1704,11 @@ function groupSelection() {
 }
 
 function canTraceSelection(objects) {
-  return objects.length > 0
-    && objects.every((object) => object.type === "image" && !object.locked);
+  return isImageSelection(objects) && objects.every((object) => !object.locked);
+}
+
+function isImageSelection(objects) {
+  return objects.length > 0 && objects.every((object) => object.type === "image");
 }
 
 async function traceSelectedImages() {
@@ -2570,13 +2572,6 @@ async function handleImageDrop(event) {
   await addImageFiles(files, dropPoint);
 }
 
-async function handleImageFileSelection(event) {
-  const files = [...(event.target.files ?? [])].filter((file) => file.type.startsWith("image/"));
-  if (!files.length) return;
-  await addImageFiles(files, getCanvasCenterWorldPoint());
-  imageFileInput.value = "";
-}
-
 async function handleClipboardPaste(event) {
   if (textEditorSession || isEditingControl(event.target)) return;
   const imageFiles = [...(event.clipboardData?.items ?? [])]
@@ -2684,9 +2679,6 @@ drawingTools.addEventListener("click", (event) => {
   const button = event.target.closest("[data-tool]");
   if (button) setActiveTool(button.dataset.tool);
 });
-importImagesButton.addEventListener("click", () => imageFileInput.click());
-imageFileInput.addEventListener("change", handleImageFileSelection);
-
 canvas.addEventListener("pointerdown", handlePointerDown);
 canvas.addEventListener("pointermove", handlePointerMove);
 canvas.addEventListener("pointerup", handlePointerUp);

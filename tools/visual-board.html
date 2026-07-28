@@ -57,13 +57,6 @@
           <button class="tool-button" data-tool="pen" type="button" title="Freehand pen">
             ✎ <span class="tool-button-label">Pen</span>
           </button>
-          <button class="tool-button" id="import-images" type="button" title="Add an image to the board">
-            ▧ <span class="tool-button-label">Image</span>
-          </button>
-          <input id="image-file-input" type="file" accept="image/*" multiple hidden>
-          <button class="tool-button" id="trace-image" type="button" title="Trace the selected image into a black-and-white vector drawing" disabled>
-            ◩ <span class="tool-button-label">Trace image</span>
-          </button>
           <button class="tool-button" data-tool="line" type="button" title="Straight line">
             ╱ <span class="tool-button-label">Line</span>
           </button>
@@ -212,6 +205,9 @@
         <button class="tool-button" id="group-selection" type="button" title="Group selected objects into one movable piece">
           ⛓ <span class="tool-button-label">Group</span>
         </button>
+        <button class="tool-button" id="trace-image" type="button" title="Trace the selected image into a black-and-white vector drawing" hidden disabled>
+          ◩ <span class="tool-button-label">Trace image</span>
+        </button>
         <button class="tool-button" id="merge-vertices" type="button" title="Detect corners and intersections, then create joined editable vertices">
           ◇ <span class="tool-button-label">Create vertices</span>
         </button>
@@ -242,6 +238,6 @@
       </section>
     </main>
   </div>
-  <script type="module" src="visual-board.js?v=19"></script>
+  <script type="module" src="visual-board.js?v=20"></script>
 </body>
 </html>

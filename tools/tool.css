@@ -140,6 +140,10 @@
   white-space: nowrap;
 }
 
+.tool-button[hidden] {
+  display: none;
+}
+
 .tool-button:hover,
 .tool-button.is-active {
   border-color: var(--line);
