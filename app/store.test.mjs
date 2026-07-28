@@ -50,7 +50,7 @@ test("a new workspace starts with nine permanent libraries and editable examples
   ));
   const sampleIds = coreSections.flatMap((section) => section.items.map((item) => item.id));
 
-  assert.equal(workspace.version, 8);
+  assert.equal(workspace.version, 10);
   assert.deepEqual(everydaySections.map((section) => section.id), EVERYDAY_SECTION_IDS);
   assert.deepEqual(
     workspace.sections.filter((section) => section.area !== "everyday").map((section) => section.id),
@@ -154,7 +154,7 @@ test("existing workspaces gain examples in empty libraries without losing saved 
   const workspace = getWorkspace();
   const questionsAndIdeas = workspace.sections.find((section) => section.id === "questions-ideas");
 
-  assert.equal(workspace.version, 8);
+  assert.equal(workspace.version, 10);
   assert.deepEqual(workspace.sections.find((section) => section.id === "studies").items, [savedStudy]);
   assert.ok(questionsAndIdeas.items.length >= 2);
   assert.ok(questionsAndIdeas.items.every((item) => item.isSample === true));
@@ -219,18 +219,66 @@ test("deleted examples do not reappear when a version 7 workspace is upgraded", 
   assert.ok(workspace.sections.find((section) => section.id === "algorithms").items.length >= 2);
 });
 
-test("Workout Types is seeded as a Push library while Pull and Legs begin empty", () => {
+test("Workout Types is seeded with Push, Pull, and Legs exercise libraries", () => {
   useStorage();
 
   const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
   const pushExercises = workouts.items.filter((item) => item.category === "push");
+  const pullExercises = workouts.items.filter((item) => item.category === "pull");
+  const legExercises = workouts.items.filter((item) => item.category === "legs");
 
   assert.ok(pushExercises.length >= 12);
-  assert.equal(workouts.items.some((item) => item.category === "pull"), false);
-  assert.equal(workouts.items.some((item) => item.category === "legs"), false);
+  assert.ok(pullExercises.length >= 12);
+  assert.ok(legExercises.length >= 12);
   assert.ok(pushExercises.some((item) => item.title === "Barbell bench press"));
   assert.ok(pushExercises.some((item) => item.title === "Standing overhead press"));
   assert.ok(pushExercises.some((item) => item.title === "Cable triceps pushdown"));
+  assert.ok(pullExercises.some((item) => item.title === "Pull-up"));
+  assert.ok(pullExercises.some((item) => item.title === "Chest-supported row"));
+  assert.ok(pullExercises.some((item) => item.title === "Hammer curl"));
+  assert.ok(legExercises.some((item) => item.title === "Barbell back squat"));
+  assert.ok(legExercises.some((item) => item.title === "Romanian deadlift"));
+  assert.ok(legExercises.some((item) => item.title === "Standing calf raise"));
+});
+
+test("version 9 workout libraries receive Pull and Legs samples without losing user entries", () => {
+  const savedExercise = {
+    id: "user-pull-entry",
+    title: "My cable row",
+    category: "pull",
+    updatedAt: "2026-07-27",
+  };
+  useStorage({
+    version: 9,
+    sections: [
+      {
+        id: "workouts",
+        title: "Workout Types",
+        type: "workout",
+        area: "everyday",
+        items: [
+          {
+            id: "sample-push-barbell-bench-press",
+            title: "Barbell bench press",
+            category: "push",
+            isSample: true,
+          },
+          savedExercise,
+        ],
+      },
+    ],
+  });
+
+  const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
+
+  assert.equal(getWorkspace().version, 10);
+  assert.deepEqual(workouts.items.find((item) => item.id === savedExercise.id), savedExercise);
+  assert.ok(workouts.items.some((item) => item.id === "sample-pull-pull-up"));
+  assert.ok(workouts.items.some((item) => item.id === "sample-legs-back-squat"));
+  assert.equal(
+    workouts.items.filter((item) => item.id === "sample-push-barbell-bench-press").length,
+    1,
+  );
 });
 
 test("version 7 workout samples are replaced without losing categorized user entries", () => {

@@ -38,6 +38,9 @@ const animationTimers = new Set();
 
 let activeSectionId = null;
 let editingItemId = null;
+const activeSectionSearchFilters = new Map();
+const activeSectionTagFilters = new Map();
+const activeWorkoutMuscleFilters = new Map();
 
 const SECTION_LABELS = {
   "cooking-guide": "COOKING GUIDE",
@@ -181,6 +184,32 @@ const WORKOUT_CATEGORIES = Object.freeze([
     description: "Quad, hamstring, glute, and calf movements built around squatting, hinging, and locomotion.",
   },
 ]);
+const WORKOUT_MUSCLE_FILTERS = Object.freeze({
+  push: [
+    { id: "chest", label: "Chest", terms: ["chest", "pectoral", "pectoralis"] },
+    { id: "upper-chest", label: "Upper chest", terms: ["upper chest", "incline"] },
+    { id: "anterior-deltoids", label: "Front delts", terms: ["anterior deltoid", "front delt"] },
+    { id: "lateral-deltoids", label: "Side delts", terms: ["lateral deltoid", "side delt"] },
+    { id: "triceps", label: "Triceps", terms: ["triceps", "long head", "lateral head", "medial head"] },
+    { id: "serratus-anterior", label: "Serratus", terms: ["serratus"] },
+  ],
+  pull: [
+    { id: "lats", label: "Lats", terms: ["lat", "latissimus"] },
+    { id: "upper-back", label: "Upper back", terms: ["upper back", "rhomboid", "teres"] },
+    { id: "traps", label: "Traps", terms: ["trap", "trapezius"] },
+    { id: "rear-deltoids", label: "Rear delts", terms: ["rear delt", "posterior deltoid"] },
+    { id: "biceps", label: "Biceps", terms: ["biceps", "brachialis"] },
+    { id: "forearms", label: "Forearms", terms: ["forearm", "grip"] },
+  ],
+  legs: [
+    { id: "quads", label: "Quads", terms: ["quad", "quadriceps"] },
+    { id: "hamstrings", label: "Hamstrings", terms: ["hamstring"] },
+    { id: "glutes", label: "Glutes", terms: ["glute"] },
+    { id: "calves", label: "Calves", terms: ["calf", "calves", "gastrocnemius", "soleus"] },
+    { id: "adductors", label: "Adductors", terms: ["adductor"] },
+    { id: "abductors", label: "Abductors", terms: ["abductor"] },
+  ],
+});
 
 /**
  * Creates an element with optional class and text without parsing user HTML.
@@ -287,6 +316,94 @@ function buildWorkoutHash(categoryId, itemId = null) {
   const parameters = new URLSearchParams({ section: "workouts", category: categoryId });
   if (itemId) parameters.set("item", itemId);
   return `#${parameters.toString()}`;
+}
+
+/**
+ * Returns normalized text used for workout muscle matching.
+ *
+ * @param {object} item Workout entry.
+ * @returns {string} Searchable text.
+ */
+function getWorkoutSearchText(item) {
+  return [
+    item.title,
+    item.summary,
+    item.goal,
+    ...(item.tags ?? []),
+  ].join(" ").toLocaleLowerCase();
+}
+
+/**
+ * Finds configured muscle filters that apply to a workout entry.
+ *
+ * @param {object} item Workout entry.
+ * @param {string} categoryId Workout category identifier.
+ * @returns {Array<string>} Matching muscle filter ids.
+ */
+function getWorkoutMuscleIds(item, categoryId) {
+  const searchableText = getWorkoutSearchText(item);
+  return (WORKOUT_MUSCLE_FILTERS[categoryId] ?? [])
+    .filter((muscle) => muscle.terms.some((term) => searchableText.includes(term)))
+    .map((muscle) => muscle.id);
+}
+
+/**
+ * Builds toggleable workout muscle filters for the current category page.
+ *
+ * @param {object} section Workout category section.
+ * @param {Array<object>} entries Category entries before filtering.
+ * @returns {{element: HTMLElement|null, filteredItems: Array<object>, selectedIds: Set<string>}} Filter UI and result.
+ */
+function createWorkoutMuscleFilterBar(section, entries) {
+  const categoryId = section.workoutCategory;
+  const muscles = WORKOUT_MUSCLE_FILTERS[categoryId] ?? [];
+  const availableMuscles = muscles.filter((muscle) => (
+    entries.some((item) => getWorkoutMuscleIds(item, categoryId).includes(muscle.id))
+  ));
+  const selectedIds = new Set(
+    [...(activeWorkoutMuscleFilters.get(categoryId) ?? [])]
+      .filter((muscleId) => availableMuscles.some((muscle) => muscle.id === muscleId)),
+  );
+  activeWorkoutMuscleFilters.set(categoryId, selectedIds);
+
+  const filteredItems = selectedIds.size
+    ? entries.filter((item) => getWorkoutMuscleIds(item, categoryId).some((muscleId) => selectedIds.has(muscleId)))
+    : entries;
+
+  if (!availableMuscles.length) {
+    return { element: null, filteredItems, selectedIds };
+  }
+
+  const bar = createElement("section", "workout-filter-bar");
+  bar.append(createElement("span", "tag-label", "Muscle filters"));
+  const controls = createElement("div", "workout-filter-tags");
+  availableMuscles.forEach((muscle) => {
+    const button = createElement("button", "workout-filter-tag", muscle.label);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(selectedIds.has(muscle.id)));
+    button.addEventListener("click", () => {
+      const nextFilters = new Set(activeWorkoutMuscleFilters.get(categoryId) ?? []);
+      if (nextFilters.has(muscle.id)) {
+        nextFilters.delete(muscle.id);
+      } else {
+        nextFilters.add(muscle.id);
+      }
+      activeWorkoutMuscleFilters.set(categoryId, nextFilters);
+      renderWorkspace();
+    });
+    controls.append(button);
+  });
+  if (selectedIds.size) {
+    const clearButton = createElement("button", "workout-filter-clear", "Clear");
+    clearButton.type = "button";
+    clearButton.addEventListener("click", () => {
+      activeWorkoutMuscleFilters.set(categoryId, new Set());
+      renderWorkspace();
+    });
+    controls.append(clearButton);
+  }
+  bar.append(controls);
+  return { element: bar, filteredItems, selectedIds };
 }
 
 /**
@@ -639,6 +756,13 @@ function renderSection(section) {
     appMain.dataset.sectionTitle = `Workout Types / ${category.title}`;
   }
 
+  const workoutFilters = section.workoutCategory
+    ? createWorkoutMuscleFilterBar(section, section.items)
+    : null;
+  const sectionFilters = section.type === "cooking-guide"
+    ? createTagSearchFilterBar(section, workoutFilters?.filteredItems ?? section.items)
+    : null;
+  const visibleItems = sectionFilters?.filteredItems ?? workoutFilters?.filteredItems ?? section.items;
   const heading = createElement("section", "page-heading section-page-heading");
   const headingCopy = createElement("div");
   headingCopy.append(
@@ -669,30 +793,141 @@ function renderSection(section) {
 
   const meta = createElement("div", "section-meta");
   meta.append(
-    createElement("span", "", `${section.items.length} ${section.items.length === 1 ? "entry" : "entries"}`),
+    createElement("span", "", `${visibleItems.length} ${visibleItems.length === 1 ? "entry" : "entries"}`),
     createElement("span", "", `${section.items.filter((item) => item.isSample).length} editable examples`),
     createElement("span", "", "Stored on this device"),
   );
+  if (workoutFilters?.selectedIds.size || sectionFilters?.isActive) {
+    meta.prepend(createElement("span", "", `${visibleItems.length} of ${section.items.length} shown`));
+  }
 
   const grid = createElement("div", `entry-index entry-index-${view}`);
-  if (!section.items.length) {
+  if (!visibleItems.length) {
     const empty = createEmptyState(
-      `No ${section.title.toLocaleLowerCase()} yet`,
-      getEmptyMessage(section),
+      section.items.length ? "No entries match those filters" : `No ${section.title.toLocaleLowerCase()} yet`,
+      section.items.length ? "Try another search or clear a tag filter." : getEmptyMessage(section),
     );
-    const emptyButton = createElement("button", "button button-primary", `Create the first ${getSingularLabel(section)}`);
-    emptyButton.type = "button";
-    emptyButton.addEventListener("click", () => openItemDialog(section));
-    empty.append(emptyButton);
+    if (!section.items.length) {
+      const emptyButton = createElement("button", "button button-primary", `Create the first ${getSingularLabel(section)}`);
+      emptyButton.type = "button";
+      emptyButton.addEventListener("click", () => openItemDialog(section));
+      empty.append(emptyButton);
+    }
     grid.append(empty);
   } else {
-    section.items
+    visibleItems
       .slice()
       .sort((left, right) => String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? "")))
       .forEach((item, index) => grid.append(createEntryIndexCard(section, item, index)));
   }
 
-  appMain.append(heading, meta, grid);
+  appMain.append(heading);
+  if (workoutFilters?.element) appMain.append(workoutFilters.element);
+  if (sectionFilters?.element) appMain.append(sectionFilters.element);
+  appMain.append(meta, grid);
+}
+
+/**
+ * Builds static search and tag filters for the cooking guide section.
+ *
+ * @param {object} section Section model.
+ * @param {Array<object>} entries Entries before filtering.
+ * @returns {{element: HTMLElement|null, filteredItems: Array<object>, isActive: boolean}} Filter UI and result.
+ */
+function createTagSearchFilterBar(section, entries) {
+  const tags = [...new Set(entries.flatMap((item) => item.tags ?? []))]
+    .sort((left, right) => left.localeCompare(right));
+  const searchText = activeSectionSearchFilters.get(section.id) ?? "";
+  const selectedTags = new Set(
+    [...(activeSectionTagFilters.get(section.id) ?? [])].filter((tag) => tags.includes(tag)),
+  );
+  activeSectionTagFilters.set(section.id, selectedTags);
+
+  const normalizedSearch = searchText.trim().toLocaleLowerCase();
+  const filteredItems = entries.filter((item) => {
+    if (normalizedSearch && !getCookingGuideSearchText(item).includes(normalizedSearch)) {
+      return false;
+    }
+    if (!selectedTags.size) return true;
+    const itemTags = new Set(item.tags ?? []);
+    return [...selectedTags].every((tag) => itemTags.has(tag));
+  });
+
+  if (!entries.length || (!tags.length && entries.length <= 4)) {
+    return { element: null, filteredItems, isActive: Boolean(normalizedSearch || selectedTags.size) };
+  }
+
+  const bar = createElement("section", "section-filter-bar");
+  const searchLabel = createElement("label", "section-search-filter");
+  searchLabel.append(createElement("span", "tag-label", "Search"));
+  const searchInput = document.createElement("input");
+  searchInput.type = "search";
+  searchInput.placeholder = "Search cooking methods";
+  searchInput.value = searchText;
+  searchInput.addEventListener("input", () => {
+    const cursorPosition = searchInput.selectionStart ?? searchInput.value.length;
+    activeSectionSearchFilters.set(section.id, searchInput.value);
+    renderSection(section);
+    const nextSearchInput = appMain.querySelector(".section-search-filter input");
+    nextSearchInput?.focus();
+    nextSearchInput?.setSelectionRange(cursorPosition, cursorPosition);
+  });
+  searchLabel.append(searchInput);
+  bar.append(searchLabel);
+
+  if (tags.length) {
+    const controls = createElement("div", "section-filter-tags");
+    controls.append(createElement("span", "tag-label", "Tags"));
+    tags.forEach((tag) => {
+      const button = createElement("button", "section-filter-tag", tag);
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(selectedTags.has(tag)));
+      button.addEventListener("click", () => {
+        const nextTags = new Set(activeSectionTagFilters.get(section.id) ?? []);
+        if (nextTags.has(tag)) {
+          nextTags.delete(tag);
+        } else {
+          nextTags.add(tag);
+        }
+        activeSectionTagFilters.set(section.id, nextTags);
+        renderSection(section);
+      });
+      controls.append(button);
+    });
+    if (selectedTags.size || normalizedSearch) {
+      const clearButton = createElement("button", "section-filter-clear", "Clear");
+      clearButton.type = "button";
+      clearButton.addEventListener("click", () => {
+        activeSectionSearchFilters.set(section.id, "");
+        activeSectionTagFilters.set(section.id, new Set());
+        renderSection(section);
+      });
+      controls.append(clearButton);
+    }
+    bar.append(controls);
+  }
+
+  return { element: bar, filteredItems, isActive: Boolean(normalizedSearch || selectedTags.size) };
+}
+
+/**
+ * Returns normalized text used for cooking guide search.
+ *
+ * @param {object} item Cooking guide entry.
+ * @returns {string} Searchable text.
+ */
+function getCookingGuideSearchText(item) {
+  return [
+    item.title,
+    item.summary,
+    item.heat,
+    item.signals,
+    item.principles,
+    item.essentials,
+    item.mistakes,
+    ...(item.steps ?? []),
+    ...(item.tags ?? []),
+  ].join(" ").toLocaleLowerCase();
 }
 
 /**
@@ -796,6 +1031,7 @@ function createEntryIndexCard(section, item, index) {
     createElement("h2", "", item.title),
     createElement("p", "", item.summary || "Open this entry to view its complete record."),
   );
+  appendTagGroup(copy, "Tags", (item.tags ?? []).slice(0, 5));
   link.append(copy, createEntryVisual(section, item, true));
 
   const actions = createElement("div", "entry-index-actions");
@@ -904,12 +1140,12 @@ function createEntryVisual(section, item, compact) {
   const frame = createElement("div", "subject-visual-frame");
   const symbol = createElement("div", "subject-visual-symbol");
   const type = section.type;
-  if (type === "workout") {
+  if (type === "workout" || type === "cooking-guide") {
     visual.classList.add("is-blank");
     visual.append(frame);
     return visual;
   }
-  if (type === "cooking-guide" || type === "recipe") {
+  if (type === "recipe") {
     symbol.append(
       createElement("i", "visual-vessel"),
       createElement("i", "visual-steam steam-one"),
@@ -1156,6 +1392,7 @@ function createCookingGuideBody(section, item) {
   if (item.mistakes) details.append(createDefinition("Common mistakes", item.mistakes));
   if (details.childElementCount) body.append(details);
   appendPersistentChecklist(body, section, item, "Method", item.steps, "checkedSteps");
+  appendTagGroup(body, "Tags", item.tags);
   return body;
 }
 
@@ -1534,6 +1771,7 @@ function createItemFields(section, item) {
       createField("Tools and essentials", "essentials", "textarea", item?.essentials ?? "", false, "Equipment, ingredients, heat, or setup"),
       createField("Method · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write the method in the order you use it"),
       createField("Common mistakes", "mistakes", "textarea", item?.mistakes ?? "", false, "What usually goes wrong and how to notice it"),
+      createField("Tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "Optional cooking labels"),
     );
   } else if (section.type === "recipe") {
     fields.push(
@@ -1766,6 +2004,7 @@ function readItemForm(section) {
       essentials: String(formData.get("essentials") ?? "").trim(),
       steps: lineList("steps"),
       mistakes: String(formData.get("mistakes") ?? "").trim(),
+      tags: commaList("tags"),
     };
   }
   if (section.type === "recipe") {
