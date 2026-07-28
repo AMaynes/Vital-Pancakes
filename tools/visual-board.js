@@ -35,6 +35,12 @@ import {
 import { traceBlackAndWhiteImage } from "./visual-board-tracing.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
+  getSelectionBounds,
+  getSelectionUnits,
+  resizeSelectionObjects,
+  rotateSelectionObjects,
+} from "./visual-board-groups.mjs?v=1";
+import {
   CURVE_TYPES,
   LINE_TYPES,
   SHAPE_TYPES,
@@ -777,19 +783,52 @@ function drawSelection() {
   if (!selectedObjects.length) return;
 
   const vertexNetwork = getSelectedVertexNetwork();
+  const selectionUnits = getSelectionUnits(selectedObjects);
   context.save();
   context.strokeStyle = selectedObjects.every((object) => object.locked) ? "#777777" : "#7b211a";
   context.fillStyle = "#ffffff";
   context.lineWidth = 1 / viewport.zoom;
   context.setLineDash([6 / viewport.zoom, 4 / viewport.zoom]);
 
-  const showHandles = selectedObjects.length === 1 && !vertexNetwork;
-  selectedObjects.forEach((object) => drawObjectSelection(object, showHandles));
+  const showObjectHandles = selectionUnits.length === 1
+    && selectionUnits[0].length === 1
+    && !vertexNetwork;
+  selectionUnits.forEach((unit) => {
+    if (unit.length === 1) {
+      drawObjectSelection(unit[0], showObjectHandles);
+    } else {
+      drawGroupSelection(unit, selectionUnits.length === 1);
+    }
+  });
   if (vertexNetwork && !vertexNetwork.objects.some((object) => object.locked)) {
     context.setLineDash([]);
     vertexNetwork.vertices.forEach((vertex) => drawHandle(vertex));
   }
   context.restore();
+}
+
+function drawGroupSelection(objects, showHandles) {
+  const bounds = getSelectionBounds(objects);
+  const frame = {
+    x: bounds.x,
+    y: bounds.y,
+    w: bounds.width,
+    h: bounds.height,
+    rotation: 0,
+  };
+  const corners = getShapeCorners(frame);
+  strokeSelectionPolygon(Object.values(corners));
+  if (!showHandles || objects.some((object) => object.locked)) return;
+
+  context.setLineDash([]);
+  Object.values(corners).forEach((point) => drawHandle(point));
+  const rotationHandle = getRotationHandlePoint(frame);
+  context.beginPath();
+  context.moveTo(corners.ne.x, corners.ne.y);
+  context.lineTo(rotationHandle.x, rotationHandle.y);
+  context.strokeStyle = "#7b211a";
+  context.stroke();
+  drawHandle(rotationHandle, true);
 }
 
 function drawObjectSelection(object, showHandles) {
@@ -907,20 +946,6 @@ function getRectangleFromPoints(first, second) {
   };
 }
 
-function getSelectionBounds(objects) {
-  const bounds = objects.map(getObjectBounds);
-  const minimumX = Math.min(...bounds.map((item) => item.x));
-  const minimumY = Math.min(...bounds.map((item) => item.y));
-  const maximumX = Math.max(...bounds.map((item) => item.x + item.width));
-  const maximumY = Math.max(...bounds.map((item) => item.y + item.height));
-  return {
-    x: minimumX,
-    y: minimumY,
-    width: Math.max(1, maximumX - minimumX),
-    height: Math.max(1, maximumY - minimumY),
-  };
-}
-
 function findObjectAt(point) {
   const padding = 8 / viewport.zoom;
   return board.objects.slice().reverse().find((object) => pointHitsObject(object, point, padding)) ?? null;
@@ -960,6 +985,37 @@ function getSelectedVertexNetwork() {
 
 function findSelectionHandle(point) {
   const hitRadius = 11 / viewport.zoom;
+  const selectionUnits = getSelectionUnits(selectedObjects);
+  const selectedUnit = selectionUnits.length === 1 ? selectionUnits[0] : null;
+  if (
+    selectedUnit?.length > 1
+    && !selectedUnit.some((object) => object.locked)
+  ) {
+    const bounds = getSelectionBounds(selectedUnit);
+    const frame = {
+      x: bounds.x,
+      y: bounds.y,
+      w: bounds.width,
+      h: bounds.height,
+      rotation: 0,
+    };
+    const rotationHandle = getRotationHandlePoint(frame);
+    if (distanceBetween(point, rotationHandle) <= hitRadius) {
+      return { kind: "group-rotate", objects: selectedUnit, bounds };
+    }
+    const corner = Object.entries(getShapeCorners(frame)).find(([, handle]) => (
+      distanceBetween(point, handle) <= hitRadius
+    ));
+    if (corner) {
+      return {
+        kind: "group-resize",
+        objects: selectedUnit,
+        bounds,
+        corner: corner[0],
+      };
+    }
+  }
+
   const vertexNetwork = getSelectedVertexNetwork();
   if (vertexNetwork && !vertexNetwork.objects.some((object) => object.locked)) {
     const vertex = vertexNetwork.vertices.find((candidate) => (
@@ -1067,6 +1123,27 @@ function handlePointerDown(event) {
 function startSelectionInteraction(event, screenPoint, worldPoint) {
   const handle = findSelectionHandle(worldPoint);
   if (handle) {
+    if (["group-resize", "group-rotate"].includes(handle.kind)) {
+      const center = {
+        x: handle.bounds.x + handle.bounds.width / 2,
+        y: handle.bounds.y + handle.bounds.height / 2,
+      };
+      interaction = {
+        ...handle,
+        pointerId: event.pointerId,
+        startWorld: worldPoint,
+        initialBounds: { ...handle.bounds },
+        center,
+        initialAngle: Math.atan2(
+          worldPoint.y - center.y,
+          worldPoint.x - center.x,
+        ),
+        originals: new Map(handle.objects.map((object) => [object.id, cloneValue(object)])),
+        checkpointed: false,
+        changed: false,
+      };
+      return;
+    }
     if (handle.kind === "network-vertex") {
       interaction = {
         ...handle,
@@ -1251,6 +1328,30 @@ function handlePointerMove(event) {
     const currentAngle = Math.atan2(worldPoint.y - center.y, worldPoint.x - center.x);
     interaction.object.rotation = interaction.initialRotation + currentAngle - interaction.initialAngle;
     interaction.changed = true;
+  } else if (interaction.kind === "group-resize") {
+    ensureInteractionCheckpoint();
+    const resized = resizeSelectionObjects(
+      [...interaction.originals.values()],
+      interaction.initialBounds,
+      interaction.corner,
+      getSnappedPoint(worldPoint),
+      MIN_SHAPE_SIZE,
+    );
+    replaceInteractionObjects(resized.objects);
+    interaction.changed = true;
+  } else if (interaction.kind === "group-rotate") {
+    ensureInteractionCheckpoint();
+    const currentAngle = Math.atan2(
+      worldPoint.y - interaction.center.y,
+      worldPoint.x - interaction.center.x,
+    );
+    const rotated = rotateSelectionObjects(
+      [...interaction.originals.values()],
+      interaction.center,
+      currentAngle - interaction.initialAngle,
+    );
+    replaceInteractionObjects(rotated);
+    interaction.changed = true;
   } else if (interaction.kind === "endpoint") {
     ensureInteractionCheckpoint();
     const point = getSnappedPoint(worldPoint);
@@ -1365,6 +1466,13 @@ function restoreInteractionOriginals() {
   });
 }
 
+function replaceInteractionObjects(objects) {
+  objects.forEach((source) => {
+    const target = board.objects.find((object) => object.id === source.id);
+    if (target) replaceObjectProperties(target, source);
+  });
+}
+
 function replaceObjectProperties(target, source) {
   Object.keys(target).forEach((key) => delete target[key]);
   Object.assign(target, source);
@@ -1424,7 +1532,16 @@ function finishPointerInteraction(event, cancelled) {
       history.pop();
       updateHistoryControls();
     }
-  } else if (["move", "resize", "rotate", "endpoint", "curve-middle", "network-vertex"]
+  } else if ([
+    "move",
+    "resize",
+    "rotate",
+    "group-resize",
+    "group-rotate",
+    "endpoint",
+    "curve-middle",
+    "network-vertex",
+  ]
     .includes(finishedInteraction.kind)) {
     if (finishedInteraction.changed) saveBoard();
   } else if (
@@ -1633,14 +1750,15 @@ function exportBoard() {
 }
 
 function updateSelectionControls() {
+  const selectionUnitCount = getSelectionUnits(selectedObjects).length;
   selectionActions.hidden = selectedObjects.length === 0;
   copySelectionButton.disabled = selectedObjects.length === 0;
   pasteSelectionButton.disabled = objectClipboard.length === 0;
   traceImageButton.hidden = !isImageSelection(selectedObjects);
   traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
-  selectionCount.textContent = selectedObjects.length === 1
+  selectionCount.textContent = selectionUnitCount === 1
     ? "1 selected"
-    : `${selectedObjects.length} selected`;
+    : `${selectionUnitCount} selected`;
 
   updateTextStyleControls();
   if (!selectedObjects.length) return;
@@ -2358,11 +2476,11 @@ function updateCanvasCursor(worldPoint = hoverPoint) {
   }
 
   const handle = worldPoint ? findSelectionHandle(worldPoint) : null;
-  if (handle?.kind === "rotate") canvas.style.cursor = "crosshair";
+  if (["rotate", "group-rotate"].includes(handle?.kind)) canvas.style.cursor = "crosshair";
   else if (["endpoint", "curve-middle", "network-vertex"].includes(handle?.kind)) {
     canvas.style.cursor = "move";
   }
-  else if (handle?.kind === "resize") {
+  else if (["resize", "group-resize"].includes(handle?.kind)) {
     canvas.style.cursor = ["nw", "se"].includes(handle.corner) ? "nwse-resize" : "nesw-resize";
   } else if (worldPoint && selectedObjects.includes(findObjectAt(worldPoint))) {
     canvas.style.cursor = "move";
