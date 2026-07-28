@@ -23,7 +23,7 @@ import {
   getWorkspace,
   isCoreSectionId,
   updateItem,
-} from "./store.js?v=13";
+} from "./store.js?v=14";
 import {
   buildContentHash,
   CONTENT_VIEWS,
@@ -139,32 +139,32 @@ const SECTION_PRESENTATIONS = {
   },
   language: {
     mode: "language-reference",
-    kicker: "RETURN-TO-LANGUAGE SHEETS",
-    introduction: "These are re-entry references: when to choose the language, how to think in it, syntax worth recalling, durable patterns, and dangerous edges.",
+    kicker: "LANGUAGE FIELD GUIDE",
+    introduction: "Each language combines quick facts, a core-function mindmap, a syntax reference sheet, and specific lessons with explanations.",
     stages: [
-      ["M", "Model", "Recover the language’s execution and data model."],
-      ["S", "Syntax", "Keep a compact, runnable reminder of common work."],
-      ["!", "Gotchas", "Record the mistakes that survive ordinary tutorials."],
+      ["Q", "Quick facts", "Recover the language’s role, runtime, and data model."],
+      ["M", "Mindmap", "See how the core concepts connect around the language."],
+      ["L", "Lessons", "Preserve explanations that make the syntax meaningful."],
     ],
   },
   algorithm: {
     mode: "algorithm-lab",
     kicker: "ALGORITHM LAB",
-    introduction: "Each algorithm begins with the problem shape and invariant, then exposes pseudocode, cost, and a small playable trace.",
+    introduction: "Each algorithm moves from purpose and reasoning into an explained visual trace, English pseudocode, analysis, and real C and Java implementations.",
     stages: [
-      ["P", "Problem", "Recognize the structure before reaching for a named method."],
-      ["I", "Invariant", "Name what remains true through every step."],
-      ["C", "Cost", "State time, space, and the trade-off that earns them."],
+      ["P", "Purpose", "Recognize the problem shape and why this method fits."],
+      ["V", "Visualize", "Walk through each state transition with an explanation."],
+      ["C", "Code", "Connect English pseudocode to working C and Java."],
     ],
   },
   project: {
     mode: "project-casebook",
     kicker: "PROJECT CASEBOOK",
-    introduction: "Projects are decision records rather than galleries: preserve the problem, chosen approach, outcome, relationships, and next meaningful move.",
+    introduction: "Projects preserve the main idea, visual overview, architecture, code map, implementation details, algorithm relationships, and dependencies.",
     stages: [
-      ["01", "Problem", "Explain the constraint or tension worth solving."],
-      ["02", "Decision", "Preserve why this approach beat the alternatives."],
-      ["03", "Result", "Record the outcome and what should happen next."],
+      ["01", "Idea", "State the project’s central purpose in plain language."],
+      ["02", "System", "Map the architecture, functions, and moving parts."],
+      ["03", "Build", "Explain implementation specifics and dependencies."],
     ],
   },
 };
@@ -243,6 +243,11 @@ const ALGORITHM_CATEGORIES = Object.freeze([
     id: "advanced",
     title: "Advanced Algorithms",
     description: "More specialized techniques for optimization, pathfinding, connectivity, and pattern matching.",
+  },
+  {
+    id: "analysis",
+    title: "Algorithm Analysis",
+    description: "Special lessons on comparison, time and space complexity, cases, recurrences, and benchmarking.",
   },
 ]);
 
@@ -1751,70 +1756,121 @@ function appendPersistentChecklist(parent, section, item, labelText, values = []
 }
 
 /**
- * Renders language refresher fields.
+ * Renders one language as a field guide with facts, a core-function mindmap,
+ * a syntax reference, and explained lessons.
  *
  * @param {object} item Language record.
  * @returns {HTMLElement} Language content.
  */
 function createLanguageBody(item) {
-  const body = createElement("div", "entry-body language-sheet");
-  if (item.useWhen) body.append(createDefinition("Reach for it when", item.useWhen));
-  if (item.mentalModel) body.append(createDefinition("Mental model", item.mentalModel));
-  if (item.syntax) body.append(createCodeDefinition("Syntax refresher", item.syntax));
-  if (item.patterns?.length) {
-    const patterns = createElement("section", "language-patterns");
-    patterns.append(createElement("h3", "", "Durable patterns"));
-    const list = createElement("ul");
-    item.patterns.forEach((pattern) => list.append(createElement("li", "", pattern)));
-    patterns.append(list);
-    body.append(patterns);
+  const body = createElement("div", "entry-body language-field-guide");
+  if (item.quickFacts?.length) {
+    body.append(createStructuredCardSection("Quick Facts", item.quickFacts, "language-quick-facts"));
   }
-  if (item.gotchas) body.append(createDefinition("Gotchas", item.gotchas));
+  if (item.coreConcepts?.length) {
+    const mindmap = createElement("section", "language-mindmap");
+    mindmap.append(createElement("h3", "", "Mindmap of core functionality"));
+    const map = createElement("div", "language-mindmap-canvas");
+    map.append(createElement("strong", "language-mindmap-core", item.title.replace(/\s+refresher$/i, "")));
+    item.coreConcepts.forEach((value, index) => {
+      const { label, explanation } = splitStructuredLine(value, `Concept ${index + 1}`);
+      const node = createElement("article", "language-mindmap-node");
+      node.append(createElement("strong", "", label), createElement("p", "", explanation));
+      map.append(node);
+    });
+    mindmap.append(map);
+    body.append(mindmap);
+  }
+  const syntaxReference = item.syntaxReference ?? item.syntax;
+  if (syntaxReference) body.append(createCodeDefinition("Reference sheet · syntax", syntaxReference));
+  if (item.lessons?.length) {
+    body.append(createStructuredCardSection(
+      "Specific Lessons + Explanations",
+      item.lessons,
+      "language-lessons",
+    ));
+  }
   return body;
 }
 
 /**
- * Renders algorithm notes plus an optional user-authored animation.
+ * Renders an algorithm or analysis lesson in the requested progression from
+ * purpose and explanation to visualization, pseudocode, and real code.
  *
  * @param {object} item Algorithm record.
  * @returns {HTMLElement} Algorithm content.
  */
 function createAlgorithmBody(item) {
-  const body = createElement("div", "entry-body");
+  const isAnalysisLesson = item.category === "analysis";
+  const body = createElement(
+    "div",
+    `entry-body algorithm-reference${isAnalysisLesson ? " algorithm-analysis-lesson" : ""}`,
+  );
   const details = createElement("div", "two-column-details");
-  if (item.useCases) details.append(createDefinition("Use when", item.useCases));
-  if (item.complexity) details.append(createDefinition("Complexity", item.complexity));
-  body.append(details);
-  if (item.invariant) body.append(createDefinition("Invariant", item.invariant));
+  const purpose = item.purpose ?? item.useCases;
+  if (purpose) details.append(createDefinition("Purpose", purpose));
+  if (item.complexity) details.append(createDefinition("Time / space", item.complexity));
+  if (details.childElementCount) body.append(details);
   if (item.explanation) body.append(createDefinition("How it works", item.explanation));
-  if (item.pseudocode) body.append(createCodeDefinition("Pseudocode", item.pseudocode));
+  if (item.invariant) body.append(createDefinition("Correctness anchor", item.invariant));
+  if (item.keyIdeas?.length) {
+    body.append(createStructuredCardSection("Key ideas", item.keyIdeas, "algorithm-key-ideas"));
+  }
+  if (item.workedExample) body.append(createDefinition("Worked example", item.workedExample));
 
   const frames = item.visualFrames ?? [];
   if (frames.length) {
-    body.append(createAlgorithmAnimation(frames));
+    body.append(createAlgorithmAnimation(
+      frames,
+      item.frameExplanations,
+      isAnalysisLesson ? "ANALYSIS WALKTHROUGH" : "DIAGRAM + STEP EXPLANATIONS",
+    ));
+  }
+  if (item.pseudocode) body.append(createCodeDefinition("Pseudocode in English", item.pseudocode));
+  if (item.cCode || item.javaCode) {
+    const implementations = createElement("section", "algorithm-code-grid");
+    implementations.append(createElement("h3", "", "Real code"));
+    if (item.cCode) implementations.append(createCodeDefinition("C", item.cCode));
+    if (item.javaCode) implementations.append(createCodeDefinition("Java", item.javaCode));
+    body.append(implementations);
   }
   appendTagGroup(body, "Tags", normalizeEntryTags(item.tags));
   return body;
 }
 
 /**
- * Creates a small playback surface from user-authored “a > b > c” frames.
+ * Creates manual and automatic playback for a sequence of diagram frames.
  *
- * @param {Array<string>} frames Animation frames.
- * @returns {HTMLElement} Playback control and stage.
+ * @param {Array<string>} frames Diagram frames written as “a > b > c”.
+ * @param {Array<string>} explanations Optional explanation for each frame.
+ * @param {string} label Toolbar label.
+ * @returns {HTMLElement} Playback controls, stage, and step explanation.
  */
-function createAlgorithmAnimation(frames) {
+function createAlgorithmAnimation(frames, explanations = [], label = "VISUAL WALKTHROUGH") {
   const animation = createElement("section", "algorithm-animation");
   const toolbar = createElement("div", "animation-toolbar");
-  toolbar.append(createElement("span", "card-kicker", "VISUAL WALKTHROUGH"));
+  toolbar.append(createElement("span", "card-kicker", label));
+  const controls = createElement("div", "animation-controls");
+  const previousButton = createElement("button", "button button-small", "← Previous");
   const playButton = createElement("button", "button button-small", "Play");
-  playButton.type = "button";
-  toolbar.append(playButton);
+  const nextButton = createElement("button", "button button-small", "Next →");
+  [previousButton, playButton, nextButton].forEach((button) => {
+    button.type = "button";
+    controls.append(button);
+  });
+  toolbar.append(controls);
   const stage = createElement("div", "algorithm-stage");
-  const caption = createElement("p", "animation-caption");
+  const caption = createElement("div", "animation-caption");
   let frameIndex = 0;
   let timer = null;
 
+  const stopPlayback = () => {
+    if (!timer) return;
+    window.clearInterval(timer);
+    animationTimers.delete(timer);
+    timer = null;
+    playButton.textContent = "Play";
+  };
   const showFrame = () => {
     stage.replaceChildren();
     const tokens = frames[frameIndex].split(">").map((token) => token.trim()).filter(Boolean);
@@ -1824,22 +1880,32 @@ function createAlgorithmAnimation(frames) {
         stage.append(createElement("i", "", "→"));
       }
     });
-    caption.textContent = `Frame ${frameIndex + 1} of ${frames.length}`;
+    const fallbackExplanation = tokens.length
+      ? `${tokens.slice(0, -1).join(", then ")} leads to ${tokens.at(-1)}.`
+      : "Observe how the state changes during this step.";
+    caption.replaceChildren(
+      createElement("strong", "", `Step ${frameIndex + 1} of ${frames.length}`),
+      createElement("span", "", explanations[frameIndex] || fallbackExplanation),
+    );
+  };
+  const moveFrame = (delta) => {
+    stopPlayback();
+    frameIndex = (frameIndex + delta + frames.length) % frames.length;
+    showFrame();
   };
 
+  previousButton.addEventListener("click", () => moveFrame(-1));
+  nextButton.addEventListener("click", () => moveFrame(1));
   playButton.addEventListener("click", () => {
     if (timer) {
-      window.clearInterval(timer);
-      animationTimers.delete(timer);
-      timer = null;
-      playButton.textContent = "Play";
+      stopPlayback();
       return;
     }
     playButton.textContent = "Pause";
     timer = window.setInterval(() => {
       frameIndex = (frameIndex + 1) % frames.length;
       showFrame();
-    }, 1100);
+    }, 1800);
     animationTimers.add(timer);
   });
   showFrame();
@@ -1848,23 +1914,36 @@ function createAlgorithmAnimation(frames) {
 }
 
 /**
- * Renders project fields and related language/algorithm labels.
+ * Renders a project as an idea-to-implementation system map.
  *
  * @param {object} item Project record.
  * @returns {HTMLElement} Project content.
  */
 function createProjectBody(item) {
-  const body = createElement("div", "entry-body project-case-study");
+  const body = createElement("div", "entry-body project-blueprint");
   if (item.status) {
     body.append(createElement("span", `project-status status-${item.status.toLowerCase().replaceAll(" ", "-")}`, item.status));
   }
-  const sequence = createElement("div", "project-sequence");
-  if (item.problem) sequence.append(createDefinition("01 · Problem", item.problem));
-  if (item.solution) sequence.append(createDefinition("02 · Decision", item.solution));
-  if (item.outcome) sequence.append(createDefinition("03 · Outcome", item.outcome));
-  body.append(sequence);
+  const mainIdea = item.mainIdea ?? item.problem;
+  if (mainIdea) body.append(createDefinition("Main Idea", mainIdea));
+  if (item.overview) body.append(createDefinition("Broad overview", item.overview));
+  if (item.visualFrames?.length) {
+    body.append(createAlgorithmAnimation(
+      item.visualFrames,
+      item.frameExplanations,
+      "PROJECT OVERVIEW · DIAGRAM + EXPLANATIONS",
+    ));
+  }
+  if (item.architecture) body.append(createDefinition("Architecture Overview", item.architecture));
+  if (item.codeMap?.length) {
+    body.append(createStructuredCardSection("Code map / functions", item.codeMap, "project-code-map"));
+  }
+  const specifics = item.specifics ?? item.solution;
+  if (specifics) body.append(createDefinition("Specifics · how it works", specifics));
+  appendAlgorithmLinks(body, item.algorithmIds);
   appendTagGroup(body, "Languages", item.languages);
-  appendTagGroup(body, "Algorithms", resolveAlgorithmNames(item.algorithmIds));
+  appendTagGroup(body, "Dependencies / packages / services", item.dependencies);
+  if (item.outcome) body.append(createDefinition("Current outcome", item.outcome));
   if (item.nextStep) body.append(createDefinition("Next meaningful move", item.nextStep));
   return body;
 }
@@ -1929,6 +2008,49 @@ function createCodeDefinition(label, value) {
 }
 
 /**
+ * Splits an editable “label | explanation” line at its first separator.
+ *
+ * @param {string} value Editable structured line.
+ * @param {string} fallbackLabel Label used when no separator exists.
+ * @returns {{label: string, explanation: string}} Card content.
+ */
+function splitStructuredLine(value, fallbackLabel) {
+  const separatorIndex = String(value).indexOf("|");
+  if (separatorIndex < 0) {
+    return { label: fallbackLabel, explanation: String(value).trim() };
+  }
+  return {
+    label: String(value).slice(0, separatorIndex).trim() || fallbackLabel,
+    explanation: String(value).slice(separatorIndex + 1).trim(),
+  };
+}
+
+/**
+ * Builds a reusable set of labeled explanation cards.
+ *
+ * @param {string} title Section heading.
+ * @param {Array<string>} values “label | explanation” lines.
+ * @param {string} className Subject-specific class.
+ * @returns {HTMLElement} Structured card section.
+ */
+function createStructuredCardSection(title, values, className) {
+  const section = createElement("section", `structured-card-section ${className}`);
+  section.append(createElement("h3", "", title));
+  const grid = createElement("div", "structured-card-grid");
+  values.forEach((value, index) => {
+    const fallbackLabel = className === "algorithm-key-ideas"
+      ? `Idea ${index + 1}`
+      : `${title} ${index + 1}`;
+    const { label, explanation } = splitStructuredLine(value, fallbackLabel);
+    const card = createElement("article", "structured-card");
+    card.append(createElement("strong", "", label), createElement("p", "", explanation));
+    grid.append(card);
+  });
+  section.append(grid);
+  return section;
+}
+
+/**
  * Appends a set of compact tags when values exist.
  *
  * @param {HTMLElement} parent Destination element.
@@ -1944,18 +2066,29 @@ function appendTagGroup(parent, label, values = []) {
 }
 
 /**
- * Resolves stored algorithm identifiers to current titles.
+ * Adds deep links from a project to its current Algorithm records.
  *
- * @param {Array<string>} algorithmIds Algorithm identifiers.
- * @returns {Array<string>} Existing algorithm titles.
+ * @param {HTMLElement} parent Destination body.
+ * @param {Array<string>} algorithmIds Stored algorithm identifiers.
  */
-function resolveAlgorithmNames(algorithmIds = []) {
+function appendAlgorithmLinks(parent, algorithmIds = []) {
   const algorithms = getWorkspace().sections
     .filter((section) => section.type === "algorithm")
-    .flatMap((section) => section.items);
-  return algorithmIds
-    .map((algorithmId) => algorithms.find((algorithm) => algorithm.id === algorithmId)?.title)
+    .flatMap((section) => section.items)
+    .filter((algorithm) => algorithm.category !== "analysis");
+  const relatedAlgorithms = algorithmIds
+    .map((algorithmId) => algorithms.find((algorithm) => algorithm.id === algorithmId))
     .filter(Boolean);
+  if (!relatedAlgorithms.length) return;
+
+  const group = createElement("div", "tag-group algorithm-link-group");
+  group.append(createElement("span", "tag-label", "Algorithms · how it works"));
+  relatedAlgorithms.forEach((algorithm) => {
+    const link = createElement("a", "tag algorithm-link", algorithm.title);
+    link.href = buildAlgorithmHash(algorithm.category ?? "personal", algorithm.id);
+    group.append(link);
+  });
+  parent.append(group);
 }
 
 /**
@@ -2058,11 +2191,10 @@ function createItemFields(section, item) {
     );
   } else if (section.type === "language") {
     fields.push(
-      createField("Reach for it when", "useWhen", "textarea", item?.useWhen ?? "", false, "The problem shapes this language fits"),
-      createField("Mental model", "mentalModel", "textarea", item?.mentalModel ?? "", false, "How should you think in this language?"),
-      createField("Syntax refresher", "syntax", "textarea", item?.syntax ?? "", false, "Keep your most useful syntax here"),
-      createField("Durable patterns · one per line", "patterns", "textarea", (item?.patterns ?? []).join("\n"), false, "Practices worth carrying between projects"),
-      createField("Gotchas", "gotchas", "textarea", item?.gotchas ?? "", false, "Mistakes, edge cases, and conventions"),
+      createField("Quick Facts · one per line", "quickFacts", "textarea", (item?.quickFacts ?? []).join("\n"), false, "Use: Label | explanation"),
+      createField("Core functionality mindmap · one branch per line", "coreConcepts", "textarea", (item?.coreConcepts ?? []).join("\n"), false, "Use: Concept | what it controls"),
+      createField("Reference sheet · syntax", "syntaxReference", "textarea", item?.syntaxReference ?? item?.syntax ?? "", false, "Runnable syntax worth keeping close"),
+      createField("Specific lessons + explanations · one per line", "lessons", "textarea", (item?.lessons ?? []).join("\n"), false, "Use: Lesson | explanation"),
     );
   } else if (section.type === "algorithm") {
     fields.push(
@@ -2070,32 +2202,43 @@ function createItemFields(section, item) {
         "Algorithm subsection",
         "category",
         item?.category ?? section.algorithmCategory ?? "personal",
-        ["personal", "traditional", "advanced"],
+        ["personal", "traditional", "advanced", "analysis"],
       ),
-      createField("Use cases", "useCases", "textarea", item?.useCases ?? "", false, "What kind of problem is this good for?"),
-      createField("Invariant", "invariant", "textarea", item?.invariant ?? "", false, "What remains true after every step?"),
+      createField("Purpose", "purpose", "textarea", item?.purpose ?? item?.useCases ?? "", false, "What problem does this solve, and when should you use it?"),
       createField("How it works", "explanation", "textarea", item?.explanation ?? "", false, "Explain it in your own words"),
-      createField("Pseudocode", "pseudocode", "textarea", item?.pseudocode ?? "", false, "Language-neutral steps"),
-      createField("Complexity", "complexity", "text", item?.complexity ?? "", false, "Time, space, and trade-offs"),
+      createField("Correctness anchor / invariant", "invariant", "textarea", item?.invariant ?? "", false, "What remains true after every step?"),
+      createField("Key ideas · one per line", "keyIdeas", "textarea", (item?.keyIdeas ?? []).join("\n"), false, "Especially useful for Algorithm Analysis lessons"),
+      createField("Worked example", "workedExample", "textarea", item?.workedExample ?? "", false, "Show the idea on a small concrete case"),
       createField(
-        "Animation frames · one per line",
+        "Diagram / animation frames · one per line",
         "visualFrames",
         "textarea",
         (item?.visualFrames ?? []).join("\n"),
         false,
         "Use > between nodes, then add another line for the next frame",
       ),
+      createField("Step explanations · one per frame", "frameExplanations", "textarea", (item?.frameExplanations ?? []).join("\n"), false, "Explain what changes in each frame"),
+      createField("Pseudocode in English", "pseudocode", "textarea", item?.pseudocode ?? "", false, "Plain-language, implementation-neutral steps"),
+      createField("Time / space complexity", "complexity", "text", item?.complexity ?? "", false, "Time, space, and trade-offs"),
+      createField("Real code · C", "cCode", "textarea", item?.cCode ?? "", false, "A focused C implementation"),
+      createField("Real code · Java", "javaCode", "textarea", item?.javaCode ?? "", false, "A focused Java implementation"),
       createField("Filter tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "e.g. graph, sorting, dynamic programming"),
     );
   } else if (section.type === "project") {
     fields.push(
       createSelectField("Status", "status", item?.status ?? "Active", ["Concept", "Active", "Paused", "Complete", "Archived"]),
-      createField("Interesting problem", "problem", "textarea", item?.problem ?? "", false, "What made this problem worth solving?"),
-      createField("How I solved it", "solution", "textarea", item?.solution ?? "", false, "Capture the approach and the useful insight"),
-      createField("Outcome", "outcome", "textarea", item?.outcome ?? "", false, "What exists or changed because of the work?"),
-      createField("Next meaningful move", "nextStep", "textarea", item?.nextStep ?? "", false, "The next action that changes the project"),
+      createField("Main Idea", "mainIdea", "textarea", item?.mainIdea ?? item?.problem ?? "", false, "The central idea in plain language"),
+      createField("Broad overview", "overview", "textarea", item?.overview ?? "", false, "What the whole system does"),
+      createField("Overview diagram / animation frames · one per line", "visualFrames", "textarea", (item?.visualFrames ?? []).join("\n"), false, "Use > between nodes"),
+      createField("Overview step explanations · one per frame", "frameExplanations", "textarea", (item?.frameExplanations ?? []).join("\n"), false, "Explain each visual transition"),
+      createField("Architecture Overview", "architecture", "textarea", item?.architecture ?? "", false, "Major components, boundaries, and data flow"),
+      createField("Code map / functions · one per line", "codeMap", "textarea", (item?.codeMap ?? []).join("\n"), false, "Use: file or function | responsibility"),
+      createField("Specifics · how it works", "specifics", "textarea", item?.specifics ?? item?.solution ?? "", false, "Important implementation behavior and decisions"),
       createField("Languages · comma separated", "languages", "text", (item?.languages ?? []).join(", "), false, "e.g. Python, Rust"),
+      createField("Dependencies / packages / services · comma separated", "dependencies", "text", (item?.dependencies ?? []).join(", "), false, "Only what the project actually relies on"),
       createAlgorithmPicker(item?.algorithmIds ?? []),
+      createField("Current outcome", "outcome", "textarea", item?.outcome ?? "", false, "What exists or changed because of the work?"),
+      createField("Next meaningful move", "nextStep", "textarea", item?.nextStep ?? "", false, "The next action that changes the project"),
     );
   } else if (section.type === "question") {
     fields.push(
@@ -2153,7 +2296,14 @@ function createField(labelText, name, type, value, required, placeholder) {
   control.value = value;
   control.required = required;
   control.placeholder = placeholder;
-  if (type === "textarea") control.rows = name === "visualFrames" || name === "syntax" ? 5 : 3;
+  if (type === "textarea") {
+    const tallFields = new Set(["syntax", "syntaxReference", "pseudocode", "cCode", "javaCode"]);
+    const mediumFields = new Set([
+      "visualFrames", "frameExplanations", "quickFacts", "coreConcepts",
+      "lessons", "keyIdeas", "codeMap", "architecture", "specifics",
+    ]);
+    control.rows = tallFields.has(name) ? 8 : mediumFields.has(name) ? 5 : 3;
+  }
   label.append(control);
   return label;
 }
@@ -2194,7 +2344,8 @@ function createAlgorithmPicker(selectedIds) {
   fieldset.append(createElement("legend", "", "Algorithms used"));
   const algorithms = getWorkspace().sections
     .filter((section) => section.type === "algorithm")
-    .flatMap((section) => section.items);
+    .flatMap((section) => section.items)
+    .filter((algorithm) => algorithm.category !== "analysis");
   if (!algorithms.length) {
     fieldset.append(createElement("p", "field-hint", "No algorithms exist yet. Add them in the Algorithms section first."));
     return fieldset;
@@ -2307,25 +2458,29 @@ function readItemForm(section) {
   if (section.type === "language") {
     return {
       ...base,
-      useWhen: String(formData.get("useWhen") ?? "").trim(),
-      mentalModel: String(formData.get("mentalModel") ?? "").trim(),
-      syntax: String(formData.get("syntax") ?? "").trim(),
-      patterns: lineList("patterns"),
-      gotchas: String(formData.get("gotchas") ?? "").trim(),
+      quickFacts: lineList("quickFacts"),
+      coreConcepts: lineList("coreConcepts"),
+      syntaxReference: String(formData.get("syntaxReference") ?? "").trim(),
+      lessons: lineList("lessons"),
     };
   }
   if (section.type === "algorithm") {
     return {
       ...base,
-      category: ["personal", "traditional", "advanced"].includes(String(formData.get("category")))
+      category: ["personal", "traditional", "advanced", "analysis"].includes(String(formData.get("category")))
         ? String(formData.get("category"))
         : "personal",
-      useCases: String(formData.get("useCases") ?? "").trim(),
-      invariant: String(formData.get("invariant") ?? "").trim(),
+      purpose: String(formData.get("purpose") ?? "").trim(),
       explanation: String(formData.get("explanation") ?? "").trim(),
+      invariant: String(formData.get("invariant") ?? "").trim(),
+      keyIdeas: lineList("keyIdeas"),
+      workedExample: String(formData.get("workedExample") ?? "").trim(),
+      visualFrames: lineList("visualFrames"),
+      frameExplanations: lineList("frameExplanations"),
       pseudocode: String(formData.get("pseudocode") ?? "").trim(),
       complexity: String(formData.get("complexity") ?? "").trim(),
-      visualFrames: lineList("visualFrames"),
+      cCode: String(formData.get("cCode") ?? "").trim(),
+      javaCode: String(formData.get("javaCode") ?? "").trim(),
       tags: commaList("tags").map((tag) => tag.toLocaleLowerCase()),
     };
   }
@@ -2333,11 +2488,17 @@ function readItemForm(section) {
     return {
       ...base,
       status: String(formData.get("status") ?? "Active"),
-      problem: String(formData.get("problem") ?? "").trim(),
-      solution: String(formData.get("solution") ?? "").trim(),
+      mainIdea: String(formData.get("mainIdea") ?? "").trim(),
+      overview: String(formData.get("overview") ?? "").trim(),
+      visualFrames: lineList("visualFrames"),
+      frameExplanations: lineList("frameExplanations"),
+      architecture: String(formData.get("architecture") ?? "").trim(),
+      codeMap: lineList("codeMap"),
+      specifics: String(formData.get("specifics") ?? "").trim(),
       outcome: String(formData.get("outcome") ?? "").trim(),
       nextStep: String(formData.get("nextStep") ?? "").trim(),
       languages: commaList("languages"),
+      dependencies: commaList("dependencies"),
       algorithmIds: formData.getAll("algorithmIds").map(String),
     };
   }

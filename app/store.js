@@ -13,10 +13,11 @@
  * State is intentionally device-local.
  */
 
-import { ALGORITHM_SAMPLES } from "./algorithm-samples.mjs?v=1";
+import { ALGORITHM_ANALYSIS_SAMPLES } from "./algorithm-analysis-samples.mjs?v=1";
+import { ALGORITHM_SAMPLES } from "./algorithm-samples.mjs?v=2";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
-const CURRENT_WORKSPACE_VERSION = 13;
+const CURRENT_WORKSPACE_VERSION = 14;
 const EVERYDAY_AREA = "everyday";
 const SAMPLE_DATE = "2026-07-28T12:00:00.000Z";
 const LEGACY_WORKOUT_SAMPLE_IDS = new Set([
@@ -1541,33 +1542,77 @@ const DEFAULT_SECTIONS = [
   {
     id: "programming-languages",
     title: "Programming Languages",
-    description: "Fast, personal refreshers for returning to a language.",
+    description: "Language-by-language quick facts, core-function mindmaps, syntax sheets, and explained lessons.",
     icon: "⌘",
     type: "language",
     items: [
       createSample("sample-language-javascript", {
         title: "JavaScript refresher",
         summary: "The language model and syntax I need when returning to browser or Node work.",
+        quickFacts: [
+          "Primary use | Interactive web interfaces, Node.js services, automation, and shared full-stack code.",
+          "Typing | Dynamic and weakly typed; TypeScript adds static analysis without changing the runtime.",
+          "Execution | A run-to-completion call stack coordinated with task and microtask queues.",
+          "Data model | Primitives are copied by value; objects and functions are reference values.",
+          "Package ecosystem | npm packages use ES modules or the older CommonJS module system.",
+        ],
+        coreConcepts: [
+          "Values & types | Primitives, objects, arrays, maps, sets, and coercion rules.",
+          "Functions & scope | First-class functions, lexical scope, closures, and this binding.",
+          "Objects | Prototype delegation, classes, property descriptors, and composition.",
+          "Async runtime | Promises, async/await, tasks, microtasks, timers, and cancellation.",
+          "Modules | Explicit imports and exports create reusable dependency boundaries.",
+          "Web platform | DOM events, fetch, storage, workers, and browser security boundaries.",
+        ],
         useWhen: "Interactive browser interfaces, small servers, build tooling, and code that benefits from sharing one language across the stack.",
         mentalModel: "Values flow through a single-threaded event loop. Synchronous code runs to completion; queued tasks and promise callbacks resume later. Objects are reference values and functions close over their lexical scope.",
         syntax: "const unique = [...new Set(values)];\nconst names = records.filter(Boolean).map(({ name }) => name);\nconst result = await fetch(url).then((response) => response.json());\n\ntry {\n  await save(result);\n} catch (error) {\n  console.error(\"Save failed\", error);\n}",
+        syntaxReference: "const total = values.reduce((sum, value) => sum + value, 0);\nconst activeNames = records\n  .filter(({ active }) => active)\n  .map(({ name }) => name);\n\nexport async function loadRecord(id, { signal } = {}) {\n  const response = await fetch(`/api/records/${id}`, { signal });\n  if (!response.ok) throw new Error(`Request failed: ${response.status}`);\n  return response.json();\n}\n\ntry {\n  const record = await loadRecord(\"example\");\n  console.log(record);\n} catch (error) {\n  console.error(\"Unable to load record\", error);\n}",
         patterns: [
           "Prefer const; use let only when reassignment is part of the design.",
           "Normalize data at boundaries rather than scattering null checks.",
           "Use async/await for sequencing and Promise.all for independent work.",
+        ],
+        lessons: [
+          "Closures | A function retains access to the lexical bindings that existed where it was created, enabling private state and callbacks that remember context.",
+          "Reference values | Assigning an object copies its reference, so mutations are shared; use intentional copying when independent state is required.",
+          "Promises and the event loop | Promise continuations run as microtasks after the current stack, before the browser takes the next ordinary task.",
+          "Modules as boundaries | Keep side effects at the edges and export small contracts so dependencies remain understandable and testable.",
         ],
         gotchas: "Array and object equality is by identity. sort() mutates and sorts strings by default. await inside a loop is serial. Date parsing and time zones need explicit tests.",
       }),
       createSample("sample-language-python", {
         title: "Python refresher",
         summary: "A compact reference for readable scripts, data work, and small automation.",
+        quickFacts: [
+          "Primary use | Automation, data and scientific work, backend services, command-line tools, and education.",
+          "Typing | Dynamic and strongly typed; optional type hints support static checking and clearer contracts.",
+          "Execution | Source compiles to bytecode executed by an interpreter such as CPython.",
+          "Data model | Every value is an object; names are bindings and mutability belongs to the object.",
+          "Package ecosystem | PyPI packages are installed into isolated virtual environments.",
+        ],
+        coreConcepts: [
+          "Objects & names | Assignment binds a name to an object rather than copying a typed storage slot.",
+          "Collections | Lists, tuples, dictionaries, sets, slicing, comprehensions, and iteration protocols.",
+          "Functions | First-class callables, positional and keyword arguments, closures, and decorators.",
+          "Resource safety | Context managers guarantee cleanup around files, locks, and transactions.",
+          "Data modeling | Dataclasses, protocols, type hints, and explicit validation at boundaries.",
+          "Concurrency | Threads, processes, asyncio tasks, cancellation, and the limits of the GIL.",
+        ],
         useWhen: "Data transformation, scientific work, automation, command-line tools, and services where clarity matters more than browser delivery.",
         mentalModel: "Everything is an object bound to a name. Mutability belongs to the object, not the variable. Iteration protocols and context managers hide resource-handling machinery behind concise syntax.",
         syntax: "from collections import Counter\nfrom pathlib import Path\n\ntext = Path(\"data.txt\").read_text(encoding=\"utf-8\")\nrows = [line.strip() for line in text.splitlines() if line.strip()]\ncounts = Counter(rows)\n\nPath(\"output.txt\").write_text(\"\\n\".join(sorted(rows)), encoding=\"utf-8\")",
+        syntaxReference: "from collections import Counter\nfrom dataclasses import dataclass\nfrom pathlib import Path\n\n@dataclass(frozen=True)\nclass Record:\n    name: str\n    score: int\n\nrows = [\n    line.strip()\n    for line in Path(\"data.txt\").read_text(encoding=\"utf-8\").splitlines()\n    if line.strip()\n]\ncounts = Counter(rows)\nrecords = [Record(name, score) for name, score in counts.items()]\n\nwith Path(\"output.txt\").open(\"w\", encoding=\"utf-8\") as output:\n    output.write(\"\\n\".join(record.name for record in records))",
         patterns: [
           "Use pathlib for paths and context managers for resources.",
           "Prefer comprehensions for simple transforms, ordinary loops for branching logic.",
           "Add type hints at module boundaries and dataclasses for stable records.",
+        ],
+        lessons: [
+          "Names and mutability | Rebinding a name does not alter an object, but mutating a shared list or dictionary is visible through every name bound to it.",
+          "Iteration protocols | for loops consume iterators, letting lists, files, generators, and custom objects share one traversal model.",
+          "Context managers | with pairs acquisition and cleanup so resources close correctly even when the protected block raises.",
+          "Type hints as design | Annotations document boundaries and enable tools, but runtime validation remains a separate responsibility.",
         ],
         gotchas: "Mutable default arguments persist between calls. is tests identity, not value equality. A broad except hides programming errors. Local naive datetimes are ambiguous.",
       }),
@@ -1576,15 +1621,16 @@ const DEFAULT_SECTIONS = [
   {
     id: "algorithms",
     title: "Algorithms",
-    description: "Personal methods, traditional foundations, and advanced techniques with clickable topic tags.",
+    description: "Personal methods, traditional foundations, advanced techniques, and special analysis lessons with clickable topic tags.",
     icon: "⌬",
     type: "algorithm",
-    items: ALGORITHM_SAMPLES.map(({ id, ...fields }) => createSample(id, fields)),
+    items: [...ALGORITHM_SAMPLES, ...ALGORITHM_ANALYSIS_SAMPLES]
+      .map(({ id, ...fields }) => createSample(id, fields)),
   },
   {
     id: "projects",
     title: "Projects",
-    description: "Problems worth remembering, how you solved them, and what you used.",
+    description: "Project ideas, animated overviews, architecture, code maps, implementation details, and dependencies.",
     icon: "◇",
     type: "project",
     items: [
@@ -1592,6 +1638,28 @@ const DEFAULT_SECTIONS = [
         title: "Vital Pancakes knowledge archive",
         summary: "A local-first catalogue designed to preserve learned methods, questions, and working tools.",
         status: "Active",
+        mainIdea: "Build a durable personal knowledge archive that keeps learning material, practical life systems, and focused work tools understandable without requiring an account or server.",
+        overview: "Vital Pancakes is a static installable website. Public archival pages lead into a local-first workspace whose specialized libraries keep subject-specific records in the browser. Dedicated tools handle visual thinking, literature, planning, signing, and software architecture.",
+        visualFrames: [
+          "public archive > workspace libraries > focused entry",
+          "edit locally > save in browser > reopen offline",
+          "specialized task > dedicated tool > exported result",
+        ],
+        frameExplanations: [
+          "The public site routes each kind of knowledge into a focused editable library.",
+          "Changes remain on the device and the service worker keeps the application shell available offline.",
+          "Complex work receives a purpose-built tool instead of being flattened into generic notes.",
+        ],
+        architecture: "Static HTML pages form the public shell. workspace.html loads a module-based renderer and versioned localStorage store. Subject renderers translate records into specialized layouts. A service worker caches the application shell, while isolated tools own their own pure models and local persistence.",
+        codeMap: [
+          "app/store.js | Owns schema versions, starter records, migrations, and atomic local persistence.",
+          "app/main.js | Routes workspace hashes and renders each subject-specific library, detail page, and editor.",
+          "site-navigation.js | Keeps primary navigation, page paths, and history controls consistent.",
+          "sw.js | Pre-caches the offline application shell and retires older caches.",
+          "tools/*.mjs | Isolate testable models for geometry, planning, annotation, and architecture behavior.",
+        ],
+        specifics: "Every user value is written through textContent rather than parsed HTML. Core libraries have stable IDs, while entries keep collision-resistant IDs and timestamps. Migrations add new fields and samples without dropping existing user records. Each tool separates DOM orchestration from pure model functions where behavior needs focused tests.",
+        dependencies: ["Browser ES modules", "localStorage", "Service Worker API", "Canvas 2D", "PDF.js", "PDF-Lib"],
         problem: "Useful knowledge was scattered across school files, browser tabs, notes, and memory, then became difficult to retrieve when its original context disappeared.",
         solution: "Organize knowledge by the way it is used, store editable personal entries locally, and give specialized work—diagramming, literature analysis, planning—its own tool.",
         outcome: "A static, installable site with durable libraries, offline support, and no account dependency.",
@@ -1603,12 +1671,34 @@ const DEFAULT_SECTIONS = [
         title: "Walkable route explorer",
         summary: "A project sketch for comparing nearby destinations by actual route cost rather than straight-line distance.",
         status: "Concept",
+        mainIdea: "Compare nearby destinations by the real effort and experience of reaching them, not only by straight-line distance.",
+        overview: "The explorer turns intersections and walkable segments into a weighted graph. Candidate destinations are connected to nearby graph nodes, route costs are calculated, and results are ranked by a configurable mix of distance, crossings, incline, shade, and personal preference.",
+        visualFrames: [
+          "destination candidates > geocode coordinates > attach to graph",
+          "start node > weighted route search > candidate paths",
+          "distance + crossings + incline > preference score > ranked routes",
+        ],
+        frameExplanations: [
+          "Places first become coordinates connected to the local walking network.",
+          "A shortest-path search produces feasible routes from the user's start.",
+          "A transparent scoring layer turns route attributes into a personal ranking.",
+        ],
+        architecture: "A place-search adapter supplies coordinates, a graph builder normalizes intersections and walkable edges, a routing engine finds candidate paths, and a scoring layer applies user preferences. The interface displays the ranked choices and explains each score.",
+        codeMap: [
+          "searchPlaces(query) | Resolves an explicit place query into bounded candidate coordinates.",
+          "buildWalkingGraph(segments) | Converts map segments into nodes, weighted edges, and route attributes.",
+          "findRoute(start, goal) | Runs the selected shortest-path algorithm and reconstructs the path.",
+          "scoreRoute(route, weights) | Combines distance, crossings, incline, and preference penalties.",
+          "rankDestinations(candidates) | Sorts candidates while retaining a readable score breakdown.",
+        ],
+        specifics: "Edge weights must never be negative for Dijkstra or A*. Preference scoring should remain separate from graph construction so users can change weights without rebuilding topology. Place-search results need caching and attribution, while every route result should retain predecessor data for reconstruction and explanation.",
+        dependencies: ["Map or OpenStreetMap data", "Geocoding/search endpoint", "Priority queue", "Geospatial distance utilities"],
         problem: "The closest place on a map is not always the quickest or most pleasant place to reach because crossings, barriers, and street topology matter.",
         solution: "Represent intersections and paths as a weighted graph, geocode candidate destinations, then compare routes using distance, crossings, incline, and preference penalties.",
         outcome: "Not built yet; the useful artifact is the problem model and its measurable trade-offs.",
         nextStep: "Prototype with one neighborhood and compare graph results against five routes walked in person.",
         languages: ["Python", "JavaScript"],
-        algorithmIds: ["sample-algorithm-breadth-first-search"],
+        algorithmIds: ["sample-algorithm-dijkstra", "sample-algorithm-a-star"],
       }),
     ],
   },
@@ -1752,10 +1842,10 @@ function getCleaningTags(item, category) {
  * records become Personal; bundled examples remain part of the curriculum.
  *
  * @param {object} item Algorithm entry.
- * @returns {"personal"|"traditional"|"advanced"} Supported category.
+ * @returns {"personal"|"traditional"|"advanced"|"analysis"} Supported category.
  */
 function getAlgorithmCategory(item) {
-  if (["personal", "traditional", "advanced"].includes(item.category)) {
+  if (["personal", "traditional", "advanced", "analysis"].includes(item.category)) {
     return item.category;
   }
   return item.isSample ? "traditional" : "personal";
@@ -1765,7 +1855,7 @@ function getAlgorithmCategory(item) {
  * Normalizes saved algorithm tags and restores tags for legacy starter records.
  *
  * @param {object} item Algorithm entry.
- * @param {"personal"|"traditional"|"advanced"} category Algorithm category.
+ * @param {"personal"|"traditional"|"advanced"|"analysis"} category Algorithm category.
  * @param {Map<string, object>} defaultItems Bundled algorithms by identifier.
  * @returns {Array<string>} Clickable filter tags.
  */
@@ -1774,6 +1864,27 @@ function getAlgorithmTags(item, category, defaultItems) {
     return [...new Set(item.tags.map((tag) => String(tag).trim().toLocaleLowerCase()).filter(Boolean))];
   }
   return [...(defaultItems.get(item.id)?.tags ?? [category])];
+}
+
+/**
+ * Adds newly bundled fields to an editable starter record without replacing
+ * any value the user has already changed.
+ *
+ * @param {object} item Saved record.
+ * @param {object|undefined} defaultItem Current bundled record.
+ * @returns {object} Record with only missing default fields added.
+ */
+function addMissingDefaultFields(item, defaultItem) {
+  if (!defaultItem) return { ...item };
+  const additions = Object.fromEntries(
+    Object.entries(defaultItem)
+      .filter(([key]) => item[key] === undefined)
+      .map(([key, value]) => [
+        key,
+        value === undefined ? undefined : JSON.parse(JSON.stringify(value)),
+      ]),
+  );
+  return { ...additions, ...item };
 }
 
 /**
@@ -1935,6 +2046,117 @@ function migrateWorkspace(workspace) {
       const newAlgorithmSamples = cloneDefaultSection(defaultAlgorithmSection).items
         .filter((item) => !existingIds.has(item.id));
       algorithmSection.items = [...preservedItems, ...newAlgorithmSamples];
+      changed = true;
+    }
+  }
+
+  if (previousVersion < 14) {
+    const languageSection = workspace.sections.find((section) => section.id === "programming-languages");
+    const defaultLanguageSection = DEFAULT_SECTIONS.find((section) => section.id === "programming-languages");
+    if (languageSection && defaultLanguageSection) {
+      const defaultItems = new Map(defaultLanguageSection.items.map((item) => [item.id, item]));
+      languageSection.title = defaultLanguageSection.title;
+      languageSection.description = defaultLanguageSection.description;
+      languageSection.items = (languageSection.items ?? []).map((savedItem) => {
+        const defaultItem = savedItem.isSample ? defaultItems.get(savedItem.id) : undefined;
+        const changedUseWhen = savedItem.useWhen && savedItem.useWhen !== defaultItem?.useWhen;
+        const changedGotchas = savedItem.gotchas && savedItem.gotchas !== defaultItem?.gotchas;
+        const changedMentalModel = savedItem.mentalModel && savedItem.mentalModel !== defaultItem?.mentalModel;
+        const changedSyntax = savedItem.syntax && savedItem.syntax !== defaultItem?.syntax;
+        const changedPatterns = savedItem.patterns
+          && JSON.stringify(savedItem.patterns) !== JSON.stringify(defaultItem?.patterns);
+        const normalizedSavedItem = {
+          ...savedItem,
+          coreConcepts: savedItem.coreConcepts
+            ?? (changedMentalModel ? [`Personal mental model | ${savedItem.mentalModel}`] : undefined),
+          syntaxReference: savedItem.syntaxReference
+            ?? (changedSyntax ? savedItem.syntax : undefined),
+          lessons: savedItem.lessons
+            ?? (changedPatterns ? savedItem.patterns.map((pattern) => `Practice | ${pattern}`) : undefined),
+        };
+        const item = addMissingDefaultFields(normalizedSavedItem, defaultItem);
+        const personalFacts = [
+          defaultItem && changedUseWhen ? `Personal use | ${savedItem.useWhen}` : "",
+          defaultItem && changedGotchas ? `Personal warning | ${savedItem.gotchas}` : "",
+        ].filter(Boolean);
+        return {
+          ...item,
+          quickFacts: [...personalFacts, ...(item.quickFacts ?? [
+            item.useWhen ? `Best for | ${item.useWhen}` : "",
+            item.gotchas ? `Watch for | ${item.gotchas}` : "",
+          ].filter(Boolean))],
+          coreConcepts: item.coreConcepts
+            ?? (item.mentalModel ? [`Mental model | ${item.mentalModel}`] : []),
+          syntaxReference: item.syntaxReference ?? item.syntax ?? "",
+          lessons: item.lessons
+            ?? (item.patterns ?? []).map((pattern) => `Practice | ${pattern}`),
+        };
+      });
+      changed = true;
+    }
+
+    const algorithmSection = workspace.sections.find((section) => section.id === "algorithms");
+    const defaultAlgorithmSection = DEFAULT_SECTIONS.find((section) => section.id === "algorithms");
+    if (algorithmSection && defaultAlgorithmSection) {
+      const defaultItems = new Map(defaultAlgorithmSection.items.map((item) => [item.id, item]));
+      algorithmSection.title = defaultAlgorithmSection.title;
+      algorithmSection.description = defaultAlgorithmSection.description;
+      const preservedItems = (algorithmSection.items ?? []).map((savedItem) => {
+        const defaultItem = savedItem.isSample ? defaultItems.get(savedItem.id) : undefined;
+        const changedUseCases = savedItem.useCases && savedItem.useCases !== defaultItem?.useCases;
+        const item = addMissingDefaultFields({
+          ...savedItem,
+          purpose: savedItem.purpose ?? (changedUseCases ? savedItem.useCases : undefined),
+        }, defaultItem);
+        const category = getAlgorithmCategory(item);
+        return {
+          ...item,
+          category,
+          purpose: item.purpose ?? item.useCases ?? "",
+          keyIdeas: item.keyIdeas ?? [],
+          workedExample: item.workedExample ?? "",
+          cCode: item.cCode ?? "",
+          javaCode: item.javaCode ?? "",
+          frameExplanations: item.frameExplanations ?? [],
+          tags: getAlgorithmTags(item, category, defaultItems),
+        };
+      });
+      const existingIds = new Set(preservedItems.map((item) => item.id));
+      const newSamples = cloneDefaultSection(defaultAlgorithmSection).items
+        .filter((item) => !existingIds.has(item.id));
+      algorithmSection.items = [...preservedItems, ...newSamples];
+      changed = true;
+    }
+
+    const projectSection = workspace.sections.find((section) => section.id === "projects");
+    const defaultProjectSection = DEFAULT_SECTIONS.find((section) => section.id === "projects");
+    if (projectSection && defaultProjectSection) {
+      const defaultItems = new Map(defaultProjectSection.items.map((item) => [item.id, item]));
+      projectSection.title = defaultProjectSection.title;
+      projectSection.description = defaultProjectSection.description;
+      projectSection.items = (projectSection.items ?? []).map((savedItem) => {
+        const defaultItem = savedItem.isSample ? defaultItems.get(savedItem.id) : undefined;
+        const changedProblem = savedItem.problem && savedItem.problem !== defaultItem?.problem;
+        const changedSolution = savedItem.solution && savedItem.solution !== defaultItem?.solution;
+        const changedOutcome = savedItem.outcome && savedItem.outcome !== defaultItem?.outcome;
+        const item = addMissingDefaultFields({
+          ...savedItem,
+          mainIdea: savedItem.mainIdea ?? (changedProblem ? savedItem.problem : undefined),
+          overview: savedItem.overview ?? (changedOutcome ? savedItem.outcome : undefined),
+          specifics: savedItem.specifics ?? (changedSolution ? savedItem.solution : undefined),
+        }, defaultItem);
+        return {
+          ...item,
+          mainIdea: item.mainIdea ?? item.problem ?? "",
+          overview: item.overview ?? item.outcome ?? "",
+          visualFrames: item.visualFrames ?? [],
+          frameExplanations: item.frameExplanations ?? [],
+          architecture: item.architecture ?? "",
+          codeMap: item.codeMap ?? [],
+          specifics: item.specifics ?? item.solution ?? "",
+          dependencies: item.dependencies ?? [],
+        };
+      });
       changed = true;
     }
   }

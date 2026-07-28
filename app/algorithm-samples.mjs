@@ -5,7 +5,9 @@
  * the subject content and category structure.
  */
 
-export const ALGORITHM_SAMPLES = [
+import { ALGORITHM_CODE_EXAMPLES } from "./algorithm-code-examples.mjs?v=1";
+
+const ALGORITHM_FOUNDATIONS = [
   {
     id: "sample-algorithm-linear-search",
     category: "traditional",
@@ -381,3 +383,9 @@ export const ALGORITHM_SAMPLES = [
     tags: ["graph", "shortest path", "negative weight", "dynamic programming"],
   },
 ];
+
+export const ALGORITHM_SAMPLES = ALGORITHM_FOUNDATIONS.map((sample) => ({
+  ...sample,
+  purpose: sample.useCases,
+  ...(ALGORITHM_CODE_EXAMPLES[sample.id] ?? {}),
+}));

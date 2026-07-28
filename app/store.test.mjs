@@ -50,7 +50,7 @@ test("a new workspace starts with nine permanent libraries and editable examples
   ));
   const sampleIds = coreSections.flatMap((section) => section.items.map((item) => item.id));
 
-  assert.equal(workspace.version, 13);
+  assert.equal(workspace.version, 14);
   assert.deepEqual(everydaySections.map((section) => section.id), EVERYDAY_SECTION_IDS);
   assert.deepEqual(
     workspace.sections.filter((section) => section.area !== "everyday").map((section) => section.id),
@@ -66,7 +66,29 @@ test("a new workspace starts with nine permanent libraries and editable examples
   const algorithms = workspace.sections.find((section) => section.id === "algorithms");
   assert.equal(algorithms.items.filter((item) => item.category === "traditional").length, 17);
   assert.equal(algorithms.items.filter((item) => item.category === "advanced").length, 5);
+  assert.equal(algorithms.items.filter((item) => item.category === "analysis").length, 6);
   assert.ok(algorithms.items.every((item) => item.tags?.length));
+  assert.ok(
+    algorithms.items
+      .filter((item) => item.category !== "analysis")
+      .every((item) => item.purpose && item.cCode && item.javaCode),
+  );
+  const languages = workspace.sections.find((section) => section.id === "programming-languages");
+  assert.ok(languages.items.every((item) => (
+    item.quickFacts.length
+    && item.coreConcepts.length
+    && item.syntaxReference
+    && item.lessons.length
+  )));
+  const projects = workspace.sections.find((section) => section.id === "projects");
+  assert.ok(projects.items.every((item) => (
+    item.mainIdea
+    && item.overview
+    && item.architecture
+    && item.codeMap.length
+    && item.specifics
+    && item.dependencies.length
+  )));
   assert.equal(isCoreSectionId("questions-ideas"), true);
   assert.equal(workspace.sections.some((section) => section.id === "protocols"), false);
 });
@@ -160,7 +182,7 @@ test("existing workspaces gain examples in empty libraries without losing saved 
   const workspace = getWorkspace();
   const questionsAndIdeas = workspace.sections.find((section) => section.id === "questions-ideas");
 
-  assert.equal(workspace.version, 13);
+  assert.equal(workspace.version, 14);
   assert.deepEqual(workspace.sections.find((section) => section.id === "studies").items, [savedStudy]);
   assert.ok(questionsAndIdeas.items.length >= 2);
   assert.ok(questionsAndIdeas.items.every((item) => item.isSample === true));
@@ -193,7 +215,7 @@ test("version 11 workspaces receive the expanded cooking guide samples", () => {
 
   const cooking = getWorkspace().sections.find((section) => section.id === "how-to-cook");
 
-  assert.equal(getWorkspace().version, 13);
+  assert.equal(getWorkspace().version, 14);
   assert.ok(cooking.items.some((item) => item.id === "user-cook-note"));
   assert.ok(cooking.items.some((item) => item.id === "sample-cook-knife-prep"));
   assert.ok(cooking.items.some((item) => item.tags?.includes("heat control")));
@@ -232,13 +254,87 @@ test("a version 6 workspace preserves populated libraries and seeds only empty c
 
   const algorithms = workspace.sections.find((section) => section.id === "algorithms");
   const migratedAlgorithm = algorithms.items.find((item) => item.id === savedAlgorithm.id);
-  assert.deepEqual(migratedAlgorithm, {
-    ...savedAlgorithm,
-    category: "personal",
-    tags: ["personal"],
-  });
+  assert.equal(migratedAlgorithm.id, savedAlgorithm.id);
+  assert.equal(migratedAlgorithm.title, savedAlgorithm.title);
+  assert.equal(migratedAlgorithm.updatedAt, savedAlgorithm.updatedAt);
+  assert.equal(migratedAlgorithm.category, "personal");
+  assert.deepEqual(migratedAlgorithm.tags, ["personal"]);
+  assert.equal(migratedAlgorithm.purpose, "");
+  assert.equal(migratedAlgorithm.cCode, "");
+  assert.equal(migratedAlgorithm.javaCode, "");
   assert.ok(algorithms.items.some((item) => item.id === "sample-algorithm-merge-sort"));
+  assert.ok(algorithms.items.some((item) => item.id === "sample-analysis-time-complexity"));
   assert.ok(workspace.sections.find((section) => section.id === "recipes").items.length >= 2);
+});
+
+test("version 13 language, algorithm, and project records gain the new structure without losing legacy content", () => {
+  useStorage({
+    version: 13,
+    sections: [
+      {
+        id: "programming-languages",
+        type: "language",
+        items: [{
+          id: "user-language",
+          title: "Rust",
+          useWhen: "Systems work",
+          mentalModel: "Ownership controls lifetimes.",
+          syntax: "fn main() {}",
+          patterns: ["Model invalid states out"],
+          gotchas: "Borrowing rules are explicit.",
+        }],
+      },
+      {
+        id: "algorithms",
+        type: "algorithm",
+        items: [{
+          id: "user-algorithm",
+          title: "My scheduler",
+          category: "advanced",
+          useCases: "Prioritize personal work.",
+          tags: ["scheduling"],
+        }],
+      },
+      {
+        id: "projects",
+        type: "project",
+        items: [{
+          id: "user-project",
+          title: "Planner",
+          problem: "Plans were scattered.",
+          solution: "Use one timeline.",
+          outcome: "A working prototype.",
+        }],
+      },
+    ],
+  });
+
+  const workspace = getWorkspace();
+  const language = workspace.sections.find((section) => section.id === "programming-languages")
+    .items.find((item) => item.id === "user-language");
+  const algorithm = workspace.sections.find((section) => section.id === "algorithms")
+    .items.find((item) => item.id === "user-algorithm");
+  const project = workspace.sections.find((section) => section.id === "projects")
+    .items.find((item) => item.id === "user-project");
+
+  assert.equal(workspace.version, 14);
+  assert.deepEqual(language.quickFacts, [
+    "Best for | Systems work",
+    "Watch for | Borrowing rules are explicit.",
+  ]);
+  assert.deepEqual(language.coreConcepts, ["Personal mental model | Ownership controls lifetimes."]);
+  assert.equal(language.syntaxReference, "fn main() {}");
+  assert.deepEqual(language.lessons, ["Practice | Model invalid states out"]);
+  assert.equal(algorithm.category, "advanced");
+  assert.equal(algorithm.purpose, "Prioritize personal work.");
+  assert.equal(algorithm.cCode, "");
+  assert.equal(algorithm.javaCode, "");
+  assert.deepEqual(algorithm.tags, ["scheduling"]);
+  assert.equal(project.mainIdea, "Plans were scattered.");
+  assert.equal(project.overview, "A working prototype.");
+  assert.equal(project.specifics, "Use one timeline.");
+  assert.deepEqual(project.codeMap, []);
+  assert.deepEqual(project.dependencies, []);
 });
 
 test("deleted examples do not reappear when a version 7 workspace is upgraded", () => {
@@ -315,7 +411,7 @@ test("version 9 workout libraries receive Pull and Legs samples without losing u
 
   const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
 
-  assert.equal(getWorkspace().version, 13);
+  assert.equal(getWorkspace().version, 14);
   assert.deepEqual(workouts.items.find((item) => item.id === savedExercise.id), savedExercise);
   assert.ok(workouts.items.some((item) => item.id === "sample-pull-pull-up"));
   assert.ok(workouts.items.some((item) => item.id === "sample-legs-back-squat"));

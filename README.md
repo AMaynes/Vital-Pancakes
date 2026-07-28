@@ -64,9 +64,9 @@ The editable areas use nine permanent core libraries. A new or previously empty 
 - **Cleaning** — Separate House Cleaning and Self Care libraries with practical routines, blank visual panels, and toggleable tags for quickly filtering by task, area, frequency, or supply.
 - **Studies** — Inquiry dossiers that keep the research question, prediction, method, evidence, findings, limitations, and next test distinct.
 - **Questions & Ideas** — An investigation board for prompts, possible directions, provisional positions, and development status.
-- **Programming Languages** — Return-to-language sheets covering problem fit, execution model, runnable syntax, durable patterns, and gotchas.
-- **Algorithms** — Separate Personal, Traditional, and Advanced labs with clickable topic filters, problem shape, invariants, pseudocode, complexity, and animated traces. The starter curriculum includes seventeen traditional and five advanced algorithms.
-- **Projects** — Decision-oriented case studies preserving the problem, approach, outcome, next move, languages, and live Algorithm relationships.
+- **Programming Languages** — One field guide per language with Quick Facts, a core-function mindmap, a runnable syntax reference sheet, and specific lessons with explanations.
+- **Algorithms** — Personal, Traditional, Advanced, and special Algorithm Analysis libraries with clickable topic filters. Algorithm pages progress from purpose and reasoning through explained step diagrams, English pseudocode, complexity, and real C and Java implementations. The starter curriculum includes seventeen traditional algorithms, five advanced algorithms, and six analysis subjects.
+- **Projects** — System blueprints organized around the Main Idea, an explained visual overview, architecture, code and function maps, implementation specifics, deep-linked algorithms, languages, dependencies, outcomes, and next moves.
 
 These nine core libraries cannot be added, renamed, or deleted. Their entries—including every starter example—remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library, while existing user-authored algorithms migrate into Personal Algorithms without being discarded.
 

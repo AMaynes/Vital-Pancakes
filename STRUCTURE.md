@@ -199,7 +199,15 @@ Defines the browser-local data schema, nine permanent core libraries, determinis
 
 ### `app/algorithm-samples.mjs`
 
-Contains the editable Traditional and Advanced algorithm curriculum. `store.js` adds stable sample metadata and migrates older user-authored algorithm records into the Personal subsection.
+Contains the editable Traditional and Advanced algorithm curriculum and joins each subject to its C and Java reference implementations.
+
+### `app/algorithm-code-examples.mjs`
+
+Keeps compact C and Java implementations for every bundled Traditional and Advanced algorithm separate from the conceptual curriculum.
+
+### `app/algorithm-analysis-samples.mjs`
+
+Defines the special Algorithm Analysis subject library, including comparison, time, space, case analysis, recurrences, and responsible benchmarking. `store.js` adds stable sample metadata and migrates older user-authored algorithm records into the Personal subsection.
 
 ### `assets/`
 
