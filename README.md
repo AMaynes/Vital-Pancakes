@@ -61,7 +61,7 @@ The editable areas use nine permanent core libraries. A new or previously empty 
 - **How to Cook** — A technique atlas organized around heat, sensory signals, underlying principles, ordered methods, and failure recovery.
 - **Recipes** — Stove-readable recipe spreads with timing, yield, ingredient preparation, method, and post-cook adjustment notes.
 - **Workout Types** — Reusable training prescriptions with purpose, dose, equipment, movement order, coaching notes, and explicit progression rules.
-- **House Cleaning** — A care manual that divides the house into zones and material-safe, clean-to-dirty routes.
+- **Cleaning** — Separate House Cleaning and Self Care libraries with practical routines, blank visual panels, and toggleable tags for quickly filtering by task, area, frequency, or supply.
 - **Studies** — Inquiry dossiers that keep the research question, prediction, method, evidence, findings, limitations, and next test distinct.
 - **Questions & Ideas** — An investigation board for prompts, possible directions, provisional positions, and development status.
 - **Programming Languages** — Return-to-language sheets covering problem fit, execution model, runnable syntax, durable patterns, and gotchas.

@@ -50,7 +50,7 @@ test("a new workspace starts with nine permanent libraries and editable examples
   ));
   const sampleIds = coreSections.flatMap((section) => section.items.map((item) => item.id));
 
-  assert.equal(workspace.version, 10);
+  assert.equal(workspace.version, 11);
   assert.deepEqual(everydaySections.map((section) => section.id), EVERYDAY_SECTION_IDS);
   assert.deepEqual(
     workspace.sections.filter((section) => section.area !== "everyday").map((section) => section.id),
@@ -154,7 +154,7 @@ test("existing workspaces gain examples in empty libraries without losing saved 
   const workspace = getWorkspace();
   const questionsAndIdeas = workspace.sections.find((section) => section.id === "questions-ideas");
 
-  assert.equal(workspace.version, 10);
+  assert.equal(workspace.version, 11);
   assert.deepEqual(workspace.sections.find((section) => section.id === "studies").items, [savedStudy]);
   assert.ok(questionsAndIdeas.items.length >= 2);
   assert.ok(questionsAndIdeas.items.every((item) => item.isSample === true));
@@ -271,7 +271,7 @@ test("version 9 workout libraries receive Pull and Legs samples without losing u
 
   const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
 
-  assert.equal(getWorkspace().version, 10);
+  assert.equal(getWorkspace().version, 11);
   assert.deepEqual(workouts.items.find((item) => item.id === savedExercise.id), savedExercise);
   assert.ok(workouts.items.some((item) => item.id === "sample-pull-pull-up"));
   assert.ok(workouts.items.some((item) => item.id === "sample-legs-back-squat"));
@@ -309,4 +309,53 @@ test("version 7 workout samples are replaced without losing categorized user ent
   assert.equal(workouts.items.some((item) => item.id === "sample-workout-full-body"), false);
   assert.deepEqual(workouts.items.find((item) => item.id === savedPullExercise.id), savedPullExercise);
   assert.ok(workouts.items.some((item) => item.id === "sample-push-barbell-bench-press"));
+});
+
+test("Cleaning contains filled House Cleaning and Self Care libraries with tags", () => {
+  useStorage();
+
+  const cleaning = getWorkspace().sections.find((section) => section.id === "cleaning");
+  const houseEntries = cleaning.items.filter((item) => item.category === "house");
+  const selfCareEntries = cleaning.items.filter((item) => item.category === "self-care");
+
+  assert.equal(cleaning.title, "Cleaning");
+  assert.ok(houseEntries.length >= 10);
+  assert.ok(selfCareEntries.length >= 9);
+  assert.ok(cleaning.items.every((item) => item.tags.length >= 2));
+  assert.ok(houseEntries.some((item) => item.title === "Refrigerator cleanout"));
+  assert.ok(selfCareEntries.some((item) => item.title === "Personal laundry"));
+  assert.ok(selfCareEntries.some((item) => item.title === "Oral hygiene"));
+});
+
+test("version 10 cleaning entries gain categories and tags without losing user content", () => {
+  const savedLaundryEntry = {
+    id: "user-laundry",
+    title: "Laundry for dark clothes",
+    frequency: "Weekly",
+    updatedAt: "2026-07-27",
+  };
+  useStorage({
+    version: 10,
+    sections: [
+      {
+        id: "cleaning",
+        title: "House Cleaning",
+        type: "cleaning",
+        area: "everyday",
+        items: [
+          { id: "sample-clean-kitchen-reset", title: "Old sample", isSample: true },
+          savedLaundryEntry,
+        ],
+      },
+    ],
+  });
+
+  const cleaning = getWorkspace().sections.find((section) => section.id === "cleaning");
+  const migratedEntry = cleaning.items.find((item) => item.id === savedLaundryEntry.id);
+
+  assert.equal(cleaning.items.some((item) => item.id === "sample-clean-kitchen-reset" && item.title === "Old sample"), false);
+  assert.equal(migratedEntry.category, "self-care");
+  assert.ok(migratedEntry.tags.includes("weekly"));
+  assert.ok(migratedEntry.tags.includes("laundry"));
+  assert.ok(cleaning.items.some((item) => item.id === "sample-self-shower"));
 });

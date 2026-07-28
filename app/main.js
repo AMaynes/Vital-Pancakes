@@ -30,6 +30,11 @@ import {
   getContentViewStorageKey,
   normalizeContentView,
 } from "./content-view.mjs";
+import {
+  collectEntryTags,
+  filterItemsByTags,
+  normalizeEntryTags,
+} from "./tag-filter.mjs";
 
 const appMain = document.querySelector("#app-main");
 const itemDialog = document.querySelector("#item-dialog");
@@ -41,12 +46,13 @@ let editingItemId = null;
 const activeSectionSearchFilters = new Map();
 const activeSectionTagFilters = new Map();
 const activeWorkoutMuscleFilters = new Map();
+const activeCleaningTagFilters = new Map();
 
 const SECTION_LABELS = {
   "cooking-guide": "COOKING GUIDE",
   recipe: "RECIPE",
   workout: "WORKOUT",
-  cleaning: "CLEANING AREA",
+  cleaning: "CLEANING ROUTINE",
   routine: "ROUTINE",
   study: "STUDY",
   language: "LANGUAGE",
@@ -210,6 +216,18 @@ const WORKOUT_MUSCLE_FILTERS = Object.freeze({
     { id: "abductors", label: "Abductors", terms: ["abductor"] },
   ],
 });
+const CLEANING_CATEGORIES = Object.freeze([
+  {
+    id: "house",
+    title: "House Cleaning",
+    description: "Room-by-room routines for surfaces, appliances, floors, linens, waste, and seasonal deep cleaning.",
+  },
+  {
+    id: "self-care",
+    title: "Self Care",
+    description: "Personal hygiene, grooming, laundry, linens, and clothing-care routines kept practical and repeatable.",
+  },
+]);
 
 /**
  * Creates an element with optional class and text without parsing user HTML.
@@ -316,6 +334,61 @@ function buildWorkoutHash(categoryId, itemId = null) {
   const parameters = new URLSearchParams({ section: "workouts", category: categoryId });
   if (itemId) parameters.set("item", itemId);
   return `#${parameters.toString()}`;
+}
+
+function getRouteCleaningCategory() {
+  const requestedCategory = new URLSearchParams(location.hash.slice(1)).get("category");
+  return CLEANING_CATEGORIES.some((category) => category.id === requestedCategory)
+    ? requestedCategory
+    : null;
+}
+
+function buildCleaningHash(categoryId, itemId = null) {
+  const parameters = new URLSearchParams({ section: "cleaning", category: categoryId });
+  if (itemId) parameters.set("item", itemId);
+  return `#${parameters.toString()}`;
+}
+
+function createCleaningTagFilters(section) {
+  const categoryId = section.cleaningCategory;
+  const availableTags = collectEntryTags(section.items);
+  const availableTagNames = new Set(availableTags.map(({ tag }) => tag));
+  const selectedTags = new Set(
+    [...(activeCleaningTagFilters.get(categoryId) ?? [])]
+      .filter((tag) => availableTagNames.has(tag)),
+  );
+  activeCleaningTagFilters.set(categoryId, selectedTags);
+  const items = filterItemsByTags(section.items, selectedTags);
+
+  if (!availableTags.length) return { element: null, items, selectedTags };
+
+  const bar = createElement("section", "cleaning-filter-bar");
+  bar.append(createElement("span", "tag-label", "Filter by tag"));
+  const controls = createElement("div", "cleaning-filter-tags");
+  availableTags.forEach(({ tag, count }) => {
+    const button = createElement("button", "cleaning-filter-tag", `${tag} · ${count}`);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(selectedTags.has(tag)));
+    button.addEventListener("click", () => {
+      const nextTags = new Set(activeCleaningTagFilters.get(categoryId) ?? []);
+      if (nextTags.has(tag)) nextTags.delete(tag);
+      else nextTags.add(tag);
+      activeCleaningTagFilters.set(categoryId, nextTags);
+      renderWorkspace();
+    });
+    controls.append(button);
+  });
+  if (selectedTags.size) {
+    const clearButton = createElement("button", "cleaning-filter-clear", "Clear filters");
+    clearButton.type = "button";
+    clearButton.addEventListener("click", () => {
+      activeCleaningTagFilters.set(categoryId, new Set());
+      renderWorkspace();
+    });
+    controls.append(clearButton);
+  }
+  bar.append(controls);
+  return { element: bar, items, selectedTags };
 }
 
 /**
@@ -568,7 +641,7 @@ function renderEverydayDashboard(workspace) {
     {
       label: "03",
       title: "Cleaning",
-      copy: "Divide the house into parts so every area has a clear cleaning method.",
+      copy: "Keep house care and personal hygiene organized as clear, repeatable routines.",
       sectionIds: ["cleaning"],
     },
   ].forEach((domain) => {
@@ -729,11 +802,18 @@ function renderSection(section) {
     ? section.items.find((item) => item.id === routeItemId)
     : null;
   if (routeItem) {
-    const category = section.type === "workout"
+    const workoutCategory = section.type === "workout"
       ? WORKOUT_CATEGORIES.find((candidate) => candidate.id === routeItem.category)
       : null;
+    const cleaningCategory = section.type === "cleaning"
+      ? CLEANING_CATEGORIES.find((candidate) => candidate.id === routeItem.category)
+      : null;
     renderEntryDetail(
-      category ? { ...section, workoutCategory: category.id, title: category.title } : section,
+      workoutCategory
+        ? { ...section, workoutCategory: workoutCategory.id, title: workoutCategory.title }
+        : cleaningCategory
+          ? { ...section, cleaningCategory: cleaningCategory.id, title: cleaningCategory.title }
+          : section,
       routeItem,
     );
     return;
@@ -756,13 +836,36 @@ function renderSection(section) {
     appMain.dataset.sectionTitle = `Workout Types / ${category.title}`;
   }
 
+  if (section.type === "cleaning") {
+    const categoryId = getRouteCleaningCategory();
+    if (!categoryId) {
+      renderCleaningCategoryIndex(section);
+      return;
+    }
+    const category = CLEANING_CATEGORIES.find((candidate) => candidate.id === categoryId);
+    section = {
+      ...section,
+      cleaningCategory: category.id,
+      title: category.title,
+      description: category.description,
+      items: section.items.filter((item) => item.category === category.id),
+    };
+    appMain.dataset.sectionTitle = `Cleaning / ${category.title}`;
+  }
+
   const workoutFilters = section.workoutCategory
     ? createWorkoutMuscleFilterBar(section, section.items)
     : null;
   const sectionFilters = section.type === "cooking-guide"
     ? createTagSearchFilterBar(section, workoutFilters?.filteredItems ?? section.items)
     : null;
-  const visibleItems = sectionFilters?.filteredItems ?? workoutFilters?.filteredItems ?? section.items;
+  const cleaningFilters = section.cleaningCategory
+    ? createCleaningTagFilters(section)
+    : null;
+  const visibleItems = cleaningFilters?.items
+    ?? sectionFilters?.filteredItems
+    ?? workoutFilters?.filteredItems
+    ?? section.items;
   const heading = createElement("section", "page-heading section-page-heading");
   const headingCopy = createElement("div");
   headingCopy.append(
@@ -797,7 +900,7 @@ function renderSection(section) {
     createElement("span", "", `${section.items.filter((item) => item.isSample).length} editable examples`),
     createElement("span", "", "Stored on this device"),
   );
-  if (workoutFilters?.selectedIds.size || sectionFilters?.isActive) {
+  if (workoutFilters?.selectedIds.size || sectionFilters?.isActive || cleaningFilters?.selectedTags.size) {
     meta.prepend(createElement("span", "", `${visibleItems.length} of ${section.items.length} shown`));
   }
 
@@ -824,6 +927,7 @@ function renderSection(section) {
   appMain.append(heading);
   if (workoutFilters?.element) appMain.append(workoutFilters.element);
   if (sectionFilters?.element) appMain.append(sectionFilters.element);
+  if (cleaningFilters?.element) appMain.append(cleaningFilters.element);
   appMain.append(meta, grid);
 }
 
@@ -967,6 +1071,41 @@ function renderWorkoutCategoryIndex(section) {
 }
 
 /**
+ * Renders Cleaning as two persistent, fully populated routine libraries.
+ *
+ * @param {object} section Cleaning section.
+ */
+function renderCleaningCategoryIndex(section) {
+  const heading = createElement("section", "page-heading section-page-heading");
+  const headingCopy = createElement("div");
+  headingCopy.append(
+    createElement("p", "eyebrow", `${section.icon} CARE LIBRARY`),
+    createElement("h1", "", section.title),
+    createElement("p", "page-description", section.description),
+  );
+  heading.append(headingCopy);
+
+  const categoryGrid = createElement("div", "workout-category-grid cleaning-category-grid");
+  CLEANING_CATEGORIES.forEach((category) => {
+    const entries = section.items.filter((item) => item.category === category.id);
+    const card = createElement("a", "workout-category-card cleaning-category-card");
+    card.href = buildCleaningHash(category.id);
+    const copy = createElement("div", "workout-category-copy");
+    copy.append(
+      createElement("span", "card-kicker", `${entries.length} ${entries.length === 1 ? "ROUTINE" : "ROUTINES"}`),
+      createElement("h2", "", category.title),
+      createElement("p", "", category.description),
+    );
+    const blankVisual = createElement("div", "workout-category-visual");
+    blankVisual.setAttribute("aria-hidden", "true");
+    card.append(copy, blankVisual, createElement("span", "card-arrow", "↗"));
+    categoryGrid.append(card);
+  });
+
+  appMain.append(heading, categoryGrid);
+}
+
+/**
  * Reads a collection's retained list/grid preference.
  *
  * @param {string} sectionId Collection identifier.
@@ -1018,7 +1157,9 @@ function createEntryIndexCard(section, item, index) {
   const link = createElement("a", "entry-index-link");
   link.href = section.workoutCategory
     ? buildWorkoutHash(section.workoutCategory, item.id)
-    : buildContentHash(section.id, item.id);
+    : section.cleaningCategory
+      ? buildCleaningHash(section.cleaningCategory, item.id)
+      : buildContentHash(section.id, item.id);
   link.setAttribute("aria-label", `Open ${item.title}`);
 
   const copy = createElement("div", "entry-index-copy");
@@ -1065,7 +1206,9 @@ function renderEntryDetail(section, item) {
   const backLink = createElement("a", "entry-back-link", `← ${section.title}`);
   backLink.href = section.workoutCategory
     ? buildWorkoutHash(section.workoutCategory)
-    : buildContentHash(section.id);
+    : section.cleaningCategory
+      ? buildCleaningHash(section.cleaningCategory)
+      : buildContentHash(section.id);
   headingCopy.append(
     backLink,
     createElement(
@@ -1140,7 +1283,7 @@ function createEntryVisual(section, item, compact) {
   const frame = createElement("div", "subject-visual-frame");
   const symbol = createElement("div", "subject-visual-symbol");
   const type = section.type;
-  if (type === "workout" || type === "cooking-guide") {
+  if (type === "workout" || type === "cooking-guide" || type === "cleaning") {
     visual.classList.add("is-blank");
     visual.append(frame);
     return visual;
@@ -1151,13 +1294,6 @@ function createEntryVisual(section, item, compact) {
       createElement("i", "visual-steam steam-one"),
       createElement("i", "visual-steam steam-two"),
       createElement("i", "visual-steam steam-three"),
-    );
-  } else if (type === "cleaning") {
-    symbol.append(
-      createElement("i", "visual-room"),
-      createElement("i", "visual-sweep"),
-      createElement("i", "visual-spark spark-one"),
-      createElement("i", "visual-spark spark-two"),
     );
   } else if (type === "language") {
     symbol.append(
@@ -1261,7 +1397,7 @@ function getEmptyMessage(section) {
     "cooking-guide": "Add a cooking method or skill when you want its principles and steps available without searching again.",
     recipe: "Add a recipe you want to make, improve, and return to.",
     workout: "Add a type of workout with its purpose, frequency, and exercise structure.",
-    cleaning: "Add one room, surface, or part of the house with the order and supplies needed to clean it.",
+    cleaning: "Add a house-care or self-care routine with its frequency, supplies, ordered steps, and tags.",
     routine: "Turn a recurring task into a clear trigger and a checklist you can follow without re-planning it.",
     study: "Frame a question, decide what evidence matters, record the method, and keep limitations beside the findings.",
     language: "Add a language when you need a refresher. Capture syntax, mental models, and the mistakes you want to avoid.",
@@ -1284,7 +1420,7 @@ function getSingularLabel(section) {
     "cooking-guide": "cooking guide",
     recipe: "recipe",
     workout: "exercise",
-    cleaning: "cleaning area",
+    cleaning: "cleaning routine",
     routine: "routine",
     study: "study",
     language: "language",
@@ -1457,6 +1593,7 @@ function createCleaningBody(section, item) {
   body.append(route);
   if (item.warnings) body.append(createDefinition("Material and safety limits", item.warnings));
   if (item.notes) body.append(createDefinition("Maintenance notes", item.notes));
+  appendTagGroup(body, "Tags", normalizeEntryTags(item.tags));
   return body;
 }
 
@@ -1799,12 +1936,19 @@ function createItemFields(section, item) {
     );
   } else if (section.type === "cleaning") {
     fields.push(
-      createField("Zone and surfaces", "zone", "text", item?.zone ?? "", false, "What is included in this route?"),
+      createSelectField(
+        "Cleaning subsection",
+        "category",
+        item?.category ?? section.cleaningCategory ?? "house",
+        ["house", "self-care"],
+      ),
+      createField("Area or items included", "zone", "text", item?.zone ?? "", false, "What does this routine cover?"),
       createField("Frequency", "frequency", "text", item?.frequency ?? "", false, "Daily, weekly, monthly, or as needed"),
-      createField("Supplies · one per line", "supplies", "textarea", (item?.supplies ?? []).join("\n"), false, "Only what this part of the house needs"),
+      createField("Supplies · one per line", "supplies", "textarea", (item?.supplies ?? []).join("\n"), false, "Only what this routine needs"),
       createField("Cleaning order · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Work from the first action to the last"),
       createField("Material and safety limits", "warnings", "textarea", item?.warnings ?? "", false, "Chemical combinations, delicate materials, or ventilation"),
       createField("Notes", "notes", "textarea", item?.notes ?? "", false, "Warnings, material care, or shortcuts"),
+      createField("Filter tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "e.g. weekly, kitchen, dust"),
     );
   } else if (section.type === "routine") {
     fields.push(
@@ -2035,12 +2179,16 @@ function readItemForm(section) {
   if (section.type === "cleaning") {
     return {
       ...base,
+      category: ["house", "self-care"].includes(String(formData.get("category")))
+        ? String(formData.get("category"))
+        : "house",
       zone: String(formData.get("zone") ?? "").trim(),
       frequency: String(formData.get("frequency") ?? "").trim(),
       supplies: lineList("supplies"),
       steps: lineList("steps"),
       warnings: String(formData.get("warnings") ?? "").trim(),
       notes: String(formData.get("notes") ?? "").trim(),
+      tags: commaList("tags").map((tag) => tag.toLocaleLowerCase()),
     };
   }
   if (section.type === "routine") {

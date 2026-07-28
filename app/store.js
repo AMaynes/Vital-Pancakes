@@ -14,12 +14,16 @@
  */
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
-const CURRENT_WORKSPACE_VERSION = 10;
+const CURRENT_WORKSPACE_VERSION = 11;
 const EVERYDAY_AREA = "everyday";
 const SAMPLE_DATE = "2026-07-28T12:00:00.000Z";
 const LEGACY_WORKOUT_SAMPLE_IDS = new Set([
   "sample-workout-full-body",
   "sample-workout-zone-two",
+]);
+const LEGACY_CLEANING_SAMPLE_IDS = new Set([
+  "sample-clean-kitchen-reset",
+  "sample-clean-bathroom",
 ]);
 
 /**
@@ -831,13 +835,14 @@ const DEFAULT_SECTIONS = [
   },
   {
     id: "cleaning",
-    title: "House Cleaning",
-    description: "Break the house into manageable parts with supplies, order, and repeatable cleaning steps.",
+    title: "Cleaning",
+    description: "House care and personal hygiene organized into repeatable, searchable routines.",
     icon: "⌂",
     type: "cleaning",
     area: EVERYDAY_AREA,
     items: [
       createSample("sample-clean-kitchen-reset", {
+        category: "house",
         title: "Kitchen closing reset",
         summary: "A top-to-bottom fifteen-minute route that leaves the kitchen ready for the next meal.",
         frequency: "Nightly or after the final cooked meal",
@@ -857,8 +862,10 @@ const DEFAULT_SECTIONS = [
         ],
         warnings: "Do not mix cleaning chemicals. Let a hot glass cooktop cool before applying liquid.",
         notes: "Keep the route short enough to do consistently; save the oven, cabinet fronts, and refrigerator shelves for weekly rotation.",
+        tags: ["daily", "kitchen", "dishes", "surfaces"],
       }),
       createSample("sample-clean-bathroom", {
+        category: "house",
         title: "Weekly bathroom clean",
         summary: "Use dwell time and a clean-to-dirty route instead of scrubbing every surface at once.",
         frequency: "Weekly · 25–35 minutes",
@@ -879,6 +886,313 @@ const DEFAULT_SECTIONS = [
         ],
         warnings: "Never combine bleach with ammonia, acids, or other cleaners. Check natural stone before using acidic products.",
         notes: "A squeegee after showers reduces the weekly mineral and soap buildup more than extra scrubbing does.",
+        tags: ["weekly", "bathroom", "disinfecting", "hard water"],
+      }),
+      createSample("sample-clean-floors", {
+        category: "house",
+        title: "Vacuum and mop floors",
+        summary: "Remove dry debris first, then wet-clean only with a product suitable for the floor material.",
+        frequency: "Vacuum weekly; spot-clean as needed; mop every 1–2 weeks",
+        zone: "Hard floors, rugs, carpet edges, thresholds, and under movable furniture",
+        supplies: ["Vacuum with attachments", "Microfiber mop", "Floor-specific cleaner", "Bucket or spray bottle"],
+        steps: [
+          "Pick up objects and move light furniture before beginning.",
+          "Vacuum edges, corners, rugs, and the full floor so grit is not dragged through the mop water.",
+          "Test the cleaner on the floor type and use the minimum liquid required.",
+          "Mop from the far side toward the exit with overlapping passes.",
+          "Let the floor dry before replacing rugs or furniture.",
+        ],
+        warnings: "Do not soak hardwood or laminate. Never use a product unless it is approved for the installed floor.",
+        notes: "Separate vacuum attachments used near food areas from those used in bathrooms when practical.",
+        tags: ["weekly", "floors", "vacuuming", "mopping", "dust"],
+      }),
+      createSample("sample-clean-bedroom", {
+        category: "house",
+        title: "Bedroom reset",
+        summary: "Keep the sleeping area clear, low-dust, and easy to maintain with a short ordered route.",
+        frequency: "Five-minute daily reset; fuller clean weekly",
+        zone: "Bed, nightstands, dresser, mirrors, floor, and frequently handled surfaces",
+        supplies: ["Laundry basket", "Microfiber cloth", "Vacuum", "Glass cleaner if needed"],
+        steps: [
+          "Open the curtains and air the room if outdoor conditions permit.",
+          "Make the bed and move worn clothing to the laundry basket.",
+          "Return objects to their homes and clear the floor.",
+          "Dust high surfaces before lower furniture.",
+          "Vacuum or mop last, including under the bed when accessible.",
+        ],
+        warnings: "Avoid spraying cleaner directly over bedding or electronics.",
+        notes: "Keep the daily reset small; rotate drawers, closet shelves, and under-bed storage into monthly work.",
+        tags: ["daily", "weekly", "bedroom", "dust", "decluttering"],
+      }),
+      createSample("sample-clean-living-area", {
+        category: "house",
+        title: "Living and common areas",
+        summary: "Reset high-use rooms by clearing clutter, dusting top to bottom, and finishing with upholstery and floors.",
+        frequency: "Weekly · 25–40 minutes",
+        zone: "Living room, dining area, entryway, shelves, electronics, upholstery, and floors",
+        supplies: ["Microfiber cloths", "Vacuum with upholstery attachment", "Surface-safe cleaner", "Basket for misplaced objects"],
+        steps: [
+          "Collect trash, dishes, and objects that belong elsewhere.",
+          "Dust shelves, frames, lamps, and furniture from high to low.",
+          "Wipe switches, handles, tables, and remote controls.",
+          "Vacuum upholstery and beneath removable cushions.",
+          "Vacuum or mop the floor and reset pillows and throws.",
+        ],
+        warnings: "Apply electronics-safe cleaner to the cloth, never directly into screens or openings.",
+        notes: "Use one catch-all basket during the route, then empty it immediately so clutter is not merely relocated.",
+        tags: ["weekly", "living room", "dust", "upholstery", "decluttering"],
+      }),
+      createSample("sample-clean-refrigerator", {
+        category: "house",
+        title: "Refrigerator cleanout",
+        summary: "Remove expired food, wash spills, and restore clear zones before odor and residue accumulate.",
+        frequency: "Quick check weekly; shelf clean monthly",
+        zone: "Shelves, drawers, door bins, seals, handles, and exterior",
+        supplies: ["Cooler or insulated bag", "Dish soap", "Warm water", "Microfiber cloth", "Small brush"],
+        steps: [
+          "Discard spoiled or expired food and move temperature-sensitive items to a cooler.",
+          "Remove one shelf or drawer at a time and let cold glass warm before washing.",
+          "Wash removable parts with dish soap and dry completely.",
+          "Wipe interior walls, seals, handles, and spills.",
+          "Return food by category with soonest-to-use items visible at the front.",
+        ],
+        warnings: "Do not put cold glass directly into hot water. Follow the appliance manual for removable parts and drain openings.",
+        notes: "Cleaning small spills when they happen prevents most monthly scrubbing.",
+        tags: ["weekly", "monthly", "kitchen", "refrigerator", "food safety"],
+      }),
+      createSample("sample-clean-oven-cooktop", {
+        category: "house",
+        title: "Cooktop and oven deep clean",
+        summary: "Remove grease and cooked-on residue without damaging heating elements or surface coatings.",
+        frequency: "Cooktop weekly; oven every 1–3 months or after major spills",
+        zone: "Burners, grates, knobs, cooktop, oven racks, door glass, and interior",
+        supplies: ["Degreasing dish soap", "Non-scratch pad", "Baking tray for soaking racks", "Appliance-approved oven cleaner"],
+        steps: [
+          "Turn the appliance off and let every surface cool.",
+          "Remove grates, caps, knobs, and racks only where the manual permits.",
+          "Soak removable greasy parts while wiping loose debris from the appliance.",
+          "Apply the correct cleaner and allow its labeled dwell time.",
+          "Scrub gently, rinse residues thoroughly, dry parts, and reassemble.",
+        ],
+        warnings: "Do not mix cleaners or apply chemicals to heating elements, ignition ports, or self-cleaning surfaces unless the manual allows it.",
+        notes: "Wipe fresh spills after the appliance cools; old carbonized residue takes far longer to remove.",
+        tags: ["monthly", "kitchen", "oven", "cooktop", "degreasing"],
+      }),
+      createSample("sample-clean-glass-windows", {
+        category: "house",
+        title: "Windows, mirrors, and glass",
+        summary: "Clean frames and edges before the glass so the final pass stays streak-free.",
+        frequency: "Mirrors weekly; interior windows every 1–3 months",
+        zone: "Mirrors, interior window glass, tracks, sills, and glass doors",
+        supplies: ["Dry microfiber cloth", "Glass cleaner", "Detail brush", "Squeegee for large panes"],
+        steps: [
+          "Dust frames, tracks, sills, and the top edge first.",
+          "Apply a small amount of cleaner to the cloth or glass.",
+          "Wipe the full pane in overlapping strokes.",
+          "Dry the perimeter and inspect from an angle for remaining streaks.",
+          "Wash reusable cloths without fabric softener.",
+        ],
+        warnings: "Use stable access equipment; do not lean from windows or mix ammonia-based products with bleach.",
+        notes: "Too much product usually creates streaks rather than preventing them.",
+        tags: ["weekly", "monthly", "glass", "windows", "mirrors"],
+      }),
+      createSample("sample-clean-trash-recycling", {
+        category: "house",
+        title: "Trash and recycling reset",
+        summary: "Empty waste before overflow, clean the containers, and prevent odor at the source.",
+        frequency: "As needed; inspect on collection day",
+        zone: "Kitchen, bathroom, office, bedroom, recycling, and compost containers",
+        supplies: ["Replacement liners", "Dish soap or surface cleaner", "Gloves", "Small brush"],
+        steps: [
+          "Collect every bin and separate recycling according to local rules.",
+          "Tie waste bags and take them directly to the collection area.",
+          "Remove loose residue and wash any dirty container.",
+          "Dry bins completely before adding fresh liners.",
+          "Wipe lids, pedals, and nearby wall or floor splashes.",
+        ],
+        warnings: "Handle broken glass, sharps, batteries, chemicals, and electronics through their correct local disposal streams.",
+        notes: "Odor usually means residue remains in the container, not that more fragrance is needed.",
+        tags: ["weekly", "waste", "recycling", "odor", "kitchen"],
+      }),
+      createSample("sample-clean-seasonal-deep-clean", {
+        category: "house",
+        title: "Seasonal whole-home deep clean",
+        summary: "Rotate neglected areas into a bounded project instead of attempting every deep-cleaning task at once.",
+        frequency: "Quarterly or at a seasonal change",
+        zone: "Behind appliances, vents, baseboards, high shelves, storage, soft furnishings, and overlooked surfaces",
+        supplies: ["Vacuum attachments", "Microfiber cloths", "Step stool", "Boxes for keep, donate, and discard"],
+        steps: [
+          "Choose one room or system rather than opening the whole house at once.",
+          "Remove items, decide what stays, and contain donations immediately.",
+          "Dust ceiling-level surfaces, vents, walls, and baseboards from high to low.",
+          "Move safe, manageable furniture and appliances to clean behind them.",
+          "Wash textiles or covers as their care labels permit and restore the room.",
+        ],
+        warnings: "Do not move heavy appliances alone or disturb suspected mold, asbestos, pests, or damaged wiring.",
+        notes: "Keep a rotation list so each season covers different neglected zones.",
+        tags: ["seasonal", "whole home", "deep clean", "decluttering", "dust"],
+      }),
+      createSample("sample-self-shower", {
+        category: "self-care",
+        title: "Daily shower and body wash",
+        summary: "Clean sweat, odor-prone areas, and visible soil without over-scrubbing or stripping the skin.",
+        frequency: "As needed; commonly daily and after heavy sweating",
+        zone: "Body, skin folds, underarms, feet, and external genital skin",
+        supplies: ["Lukewarm water", "Gentle body cleanser", "Clean towel", "Moisturizer if needed"],
+        steps: [
+          "Use comfortably warm rather than very hot water.",
+          "Wash odor-prone and visibly dirty areas with the hands or a clean soft cloth.",
+          "Rinse cleanser completely, including skin folds and feet.",
+          "Pat dry with a clean towel rather than rubbing aggressively.",
+          "Apply moisturizer to damp skin when dryness is a problem.",
+        ],
+        warnings: "Clean external skin only; avoid fragranced internal cleansing products. Persistent irritation, rash, sores, or unusual discharge needs professional care.",
+        notes: "More scrubbing is not always cleaner. Adjust frequency and cleanser strength to activity, climate, and skin response.",
+        tags: ["daily", "shower", "body", "skin", "hygiene"],
+      }),
+      createSample("sample-self-hair-scalp", {
+        category: "self-care",
+        title: "Hair and scalp wash",
+        summary: "Clean the scalp according to oil, sweat, hair texture, styling products, and irritation—not a universal calendar.",
+        frequency: "As needed; increase after sweating or visible oil and buildup",
+        zone: "Scalp, hair roots, lengths, hairline, and reusable styling tools",
+        supplies: ["Shampoo suited to the scalp", "Conditioner suited to the hair", "Wide-tooth comb", "Clean towel"],
+        steps: [
+          "Thoroughly wet the scalp and hair.",
+          "Massage shampoo into the scalp with fingertips rather than scratching with nails.",
+          "Rinse completely and repeat only when buildup remains.",
+          "Apply conditioner mainly to lengths and ends, then rinse as directed.",
+          "Dry gently and clean brushes or combs when product and hair accumulate.",
+        ],
+        warnings: "Stop products that cause burning or swelling. Persistent severe flaking, pain, sores, or sudden hair loss needs professional evaluation.",
+        notes: "Dry shampoo can delay a wash but does not remove oil, dead skin, and product buildup from the scalp.",
+        tags: ["hair", "scalp", "shower", "grooming", "as needed"],
+      }),
+      createSample("sample-self-oral-care", {
+        category: "self-care",
+        title: "Oral hygiene",
+        summary: "Use a consistent brushing and interdental-cleaning routine to remove plaque from teeth and the gumline.",
+        frequency: "Brush twice daily for two minutes; clean between teeth daily",
+        zone: "Teeth, gumline, tongue, retainers, and reusable oral-care tools",
+        supplies: ["Soft-bristled toothbrush", "Fluoride toothpaste", "Floss or interdental cleaner", "Retainer cleaner if applicable"],
+        steps: [
+          "Brush every tooth surface and the gumline gently for two minutes.",
+          "Spit out excess toothpaste and follow product or dental guidance about rinsing.",
+          "Clean between teeth with floss or another appropriate interdental cleaner.",
+          "Gently clean the tongue and rinse the toothbrush.",
+          "Clean retainers or guards according to their instructions and let them dry.",
+        ],
+        warnings: "Bleeding, pain, swelling, loose teeth, or sores that persist should be assessed by a dental professional.",
+        notes: "Replace a frayed toothbrush or brush head; forceful scrubbing does not compensate for missed surfaces.",
+        tags: ["daily", "oral care", "teeth", "gums", "hygiene"],
+      }),
+      createSample("sample-self-face", {
+        category: "self-care",
+        title: "Face cleansing",
+        summary: "Remove sweat, sunscreen, makeup, and debris with a gentle routine that avoids unnecessary friction.",
+        frequency: "Up to twice daily and after heavy sweating, adjusted for skin tolerance",
+        zone: "Face, hairline, jawline, and neck",
+        supplies: ["Gentle non-abrasive cleanser", "Lukewarm water", "Clean soft towel", "Moisturizer"],
+        steps: [
+          "Wash hands before touching the face.",
+          "Wet the face with lukewarm water.",
+          "Massage cleanser gently with fingertips without scrubbing.",
+          "Rinse completely and pat dry.",
+          "Apply moisturizer if the skin feels dry or tight.",
+        ],
+        warnings: "Stop products that cause persistent burning, swelling, or rash. Avoid abrasive tools and aggressive exfoliation on irritated skin.",
+        notes: "Clean pillowcases, phones, glasses, and makeup tools regularly because they repeatedly contact the face.",
+        tags: ["daily", "face", "skin", "skincare", "hygiene"],
+      }),
+      createSample("sample-self-hands-nails", {
+        category: "self-care",
+        title: "Hands and nails",
+        summary: "Keep hands visibly clean and nails short enough that the edges and undersides are easy to maintain.",
+        frequency: "Wash at key moments; inspect and trim nails weekly or as needed",
+        zone: "Palms, backs of hands, between fingers, thumbs, fingertips, and beneath nails",
+        supplies: ["Soap", "Clean running water", "Nail clippers", "Nail file", "Hand moisturizer"],
+        steps: [
+          "Wet hands, lather with soap, and scrub every surface for about 20 seconds.",
+          "Rinse under clean running water and dry thoroughly.",
+          "Trim clean nails straight across and smooth sharp edges with a file.",
+          "Clean beneath nails without cutting or aggressively pushing the cuticle.",
+          "Moisturize when repeated washing causes dryness.",
+        ],
+        warnings: "Do not share nail tools without cleaning them. Redness, warmth, swelling, pus, or worsening pain can indicate infection.",
+        notes: "Wash after bathroom use, before food preparation or eating, after handling waste or dirty laundry, and whenever hands are visibly dirty.",
+        tags: ["daily", "weekly", "hands", "nails", "hygiene"],
+      }),
+      createSample("sample-self-shaving", {
+        category: "self-care",
+        title: "Shaving and grooming",
+        summary: "Reduce irritation by softening hair, using clean tools, and shaving with controlled pressure.",
+        frequency: "As needed",
+        zone: "Face or body areas being shaved; razor and grooming tools",
+        supplies: ["Clean sharp razor", "Shaving cream or gel", "Warm water", "Moisturizer", "Tool disinfectant where appropriate"],
+        steps: [
+          "Wash the area and soften the hair with warm water.",
+          "Apply a lubricating shaving product and allow it to sit briefly.",
+          "Shave with light pressure in the direction that causes the least irritation.",
+          "Rinse the skin and razor frequently.",
+          "Pat dry, moisturize, and let the tool dry completely.",
+        ],
+        warnings: "Do not share razors. Stop over cuts, inflamed follicles, or broken skin and replace dull or rusting blades.",
+        notes: "Fewer passes and a sharper clean blade usually reduce irritation more than pressing harder.",
+        tags: ["grooming", "shaving", "skin", "as needed"],
+      }),
+      createSample("sample-self-laundry", {
+        category: "self-care",
+        title: "Personal laundry",
+        summary: "Sort, wash, dry, and put away clothing without damaging fabrics or leaving damp loads to develop odor.",
+        frequency: "Weekly or when a full practical load is ready",
+        zone: "Everyday clothing, underwear, socks, activewear, delicates, and hampers",
+        supplies: ["Laundry detergent", "Stain treatment", "Mesh bags for delicates", "Drying rack", "Clean hamper"],
+        steps: [
+          "Check care labels, empty pockets, close fasteners, and pretreat stains.",
+          "Separate by color, fabric weight, soil level, and special care needs.",
+          "Use the measured detergent amount and the warmest water allowed by the care label.",
+          "Dry according to the label and remove items promptly.",
+          "Fold or hang clothing and return it to storage; leave the washer and hamper dry.",
+        ],
+        warnings: "Never mix household chemicals into laundry unless the product label explicitly permits it. Wash hands after handling heavily soiled laundry.",
+        notes: "Overloading prevents effective washing and rinsing; excess detergent can leave residue and trap odor.",
+        tags: ["weekly", "laundry", "clothing", "activewear", "stains"],
+      }),
+      createSample("sample-self-linens", {
+        category: "self-care",
+        title: "Bedding and towels",
+        summary: "Rotate linens often enough that sleep and bathing begin with dry, clean fabric.",
+        frequency: "Sheets weekly or every 1–2 weeks; towels every 3–4 uses; sooner when soiled or damp",
+        zone: "Sheets, pillowcases, duvet covers, bath towels, hand towels, washcloths, and bath mats",
+        supplies: ["Laundry detergent", "Spare linen set", "Drying rack or dryer"],
+        steps: [
+          "Strip the bed and collect towels without shaking heavily so dust stays contained.",
+          "Check labels and separate bulky items so they can move freely.",
+          "Wash with appropriate detergent and water temperature.",
+          "Dry completely before folding or remaking the bed.",
+          "Store spare linens only when fully dry and air towels between uses.",
+        ],
+        warnings: "Never store damp linens. Follow fabric labels for bleach, heat, and specialty fills.",
+        notes: "Pillowcases may need more frequent changes when skin is oily, sweating is heavy, or hair products transfer to fabric.",
+        tags: ["weekly", "laundry", "bedding", "towels", "bedroom"],
+      }),
+      createSample("sample-self-footwear", {
+        category: "self-care",
+        title: "Footwear and odor control",
+        summary: "Let shoes dry between uses and clean them according to their materials rather than masking moisture with fragrance.",
+        frequency: "Air after every wear; clean as needed",
+        zone: "Shoes, insoles, socks, gym bag, and entry storage",
+        supplies: ["Soft brush", "Material-appropriate cleaner", "Clean socks", "Drying space"],
+        steps: [
+          "Remove shoes and allow them to air in a ventilated place.",
+          "Take out removable insoles when they are damp.",
+          "Brush away dry dirt before applying any cleaner.",
+          "Clean according to the shoe material and dry away from damaging direct heat.",
+          "Wash socks after each wear and clean the gym bag periodically.",
+        ],
+        warnings: "Do not place footwear in a washer or dryer unless the manufacturer allows it. Persistent skin cracking, pain, or infection needs professional care.",
+        notes: "Alternating pairs gives moisture more time to evaporate and helps prevent odor buildup.",
+        tags: ["footwear", "odor", "feet", "gym", "as needed"],
       }),
     ],
   },
@@ -1144,6 +1458,60 @@ function getWorkoutCategory(item) {
 }
 
 /**
+ * Assigns older cleaning records to one of the two permanent cleaning
+ * libraries without hiding user-authored entries during migration.
+ *
+ * @param {object} item Cleaning entry.
+ * @returns {"house"|"self-care"} Supported cleaning category.
+ */
+function getCleaningCategory(item) {
+  if (["house", "self-care"].includes(item.category)) {
+    return item.category;
+  }
+
+  const searchableText = [
+    item.title,
+    item.summary,
+    item.zone,
+    ...(item.steps ?? []),
+  ].join(" ").toLocaleLowerCase();
+  const selfCareTerms = [
+    "shower", "body", "hair", "scalp", "oral", "teeth", "face", "skin",
+    "hand", "nail", "shav", "groom", "laundry", "clothing", "bedding",
+    "towel", "footwear", "shoe", "hygiene",
+  ];
+  return selfCareTerms.some((term) => searchableText.includes(term)) ? "self-care" : "house";
+}
+
+/**
+ * Preserves explicit tags and derives a small searchable fallback for older
+ * cleaning entries that predate tag filtering.
+ *
+ * @param {object} item Cleaning entry.
+ * @param {"house"|"self-care"} category Cleaning category.
+ * @returns {Array<string>} Normalized tags.
+ */
+function getCleaningTags(item, category) {
+  if (Array.isArray(item.tags) && item.tags.length) {
+    return [...new Set(item.tags.map((tag) => String(tag).trim().toLocaleLowerCase()).filter(Boolean))];
+  }
+
+  const searchableText = [
+    item.title,
+    item.summary,
+    item.frequency,
+    item.zone,
+  ].join(" ").toLocaleLowerCase();
+  const knownTags = [
+    "daily", "weekly", "monthly", "seasonal", "kitchen", "bathroom",
+    "bedroom", "floors", "laundry", "bedding", "towels", "skin", "hair",
+    "hygiene", "grooming", "dust", "decluttering",
+  ];
+  const inferredTags = knownTags.filter((tag) => searchableText.includes(tag));
+  return inferredTags.length ? inferredTags : [category === "house" ? "house care" : "self care"];
+}
+
+/**
  * Restores every fixed core library and moves saved Protocol entries into an
  * optional Personal Routines library. Empty legacy Protocols are discarded.
  *
@@ -1240,6 +1608,30 @@ function migrateWorkspace(workspace) {
       const newWorkoutSamples = cloneDefaultSection(defaultWorkoutSection).items
         .filter((item) => !existingIds.has(item.id));
       workoutSection.items = [...preservedItems, ...newWorkoutSamples];
+      changed = true;
+    }
+  }
+
+  if (previousVersion < 11) {
+    const cleaningSection = workspace.sections.find((section) => section.id === "cleaning");
+    const defaultCleaningSection = DEFAULT_SECTIONS.find((section) => section.id === "cleaning");
+    if (cleaningSection && defaultCleaningSection) {
+      cleaningSection.title = defaultCleaningSection.title;
+      cleaningSection.description = defaultCleaningSection.description;
+      const preservedItems = (cleaningSection.items ?? [])
+        .filter((item) => !LEGACY_CLEANING_SAMPLE_IDS.has(item.id))
+        .map((item) => {
+          const category = getCleaningCategory(item);
+          return {
+            ...item,
+            category,
+            tags: getCleaningTags(item, category),
+          };
+        });
+      const existingIds = new Set(preservedItems.map((item) => item.id));
+      const newCleaningSamples = cloneDefaultSection(defaultCleaningSection).items
+        .filter((item) => !existingIds.has(item.id));
+      cleaningSection.items = [...preservedItems, ...newCleaningSamples];
       changed = true;
     }
   }
