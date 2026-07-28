@@ -81,10 +81,20 @@ function translateBoardObject(object, deltaX, deltaY) {
     return;
   }
 
+  if (object.type === "trace" && Array.isArray(object.paths)) {
+    object.paths.flat().forEach((point) => {
+      point.x += deltaX;
+      point.y += deltaY;
+    });
+    return;
+  }
+
   if (Number.isFinite(object.x)) object.x += deltaX;
   if (Number.isFinite(object.y)) object.y += deltaY;
   if (Number.isFinite(object.endX)) object.endX += deltaX;
   if (Number.isFinite(object.endY)) object.endY += deltaY;
+  if (Number.isFinite(object.midX)) object.midX += deltaX;
+  if (Number.isFinite(object.midY)) object.midY += deltaY;
 }
 
 function cloneValue(value) {

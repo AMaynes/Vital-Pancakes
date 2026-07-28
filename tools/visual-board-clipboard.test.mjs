@@ -141,3 +141,39 @@ test("copying an editable vertex network remaps shared vertices together", () =>
     [66, 16, 66, 66],
   );
 });
+
+test("copying arcs and traces translates every editable point", () => {
+  const source = [
+    {
+      id: "arc-1",
+      type: "arc",
+      x: 0,
+      y: 20,
+      midX: 50,
+      midY: 0,
+      endX: 100,
+      endY: 20,
+    },
+    {
+      id: "trace-1",
+      type: "trace",
+      paths: [[
+        { x: 10, y: 10 },
+        { x: 20, y: 10 },
+        { x: 20, y: 20 },
+      ]],
+    },
+  ];
+
+  const copies = duplicateBoardObjects(source, identifierFactory(), { x: 8, y: 12 });
+
+  assert.deepEqual(
+    [copies[0].x, copies[0].y, copies[0].midX, copies[0].midY, copies[0].endX, copies[0].endY],
+    [8, 32, 58, 12, 108, 32],
+  );
+  assert.deepEqual(copies[1].paths[0], [
+    { x: 18, y: 22 },
+    { x: 28, y: 22 },
+    { x: 28, y: 32 },
+  ]);
+});

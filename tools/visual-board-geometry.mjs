@@ -5,8 +5,11 @@
  * resizing, hit testing, and marquee selection deterministic and testable.
  */
 
+import { getQuadraticCurvePoints } from "./visual-board-curves.mjs";
+
 export const SHAPE_TYPES = new Set(["rectangle", "ellipse", "shape", "textbox", "image"]);
 export const LINE_TYPES = new Set(["line", "connector"]);
+export const CURVE_TYPES = new Set(["arc"]);
 
 const SHAPE_SEGMENT_BUILDERS = {
   triangle: () => polygonSegments([
@@ -262,6 +265,14 @@ function normalizedPointToWorld(object, point) {
  * lines without maintaining a second geometry definition.
  */
 export function getObjectSegments(object) {
+  if (CURVE_TYPES.has(object.type)) {
+    return pointsToSegments(getQuadraticCurvePoints(object));
+  }
+
+  if (object.type === "trace") {
+    return object.paths.flatMap((path) => pointsToSegments(path, true));
+  }
+
   if (LINE_TYPES.has(object.type)) {
     const segments = [[
       { x: object.x, y: object.y },
@@ -312,7 +323,8 @@ export function getObjectSegments(object) {
 
 export function isExplodableObject(object) {
   return LINE_TYPES.has(object.type)
-    || ["rectangle", "ellipse", "shape"].includes(object.type);
+    || CURVE_TYPES.has(object.type)
+    || ["rectangle", "ellipse", "shape", "trace"].includes(object.type);
 }
 
 export function getObjectBounds(object) {
@@ -329,6 +341,14 @@ export function getObjectBounds(object) {
       width: Math.max(1, Math.max(...xValues) - minimumX),
       height: Math.max(1, Math.max(...yValues) - minimumY),
     };
+  }
+
+  if (CURVE_TYPES.has(object.type)) {
+    return getPointsBounds(getQuadraticCurvePoints(object));
+  }
+
+  if (object.type === "trace") {
+    return getPointsBounds(object.paths.flat());
   }
 
   if (LINE_TYPES.has(object.type)) {
@@ -365,6 +385,19 @@ export function pointHitsObject(object, point, padding = 0) {
     if (points.length === 1) return distanceBetween(point, points[0]) <= strokePadding;
     return points.slice(1).some((segmentEnd, index) => (
       distancePointToSegment(point, points[index], segmentEnd) <= strokePadding
+    ));
+  }
+
+  if (CURVE_TYPES.has(object.type)) {
+    return getObjectSegments(object).some(([start, end]) => (
+      distancePointToSegment(point, start, end) <= strokePadding
+    ));
+  }
+
+  if (object.type === "trace") {
+    if (pointIsInsideClosedPaths(point, object.paths)) return true;
+    return getObjectSegments(object).some(([start, end]) => (
+      distancePointToSegment(point, start, end) <= strokePadding
     ));
   }
 
@@ -410,13 +443,48 @@ export function rectanglesIntersect(first, second) {
 }
 
 export function objectIntersectsRectangle(object, rectangle) {
-  if (LINE_TYPES.has(object.type)) {
+  if (LINE_TYPES.has(object.type) || CURVE_TYPES.has(object.type)) {
     const strokePadding = (object.strokeWidth ?? 1) / 2;
     return getObjectSegments(object).some(([start, end]) => (
       segmentIntersectsRectangle(start, end, rectangle, strokePadding)
     ));
   }
   return rectanglesIntersect(getObjectBounds(object), rectangle);
+}
+
+function pointsToSegments(points, closed = false) {
+  if (!Array.isArray(points) || points.length < 2) return [];
+  const segments = points.slice(1).map((end, index) => [points[index], end]);
+  if (closed && points.length > 2) segments.push([points.at(-1), points[0]]);
+  return segments;
+}
+
+function getPointsBounds(points) {
+  if (!points.length) return { x: 0, y: 0, width: 0, height: 0 };
+  const xValues = points.map((point) => point.x);
+  const yValues = points.map((point) => point.y);
+  const minimumX = Math.min(...xValues);
+  const minimumY = Math.min(...yValues);
+  return {
+    x: minimumX,
+    y: minimumY,
+    width: Math.max(1, Math.max(...xValues) - minimumX),
+    height: Math.max(1, Math.max(...yValues) - minimumY),
+  };
+}
+
+function pointIsInsideClosedPaths(point, paths) {
+  let isInside = false;
+  paths.forEach((path) => {
+    path.forEach((start, index) => {
+      const end = path[(index + 1) % path.length];
+      const crossesRay = (start.y > point.y) !== (end.y > point.y)
+        && point.x < (end.x - start.x) * (point.y - start.y)
+          / (end.y - start.y) + start.x;
+      if (crossesRay) isInside = !isInside;
+    });
+  });
+  return isInside;
 }
 
 /**

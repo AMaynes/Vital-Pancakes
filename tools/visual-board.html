@@ -9,7 +9,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=18">
-  <link rel="stylesheet" href="tool.css?v=25">
+  <link rel="stylesheet" href="tool.css?v=26">
   <link rel="stylesheet" href="../site-navigation.css?v=20">
   <script type="module" src="../site-navigation.js?v=5"></script>
 </head>
@@ -57,8 +57,15 @@
           <button class="tool-button" data-tool="pen" type="button" title="Freehand pen">
             ✎ <span class="tool-button-label">Pen</span>
           </button>
+          <button class="tool-button" id="import-images" type="button" title="Add an image to the board">
+            ▧ <span class="tool-button-label">Image</span>
+          </button>
+          <input id="image-file-input" type="file" accept="image/*" multiple hidden>
           <button class="tool-button" data-tool="line" type="button" title="Straight line">
             ╱ <span class="tool-button-label">Line</span>
+          </button>
+          <button class="tool-button" data-tool="arc" type="button" title="Three-point arc">
+            ⌒ <span class="tool-button-label">Arc</span>
           </button>
           <button class="tool-button" data-tool="connector" type="button" title="Arrow connector">
             ↗ <span class="tool-button-label">Arrow</span>
@@ -202,8 +209,14 @@
         <button class="tool-button" id="group-selection" type="button" title="Group selected objects into one movable piece">
           ⛓ <span class="tool-button-label">Group</span>
         </button>
-        <button class="tool-button" id="merge-vertices" type="button" title="Convert selected outlines into one shape with editable shared vertices">
-          ◇ <span class="tool-button-label">Merge vertices</span>
+        <button class="tool-button" id="trace-image" type="button" title="Trace selected images into black-and-white vector drawings">
+          ◩ <span class="tool-button-label">Trace image</span>
+        </button>
+        <button class="tool-button" id="merge-vertices" type="button" title="Detect corners and intersections, then create joined editable vertices">
+          ◇ <span class="tool-button-label">Create vertices</span>
+        </button>
+        <button class="tool-button" id="curve-vertices" type="button" title="Convert selected arcs into joined vertices based on their curvature">
+          ⌒ <span class="tool-button-label">Curve vertices</span>
         </button>
         <button class="tool-button" id="ungroup-selection" type="button" title="Release a grouped piece into its objects">
           ⛓ <span class="tool-button-label">Release</span>
@@ -229,6 +242,6 @@
       </section>
     </main>
   </div>
-  <script type="module" src="visual-board.js?v=16"></script>
+  <script type="module" src="visual-board.js?v=18"></script>
 </body>
 </html>
