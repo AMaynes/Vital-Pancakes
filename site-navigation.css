@@ -156,7 +156,7 @@
   flex: 0 0 auto;
   overflow: hidden;
   color: transparent;
-  background: #fff url("assets/pinakes-vitae-logo-final-light.png") center / 142% auto no-repeat;
+  background: #fff url("assets/vital-pancakes-logo-v2.png?v=3") center / contain no-repeat;
   border: 1px solid var(--ink, #171613);
   border-radius: 0;
   font-size: 0;
