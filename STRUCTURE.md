@@ -46,6 +46,8 @@ vital-pancakes/
 │   ├── visual-board-clipboard.test.mjs — Verifies multi-object clipboard duplication and identifier remapping.
 │   ├── visual-board-geometry.mjs — Provides pure hit-testing, bounds, rotation, and resizing math.
 │   ├── visual-board-geometry.test.mjs — Verifies Visual Board geometry with Node's test runner.
+│   ├── visual-board-history.mjs — Snapshots board content together with selection state for undo and redo.
+│   ├── visual-board-history.test.mjs — Verifies selection-aware history snapshots and restoration.
 │   ├── visual-board-rich-text.mjs — Stores, edits, and renders per-range textbox colors.
 │   ├── visual-board-rich-text.test.mjs — Verifies highlighted color ranges and edit preservation.
 │   ├── visual-board-shape-tools.mjs — Retains the independent 2D and 3D split-button choices.

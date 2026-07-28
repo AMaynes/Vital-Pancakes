@@ -16,6 +16,10 @@ import {
   updateTextColorRangesForEdit,
 } from "./visual-board-rich-text.mjs?v=1";
 import {
+  createBoardHistoryEntry,
+  restoreBoardHistoryEntry,
+} from "./visual-board-history.mjs?v=1";
+import {
   getDefaultTextboxSize,
   getTextWorldFontSize,
 } from "./visual-board-text.mjs?v=1";
@@ -331,7 +335,7 @@ function announceStatus(message) {
 }
 
 function checkpoint() {
-  history.push(cloneValue(board.objects));
+  history.push(createBoardHistoryEntry(board.objects, selectedObjects));
   if (history.length > HISTORY_LIMIT) history.shift();
   future = [];
   updateHistoryControls();
@@ -1383,9 +1387,11 @@ function undo() {
   closeTextEditor();
   const snapshot = history.pop();
   if (!snapshot) return;
-  future.push(cloneValue(board.objects));
-  board.objects = cloneValue(snapshot).map(normalizeObject).filter(Boolean);
-  selectedObjects = [];
+  future.push(createBoardHistoryEntry(board.objects, selectedObjects));
+  const restored = restoreBoardHistoryEntry(snapshot, normalizeObject);
+  board.objects = restored.objects;
+  selectedObjects = restored.selectedObjects;
+  resetPendingStyleChanges();
   saveBoard();
   updateHistoryControls();
   updateSelectionControls();
@@ -1396,9 +1402,11 @@ function redo() {
   closeTextEditor();
   const snapshot = future.pop();
   if (!snapshot) return;
-  history.push(cloneValue(board.objects));
-  board.objects = cloneValue(snapshot).map(normalizeObject).filter(Boolean);
-  selectedObjects = [];
+  history.push(createBoardHistoryEntry(board.objects, selectedObjects));
+  const restored = restoreBoardHistoryEntry(snapshot, normalizeObject);
+  board.objects = restored.objects;
+  selectedObjects = restored.selectedObjects;
+  resetPendingStyleChanges();
   saveBoard();
   updateHistoryControls();
   updateSelectionControls();
@@ -1412,6 +1420,12 @@ function updateHistoryControls() {
   redoButton.disabled = future.length === 0;
   undoButton.title = history.length ? `Undo · ${history.length} stored actions` : "Nothing to undo";
   redoButton.title = future.length ? `Redo · ${future.length} stored actions` : "Nothing to redo";
+}
+
+function resetPendingStyleChanges() {
+  colorChangeActive = false;
+  widthChangeActive = false;
+  textColorChangeActive = false;
 }
 
 function setZoom(nextZoom, anchorScreenPoint = null) {
@@ -2145,6 +2159,17 @@ function handleKeyDown(event) {
     returnToSelectionMode();
     return;
   }
+  if (commandKey && event.key.toLowerCase() === "z") {
+    event.preventDefault();
+    if (event.shiftKey) redo();
+    else undo();
+    return;
+  }
+  if (commandKey && event.key.toLowerCase() === "y") {
+    event.preventDefault();
+    redo();
+    return;
+  }
   if (isEditingControl(event.target)) return;
 
   if (commandKey && event.key.toLowerCase() === "c") {
@@ -2157,17 +2182,6 @@ function handleKeyDown(event) {
     if (!objectClipboard.length) return;
     event.preventDefault();
     pasteSelection();
-    return;
-  }
-  if (commandKey && event.key.toLowerCase() === "z") {
-    event.preventDefault();
-    if (event.shiftKey) redo();
-    else undo();
-    return;
-  }
-  if (commandKey && event.key.toLowerCase() === "y") {
-    event.preventDefault();
-    redo();
     return;
   }
   if (commandKey && ["+", "=", "-", "_", "0"].includes(event.key)) {
