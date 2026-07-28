@@ -160,42 +160,22 @@ main {
 .hero-emblem {
   position: relative;
   margin: 0;
-  overflow: hidden;
-  background: #fff;
-  border: 1px solid var(--ink);
-  box-shadow: 12px 12px 0 var(--ink);
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .hero-emblem::before,
 .hero-emblem::after {
-  position: absolute;
-  z-index: 1;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-color: var(--teal);
-  content: "";
-  pointer-events: none;
-}
-
-.hero-emblem::before {
-  top: 0.55rem;
-  left: 0.55rem;
-  border-top: 1px solid;
-  border-left: 1px solid;
-}
-
-.hero-emblem::after {
-  right: 0.55rem;
-  bottom: 0.55rem;
-  border-right: 1px solid;
-  border-bottom: 1px solid;
+  display: none;
 }
 
 .hero-emblem img {
   display: block;
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .hero-emblem figcaption {

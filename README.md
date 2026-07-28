@@ -36,18 +36,21 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Literature Curation, Travel Planner, and Software Architect without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
-The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the original anatomical *Pinakes Vitae* emblem.
+The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the forest-and-circuit *Vital Pancakes* skull.
 
 ## Brand Identity
 
-The public project, navigation, app, repository, and website name is **Vital Pancakes**. The homepage preserves **Pinakes Vitae — In Perpetuum** as the project's original identity and historical inspiration.
+The public project, navigation, app, repository, and website name is **Vital Pancakes**. The historical **Pinakes Vitae — In Perpetuum** identity remains the project's origin and inspiration.
 
 The canonical logo files are:
 
-- `assets/pinakes-vitae-logo-final-light.png` — Primary website mark, drawn in black on white.
-- `assets/pinakes-vitae-logo-final.png` — Inverted companion mark, drawn in white on charcoal.
+- `assets/vital-pancakes-logo-transparent-black.png` — Primary black website mark and light-browser favicon.
+- `assets/vital-pancakes-logo-transparent-white.png` — White favicon selected by browsers in dark mode.
+- `assets/vital-pancakes-logo-v2.png` — Original flat black-on-white source artwork.
+- `assets/pinakes-vitae-logo-final-light.png` — Preserved historical black-ink *Pinakes Vitae* artwork.
+- `assets/pinakes-vitae-logo-final.png` — Preserved historical inverted artwork.
 
-The logo combines an anatomical skull and brain with a neural chip and circuitry, representing biological memory joined to a durable external index. The light version is the default throughout the website and is the source for the install icons.
+The primary logo combines a skull with a forest-like brain, neural-chip circuitry, branching roots, and a bee. Both active variants have true transparent backgrounds: the website always renders the black version, while browser tabs can select black ink in light mode and white ink in dark mode.
 
 ## Personal Libraries
 

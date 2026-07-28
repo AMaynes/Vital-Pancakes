@@ -156,8 +156,8 @@
   flex: 0 0 auto;
   overflow: hidden;
   color: transparent;
-  background: #fff url("assets/vital-pancakes-logo-v2.png?v=3") center / contain no-repeat;
-  border: 1px solid var(--ink, #171613);
+  background: transparent url("assets/vital-pancakes-logo-transparent-black.png?v=1") center / contain no-repeat;
+  border: 0;
   border-radius: 0;
   font-size: 0;
 }

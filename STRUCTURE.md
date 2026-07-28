@@ -29,6 +29,9 @@ vital-pancakes/
 │   ├── store.test.mjs — Verifies permanent libraries and legacy data migration.
 │   └── store.js — Owns browser-local data, persistence, and deletion policy.
 ├── assets/
+│   ├── vital-pancakes-logo-transparent-black.png — Active black transparent site mark and light-mode favicon.
+│   ├── vital-pancakes-logo-transparent-white.png — White transparent dark-mode favicon.
+│   ├── vital-pancakes-logo-v2.png — Flat black-on-white source artwork for the active logo.
 │   ├── pinakes-vitae-logo-final-light.png — Canonical black-ink logo on white.
 │   ├── pinakes-vitae-logo-final.png — Companion white-ink logo on charcoal.
 │   ├── app-icon-192.png — Small install and shortcut icon derived from the logo.
@@ -180,7 +183,7 @@ Defines the browser-local data schema, nine permanent empty core libraries, Ques
 
 ### `assets/`
 
-Contains the original light and dark *Pinakes Vitae* logos retained by Vital Pancakes, install icons derived from the light mark, and the two phone preview screens used by Download App. The historical `pinakes-vitae-logo-final-light.png` filename remains the primary website artwork; the charcoal version is its inverted companion.
+Contains the transparent black and white variants of the forest-and-circuit *Vital Pancakes* skull, its original flat source, the earlier light and dark *Pinakes Vitae* artwork retained as historical assets, install icons, and the two phone preview screens used by Download App. The website uses the black transparent mark; browser tabs select the black or white favicon according to the browser color scheme.
 
 ## Tools
 
