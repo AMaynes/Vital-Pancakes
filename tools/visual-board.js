@@ -1638,6 +1638,7 @@ function updateSelectionControls() {
   selectionActions.hidden = selectedObjects.length === 0;
   copySelectionButton.disabled = selectedObjects.length === 0;
   pasteSelectionButton.disabled = objectClipboard.length === 0;
+  traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
   selectionCount.textContent = selectedObjects.length === 1
     ? "1 selected"
     : `${selectedObjects.length} selected`;
@@ -1652,7 +1653,6 @@ function updateSelectionControls() {
   lockSelectionButton.querySelector(".tool-button-label").textContent = allLocked ? "Unlock" : "Lock";
   deleteSelectionButton.disabled = allLocked;
   groupSelectionButton.disabled = !canGroupSelection(selectedObjects);
-  traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
   mergeVerticesButton.disabled = !canCreateVertexNetwork(selectedObjects);
   curveVerticesButton.disabled = !canConvertCurveSelection(selectedObjects);
   ungroupSelectionButton.disabled = anyLocked
@@ -2522,12 +2522,6 @@ function handleKeyDown(event) {
     copySelection();
     return;
   }
-  if (commandKey && event.key.toLowerCase() === "v") {
-    if (!objectClipboard.length) return;
-    event.preventDefault();
-    pasteSelection();
-    return;
-  }
   if (commandKey && ["+", "=", "-", "_", "0"].includes(event.key)) {
     event.preventDefault();
     if (event.key === "0") setZoom(1);
@@ -2579,13 +2573,33 @@ async function handleImageDrop(event) {
 async function handleImageFileSelection(event) {
   const files = [...(event.target.files ?? [])].filter((file) => file.type.startsWith("image/"));
   if (!files.length) return;
+  await addImageFiles(files, getCanvasCenterWorldPoint());
+  imageFileInput.value = "";
+}
+
+async function handleClipboardPaste(event) {
+  if (textEditorSession || isEditingControl(event.target)) return;
+  const imageFiles = [...(event.clipboardData?.items ?? [])]
+    .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+    .map((item) => item.getAsFile())
+    .filter(Boolean);
+  if (imageFiles.length) {
+    event.preventDefault();
+    await addImageFiles(imageFiles, getCanvasCenterWorldPoint());
+    return;
+  }
+  if (objectClipboard.length) {
+    event.preventDefault();
+    pasteSelection();
+  }
+}
+
+function getCanvasCenterWorldPoint() {
   const bounds = canvas.getBoundingClientRect();
-  const placementPoint = screenToWorld({
+  return screenToWorld({
     x: bounds.width / 2,
     y: bounds.height / 2,
   });
-  await addImageFiles(files, placementPoint);
-  imageFileInput.value = "";
 }
 
 async function addImageFiles(files, placementPoint) {
@@ -2779,6 +2793,7 @@ document.querySelector("#clear-board").addEventListener("click", () => {
 
 document.addEventListener("keydown", handleKeyDown);
 document.addEventListener("keyup", handleKeyUp);
+document.addEventListener("paste", handleClipboardPaste);
 window.addEventListener("resize", resizeCanvas);
 new ResizeObserver(resizeCanvas).observe(canvasFrame);
 
