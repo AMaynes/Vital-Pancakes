@@ -10,12 +10,13 @@
  * Static files listed in APP_SHELL.
  *
  * Notes
- * Same-origin GET requests use cache-first behavior with background cache fill.
+ * Navigations use network-first behavior with an offline fallback. Versioned
+ * static assets remain cache-first.
  * User-created localStorage, IndexedDB, OPFS, and model-cache data stays outside
  * the application shell. File Drop content and large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v50";
+const CACHE_NAME = "vital-pancakes-app-v51";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -38,12 +39,13 @@ const APP_SHELL = [
   "./assets/app-icon-512.png",
   "./assets/app-preview-workspace.svg?v=4",
   "./assets/app-preview-studies.svg?v=2",
-  "./app/main.js?v=19",
+  "./app/main.js?v=20",
   "./app/ai-command-protocol.mjs",
   "./app/ai-command-registry.mjs",
   "./app/ai-page-host.mjs",
   "./app/ai-tool-catalog.mjs",
   "./app/workspace-ai-adapter.mjs",
+  "./app/offline-shell.mjs",
   "./app/content-view.mjs",
   "./app/tag-filter.mjs?v=1",
   "./app/store.js?v=14",
@@ -265,6 +267,22 @@ function handleActivate(event) {
 function handleFetch(event) {
   const requestUrl = new URL(event.request.url);
   if (event.request.method !== "GET" || requestUrl.origin !== self.location.origin) return;
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse.ok) {
+            const responseCopy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseCopy));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request, { ignoreSearch: true })
+          .then((cachedResponse) => cachedResponse || caches.match("./index.html"))),
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

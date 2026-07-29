@@ -40,6 +40,7 @@ import {
   filterItemsByTags,
   normalizeEntryTags,
 } from "./tag-filter.mjs?v=1";
+import { registerOfflineShell } from "./offline-shell.mjs";
 
 const appMain = document.querySelector("#app-main");
 const itemDialog = document.querySelector("#item-dialog");
@@ -2913,11 +2914,9 @@ document.querySelectorAll("[data-dialog-close]").forEach((button) => {
 });
 window.addEventListener("hashchange", renderWorkspace);
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").catch((error) => {
-    console.error("Offline service worker registration failed.", error);
-  });
-}
+registerOfflineShell().catch((error) => {
+  console.error("Offline service worker registration failed.", error);
+});
 
 renderWorkspace();
 

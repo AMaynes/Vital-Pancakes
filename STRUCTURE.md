@@ -29,6 +29,7 @@ vital-pancakes/
 │   ├── ai-page-host.mjs — Exposes the shared versioned AI page API and message bridge.
 │   ├── ai-tool-catalog.mjs — Registers AI-addressable tools and their adapter modules.
 │   ├── workspace-ai-adapter.mjs — Provides bounded semantic commands for Workspace libraries and entries.
+│   ├── offline-shell.mjs — Registers cache-bypassed update checks and refreshes stale controlled Workspace views once.
 │   ├── content-view.mjs — Normalizes retained List/Grid preferences and creates collection deep links.
 │   ├── content-view.test.mjs — Verifies collection view preferences and encoded entry routes.
 │   ├── main.js — Renders workspace routes, libraries, and editors.
