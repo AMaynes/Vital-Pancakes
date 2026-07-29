@@ -52,3 +52,14 @@ test("TurboWarp receives its browser JSZip dependency before the app starts", as
   assert.ok(jsZipPosition >= 0);
   assert.ok(appPosition > jsZipPosition);
 });
+
+test("converter uses the Vital Pancakes visual system", async () => {
+  const html = await readFile(resolve(appDirectory, "index.html"), "utf8");
+  const css = await readFile(resolve(appDirectory, "assets/index-VitalPancakes.css"), "utf8");
+
+  assert.match(html, /index-VitalPancakes\.css/);
+  assert.match(css, /--paper:\s*#f1eee6/);
+  assert.match(css, /--oxblood:\s*#7b211a/);
+  assert.match(css, /--brass:\s*#967538/);
+  assert.doesNotMatch(css, /#1c77ff/i);
+});

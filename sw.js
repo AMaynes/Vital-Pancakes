@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v30";
+const CACHE_NAME = "vital-pancakes-app-v31";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -86,12 +86,12 @@ const APP_SHELL = [
   "./tools/architecture.js?v=5",
   "./tools/architecture-model.mjs",
   "./tools/file-converter.html",
-  "./tools/file-converter.css?v=1",
+  "./tools/file-converter.css?v=2",
   "./tools/file-converter.js?v=2",
   "./tools/file-converter-state.mjs",
   "./tools/file-converter-app/index.html",
   "./tools/file-converter-app/cache.json",
-  "./tools/file-converter-app/assets/index-D8MU-ZYO.css",
+  "./tools/file-converter-app/assets/index-VitalPancakes.css",
   "./tools/file-converter-app/assets/index-CqjCqN4s.js",
   "./tools/file-converter-app/assets/jszip-3.11.1.min.js",
   "./vendor/mediabunny-1.51.0.min.mjs",
