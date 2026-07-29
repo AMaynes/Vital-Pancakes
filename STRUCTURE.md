@@ -42,6 +42,13 @@ vital-pancakes/
 │   └── app-preview-studies.svg — Phone preview of study libraries.
 ├── tools/
 │   ├── tool.css — Shares full-screen and windowed tool layouts and controls.
+│   ├── budget-finance.html — Hosts recurring budgets, investment and loan analysis, and tax search.
+│   ├── budget-finance.css — Styles the tabbed finance workspace, tables, metrics, and tax results.
+│   ├── budget-finance.js — Coordinates local finance state, form editing, schedules, and tax filtering.
+│   ├── budget-finance-model.mjs — Calculates date-based budgets, investment growth, and loan amortization.
+│   ├── budget-finance-model.test.mjs — Verifies cash-flow timing and financial schedule behavior.
+│   ├── tax-directory.mjs — Indexes federal and state tax categories against official IRS sources.
+│   ├── tax-directory.test.mjs — Verifies jurisdiction coverage, categories, search, and source safety.
 │   ├── scientific-calculator.html — Hosts the scientific expression keypad, display, memory, and history.
 │   ├── scientific-calculator.css — Styles the responsive calculator and calculation history.
 │   ├── scientific-calculator.js — Coordinates calculator input, angle modes, memory, persistence, and history.
@@ -283,6 +290,12 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 `scientific-calculator.html` and `scientific-calculator.css` provide a responsive six-column scientific keypad, editable expression display, DEG/RAD/GRAD mode control, memory, and locally stored calculation history. `scientific-calculator.js` owns keyboard and button editing, live previews, answer reuse, memory operations, copy behavior, and persistence.
 
 `scientific-calculator-engine.mjs` configures bundled math.js for 64-digit decimal arithmetic, allows only scalar operators, constants, and approved scientific functions, and rejects assignments, collections, property access, and unknown symbols before compilation. Its Node tests cover PEMDAS, nested parentheses, right-associative powers, implicit multiplication, factorials, modulo, roots, decimal precision, angle modes, answer reuse, invalid arithmetic, and unsafe syntax.
+
+### Budget & Finance
+
+`budget-finance.html` and `budget-finance.css` provide separate Budget, Investments, Loans, and Tax Finder tabs. `budget-finance.js` persists finance assumptions locally, renders editable recurring cash-flow rows, annual investment growth, annual or payment-level loan schedules, and bounded official-source tax search results.
+
+`budget-finance-model.mjs` counts recurring events against inclusive calendar windows, preserves month-end recurrence anchors, amortizes investment returns and contributions monthly, and produces rounded fixed-rate loan schedules with optional extra payments. `tax-directory.mjs` covers all 50 states plus the District of Columbia across 15 broad tax categories and separates current federal IRS resources. Their tests cover financial boundaries, gross and net totals, known payment results, accelerated payoff, complete jurisdiction/category coverage, keyword search, result bounds, and HTTPS IRS sources.
 
 ### `vendor/`
 

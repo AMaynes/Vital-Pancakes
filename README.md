@@ -35,7 +35,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Everyday Life** — Separate Cooking, Gym, and Cleaning areas for practical knowledge used at home.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Subject-specific working libraries for questions and ideas, structured studies, programming-language refreshers, algorithm labs, and project case studies, plus the existing notecard and educational collections.
-- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Literature Curation, Travel Planner, Software Architect, File Converter, and Scientific Calculator without unrelated library content.
+- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Literature Curation, Travel Planner, Software Architect, File Converter, Scientific Calculator, and Budget & Finance tool without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the forest-and-circuit *Vital Pancakes* skull.
@@ -123,6 +123,12 @@ Files are processed by the converter inside the browser and are not uploaded by 
 ### Scientific Calculator
 
 Evaluates nested scalar expressions with math.js, high-precision decimal arithmetic, standard operator precedence, implicit multiplication, powers, roots, factorials, logarithms, trigonometry, and DEG/RAD/GRAD modes. Results can be reused through `ans`, calculator memory, and locally saved history.
+
+### Budget & Finance
+
+Projects recurring income and expenses across exact calendar dates and reports gross income, gross expenses, and net cash flow. Its add-on views calculate amortized investment growth with contributions and fixed-rate loan repayment schedules with optional extra payments.
+
+The tax finder indexes federal resources plus all 50 states and the District of Columbia across major individual, business, payroll, property, estate, sales, excise, local, and special-tax categories. It stores official IRS source links rather than frozen rates so current state and local rules can be verified at the authority.
 
 ## Adding List Content
 

@@ -56,6 +56,10 @@ const PAGE_TRAILS = {
     segment("workspace", "workspace.html#area=tools"),
     segment("software-architect"),
   ],
+  "tools/budget-finance.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("budget-finance"),
+  ],
   "tools/file-converter.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("file-converter"),

@@ -778,6 +778,13 @@ function renderToolsDashboard() {
       icon: "∑",
       accent: "sage",
     },
+    {
+      title: "Budget & Finance",
+      copy: "Project recurring cash flow, model investment growth and loan payoff, and find official tax sources.",
+      href: "tools/budget-finance.html",
+      icon: "$",
+      accent: "ochre",
+    },
   ].forEach((tool) => toolsGrid.append(createToolCard(tool)));
 
   appMain.append(hero, toolsHeading, toolsGrid);

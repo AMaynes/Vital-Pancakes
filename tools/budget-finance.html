@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>Budget &amp; Finance · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="../workspace.css?v=24">
+  <link rel="stylesheet" href="tool.css?v=33">
+  <link rel="stylesheet" href="budget-finance.css?v=2">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=10"></script>
+</head>
+<body class="tool-body finance-body">
+  <a class="skip-link" href="#tool-main">Skip to finance tools</a>
+
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Vital Pancakes home">
+      <span class="brand-mark" aria-hidden="true">VP</span>
+      <span>Vital Pancakes</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../workspace.html#area=everyday">Everyday Life</a>
+      <a href="../research-literature.html">Research &amp; Literature</a>
+      <a href="../workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="../workspace.html#area=tools" aria-current="page">Workspace</a>
+      <a href="../download-app.html">Download App</a>
+    </nav>
+  </header>
+
+  <div class="tool-shell finance-shell">
+    <header class="tool-topbar finance-topbar">
+      <div class="tool-title-group">
+        <div>
+          <h1>Budget &amp; Finance</h1>
+          <small>PROJECTIONS · INVESTMENTS · LOANS · TAX SOURCES</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions">
+        <span class="finance-save-status" id="finance-save-status">Saved locally</span>
+      </div>
+    </header>
+
+    <main class="finance-workspace" id="tool-main">
+      <div class="finance-tabs" role="tablist" aria-label="Finance tools">
+        <button id="finance-tab-budget" type="button" role="tab" aria-selected="true" aria-controls="finance-panel-budget" data-finance-tab="budget">Budget</button>
+        <button id="finance-tab-investment" type="button" role="tab" aria-selected="false" aria-controls="finance-panel-investment" data-finance-tab="investment">Investments</button>
+        <button id="finance-tab-loan" type="button" role="tab" aria-selected="false" aria-controls="finance-panel-loan" data-finance-tab="loan">Loans</button>
+        <button id="finance-tab-tax" type="button" role="tab" aria-selected="false" aria-controls="finance-panel-tax" data-finance-tab="tax">Tax finder</button>
+      </div>
+
+      <section class="finance-panel" id="finance-panel-budget" role="tabpanel" aria-labelledby="finance-tab-budget">
+        <header class="finance-panel-header">
+          <div>
+            <h2>Time-based budget</h2>
+            <p>USD projection</p>
+          </div>
+          <div class="budget-actions">
+            <button class="button button-quiet" id="add-budget-income" type="button">+ Income</button>
+            <button class="button button-primary" id="add-budget-expense" type="button">+ Expense</button>
+          </div>
+        </header>
+
+        <div class="finance-date-range">
+          <label>
+            <span>Projection start</span>
+            <input id="budget-start-date" type="date">
+          </label>
+          <label>
+            <span>Projection end</span>
+            <input id="budget-end-date" type="date">
+          </label>
+          <span class="finance-inline-error" id="budget-error" role="alert" hidden></span>
+        </div>
+
+        <div class="budget-table-wrap">
+          <table class="finance-table budget-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Name</th>
+                <th>Amount</th>
+                <th>Cadence</th>
+                <th>Starts</th>
+                <th>Ends</th>
+                <th>Count</th>
+                <th>Total</th>
+                <th><span class="visually-hidden">Delete</span></th>
+              </tr>
+            </thead>
+            <tbody id="budget-rows"></tbody>
+          </table>
+          <p class="finance-empty" id="budget-empty">Add income and expenses to begin the projection.</p>
+        </div>
+
+        <footer class="finance-totals" aria-label="Budget projection totals">
+          <div>
+            <span>Gross income</span>
+            <strong id="budget-gross-income">$0.00</strong>
+          </div>
+          <div>
+            <span>Gross expenses</span>
+            <strong id="budget-gross-expenses">$0.00</strong>
+          </div>
+          <div class="finance-net-total" id="budget-net-card">
+            <span>Net total at end</span>
+            <strong id="budget-net-total">$0.00</strong>
+          </div>
+        </footer>
+      </section>
+
+      <section class="finance-panel" id="finance-panel-investment" role="tabpanel" aria-labelledby="finance-tab-investment" hidden>
+        <header class="finance-panel-header">
+          <div>
+            <h2>Investment growth</h2>
+            <p>Amortized monthly projection</p>
+          </div>
+        </header>
+
+        <div class="finance-analysis-layout">
+          <form class="finance-input-panel" id="investment-form">
+            <label><span>Starting principal</span><input name="principal" type="number" min="0" step="100" required></label>
+            <label><span>Monthly contribution</span><input name="monthlyContribution" type="number" min="0" step="10" required></label>
+            <label><span>Annual return</span><div class="finance-suffixed-input"><input name="annualRate" type="number" min="-99.999" max="1000" step="0.01" required><span>%</span></div></label>
+            <label><span>Years</span><input name="years" type="number" min="0.0833" max="100" step="1" required></label>
+            <label><span>Compounding</span>
+              <select name="compoundsPerYear">
+                <option value="1">Annually</option>
+                <option value="4">Quarterly</option>
+                <option value="12">Monthly</option>
+                <option value="365">Daily</option>
+              </select>
+            </label>
+            <label><span>Contribution timing</span>
+              <select name="contributionTiming">
+                <option value="end">End of month</option>
+                <option value="beginning">Beginning of month</option>
+              </select>
+            </label>
+            <p class="finance-inline-error" id="investment-error" role="alert" hidden></p>
+          </form>
+
+          <div class="finance-analysis-output">
+            <div class="finance-metrics">
+              <div><span>Ending balance</span><strong id="investment-ending">$0.00</strong></div>
+              <div><span>Total contributions</span><strong id="investment-contributions">$0.00</strong></div>
+              <div><span>Investment growth</span><strong id="investment-growth">$0.00</strong></div>
+              <div><span>Effective annual return</span><strong id="investment-effective-rate">0.00%</strong></div>
+            </div>
+            <div class="finance-schedule-wrap">
+              <table class="finance-table">
+                <thead><tr><th>Year</th><th>Contributions</th><th>Growth</th><th>Ending balance</th></tr></thead>
+                <tbody id="investment-schedule"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="finance-panel" id="finance-panel-loan" role="tabpanel" aria-labelledby="finance-tab-loan" hidden>
+        <header class="finance-panel-header">
+          <div>
+            <h2>Loan repayment</h2>
+            <p>Fixed-rate amortization</p>
+          </div>
+          <label class="loan-schedule-view">
+            <span>Schedule</span>
+            <select id="loan-schedule-view">
+              <option value="annual">Annual summary</option>
+              <option value="payments">Every payment</option>
+            </select>
+          </label>
+        </header>
+
+        <div class="finance-analysis-layout">
+          <form class="finance-input-panel" id="loan-form">
+            <label><span>Loan principal</span><input name="principal" type="number" min="0.01" step="1000" required></label>
+            <label><span>Annual interest</span><div class="finance-suffixed-input"><input name="annualRate" type="number" min="0" max="1000" step="0.01" required><span>%</span></div></label>
+            <label><span>Term in years</span><input name="years" type="number" min="0.01" max="100" step="1" required></label>
+            <label><span>Payment frequency</span>
+              <select name="paymentsPerYear">
+                <option value="12">Monthly</option>
+                <option value="24">Twice monthly</option>
+                <option value="26">Biweekly</option>
+                <option value="52">Weekly</option>
+                <option value="4">Quarterly</option>
+                <option value="1">Annually</option>
+              </select>
+            </label>
+            <label><span>Extra each payment</span><input name="extraPayment" type="number" min="0" step="10" required></label>
+            <p class="finance-inline-error" id="loan-error" role="alert" hidden></p>
+          </form>
+
+          <div class="finance-analysis-output">
+            <div class="finance-metrics">
+              <div><span>Regular payment</span><strong id="loan-payment">$0.00</strong></div>
+              <div><span>Payment with extra</span><strong id="loan-planned-payment">$0.00</strong></div>
+              <div><span>Total interest</span><strong id="loan-total-interest">$0.00</strong></div>
+              <div><span>Total repaid</span><strong id="loan-total-paid">$0.00</strong></div>
+              <div><span>Payments</span><strong id="loan-payment-count">0</strong></div>
+              <div><span>Payoff time</span><strong id="loan-payoff-time">0 years</strong></div>
+            </div>
+            <div class="finance-schedule-wrap">
+              <table class="finance-table">
+                <thead><tr><th id="loan-period-heading">Year</th><th>Paid</th><th>Principal</th><th>Interest</th><th>Balance</th></tr></thead>
+                <tbody id="loan-schedule"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="finance-panel tax-panel" id="finance-panel-tax" role="tabpanel" aria-labelledby="finance-tab-tax" hidden>
+        <header class="finance-panel-header">
+          <div>
+            <h2>Federal &amp; state tax finder</h2>
+            <p id="tax-reviewed-date">Official-source directory</p>
+          </div>
+          <a class="button button-quiet" href="https://www.irs.gov/businesses/small-businesses-self-employed/state-government-websites" target="_blank" rel="noreferrer">IRS state directory</a>
+        </header>
+
+        <div class="tax-filters">
+          <label><span>Search</span><input id="tax-search" type="search" placeholder="State, tax, filing, industry…"></label>
+          <label><span>Jurisdiction</span><select id="tax-jurisdiction"></select></label>
+          <label><span>Tax category</span><select id="tax-category"></select></label>
+        </div>
+
+        <div class="tax-disclaimer">
+          <strong>Reference directory, not a tax estimate.</strong>
+          <span>Rates, brackets, local levies, filing rules, and effective dates change. Verify details with the linked government authority or a qualified tax professional.</span>
+        </div>
+
+        <div class="tax-results-heading">
+          <span id="tax-result-count">0 resources</span>
+        </div>
+        <ul class="tax-results" id="tax-results" aria-label="Official tax resources"></ul>
+        <p class="finance-empty" id="tax-empty" hidden>No official-source categories match this search.</p>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="budget-finance.js?v=2"></script>
+</body>
+</html>

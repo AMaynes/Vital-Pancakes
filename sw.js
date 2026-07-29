@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v36";
+const CACHE_NAME = "vital-pancakes-app-v37";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -24,7 +24,7 @@ const APP_SHELL = [
   "./index.html",
   "./style.css?v=18",
   "./site-navigation.css?v=20",
-  "./site-navigation.js?v=9",
+  "./site-navigation.js?v=10",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
@@ -37,7 +37,7 @@ const APP_SHELL = [
   "./assets/app-icon-512.png",
   "./assets/app-preview-workspace.svg?v=4",
   "./assets/app-preview-studies.svg?v=2",
-  "./app/main.js?v=13",
+  "./app/main.js?v=14",
   "./app/content-view.mjs",
   "./app/tag-filter.mjs?v=1",
   "./app/store.js?v=14",
@@ -90,6 +90,11 @@ const APP_SHELL = [
   "./tools/file-converter.css?v=2",
   "./tools/file-converter.js?v=2",
   "./tools/file-converter-state.mjs",
+  "./tools/budget-finance.html",
+  "./tools/budget-finance.css?v=2",
+  "./tools/budget-finance.js?v=2",
+  "./tools/budget-finance-model.mjs?v=1",
+  "./tools/tax-directory.mjs?v=1",
   "./tools/scientific-calculator.html",
   "./tools/scientific-calculator.css?v=2",
   "./tools/scientific-calculator.js?v=2",
