@@ -58,6 +58,7 @@ test("converter uses the Vital Pancakes visual system", async () => {
   const css = await readFile(resolve(appDirectory, "assets/index-VitalPancakes.css"), "utf8");
 
   assert.match(html, /index-VitalPancakes\.css/);
+  assert.match(html, /name="theme-color" content="#f1eee6"/);
   assert.match(css, /--paper:\s*#f1eee6/);
   assert.match(css, /--oxblood:\s*#7b211a/);
   assert.match(css, /--brass:\s*#967538/);
