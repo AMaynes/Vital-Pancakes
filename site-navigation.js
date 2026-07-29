@@ -60,6 +60,10 @@ const PAGE_TRAILS = {
     segment("workspace", "workspace.html#area=tools"),
     segment("budget-finance"),
   ],
+  "tools/caption-relay.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("caption-relay"),
+  ],
   "tools/file-converter.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("file-converter"),

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>Caption Relay · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="../workspace.css?v=25">
+  <link rel="stylesheet" href="tool.css?v=33">
+  <link rel="stylesheet" href="caption-relay.css?v=2">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=12"></script>
+</head>
+<body class="tool-body caption-relay-body">
+  <a class="skip-link" href="#tool-main">Skip to Caption Relay</a>
+
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Vital Pancakes home">
+      <span class="brand-mark" aria-hidden="true">VP</span>
+      <span>Vital Pancakes</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../workspace.html#area=everyday">Everyday Life</a>
+      <a href="../research-literature.html">Research &amp; Literature</a>
+      <a href="../workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="../workspace.html#area=tools" aria-current="page">Workspace</a>
+      <a href="../download-app.html">Download App</a>
+    </nav>
+  </header>
+
+  <div class="tool-shell caption-relay-shell">
+    <header class="tool-topbar caption-relay-topbar">
+      <div class="tool-title-group">
+        <div>
+          <h1>Caption Relay</h1>
+          <small>CAPTURE → TRANSLATE → DISPLAY · LOCAL-FIRST ACCESSIBILITY</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions">
+        <span class="relay-save-status" id="relay-save-status" aria-live="polite">Ready · local only</span>
+        <button class="button button-quiet" id="open-project-drawer" type="button" aria-expanded="false">Projects</button>
+      </div>
+    </header>
+
+    <main class="caption-relay-workspace" id="tool-main">
+      <nav class="relay-stepper" aria-label="Caption Relay stages">
+        <button class="is-active" type="button" data-relay-stage="capture" aria-current="step">
+          <span>1</span><strong>Capture</strong><small>English captions</small>
+        </button>
+        <span class="relay-step-arrow" aria-hidden="true">→</span>
+        <button type="button" data-relay-stage="translate">
+          <span>2</span><strong>Translate</strong><small>English → Vietnamese</small>
+        </button>
+        <span class="relay-step-arrow" aria-hidden="true">→</span>
+        <button type="button" data-relay-stage="display">
+          <span>3</span><strong>Display</strong><small>Automatic overlay</small>
+        </button>
+      </nav>
+
+      <div class="relay-main-grid">
+        <aside class="relay-context-rail" aria-label="Caption Relay status">
+          <section class="relay-rail-card">
+            <div class="relay-section-heading">
+              <div><span class="relay-kicker">LOCAL CAPABILITIES</span><h2>Browser check</h2></div>
+              <button class="relay-icon-button" id="refresh-capabilities" type="button" aria-label="Refresh capability check">↻</button>
+            </div>
+            <dl class="capability-list">
+              <div><dt>WebGPU</dt><dd id="capability-webgpu">Checking…</dd></div>
+              <div><dt>Tab audio</dt><dd id="capability-tab-audio">Checking…</dd></div>
+              <div><dt>Translator API</dt><dd id="capability-translator">Checking…</dd></div>
+              <div><dt>Document PiP</dt><dd id="capability-pip">Checking…</dd></div>
+              <div><dt>Storage available</dt><dd id="capability-storage">Checking…</dd></div>
+            </dl>
+          </section>
+
+          <section class="relay-rail-card relay-privacy-card">
+            <span class="relay-kicker">PRIVACY BOUNDARY</span>
+            <h2>The movie never leaves your device.</h2>
+            <p>Shared audio is processed in bounded rolling chunks, then discarded. Caption text, compact synchronization data, and projects stay in this browser.</p>
+            <ul>
+              <li>No backend, accounts, API keys, analytics, or hidden network transcription.</li>
+              <li>Only pinned model files download from their configured host after you ask.</li>
+              <li>No raw movie audio or video is written to storage or exported.</li>
+            </ul>
+            <p>For lawfully accessed content and personal accessibility. Caption Relay does not bypass DRM or control another website.</p>
+          </section>
+
+          <section class="relay-rail-card">
+            <span class="relay-kicker">MODEL MANAGER</span>
+            <h2>Downloaded model data</h2>
+            <p id="model-manager-status">Models cache after first use where browser storage permits.</p>
+            <button class="button button-quiet relay-full-button" id="clear-caption-models" type="button">Clear Caption Relay models</button>
+          </section>
+        </aside>
+
+        <div class="relay-stage-area">
+          <section class="relay-stage" id="relay-stage-capture" data-stage-panel="capture">
+            <header class="relay-stage-header">
+              <div><span class="relay-kicker">STAGE 1</span><h2>Capture English captions</h2></div>
+              <span class="relay-stage-note">Keep movie playback speed constant for the entire capture.</span>
+            </header>
+
+            <div class="relay-card-grid relay-capture-setup">
+              <section class="relay-card">
+                <div class="relay-section-heading"><div><span class="relay-kicker">PROJECT</span><h3>Movie and timeline</h3></div></div>
+                <div class="relay-form-grid">
+                  <label class="relay-field relay-field-wide"><span>Movie title</span><input id="capture-title" type="text" maxlength="500" autocomplete="off" placeholder="Lawfully accessed title"></label>
+                  <label class="relay-field"><span>Original duration</span><input id="capture-duration" type="text" inputmode="numeric" value="02:00:00" aria-describedby="capture-duration-help"></label>
+                  <label class="relay-field"><span>Capture playback speed</span>
+                    <select id="capture-rate">
+                      <option value="1">1× · fingerprint sync</option>
+                      <option value="1.25">1.25×</option>
+                      <option value="1.5" selected>1.5× · recommended fast option</option>
+                      <option value="2">2× · lower transcription accuracy</option>
+                    </select>
+                  </label>
+                </div>
+                <p class="relay-help" id="capture-duration-help">Use HH:MM:SS. Changing playback speed during capture invalidates timing.</p>
+                <div class="relay-calculation">
+                  <span>Real capture duration</span>
+                  <strong id="calculated-capture-duration">01:20:00</strong>
+                  <small id="capture-timeline-example">10:00 captured → 15:00 movie time</small>
+                </div>
+              </section>
+
+              <section class="relay-card">
+                <div class="relay-section-heading"><div><span class="relay-kicker">SPEECH MODEL</span><h3>Browser-local transcription</h3></div><span class="relay-license">Apache-2.0</span></div>
+                <label class="relay-field"><span>English model</span>
+                  <select id="transcription-model">
+                    <option value="tiny">Whisper Tiny English · smaller</option>
+                    <option value="small">Whisper Small English · higher quality</option>
+                  </select>
+                </label>
+                <button class="button button-primary relay-full-button" id="prepare-transcription-model" type="button">Prepare Transcription Model</button>
+                <progress id="transcription-model-progress" max="1" value="0"></progress>
+                <p class="relay-help" id="transcription-model-status" aria-live="polite">Pinned Transformers.js 3.8.1. WebGPU is preferred; WASM is the fallback.</p>
+              </section>
+            </div>
+
+            <section class="relay-card relay-capture-console">
+              <div class="relay-capture-actions">
+                <button class="button button-primary" id="start-capture" type="button" disabled>Start Capture</button>
+                <button class="button button-quiet" id="stop-capture" type="button" disabled>Finish early</button>
+                <button class="button button-quiet" id="download-capture-package" type="button" disabled>Download package</button>
+              </div>
+              <div class="relay-capture-readout">
+                <div class="relay-timer"><span>PROCESSED AUDIO</span><strong id="capture-timer">00:00:00.000</strong><small id="capture-timer-remaining">Waiting to begin</small></div>
+                <div class="relay-audio-meter" aria-label="Shared tab audio level"><span id="audio-meter-fill"></span></div>
+                <dl>
+                  <div><dt>Capture</dt><dd id="capture-status">Idle</dd></div>
+                  <div><dt>Transcription queue</dt><dd id="transcription-queue-status">0 queued</dd></div>
+                  <div><dt>Synchronization</dt><dd id="capture-sync-mode">Text sync at 1.5×</dd></div>
+                </dl>
+              </div>
+              <div class="relay-instruction-strip" role="note">
+                <strong>After Start Capture:</strong>
+                <span>Select the movie tab, enable tab audio, return to the movie, and play from start to finish at the chosen constant speed. The timer arms on the first audible shared audio; use the global offset if the movie opens with silence. Keep both tabs open.</span>
+              </div>
+              <p class="relay-alert" id="capture-alert" role="status" aria-live="assertive" hidden></p>
+            </section>
+
+            <section class="relay-card relay-editor-card">
+              <div class="relay-section-heading">
+                <div><span class="relay-kicker">CAPTION EDITOR</span><h3>English transcript</h3></div>
+                <div class="relay-inline-controls">
+                  <label>Offset (ms)<input id="timeline-offset" type="number" step="1" value="0"></label>
+                  <label>Scale<input id="timeline-scale" type="number" min="0.5" max="2" step="0.0001" value="1"></label>
+                  <button class="button button-quiet" id="apply-timeline-correction" type="button">Apply correction</button>
+                </div>
+              </div>
+              <div class="relay-editor-summary"><span id="english-cue-count">0 cues</span><span>Low-confidence and incomplete cues are marked for review.</span></div>
+              <div class="relay-table-wrap">
+                <table class="relay-caption-table">
+                  <thead><tr><th>Time</th><th>English caption</th><th>Quality</th></tr></thead>
+                  <tbody id="english-caption-rows"><tr><td colspan="3" class="relay-empty">Captured captions will appear here.</td></tr></tbody>
+                </table>
+              </div>
+              <nav class="relay-pagination" aria-label="English caption pages">
+                <button class="button button-quiet" id="cue-page-previous" type="button" disabled>← Previous</button>
+                <span id="cue-page-status" role="status" aria-live="polite" aria-atomic="true">Page 1 of 1</span>
+                <button class="button button-quiet" id="cue-page-next" type="button" disabled>Next →</button>
+              </nav>
+            </section>
+          </section>
+
+          <section class="relay-stage" id="relay-stage-translate" data-stage-panel="translate" hidden>
+            <header class="relay-stage-header">
+              <div><span class="relay-kicker">STAGE 2</span><h2>Translate captions locally</h2></div>
+              <span class="relay-stage-note">Every cue ID and millisecond timestamp remains unchanged.</span>
+            </header>
+
+            <div class="relay-card-grid">
+              <section class="relay-card">
+                <span class="relay-kicker">SOURCE</span><h3>Load captions</h3>
+                <label class="relay-file-drop">
+                  <input id="translation-import" type="file" accept=".vpcaptions.json,.json,.srt,.vtt,application/json,text/vtt">
+                  <strong>Upload Caption Relay package, SRT, or VTT</strong><small>Maximum 25 MB · English source</small>
+                </label>
+                <div class="relay-form-grid">
+                  <label class="relay-field"><span>Source</span><select id="translation-source"><option value="en">English</option></select></label>
+                  <label class="relay-field"><span>Target</span><select id="translation-target"><option value="vi">Vietnamese</option></select></label>
+                  <label class="relay-field"><span>Style</span><select id="translation-mode"><option value="natural">Natural Vietnamese</option><option value="literal">Literal</option></select></label>
+                  <label class="relay-field"><span>Pronoun / relationship review note</span><input id="pronoun-preference" type="text" maxlength="500" placeholder="Saved for manual review; models may not infer relationships"></label>
+                </div>
+              </section>
+
+              <section class="relay-card">
+                <div class="relay-section-heading"><div><span class="relay-kicker">LOCAL TRANSLATOR</span><h3>Priority adapter</h3></div><span class="relay-license">Apache-2.0 fallback</span></div>
+                <button class="button button-primary relay-full-button" id="prepare-translation-model" type="button">Prepare Translation Model</button>
+                <progress id="translation-model-progress" max="1" value="0"></progress>
+                <p class="relay-help" id="translation-model-status" aria-live="polite">Chrome Translator API is used first when available; pinned OPUS-MT runs locally as fallback.</p>
+                <div class="relay-translation-actions">
+                  <button class="button button-primary" id="translate-all" type="button" disabled>Translate all</button>
+                  <button class="button button-quiet" id="pause-translation" type="button" disabled>Pause</button>
+                  <button class="button button-quiet" id="retry-failed-translations" type="button" disabled>Retry failed</button>
+                </div>
+                <div class="relay-progress-copy"><span id="translation-progress-label">0 / 0 cues</span><span id="translation-failure-count">0 failed</span></div>
+                <progress id="translation-progress" max="1" value="0"></progress>
+              </section>
+            </div>
+
+            <div class="relay-card-grid relay-terminology-grid">
+              <section class="relay-card">
+                <span class="relay-kicker">TERMINOLOGY</span><h3>Search and replace Vietnamese</h3>
+                <div class="relay-search-replace">
+                  <input id="translation-search" type="search" placeholder="Find repeated term">
+                  <input id="translation-replacement" type="text" placeholder="Preferred replacement">
+                  <button class="button button-quiet" id="replace-translations" type="button">Replace all</button>
+                </div>
+              </section>
+              <section class="relay-card">
+                <div class="relay-section-heading"><div><span class="relay-kicker">PROJECT GLOSSARY</span><h3>Names, places, titles, phrasing</h3></div><button class="relay-icon-button" id="add-glossary-entry" type="button" aria-label="Add glossary entry">＋</button></div>
+                <div class="relay-glossary" id="glossary-rows"><p class="relay-empty">No glossary entries yet.</p></div>
+              </section>
+            </div>
+
+            <section class="relay-card relay-editor-card">
+              <div class="relay-section-heading"><div><span class="relay-kicker">SIDE-BY-SIDE REVIEW</span><h3>English / Vietnamese</h3></div></div>
+              <div class="relay-table-wrap">
+                <table class="relay-caption-table relay-translation-table">
+                  <thead><tr><th>Time</th><th>English</th><th>Vietnamese</th><th>Action</th></tr></thead>
+                  <tbody id="translation-caption-rows"><tr><td colspan="4" class="relay-empty">Load captions to begin translation.</td></tr></tbody>
+                </table>
+              </div>
+              <nav class="relay-pagination" aria-label="Translation review pages">
+                <button class="button button-quiet" id="translation-cue-page-previous" type="button" disabled>← Previous</button>
+                <span id="translation-cue-page-status" role="status" aria-live="polite" aria-atomic="true">Page 1 of 1</span>
+                <button class="button button-quiet" id="translation-cue-page-next" type="button" disabled>Next →</button>
+              </nav>
+              <div class="relay-export-bar">
+                <button class="button button-quiet" id="download-vietnamese-vtt" type="button" disabled>Vietnamese .vtt</button>
+                <button class="button button-quiet" id="download-vietnamese-srt" type="button" disabled>Vietnamese .srt</button>
+                <button class="button button-quiet" id="download-bilingual-vtt" type="button" disabled>Bilingual .vtt</button>
+                <button class="button button-primary" id="download-updated-package" type="button" disabled>Updated package</button>
+              </div>
+            </section>
+          </section>
+
+          <section class="relay-stage" id="relay-stage-display" data-stage-panel="display" hidden>
+            <header class="relay-stage-header">
+              <div><span class="relay-kicker">STAGE 3</span><h2>Display translated captions</h2></div>
+              <span class="relay-stage-note">Caption Relay listens; it does not insert code into the movie website.</span>
+            </header>
+
+            <div class="relay-card-grid">
+              <section class="relay-card">
+                <span class="relay-kicker">REFERENCE PACKAGE</span><h3>Load translated captions</h3>
+                <label class="relay-file-drop">
+                  <input id="display-import" type="file" accept=".vpcaptions.json,.json,application/json">
+                  <strong>Upload translated .vpcaptions.json</strong><small id="display-package-name">No package loaded</small>
+                </label>
+                <div class="relay-two-step">
+                  <button class="button button-primary" id="open-caption-overlay" type="button" disabled>1 · Open Caption Overlay</button>
+                  <button class="button button-primary" id="connect-movie-audio" type="button" disabled>2 · Connect Movie Audio</button>
+                </div>
+                <p class="relay-help">Picture-in-Picture and tab capture require separate user gestures. The popup fallback may need browser popup permission.</p>
+              </section>
+
+              <section class="relay-card relay-sync-console">
+                <div class="relay-section-heading"><div><span class="relay-kicker">HYBRID SYNCHRONIZATION</span><h3 id="sync-state">Idle</h3></div><span class="relay-confidence" id="sync-confidence">0%</span></div>
+                <div class="relay-detected-time"><span>DETECTED MOVIE TIME</span><strong id="detected-movie-time">00:00:00.000</strong></div>
+                <div class="relay-confidence-track"><span id="sync-confidence-fill"></span></div>
+                <p id="sync-message" aria-live="assertive">Load a translated package to begin.</p>
+                <label class="relay-field"><span>Movie playback rate</span>
+                  <select id="display-playback-rate"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+                </label>
+              </section>
+            </div>
+
+            <section class="relay-card">
+              <div class="relay-section-heading"><div><span class="relay-kicker">MANUAL TIMING</span><h3>Correction and recovery</h3></div><button class="button button-quiet" id="resynchronize-captions" type="button">Resynchronize</button></div>
+              <div class="relay-manual-controls" role="group" aria-label="Manual caption timing adjustments">
+                <button type="button" data-sync-adjust="-5000">−5 s</button>
+                <button type="button" data-sync-adjust="-1000">−1 s</button>
+                <button type="button" data-sync-adjust="-250">−0.25 s</button>
+                <button type="button" data-sync-adjust="250">+0.25 s</button>
+                <button type="button" data-sync-adjust="1000">+1 s</button>
+                <button type="button" data-sync-adjust="5000">+5 s</button>
+                <label>Set movie time<input id="manual-movie-time" type="text" value="00:00:00"></label>
+                <button type="button" id="set-manual-movie-time">Set</button>
+                <button type="button" id="pause-caption-clock">Pause caption clock</button>
+                <button type="button" id="reset-synchronization">Reset synchronization</button>
+              </div>
+              <p class="relay-help">Silence alone never pauses the caption clock: a quiet scene is not proof that the player is paused.</p>
+            </section>
+
+            <div class="relay-card-grid">
+              <section class="relay-card">
+                <span class="relay-kicker">OVERLAY APPEARANCE</span><h3>Caption display</h3>
+                <div class="relay-form-grid">
+                  <label class="relay-field"><span>Font</span><select id="overlay-font"><option value="Georgia, serif">Archival serif</option><option value="Arial, sans-serif">Sans serif</option><option value="monospace">Monospace</option></select></label>
+                  <label class="relay-field"><span>Size</span><input id="overlay-size" type="range" min="16" max="80" value="34"></label>
+                  <label class="relay-field"><span>Text color</span><input id="overlay-color" type="color" value="#ffffff"></label>
+                  <label class="relay-field"><span>Background</span><input id="overlay-background" type="color" value="#171613"></label>
+                  <label class="relay-field"><span>Placement</span><select id="overlay-placement"><option value="bottom">Bottom</option><option value="middle">Middle</option><option value="top">Top</option></select></label>
+                  <label class="relay-check"><input id="overlay-bilingual" type="checkbox"><span>Show English and Vietnamese</span></label>
+                </div>
+              </section>
+
+              <section class="relay-card relay-mirror-card">
+                <span class="relay-kicker">FULLSCREEN FALLBACK</span><h3>Mirror Mode</h3>
+                <p>Capture the movie tab into Caption Relay, render captions over it, then fullscreen this same-page player.</p>
+                <div class="relay-translation-actions">
+                  <button class="button button-quiet" id="start-mirror-mode" type="button" disabled>Start Mirror Mode</button>
+                  <button class="button button-quiet" id="fullscreen-mirror" type="button" disabled>Enter fullscreen</button>
+                  <label class="relay-check"><input id="mirror-unmute" type="checkbox"><span>Play mirrored audio</span></label>
+                </div>
+                <p class="relay-warning">May add latency, reduce quality, duplicate audio, or interrupt capture. Protected media may appear blank. Browser support varies.</p>
+              </section>
+            </div>
+
+            <section class="relay-mirror" id="relay-mirror" hidden>
+              <video id="relay-mirror-video" playsinline autoplay muted></video>
+              <div class="relay-mirror-caption" id="relay-mirror-caption" hidden></div>
+            </section>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <aside class="relay-project-drawer" id="project-drawer" aria-label="Caption Relay projects" hidden>
+    <div class="relay-section-heading"><div><span class="relay-kicker">RECOVERY &amp; EXPORT</span><h2>Local projects</h2></div><button class="relay-icon-button" id="close-project-drawer" type="button" aria-label="Close projects">×</button></div>
+    <select id="project-list" size="8" aria-label="Saved Caption Relay projects"></select>
+    <div class="relay-project-actions">
+      <button class="button button-primary" id="resume-project" type="button">Resume</button>
+      <button class="button button-quiet" id="duplicate-project" type="button">Duplicate</button>
+      <button class="button button-quiet" id="rename-project" type="button">Rename</button>
+      <button class="button button-quiet" id="export-project" type="button">Export</button>
+      <button class="button button-danger-quiet" id="delete-project" type="button">Delete</button>
+    </div>
+    <p id="project-storage-usage">Estimating browser storage…</p>
+  </aside>
+
+  <div class="relay-announcements" id="relay-announcements" role="status" aria-live="polite"></div>
+  <script type="module" src="caption-relay.js?v=4"></script>
+</body>
+</html>

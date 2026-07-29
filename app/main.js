@@ -762,6 +762,13 @@ function renderToolsDashboard() {
       accent: "coral",
     },
     {
+      title: "Caption Relay",
+      copy: "Capture English tab-audio captions, translate them locally into Vietnamese, and display a synchronized overlay.",
+      href: "tools/caption-relay.html",
+      icon: "CC",
+      accent: "ochre",
+    },
+    {
       title: "Literature Curation",
       copy: "Organize literature analyses around an idea, claim, or hypothesis and compare how each source relates.",
       href: "tools/literature-curator.html",

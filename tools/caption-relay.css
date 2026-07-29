@@ -1,0 +1,879 @@
+/**
+ * Integrated Capture → Translate → Display layout for Caption Relay.
+ * The palette inherits Vital Pancakes' warm paper, black ink, oxblood, and brass.
+ */
+
+.caption-relay-body {
+  overflow: auto;
+}
+
+.caption-relay-shell {
+  min-height: calc(100vh - 38px);
+}
+
+.caption-relay-workspace {
+  min-width: 0;
+  background:
+    linear-gradient(rgb(23 22 19 / 3%) 1px, transparent 1px),
+    var(--paper);
+  background-size: 100% 32px;
+}
+
+.relay-stepper {
+  position: sticky;
+  z-index: 15;
+  top: 38px;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr) auto minmax(150px, 1fr);
+  align-items: stretch;
+  border-bottom: 1px solid var(--line-strong);
+  background: rgb(251 250 246 / 96%);
+  backdrop-filter: blur(12px);
+}
+
+.relay-stepper button {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 0 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  text-align: left;
+}
+
+.relay-stepper button > span {
+  grid-row: 1 / 3;
+  align-self: center;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.relay-stepper button strong {
+  font: 800 12px/1.2 Georgia, serif;
+}
+
+.relay-stepper button small {
+  margin-top: 2px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.relay-stepper button.is-active {
+  border-bottom-color: var(--coral);
+  background: var(--coral-soft);
+  color: var(--coral);
+}
+
+.relay-stepper button.is-active > span {
+  border-color: var(--coral);
+  background: var(--coral);
+  color: var(--paper);
+}
+
+.relay-step-arrow {
+  align-self: center;
+  color: var(--ochre);
+  font-family: Georgia, serif;
+}
+
+.relay-main-grid {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: 248px minmax(0, 1fr);
+}
+
+.relay-context-rail {
+  align-self: start;
+  position: sticky;
+  top: 102px;
+  max-height: calc(100vh - 102px);
+  overflow: auto;
+  border-right: 1px solid var(--line-strong);
+  background: var(--card);
+}
+
+.relay-rail-card,
+.relay-card {
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.relay-rail-card h2,
+.relay-card h3 {
+  margin: 4px 0 8px;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.relay-rail-card p,
+.relay-rail-card li,
+.relay-card p {
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.relay-privacy-card {
+  border-left: 4px solid var(--coral);
+  background: linear-gradient(135deg, var(--card), var(--coral-soft));
+}
+
+.relay-privacy-card ul {
+  padding-left: 17px;
+}
+
+.relay-kicker {
+  color: var(--coral);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.relay-section-heading,
+.relay-stage-header,
+.relay-capture-actions,
+.relay-inline-controls,
+.relay-progress-copy,
+.relay-pagination,
+.relay-export-bar,
+.relay-translation-actions,
+.relay-two-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.relay-section-heading h2,
+.relay-section-heading h3 {
+  margin: 3px 0 0;
+}
+
+.relay-icon-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  background: var(--paper);
+  color: var(--coral);
+  font-size: 15px;
+}
+
+.capability-list {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0 0;
+}
+
+.capability-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px dotted var(--line);
+}
+
+.capability-list dt,
+.capability-list dd {
+  margin: 0;
+  font-size: 8px;
+}
+
+.capability-list dd {
+  color: var(--ink-faint);
+  font-weight: 800;
+  text-align: right;
+}
+
+.capability-list dd[data-tone="good"] {
+  color: #315d45;
+}
+
+.capability-list dd[data-tone="warning"] {
+  color: var(--coral);
+}
+
+.relay-stage-area {
+  min-width: 0;
+  padding: 17px;
+}
+
+.relay-stage {
+  display: grid;
+  gap: 12px;
+  max-width: 1460px;
+  margin: 0 auto;
+}
+
+.relay-stage[hidden] {
+  display: none;
+}
+
+.relay-stage-header {
+  padding: 4px 1px 10px;
+  border-bottom: 3px double var(--line-strong);
+}
+
+.relay-stage-header h2 {
+  margin: 4px 0 0;
+  font: 700 25px/1.1 Georgia, serif;
+}
+
+.relay-stage-note {
+  max-width: 420px;
+  color: var(--ink-faint);
+  font-size: 9px;
+  text-align: right;
+}
+
+.relay-card {
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: 3px 3px 0 rgb(129 121 109 / 10%);
+}
+
+.relay-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.relay-capture-setup {
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
+}
+
+.relay-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.relay-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.relay-field-wide {
+  grid-column: 1 / -1;
+}
+
+.relay-field > span,
+.relay-inline-controls label,
+.relay-manual-controls label {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.relay-field input,
+.relay-field select,
+.relay-inline-controls input,
+.relay-manual-controls input,
+.relay-search-replace input,
+.relay-glossary input,
+#project-list {
+  min-width: 0;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 10px;
+}
+
+.relay-help {
+  margin: 6px 0;
+}
+
+.relay-calculation {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border-left: 3px solid var(--ochre);
+  background: var(--ochre-soft);
+}
+
+.relay-calculation span,
+.relay-calculation small {
+  color: var(--ink-faint);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.relay-calculation strong {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  justify-self: end;
+  font: 700 22px/1 Georgia, serif;
+}
+
+.relay-license {
+  padding: 3px 5px;
+  border: 1px solid var(--ochre);
+  color: var(--ochre);
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.relay-full-button {
+  width: 100%;
+}
+
+.relay-card progress {
+  display: block;
+  width: 100%;
+  height: 5px;
+  margin: 9px 0 5px;
+  border: 0;
+  accent-color: var(--coral);
+}
+
+.relay-capture-console {
+  border-top: 3px solid var(--ink);
+}
+
+.relay-capture-readout {
+  display: grid;
+  grid-template-columns: minmax(210px, .8fr) minmax(180px, 1fr) minmax(230px, 1.2fr);
+  gap: 14px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.relay-timer {
+  display: grid;
+}
+
+.relay-timer span,
+.relay-detected-time span {
+  color: var(--coral);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.relay-timer strong,
+.relay-detected-time strong {
+  margin: 3px 0;
+  font: 700 25px/1 Georgia, serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.relay-timer small {
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.relay-audio-meter,
+.relay-confidence-track {
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: var(--paper-deep);
+}
+
+.relay-audio-meter span,
+.relay-confidence-track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ochre), var(--coral));
+  transition: width .12s linear;
+}
+
+.relay-capture-readout dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.relay-capture-readout dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px dotted var(--line);
+  font-size: 9px;
+}
+
+.relay-capture-readout dt {
+  color: var(--ink-faint);
+}
+
+.relay-capture-readout dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.relay-instruction-strip,
+.relay-warning,
+.relay-alert {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--ochre);
+  background: var(--ochre-soft);
+  color: var(--ink-soft);
+  font-size: 9px;
+}
+
+.relay-alert {
+  border-left-color: var(--coral);
+  background: var(--coral-soft);
+  color: var(--coral);
+}
+
+.relay-inline-controls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.relay-inline-controls label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.relay-inline-controls input {
+  width: 86px;
+  padding: 5px;
+}
+
+.relay-editor-summary {
+  display: flex;
+  justify-content: space-between;
+  margin: 9px 0 5px;
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.relay-table-wrap {
+  max-height: min(54vh, 620px);
+  overflow: auto;
+  border: 1px solid var(--line);
+}
+
+.relay-caption-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.relay-caption-table th {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  padding: 7px;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 8px;
+  letter-spacing: .08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.relay-caption-table th:first-child {
+  width: 155px;
+}
+
+.relay-caption-table th:last-child {
+  width: 110px;
+}
+
+.relay-caption-table td {
+  padding: 6px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 9px;
+  vertical-align: top;
+}
+
+.relay-caption-table textarea {
+  width: 100%;
+  min-height: 48px;
+  resize: vertical;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  font: 10px/1.45 Georgia, serif;
+}
+
+.relay-caption-table textarea:focus {
+  border-color: var(--coral);
+  background: var(--paper);
+}
+
+.relay-cue-time {
+  display: grid;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.relay-quality {
+  display: inline-block;
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  color: var(--ink-faint);
+  font-size: 7px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.relay-quality.is-warning,
+.relay-translation-status.is-failed {
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.relay-empty {
+  padding: 18px !important;
+  color: var(--ink-faint) !important;
+  text-align: center;
+}
+
+.relay-pagination,
+.relay-export-bar {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.relay-pagination span,
+.relay-progress-copy {
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.relay-file-drop {
+  display: grid;
+  gap: 3px;
+  padding: 16px;
+  border: 1px dashed var(--line-strong);
+  background: var(--paper);
+  text-align: center;
+  cursor: pointer;
+}
+
+.relay-file-drop input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.relay-file-drop strong {
+  color: var(--coral);
+  font: 700 13px Georgia, serif;
+}
+
+.relay-file-drop small {
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.relay-translation-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 9px;
+}
+
+.relay-search-replace {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 6px;
+}
+
+.relay-glossary {
+  display: grid;
+  gap: 5px;
+  max-height: 170px;
+  overflow: auto;
+}
+
+.relay-glossary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 28px;
+  gap: 5px;
+}
+
+.relay-translation-table th:first-child {
+  width: 145px;
+}
+
+.relay-translation-table th:last-child {
+  width: 88px;
+}
+
+.relay-translation-table td .button {
+  width: 100%;
+  padding: 5px;
+  font-size: 8px;
+}
+
+.relay-two-step {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.relay-sync-console {
+  border-top: 3px solid var(--coral);
+}
+
+.relay-confidence {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid var(--coral);
+  border-radius: 50%;
+  color: var(--coral);
+  font: 700 12px Georgia, serif;
+}
+
+.relay-detected-time {
+  display: grid;
+  margin: 10px 0;
+}
+
+.relay-sync-console > p {
+  margin-bottom: 10px;
+}
+
+.relay-manual-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: end;
+}
+
+.relay-manual-controls button {
+  min-height: 32px;
+  padding: 6px 9px;
+  border: 1px solid var(--line-strong);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.relay-manual-controls label {
+  display: grid;
+  gap: 3px;
+}
+
+.relay-manual-controls input {
+  width: 120px;
+}
+
+.relay-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-size: 9px;
+}
+
+.relay-check input {
+  accent-color: var(--coral);
+}
+
+.relay-mirror {
+  position: relative;
+  overflow: hidden;
+  border: 3px solid var(--ink);
+  background: #000;
+  aspect-ratio: 16 / 9;
+}
+
+.relay-mirror video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.relay-mirror-caption {
+  position: absolute;
+  right: 5%;
+  bottom: 6%;
+  left: 5%;
+  padding: .25em .5em;
+  background: rgb(23 22 19 / 84%);
+  color: #fff;
+  font: 34px/1.25 Georgia, serif;
+  text-align: center;
+  text-shadow: 0 2px 4px #000;
+  white-space: pre-wrap;
+}
+
+.relay-mirror[data-placement="top"] .relay-mirror-caption {
+  top: 6%;
+  bottom: auto;
+}
+
+.relay-mirror[data-placement="middle"] .relay-mirror-caption {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+.relay-project-drawer {
+  position: fixed;
+  z-index: 100;
+  top: 42px;
+  right: 0;
+  bottom: 0;
+  width: min(360px, 92vw);
+  padding: 16px;
+  border-left: 1px solid var(--line-strong);
+  background: var(--card);
+  box-shadow: -14px 0 40px rgb(23 22 19 / 16%);
+}
+
+.relay-project-drawer[hidden] {
+  display: none;
+}
+
+#project-list {
+  height: 250px;
+  margin: 12px 0;
+}
+
+.relay-project-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.relay-project-drawer > p {
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.relay-announcements {
+  position: fixed;
+  z-index: 200;
+  right: 12px;
+  bottom: 12px;
+  max-width: 360px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 9px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: .2s;
+}
+
+.relay-announcements.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 980px) {
+  .relay-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .relay-context-rail {
+    position: static;
+    display: grid;
+    max-height: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-right: 0;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .relay-context-rail .relay-rail-card {
+    border-right: 1px solid var(--line);
+  }
+
+  .relay-capture-readout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .relay-capture-readout dl {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 700px) {
+  .caption-relay-topbar small,
+  .relay-step-arrow,
+  .relay-stepper button small,
+  .relay-stage-note {
+    display: none;
+  }
+
+  .relay-stepper {
+    top: 32px;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .relay-stepper button {
+    grid-template-columns: 23px 1fr;
+    padding: 8px;
+  }
+
+  .relay-stepper button > span {
+    width: 22px;
+    height: 22px;
+  }
+
+  .relay-context-rail,
+  .relay-card-grid,
+  .relay-capture-setup,
+  .relay-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .relay-stage-area {
+    padding: 10px;
+  }
+
+  .relay-capture-readout {
+    grid-template-columns: 1fr;
+  }
+
+  .relay-capture-readout dl {
+    grid-column: auto;
+  }
+
+  .relay-stage-header h2 {
+    font-size: 20px;
+  }
+
+  .relay-inline-controls,
+  .relay-export-bar {
+    justify-content: flex-start;
+  }
+
+  .relay-search-replace {
+    grid-template-columns: 1fr;
+  }
+
+  .relay-caption-table {
+    min-width: 720px;
+  }
+}

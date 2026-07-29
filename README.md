@@ -35,7 +35,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Everyday Life** — Separate Cooking, Gym, and Cleaning areas for practical knowledge used at home.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Subject-specific working libraries for questions and ideas, structured studies, programming-language refreshers, algorithm labs, and project case studies, plus the existing notecard and educational collections.
-- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Master Lesson Builder, Literature Curation, Travel Planner, Software Architect, File Converter, Scientific Calculator, and Budget & Finance tool without unrelated library content.
+- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Master Lesson Builder, Caption Relay, Literature Curation, Travel Planner, Software Architect, File Converter, Scientific Calculator, and Budget & Finance tool without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the forest-and-circuit *Vital Pancakes* skull.
@@ -70,7 +70,7 @@ The editable areas use nine permanent core libraries. A new or previously empty 
 
 These nine core libraries cannot be added, renamed, or deleted. Their entries—including every starter example—remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library, while existing user-authored algorithms migrate into Personal Algorithms without being discarded.
 
-User-created entries, boards, literature curations, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
+User-created entries, boards, caption projects, literature curations, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 
 Existing `localStorage` namespaces retain their earlier `pinakes-vitae-*` and `artificially-neuroscience-*` identifiers. They are implementation-level compatibility keys, not public branding, and must remain unchanged unless a migration preserves previously saved user data.
 
@@ -101,6 +101,16 @@ Processes text-based PDF, TXT, and Markdown books entirely in the browser. It ex
 An explicitly loaded small or medium WebLLM model runs in a dedicated Web Worker through WebGPU. Model files are downloaded from the WebLLM distribution on first use, cached by WebLLM in browser storage, and excluded from the normal service-worker precache. Deterministic BM25 retrieval limits chat to relevant source chunks; generated page citations are discarded unless they match a real retrieved chunk and page. Approved lessons remain editable, export as Markdown or JSON, and save into Studies as backward-compatible lesson entries without changing existing inquiry dossiers.
 
 Books and generated content never leave the browser. The first model load requires a network connection, a WebGPU-capable browser, sufficient storage, and approximately 0.9 GB of GPU memory for the small model or 2.3 GB for the medium model. Local model output remains probabilistic and should be checked against its cited source pages.
+
+### Caption Relay
+
+Provides one integrated **Capture → Translate → Display** pipeline for personal accessibility. It captures shared-tab audio with `getDisplayMedia`, transcribes bounded overlapping chunks in a worker, maps accelerated captures back to the original movie timeline, and discards raw audio after local inference. Completed and interrupted projects, caption text, glossary entries, compact 1× fingerprints, and text synchronization indexes use the separate `vital-pancakes-caption-relay` IndexedDB namespace. Packages, SRT, and WebVTT can be edited and round-tripped without changing millisecond timestamps.
+
+English speech recognition uses pinned Transformers.js 3.8.1 with Apache-2.0 `onnx-community/whisper-tiny.en` revision `2575352` or `Xenova/whisper-small.en` revision `529f2fb`. English → Vietnamese translation prefers Chrome's local Translator API, then falls back to Apache-2.0 `Xenova/opus-mt-en-vi` revision `30bcd46` through the same pinned runtime. Model runtimes and weights download only after an explicit prepare action, use browser-managed caches, and are intentionally excluded from the normal application-shell precache.
+
+At display time, 1× packages match compact spectral fingerprints from the same source audio. Accelerated packages use rolling English transcription and fuzzy cue matching because ordinary fingerprints are not reliably speed invariant. Low-confidence or unrelated audio hides captions and reports **No matching video detected**. Supported desktop Chromium browsers can use an always-on-top Document Picture-in-Picture overlay; other desktop browsers receive a popup fallback. Mirror Mode keeps captured video and captions in one document for fullscreen, but protected media may be blank and capture can add latency, reduce quality, interrupt, or duplicate audio.
+
+Captured movie audio, transcripts, translations, fingerprints, and packages are never uploaded by Vital Pancakes. No raw movie media is permanently stored or included in exports. Caption Relay has no DRM bypass, analytics, backend, account, or direct control over another website. Desktop Chrome and Edge are the primary targets; mobile browsers, missing tab-audio sharing, limited storage, model download failures, and browser capture restrictions are reported honestly.
 
 ### Literature Curation
 
@@ -172,7 +182,7 @@ Open the **Download App** section after the site is loaded over HTTPS:
 - On iPhone or iPad, use Safari's Share menu and choose **Add to Home Screen**.
 - On Android or a supported desktop browser, use the page's **Install app** button or the browser's installation action.
 
-The app shell, tools, public pages, data files, and repository PDFs are cached for offline access. Remote KaTeX assets used by the legacy flashcard pages may still require a previously populated browser cache for full equation rendering.
+The app shell, tools, public pages, data files, and repository PDFs are cached for offline access. Remote KaTeX assets used by the legacy flashcard pages may still require a previously populated browser cache for full equation rendering. Caption Relay itself is cached, but its large speech and translation models are not part of the application shell; each selected model needs a first online download and works offline later only while its browser-managed cache remains available.
 
 ## Testing and Deployment
 
@@ -190,6 +200,9 @@ Production is hosted from the `main` branch with GitHub Pages. Publishing requir
 
 - A current browser with ES modules, Canvas 2D, service workers, localStorage, IndexedDB, and dialog support
 - WebGPU for Master Lesson Builder model inference; WebLLM 0.2.83 lazy-loads from its documented CDN only after an explicit model-load action
+- Desktop `getDisplayMedia`, Web Audio, AudioWorklet, and Web Workers for Caption Relay capture; Document Picture-in-Picture is optional
+- Transformers.js 3.8.1, Whisper Tiny/Small English, and OPUS-MT English → Vietnamese lazy-load from pinned CDN/model revisions; the runtime and all three models are Apache-2.0
+- Chrome 138 or newer can provide the preferred built-in local Translator API; other supported desktop browsers use the local OPUS-MT fallback
 - Python 3 for the documented local server command
 - Node.js 18 or newer for the maintained test suite
 - GitHub Pages for production hosting

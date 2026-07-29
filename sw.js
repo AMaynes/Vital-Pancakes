@@ -11,10 +11,11 @@
  *
  * Notes
  * Same-origin GET requests use cache-first behavior with background cache fill.
- * User-created localStorage data is outside service-worker storage and remains local.
+ * User-created localStorage, IndexedDB, and model-cache data stays outside the
+ * application shell. Caption Relay's large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v43";
+const CACHE_NAME = "vital-pancakes-app-v44";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -24,7 +25,7 @@ const APP_SHELL = [
   "./index.html",
   "./style.css?v=18",
   "./site-navigation.css?v=20",
-  "./site-navigation.js?v=11",
+  "./site-navigation.js?v=12",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
@@ -37,7 +38,11 @@ const APP_SHELL = [
   "./assets/app-icon-512.png",
   "./assets/app-preview-workspace.svg?v=4",
   "./assets/app-preview-studies.svg?v=2",
-  "./app/main.js?v=15",
+  "./app/main.js?v=16",
+  "./app/ai-command-protocol.mjs",
+  "./app/ai-command-registry.mjs",
+  "./app/ai-page-host.mjs",
+  "./app/ai-tool-catalog.mjs",
   "./app/content-view.mjs",
   "./app/tag-filter.mjs?v=1",
   "./app/store.js?v=14",
@@ -87,6 +92,26 @@ const APP_SHELL = [
   "./tools/master-lesson-text.mjs?v=2",
   "./tools/master-lesson-validation.mjs",
   "./tools/master-lesson-worker.js?v=1",
+  "./tools/caption-relay.html",
+  "./tools/caption-relay.css?v=2",
+  "./tools/caption-relay.js?v=4",
+  "./tools/caption-relay-ai-adapter.mjs",
+  "./tools/caption-audio-worklet.js?v=2",
+  "./tools/caption-capture.mjs",
+  "./tools/caption-fingerprint-worker.js",
+  "./tools/caption-fingerprint.mjs",
+  "./tools/caption-formats.mjs",
+  "./tools/caption-mirror.mjs",
+  "./tools/caption-overlay.mjs",
+  "./tools/caption-package.mjs",
+  "./tools/caption-storage.mjs",
+  "./tools/caption-sync.mjs",
+  "./tools/caption-text-sync.mjs",
+  "./tools/caption-timing.mjs",
+  "./tools/caption-transcript.mjs",
+  "./tools/caption-transcription-worker.js",
+  "./tools/caption-translation-worker.js",
+  "./tools/caption-translation.mjs",
   "./tools/literature-curator.html",
   "./tools/literature-curator.css?v=1",
   "./tools/literature-curator.js?v=1",

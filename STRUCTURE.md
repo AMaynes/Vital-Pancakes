@@ -24,6 +24,10 @@ vital-pancakes/
 ├── sw.js — Caches the workspace, public archive, and tools for offline use.
 ├── genericListLoader.js — Renders repository-managed text lists.
 ├── app/
+│   ├── ai-command-protocol.mjs — Validates provider-independent semantic command envelopes and permissions.
+│   ├── ai-command-registry.mjs — Routes previewed and applied commands through registered tool adapters.
+│   ├── ai-page-host.mjs — Exposes the shared versioned AI page API and message bridge.
+│   ├── ai-tool-catalog.mjs — Registers AI-addressable tools and their adapter modules.
 │   ├── content-view.mjs — Normalizes retained List/Grid preferences and creates collection deep links.
 │   ├── content-view.test.mjs — Verifies collection view preferences and encoded entry routes.
 │   ├── main.js — Renders workspace routes, libraries, and editors.
@@ -106,6 +110,27 @@ vital-pancakes/
 │   ├── master-lesson-db.mjs — Stores books, pages, chunks, summaries, lessons, and jobs in IndexedDB.
 │   ├── master-lesson-study.mjs — Converts approved lessons into compatible Studies entries.
 │   ├── master-lesson-core.test.mjs — Verifies chunking, citations, outline, retrieval, queues, prompts, and Study conversion.
+│   ├── caption-relay.html — Hosts the integrated Capture, Translate, and Display pipeline.
+│   ├── caption-relay.css — Styles the archival three-stage caption workspace and mirror player.
+│   ├── caption-relay.js — Coordinates projects, workers, editing, translation, synchronization, overlays, and exports.
+│   ├── caption-relay-ai-adapter.mjs — Exposes the validated, permission-gated semantic AI command contract.
+│   ├── caption-capture.mjs — Owns shared-tab capture, sample-count timing, wake lock, and media cleanup.
+│   ├── caption-audio-worklet.js — Downsamples audio and emits bounded overlapping chunks off the main thread.
+│   ├── caption-transcription-worker.js — Lazy-loads pinned local Whisper speech recognition.
+│   ├── caption-transcript.mjs — Deduplicates overlaps, constructs cues, and bounds queued transcription.
+│   ├── caption-translation-worker.js — Lazy-loads the pinned local English-to-Vietnamese fallback.
+│   ├── caption-translation.mjs — Preserves cues, punctuation, failures, glossary terms, and translation progress.
+│   ├── caption-fingerprint-worker.js — Generates and matches same-speed compact audio fingerprints.
+│   ├── caption-fingerprint.mjs — Implements deterministic spectral same-source hashes and confidence matching.
+│   ├── caption-text-sync.mjs — Normalizes and fuzzy-matches rolling English transcript windows.
+│   ├── caption-sync.mjs — Owns confidence-gated lock, drift, seek, pause, and rejection states.
+│   ├── caption-overlay.mjs — Renders safe captions in Document Picture-in-Picture or a popup.
+│   ├── caption-mirror.mjs — Renders captured video and subtitles together for fullscreen fallback.
+│   ├── caption-package.mjs — Validates and migrates versioned `.vpcaptions.json` packages.
+│   ├── caption-formats.mjs — Parses and exports millisecond-accurate SRT and WebVTT.
+│   ├── caption-timing.mjs — Maps capture speed to original movie time and applies corrections.
+│   ├── caption-storage.mjs — Persists projects and checkpoints in a separate IndexedDB namespace.
+│   ├── caption-*.test.mjs — Verifies formats, timing, packages, recovery, translation, fingerprints, and synchronization.
 │   ├── literature-curator.html — Hosts idea, claim, and hypothesis evidence curation.
 │   ├── literature-curator.css — Styles the curation index and evidence matrix.
 │   ├── literature-curator.js — Owns local curation editing, persistence, and Markdown export.
@@ -281,6 +306,16 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 `master-lesson-builder.html`, `.css`, and `.js` provide the book library, drag-and-drop extraction, WebGPU status, explicit model loading, editable outline, lesson editor and preview, source-grounded chat, progress controls, exports, and Studies integration. Text-based PDFs use bundled PDF.js; TXT and Markdown use native file reading. Scanned PDFs are detected from insufficient extractable text and require external OCR.
 
 The deterministic pipeline is split across extraction, normalization, outline, chunking, BM25 retrieval, prompt, validation, queue, IndexedDB, and Study-conversion modules. Source pages stay attached through chunking, and model citations survive validation only when the cited page belongs to the cited supplied chunk. WebLLM 0.2.83 is lazy-loaded inside `master-lesson-worker.js`; small and medium model artifacts use WebLLM's IndexedDB cache and are intentionally absent from the application-shell precache. Reloaded running jobs recover paused and reuse completed chunk summaries.
+
+### Caption Relay
+
+`caption-relay.html`, `.css`, and `.js` provide one persistent **Capture → Translate → Display** workspace. Capture uses `getDisplayMedia`, an `AudioContext`, an AudioWorklet, worker inference, a bounded queue, processed-sample timing, optional wake lock, and IndexedDB checkpoints. It keeps the browser-required video track alive while consuming only audio, starts its movie clock on the first audible shared samples, and never persists raw movie media. At 1×, a worker records compact same-source fingerprints; accelerated captures multiply every detected audio timestamp by the selected constant rate and use a normalized English cue index for later matching.
+
+Package, format, timing, transcript, translation, fingerprint, text-match, and synchronization rules are pure modules with deterministic Node tests. The versioned `.vpcaptions.json` validator bounds size and cue counts, rejects raw media and malformed data, migrates schema 0, preserves compatible unknown fields, and keeps source cue IDs and integer timestamps stable. Imported caption text reaches the interface and overlays through form values or `textContent`, never unsafe HTML.
+
+Speech workers lazy-load pinned Transformers.js 3.8.1 with Apache-2.0 Whisper Tiny or Small English revisions. Translation prefers Chrome's desktop local Translator API and otherwise uses the Apache-2.0 OPUS-MT English-to-Vietnamese revision in its own worker. These large model files are not application-shell assets. `caption-sync.mjs` implements the documented state machine, requires compatible matches before locking, searches near the predicted time before globally, smooths small drift, applies seek-sized jumps immediately, and hides captions on low-confidence or unrelated audio.
+
+`caption-overlay.mjs` opens Document Picture-in-Picture only from a user gesture and falls back to a normal popup. `caption-mirror.mjs` keeps a captured video element and safe subtitle layer in the same document for fullscreen. Mirror Mode warns about latency, quality, duplicate audio, protected media, interruption, and browser limits. All project data uses the new `vital-pancakes-caption-relay` IndexedDB namespace without changing existing storage keys.
 
 ### Literature Curation
 
