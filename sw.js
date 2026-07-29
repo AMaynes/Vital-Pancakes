@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v35";
+const CACHE_NAME = "vital-pancakes-app-v36";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -24,7 +24,7 @@ const APP_SHELL = [
   "./index.html",
   "./style.css?v=18",
   "./site-navigation.css?v=20",
-  "./site-navigation.js?v=8",
+  "./site-navigation.js?v=9",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
@@ -37,7 +37,7 @@ const APP_SHELL = [
   "./assets/app-icon-512.png",
   "./assets/app-preview-workspace.svg?v=4",
   "./assets/app-preview-studies.svg?v=2",
-  "./app/main.js?v=12",
+  "./app/main.js?v=13",
   "./app/content-view.mjs",
   "./app/tag-filter.mjs?v=1",
   "./app/store.js?v=14",
@@ -90,12 +90,17 @@ const APP_SHELL = [
   "./tools/file-converter.css?v=2",
   "./tools/file-converter.js?v=2",
   "./tools/file-converter-state.mjs",
+  "./tools/scientific-calculator.html",
+  "./tools/scientific-calculator.css?v=2",
+  "./tools/scientific-calculator.js?v=2",
+  "./tools/scientific-calculator-engine.mjs?v=1",
   "./tools/file-converter-app/index.html",
   "./tools/file-converter-app/cache.json",
   "./tools/file-converter-app/assets/index-VitalPancakes.css",
   "./tools/file-converter-app/assets/index-CqjCqN4s.js",
   "./tools/file-converter-app/assets/jszip-3.11.1.min.js",
   "./vendor/mediabunny-1.51.0.min.mjs",
+  "./vendor/mathjs-15.2.0.min.js",
   "./vendor/pdf.min.js",
   "./vendor/pdf.worker.min.js",
   "./vendor/pdf-lib.min.js",

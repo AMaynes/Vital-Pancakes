@@ -42,6 +42,11 @@ vital-pancakes/
 │   └── app-preview-studies.svg — Phone preview of study libraries.
 ├── tools/
 │   ├── tool.css — Shares full-screen and windowed tool layouts and controls.
+│   ├── scientific-calculator.html — Hosts the scientific expression keypad, display, memory, and history.
+│   ├── scientific-calculator.css — Styles the responsive calculator and calculation history.
+│   ├── scientific-calculator.js — Coordinates calculator input, angle modes, memory, persistence, and history.
+│   ├── scientific-calculator-engine.mjs — Safely validates and evaluates scalar math.js expressions.
+│   ├── scientific-calculator-engine.test.mjs — Verifies precedence, precision, functions, angle modes, and rejected syntax.
 │   ├── visual-board.html — Hosts diagramming and painting.
 │   ├── visual-board.js — Coordinates the infinite canvas, tools, persistence, and export.
 │   ├── visual-board-animation.mjs — Normalizes animation frames and playback timing.
@@ -97,6 +102,9 @@ vital-pancakes/
 │   ├── architecture-model.mjs — Owns migration, nesting, movement, and deletion policies.
 │   └── architecture-model.test.mjs — Verifies Software Architect model behavior.
 ├── vendor/
+│   ├── mathjs-15.2.0.min.js — Pinned math.js scientific expression and high-precision arithmetic runtime.
+│   ├── mathjs-15.2.0-LICENSE.txt — Apache-2.0 license for bundled math.js.
+│   ├── mathjs-15.2.0-NOTICE.txt — Upstream math.js attribution notice.
 │   ├── mediabunny-1.51.0.min.mjs — Pinned browser-native MP4 and WebM encoding runtime.
 │   ├── pdf.min.js — Bundled PDF.js viewer runtime.
 │   ├── pdf.worker.min.js — Bundled PDF.js worker.
@@ -270,9 +278,15 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 `file-converter.js` owns ready, timeout, offline, and retry states without reading selected files. `file-converter-state.mjs` keeps those host states deterministic, while `file-converter-byte-verification.mjs` mirrors the bundled exact comparison policy for independent tests of matches, file-count changes, length changes, and first differing offsets.
 
+### Scientific Calculator
+
+`scientific-calculator.html` and `scientific-calculator.css` provide a responsive six-column scientific keypad, editable expression display, DEG/RAD/GRAD mode control, memory, and locally stored calculation history. `scientific-calculator.js` owns keyboard and button editing, live previews, answer reuse, memory operations, copy behavior, and persistence.
+
+`scientific-calculator-engine.mjs` configures bundled math.js for 64-digit decimal arithmetic, allows only scalar operators, constants, and approved scientific functions, and rejects assignments, collections, property access, and unknown symbols before compilation. Its Node tests cover PEMDAS, nested parentheses, right-associative powers, implicit multiplication, factorials, modulo, roots, decimal precision, angle modes, answer reuse, invalid arithmetic, and unsafe syntax.
+
 ### `vendor/`
 
-Contains pinned minified Mediabunny 1.51.0, PDF.js 3.11.174, and PDF-Lib 1.17.1 browser assets so animation export, viewing, and signing do not depend on a network CDN.
+Contains pinned minified math.js 15.2.0, Mediabunny 1.51.0, PDF.js 3.11.174, and PDF-Lib 1.17.1 browser assets so calculation, animation export, viewing, and signing do not depend on a network CDN.
 
 ## Public Archive
 

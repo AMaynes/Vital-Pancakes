@@ -60,6 +60,10 @@ const PAGE_TRAILS = {
     segment("workspace", "workspace.html#area=tools"),
     segment("file-converter"),
   ],
+  "tools/scientific-calculator.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("scientific-calculator"),
+  ],
   "tools/pdf-signer.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("pdf-signer"),

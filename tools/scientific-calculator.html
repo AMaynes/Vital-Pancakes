@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>Scientific Calculator · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="../workspace.css?v=24">
+  <link rel="stylesheet" href="tool.css?v=33">
+  <link rel="stylesheet" href="scientific-calculator.css?v=2">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=9"></script>
+</head>
+<body class="tool-body calculator-body">
+  <a class="skip-link" href="#calculator-expression">Skip to calculator</a>
+
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Vital Pancakes home">
+      <span class="brand-mark" aria-hidden="true">VP</span>
+      <span>Vital Pancakes</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../workspace.html#area=everyday">Everyday Life</a>
+      <a href="../research-literature.html">Research &amp; Literature</a>
+      <a href="../workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="../workspace.html#area=tools" aria-current="page">Workspace</a>
+      <a href="../download-app.html">Download App</a>
+    </nav>
+  </header>
+
+  <div class="tool-shell calculator-shell">
+    <header class="tool-topbar calculator-topbar">
+      <div class="tool-title-group">
+        <div>
+          <h1>Scientific Calculator</h1>
+          <small>HIGH-PRECISION EXPRESSION ENGINE</small>
+        </div>
+      </div>
+      <div class="calculator-topbar-actions">
+        <div class="calculator-angle-control" role="group" aria-label="Angle mode">
+          <button type="button" data-angle-mode="deg" aria-pressed="true">DEG</button>
+          <button type="button" data-angle-mode="rad" aria-pressed="false">RAD</button>
+          <button type="button" data-angle-mode="grad" aria-pressed="false">GRAD</button>
+        </div>
+        <span class="calculator-save-status" id="calculator-save-status">History saved locally</span>
+      </div>
+    </header>
+
+    <main class="calculator-workspace" id="tool-main">
+      <section class="calculator-stage" aria-label="Scientific calculator">
+        <div class="calculator-panel">
+          <div class="calculator-display">
+            <label for="calculator-expression">Expression</label>
+            <input
+              id="calculator-expression"
+              type="text"
+              inputmode="text"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              enterkeyhint="done"
+              placeholder="0"
+            >
+            <div class="calculator-result-row">
+              <span aria-hidden="true">=</span>
+              <output id="calculator-result" for="calculator-expression" aria-live="polite">0</output>
+              <button
+                class="calculator-copy-result"
+                id="calculator-copy-result"
+                type="button"
+                aria-label="Copy result"
+                title="Copy result"
+              >⧉</button>
+            </div>
+            <p class="calculator-error" id="calculator-error" role="alert" hidden></p>
+          </div>
+
+          <div class="calculator-memory" role="group" aria-label="Calculator memory">
+            <span id="calculator-memory-status">M: 0</span>
+            <button type="button" data-action="memory-clear" title="Clear memory">MC</button>
+            <button type="button" data-action="memory-recall" title="Recall memory">MR</button>
+            <button type="button" data-action="memory-add" title="Add the current result to memory">M+</button>
+            <button type="button" data-action="memory-subtract" title="Subtract the current result from memory">M−</button>
+          </div>
+
+          <div class="calculator-keys" id="calculator-keys">
+            <button class="calculator-key key-function" type="button" data-insert="sin(">sin</button>
+            <button class="calculator-key key-function" type="button" data-insert="cos(">cos</button>
+            <button class="calculator-key key-function" type="button" data-insert="tan(">tan</button>
+            <button class="calculator-key key-function" type="button" data-insert="log10(">log</button>
+            <button class="calculator-key key-function" type="button" data-insert="ln(">ln</button>
+            <button class="calculator-key key-function" type="button" data-insert="sqrt(">√</button>
+
+            <button class="calculator-key key-function" type="button" data-insert="asin(">sin⁻¹</button>
+            <button class="calculator-key key-function" type="button" data-insert="acos(">cos⁻¹</button>
+            <button class="calculator-key key-function" type="button" data-insert="atan(">tan⁻¹</button>
+            <button class="calculator-key key-function" type="button" data-insert="sinh(">sinh</button>
+            <button class="calculator-key key-function" type="button" data-insert="cosh(">cosh</button>
+            <button class="calculator-key key-function" type="button" data-insert="tanh(">tanh</button>
+
+            <button class="calculator-key key-function" type="button" data-action="square">x²</button>
+            <button class="calculator-key key-function" type="button" data-insert="^">xʸ</button>
+            <button class="calculator-key key-function" type="button" data-insert="exp(">eˣ</button>
+            <button class="calculator-key key-function" type="button" data-insert="abs(">abs</button>
+            <button class="calculator-key key-function" type="button" data-insert="!">x!</button>
+            <button class="calculator-key key-function" type="button" data-insert=" mod ">mod</button>
+
+            <button class="calculator-key key-symbol" type="button" data-insert="(">(</button>
+            <button class="calculator-key key-symbol" type="button" data-insert=")">)</button>
+            <button class="calculator-key key-symbol" type="button" data-insert="pi">π</button>
+            <button class="calculator-key key-symbol" type="button" data-insert="e">e</button>
+            <button class="calculator-key key-symbol" type="button" data-insert="ans">ans</button>
+            <button class="calculator-key key-delete" type="button" data-action="backspace" aria-label="Backspace" title="Backspace">⌫</button>
+
+            <button class="calculator-key key-number" type="button" data-insert="7">7</button>
+            <button class="calculator-key key-number" type="button" data-insert="8">8</button>
+            <button class="calculator-key key-number" type="button" data-insert="9">9</button>
+            <button class="calculator-key key-operator" type="button" data-insert="/">÷</button>
+            <button class="calculator-key key-symbol" type="button" data-action="percent" title="Divide by 100">%</button>
+            <button class="calculator-key key-clear" type="button" data-action="clear">AC</button>
+
+            <button class="calculator-key key-number" type="button" data-insert="4">4</button>
+            <button class="calculator-key key-number" type="button" data-insert="5">5</button>
+            <button class="calculator-key key-number" type="button" data-insert="6">6</button>
+            <button class="calculator-key key-operator" type="button" data-insert="*">×</button>
+            <button class="calculator-key key-symbol" type="button" data-action="reciprocal">1/x</button>
+            <button class="calculator-key key-symbol" type="button" data-insert=",">,</button>
+
+            <button class="calculator-key key-number" type="button" data-insert="1">1</button>
+            <button class="calculator-key key-number" type="button" data-insert="2">2</button>
+            <button class="calculator-key key-number" type="button" data-insert="3">3</button>
+            <button class="calculator-key key-operator" type="button" data-insert="-">−</button>
+            <button class="calculator-key key-symbol" type="button" data-action="negate">±</button>
+            <button class="calculator-key key-symbol" type="button" data-insert="cbrt(">∛</button>
+
+            <button class="calculator-key key-number" type="button" data-insert="0">0</button>
+            <button class="calculator-key key-number" type="button" data-insert=".">.</button>
+            <button class="calculator-key key-symbol" type="button" data-insert="e" title="Scientific notation exponent">EE</button>
+            <button class="calculator-key key-operator" type="button" data-insert="+">+</button>
+            <button class="calculator-key key-equals" type="button" data-action="evaluate">=</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="calculator-history" aria-labelledby="calculator-history-title">
+        <header>
+          <div>
+            <h2 id="calculator-history-title">History</h2>
+            <span id="calculator-history-count">0 calculations</span>
+          </div>
+          <button id="calculator-clear-history" type="button">Clear</button>
+        </header>
+        <p class="calculator-history-empty" id="calculator-history-empty">Completed calculations appear here.</p>
+        <ol id="calculator-history-list" aria-label="Calculation history"></ol>
+      </aside>
+    </main>
+  </div>
+
+  <script src="../vendor/mathjs-15.2.0.min.js"></script>
+  <script type="module" src="scientific-calculator.js?v=2"></script>
+</body>
+</html>

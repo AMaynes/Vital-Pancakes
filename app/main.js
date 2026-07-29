@@ -771,6 +771,13 @@ function renderToolsDashboard() {
       icon: "⇄",
       accent: "coral",
     },
+    {
+      title: "Scientific Calculator",
+      copy: "Evaluate nested scientific expressions with precise decimals, angle modes, memory, and local history.",
+      href: "tools/scientific-calculator.html",
+      icon: "∑",
+      accent: "sage",
+    },
   ].forEach((tool) => toolsGrid.append(createToolCard(tool)));
 
   appMain.append(hero, toolsHeading, toolsGrid);
