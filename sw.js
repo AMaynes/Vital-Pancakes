@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v32";
+const CACHE_NAME = "vital-pancakes-app-v35";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -45,9 +45,9 @@ const APP_SHELL = [
   "./app/algorithm-analysis-samples.mjs?v=1",
   "./app/algorithm-code-examples.mjs?v=1",
   "./app/download-app.js",
-  "./tools/tool.css?v=30",
+  "./tools/tool.css?v=33",
   "./tools/visual-board.html",
-  "./tools/visual-board.js?v=28",
+  "./tools/visual-board.js?v=29",
   "./tools/visual-board-animation.mjs?v=1",
   "./tools/visual-board-character.mjs?v=1",
   "./tools/visual-board-clipboard.mjs?v=2",
@@ -57,6 +57,7 @@ const APP_SHELL = [
   "./tools/visual-board-groups.mjs?v=2",
   "./tools/visual-board-history.mjs?v=2",
   "./tools/visual-board-interpolation.mjs?v=1",
+  "./tools/visual-board-library.mjs?v=1",
   "./tools/visual-board-rich-text.mjs?v=1",
   "./tools/visual-board-rigging.mjs?v=1",
   "./tools/visual-board-rife.mjs?v=1",

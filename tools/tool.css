@@ -72,6 +72,7 @@
 
 .tool-workspace {
   --animation-panel-width: min(360px, 34vw);
+  --library-panel-width: min(380px, 36vw);
 
   position: relative;
   display: grid;
@@ -83,6 +84,10 @@
 
 .tool-workspace.is-animation-open {
   grid-template-columns: minmax(0, 1fr) var(--animation-panel-width);
+}
+
+.tool-workspace.is-library-open {
+  grid-template-columns: minmax(0, 1fr) var(--library-panel-width);
 }
 
 .tool-workspace.is-resizing-animation-panel {
@@ -427,7 +432,7 @@
   --animation-preview-height: 210px;
 
   position: relative;
-  z-index: 13;
+  z-index: 15;
   display: flex;
   min-width: 0;
   min-height: 0;
@@ -481,6 +486,196 @@
   pointer-events: auto;
   transform: translateX(0);
   visibility: visible;
+}
+
+.board-library-panel {
+  position: relative;
+  z-index: 15;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  grid-column: 2;
+  grid-row: 2;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--line-strong);
+  background: #f7f4ec;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(24px);
+  transition:
+    opacity 140ms ease,
+    transform 180ms ease;
+  visibility: hidden;
+}
+
+.tool-workspace.is-library-open .board-library-panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.board-library-header {
+  display: flex;
+  min-height: 52px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+
+.board-library-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.board-library-header span {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-faint);
+  font-size: 9px;
+}
+
+.board-library-controls {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 9px;
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.board-library-controls .button {
+  min-height: 32px;
+}
+
+.board-library-controls label {
+  display: grid;
+  gap: 4px;
+}
+
+.board-library-controls label span {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.board-library-controls input {
+  width: 100%;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  outline: none;
+  background: var(--card);
+  color: var(--ink);
+  font: 600 10px/1 var(--font-body);
+}
+
+.board-library-controls input:focus {
+  border-color: var(--coral);
+  box-shadow: inset 3px 0 0 var(--coral);
+}
+
+.board-library-empty {
+  margin: 0;
+  padding: 22px 18px;
+  color: var(--ink-faint);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.board-library-empty[hidden] {
+  display: none;
+}
+
+.board-library-list {
+  min-height: 0;
+  margin: 0;
+  padding: 10px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.board-library-item {
+  display: grid;
+  min-width: 0;
+  margin-bottom: 9px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+
+.board-library-preview {
+  display: block;
+  width: 96px;
+  height: 78px;
+  align-self: stretch;
+  border-right: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.board-library-item-body {
+  display: grid;
+  min-width: 0;
+  padding: 8px;
+  gap: 5px;
+}
+
+.board-library-item-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-library-item-meta {
+  overflow: hidden;
+  color: var(--ink-faint);
+  font-size: 8px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-library-item-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px 28px;
+  gap: 5px;
+}
+
+.board-library-item-actions button {
+  min-width: 0;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font: 800 9px/1 var(--font-body);
+}
+
+.board-library-item-actions button:hover,
+.board-library-item-actions button:focus-visible {
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.board-library-item-actions .board-library-delete:hover,
+.board-library-item-actions .board-library-delete:focus-visible {
+  border-color: #d9aaa5;
+  background: #fff7f5;
+  color: var(--coral);
+}
+
+.board-library-save-dialog .interpolation-count-control input {
+  text-align: left;
 }
 
 .animation-panel-header,
@@ -2282,11 +2477,13 @@
   }
 
   .tool-workspace,
-  .tool-workspace.is-animation-open {
+  .tool-workspace.is-animation-open,
+  .tool-workspace.is-library-open {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .animation-panel {
+  .animation-panel,
+  .board-library-panel {
     position: absolute;
     top: 38px;
     right: 0;
@@ -2295,6 +2492,10 @@
     grid-column: auto;
     grid-row: auto;
     box-shadow: var(--shadow-md);
+  }
+
+  .board-library-panel {
+    width: min(360px, 100%);
   }
 
   .pdf-workspace {

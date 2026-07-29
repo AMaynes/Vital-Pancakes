@@ -9,7 +9,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=18">
-  <link rel="stylesheet" href="tool.css?v=30">
+  <link rel="stylesheet" href="tool.css?v=33">
   <link rel="stylesheet" href="../site-navigation.css?v=20">
   <script type="module" src="../site-navigation.js?v=5"></script>
 </head>
@@ -41,6 +41,13 @@
       <div class="tool-topbar-actions">
         <span class="tool-save-status" id="save-status">Saved locally</span>
         <button class="button button-quiet" id="clear-board" type="button">Clear</button>
+        <button
+          class="button button-quiet"
+          id="toggle-board-library"
+          type="button"
+          aria-controls="board-library-panel"
+          aria-expanded="false"
+        >Library</button>
         <button
           class="button button-primary"
           id="toggle-animation"
@@ -235,11 +242,17 @@
         <button class="tool-button" id="reassemble-selection" type="button" title="Reassemble divided lines into their original shape">
           ⤡ <span class="tool-button-label">Reassemble</span>
         </button>
+        <button class="tool-button" id="save-to-library" type="button" title="Save selection to the reusable Visual Board library">
+          <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M5 4h14v16l-7-4-7 4zM12 7v6M9 10h6"></path>
+          </svg>
+          <span class="tool-button-label">Save to library</span>
+        </button>
         <button class="tool-button" id="export-character" type="button" title="Save this character with its groups, joints, and locks">
           <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
             <path d="M12 3v12M7 10l5 5 5-5M4 20h16"></path>
           </svg>
-          <span class="tool-button-label">Save character</span>
+          <span class="tool-button-label">Download character</span>
         </button>
         <button class="tool-button delete-selection" id="delete-selection" type="button" title="Delete selection">
           <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
@@ -356,6 +369,38 @@
 
         <ol class="animation-frame-list" id="animation-frame-list" aria-label="Animation frame timeline"></ol>
       </aside>
+      <aside
+        class="board-library-panel"
+        id="board-library-panel"
+        aria-label="Visual Board library"
+        aria-hidden="true"
+      >
+        <header class="board-library-header">
+          <div>
+            <h2>Board library</h2>
+            <span id="board-library-total">0 saved assets</span>
+          </div>
+          <button class="tool-button" id="close-board-library" type="button" aria-label="Close Visual Board library" title="Close library">×</button>
+        </header>
+        <div class="board-library-controls">
+          <button class="button button-primary" id="library-save-selection" type="button" disabled>
+            Save selection
+          </button>
+          <label for="board-library-search">
+            <span>Search</span>
+            <input
+              id="board-library-search"
+              type="search"
+              placeholder="Find saved artwork"
+              autocomplete="off"
+            >
+          </label>
+        </div>
+        <p class="board-library-empty" id="board-library-empty">
+          Save selected artwork to reuse it with the same groups, vertices, joints, and locks.
+        </p>
+        <ul class="board-library-list" id="board-library-list" aria-label="Saved Visual Board assets"></ul>
+      </aside>
     </main>
   </div>
   <dialog
@@ -407,6 +452,42 @@
       </footer>
     </form>
   </dialog>
-  <script type="module" src="visual-board.js?v=28"></script>
+  <dialog
+    class="interpolation-dialog board-library-save-dialog"
+    id="board-library-save-dialog"
+    aria-labelledby="board-library-save-title"
+  >
+    <form id="board-library-save-form">
+      <header>
+        <div>
+          <h2 id="board-library-save-title">Save to Board library</h2>
+          <p>Groups, vertices, joints, images, and locks will be preserved.</p>
+        </div>
+        <button
+          class="tool-button"
+          id="close-board-library-save"
+          type="button"
+          aria-label="Close save dialog"
+          title="Close"
+        >×</button>
+      </header>
+      <label class="interpolation-count-control" for="board-library-name">
+        <span>Asset name</span>
+        <input
+          id="board-library-name"
+          type="text"
+          maxlength="80"
+          autocomplete="off"
+          required
+        >
+      </label>
+      <p class="interpolation-error" id="board-library-save-error" role="alert" hidden></p>
+      <footer>
+        <button class="button button-quiet" id="cancel-board-library-save" type="button">Cancel</button>
+        <button class="button button-primary" type="submit">Save asset</button>
+      </footer>
+    </form>
+  </dialog>
+  <script type="module" src="visual-board.js?v=29"></script>
 </body>
 </html>

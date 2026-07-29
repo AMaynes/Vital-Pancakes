@@ -12,6 +12,15 @@ import {
   instantiateCharacter,
 } from "./visual-board-character.mjs?v=1";
 import {
+  addVisualBoardLibraryItem,
+  createEmptyVisualBoardLibrary,
+  createVisualBoardLibraryItem,
+  filterVisualBoardLibraryItems,
+  getVisualBoardLibraryItemSummary,
+  normalizeVisualBoardLibrary,
+  removeVisualBoardLibraryItem,
+} from "./visual-board-library.mjs?v=1";
+import {
   getShapeToolFamily,
   retainShapeToolChoice,
 } from "./visual-board-shape-tools.mjs?v=1";
@@ -96,6 +105,7 @@ import {
 } from "./visual-board-geometry.mjs?v=8";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
+const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
 const BOARD_VERSION = 10;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
@@ -160,12 +170,27 @@ const reassembleSelectionButton = document.querySelector("#reassemble-selection"
 const deleteSelectionButton = document.querySelector("#delete-selection");
 const copySelectionButton = document.querySelector("#copy-selection");
 const pasteSelectionButton = document.querySelector("#paste-selection");
+const saveToLibraryButton = document.querySelector("#save-to-library");
 const exportCharacterButton = document.querySelector("#export-character");
 const gridToggle = document.querySelector("#toggle-grid");
 const snapToggle = document.querySelector("#toggle-snap");
 const saveStatus = document.querySelector("#save-status");
 const toolWorkspace = document.querySelector("#tool-main");
 const animationToggleButton = document.querySelector("#toggle-animation");
+const boardLibraryToggleButton = document.querySelector("#toggle-board-library");
+const boardLibraryPanel = document.querySelector("#board-library-panel");
+const boardLibraryCloseButton = document.querySelector("#close-board-library");
+const boardLibraryTotal = document.querySelector("#board-library-total");
+const boardLibrarySaveSelectionButton = document.querySelector("#library-save-selection");
+const boardLibrarySearch = document.querySelector("#board-library-search");
+const boardLibraryEmpty = document.querySelector("#board-library-empty");
+const boardLibraryList = document.querySelector("#board-library-list");
+const boardLibrarySaveDialog = document.querySelector("#board-library-save-dialog");
+const boardLibrarySaveForm = document.querySelector("#board-library-save-form");
+const boardLibraryNameInput = document.querySelector("#board-library-name");
+const boardLibrarySaveError = document.querySelector("#board-library-save-error");
+const boardLibrarySaveCancelButton = document.querySelector("#cancel-board-library-save");
+const boardLibrarySaveCloseButton = document.querySelector("#close-board-library-save");
 const animationPanel = document.querySelector("#animation-panel");
 const animationPanelResizeHandle = document.querySelector("#animation-panel-resize");
 const animationPreview = document.querySelector("#animation-preview");
@@ -203,6 +228,7 @@ const confirmInterpolationButton = document.querySelector("#confirm-interpolatio
 const cancelInterpolationButton = document.querySelector("#cancel-interpolation");
 
 let board = loadBoard();
+let boardLibrary = loadVisualBoardLibrary();
 let viewport = { ...board.view };
 let history = [];
 let future = [];
@@ -221,6 +247,8 @@ let traceInProgress = false;
 let objectClipboard = [];
 let pasteGeneration = 0;
 let animationPanelOpen = false;
+let boardLibraryPanelOpen = false;
+let boardLibraryDialogReturnFocus = null;
 let selectedAnimationFrameId = board.animation.frames[0]?.id ?? null;
 let animationPlaybackTimer = null;
 let animationPlaybackIndex = 0;
@@ -294,6 +322,27 @@ function createEmptyBoard() {
     settings: { grid: true, snap: false },
     view: { x: 0, y: 0, zoom: 1 },
   };
+}
+
+function loadVisualBoardLibrary() {
+  try {
+    return normalizeVisualBoardLibrary(
+      JSON.parse(localStorage.getItem(BOARD_LIBRARY_KEY)),
+    );
+  } catch (error) {
+    console.error("Unable to load the Visual Board library.", error);
+    return createEmptyVisualBoardLibrary();
+  }
+}
+
+function saveVisualBoardLibrary() {
+  try {
+    localStorage.setItem(BOARD_LIBRARY_KEY, JSON.stringify(boardLibrary));
+    return true;
+  } catch (error) {
+    console.error("Unable to save the Visual Board library.", error);
+    return false;
+  }
 }
 
 function normalizeObject(rawObject, options = {}) {
@@ -1970,6 +2019,7 @@ function handleWheel(event) {
 
 function toggleAnimationPanel(forceOpen = !animationPanelOpen) {
   animationPanelOpen = Boolean(forceOpen);
+  if (animationPanelOpen && boardLibraryPanelOpen) toggleBoardLibraryPanel(false);
   if (!animationPanelOpen) {
     stopAnimationPlayback();
     exitAnimationPreviewFullscreen();
@@ -1985,6 +2035,320 @@ function toggleAnimationPanel(forceOpen = !animationPanelOpen) {
     renderAnimationPanel();
     animationPreview.focus({ preventScroll: true });
   }
+}
+
+function toggleBoardLibraryPanel(forceOpen = !boardLibraryPanelOpen) {
+  boardLibraryPanelOpen = Boolean(forceOpen);
+  if (boardLibraryPanelOpen && animationPanelOpen) toggleAnimationPanel(false);
+  toolWorkspace.classList.toggle("is-library-open", boardLibraryPanelOpen);
+  boardLibraryPanel.setAttribute("aria-hidden", String(!boardLibraryPanelOpen));
+  boardLibraryPanel.inert = !boardLibraryPanelOpen;
+  boardLibraryToggleButton.setAttribute("aria-expanded", String(boardLibraryPanelOpen));
+  boardLibraryToggleButton.classList.toggle("is-active", boardLibraryPanelOpen);
+  if (!boardLibraryPanelOpen) return;
+
+  renderBoardLibrary();
+  const focusTarget = selectedObjects.length
+    ? boardLibrarySaveSelectionButton
+    : boardLibrarySearch;
+  focusTarget.focus({ preventScroll: true });
+}
+
+function renderBoardLibrary() {
+  const total = boardLibrary.items.length;
+  boardLibraryTotal.textContent = total === 1 ? "1 saved asset" : `${total} saved assets`;
+  boardLibrarySaveSelectionButton.disabled = selectedObjects.length === 0;
+  const visibleItems = filterVisualBoardLibraryItems(
+    boardLibrary.items,
+    boardLibrarySearch.value,
+  );
+  boardLibraryList.replaceChildren(...visibleItems.map(createBoardLibraryItemElement));
+  boardLibraryEmpty.hidden = visibleItems.length > 0;
+  boardLibraryEmpty.textContent = total && !visibleItems.length
+    ? "No saved artwork matches this search."
+    : "Save selected artwork to reuse it with the same groups, vertices, joints, and locks.";
+}
+
+function createBoardLibraryItemElement(item) {
+  const listItem = document.createElement("li");
+  listItem.className = "board-library-item";
+  listItem.dataset.libraryItemId = item.id;
+
+  const preview = document.createElement("canvas");
+  preview.className = "board-library-preview";
+  preview.width = 192;
+  preview.height = 156;
+  preview.setAttribute("aria-label", `${item.name} preview`);
+  drawBoardLibraryPreview(preview, item.character.objects);
+
+  const body = document.createElement("div");
+  body.className = "board-library-item-body";
+  const name = document.createElement("strong");
+  name.className = "board-library-item-name";
+  name.textContent = item.name;
+
+  const summary = getVisualBoardLibraryItemSummary(item);
+  const metadata = document.createElement("span");
+  metadata.className = "board-library-item-meta";
+  metadata.textContent = [
+    formatLibraryCount(summary.objectCount, "object"),
+    formatLibraryCount(summary.groupCount, "group"),
+    formatLibraryCount(summary.jointCount, "joint"),
+    formatLibraryCount(summary.lockCount, "lock"),
+  ].join(" · ");
+
+  const actions = document.createElement("div");
+  actions.className = "board-library-item-actions";
+  actions.append(
+    createBoardLibraryAction("insert", item.id, "Insert", `Insert ${item.name}`),
+    createBoardLibraryAction("download", item.id, "↓", `Download ${item.name}`),
+    createBoardLibraryAction("delete", item.id, "⌫", `Delete ${item.name}`),
+  );
+  actions.lastElementChild.classList.add("board-library-delete");
+  body.append(name, metadata, actions);
+  listItem.append(preview, body);
+  return listItem;
+}
+
+function createBoardLibraryAction(action, itemId, label, accessibleLabel) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.libraryAction = action;
+  button.dataset.libraryItemId = itemId;
+  button.textContent = label;
+  button.title = accessibleLabel;
+  button.setAttribute("aria-label", accessibleLabel);
+  return button;
+}
+
+function formatLibraryCount(count, singular) {
+  return `${count} ${count === 1 ? singular : `${singular}s`}`;
+}
+
+function drawBoardLibraryPreview(preview, objects) {
+  const previewContext = preview.getContext("2d");
+  const width = preview.width / 2;
+  const height = preview.height / 2;
+  previewContext.setTransform(2, 0, 0, 2, 0, 0);
+  previewContext.fillStyle = "#ffffff";
+  previewContext.fillRect(0, 0, width, height);
+  if (!objects.length) return;
+
+  const bounds = getSelectionBounds(objects);
+  const scale = Math.min(
+    (width - 16) / Math.max(1, bounds.width),
+    (height - 16) / Math.max(1, bounds.height),
+  );
+  const offsetX = (width - bounds.width * scale) / 2 - bounds.x * scale;
+  const offsetY = (height - bounds.height * scale) / 2 - bounds.y * scale;
+  previewContext.save();
+  previewContext.translate(offsetX, offsetY);
+  previewContext.scale(scale, scale);
+  previewContext.lineCap = "round";
+  previewContext.lineJoin = "round";
+
+  objects.forEach((object) => {
+    previewContext.strokeStyle = object.color || "#171613";
+    previewContext.fillStyle = object.color || "#171613";
+    previewContext.lineWidth = Math.max(
+      0.8 / Math.max(scale, 0.01),
+      Math.min(object.strokeWidth || 2, 2.5 / Math.max(scale, 0.01)),
+    );
+    const segments = getObjectSegments(object);
+    if (segments.length) {
+      previewContext.beginPath();
+      segments.forEach(([start, end]) => {
+        previewContext.moveTo(start.x, start.y);
+        previewContext.lineTo(end.x, end.y);
+      });
+      previewContext.stroke();
+      return;
+    }
+    if (object.type === "pen" && object.points?.length) {
+      previewContext.beginPath();
+      previewContext.moveTo(object.points[0].x, object.points[0].y);
+      object.points.slice(1).forEach((point) => previewContext.lineTo(point.x, point.y));
+      previewContext.stroke();
+      return;
+    }
+
+    const objectBounds = getObjectBounds(object);
+    previewContext.strokeRect(
+      objectBounds.x,
+      objectBounds.y,
+      objectBounds.width,
+      objectBounds.height,
+    );
+    if (object.type === "image") {
+      previewContext.beginPath();
+      previewContext.moveTo(objectBounds.x, objectBounds.y);
+      previewContext.lineTo(
+        objectBounds.x + objectBounds.width,
+        objectBounds.y + objectBounds.height,
+      );
+      previewContext.stroke();
+    }
+  });
+  previewContext.restore();
+}
+
+function getSuggestedBoardLibraryName() {
+  const namedObject = selectedObjects.find((object) => object.name)?.name
+    ?.replace(/\s+trace$/i, "");
+  if (namedObject) return namedObject;
+  const selectionUnitCount = getSelectionUnits(selectedObjects).length;
+  if (selectionUnitCount > 1) return `Board collection ${boardLibrary.items.length + 1}`;
+  const selectedObject = selectedObjects[0];
+  if (selectedObject?.shapeKind) {
+    return `${selectedObject.shapeKind.replaceAll("-", " ")} ${boardLibrary.items.length + 1}`;
+  }
+  if (selectedObject?.type) {
+    return `${selectedObject.type.replaceAll("-", " ")} ${boardLibrary.items.length + 1}`;
+  }
+  return `Board asset ${boardLibrary.items.length + 1}`;
+}
+
+function openBoardLibrarySaveDialog() {
+  if (!selectedObjects.length) return;
+  boardLibraryDialogReturnFocus = document.activeElement;
+  boardLibrarySaveError.hidden = true;
+  boardLibrarySaveError.textContent = "";
+  boardLibraryNameInput.value = getSuggestedBoardLibraryName();
+  boardLibrarySaveDialog.showModal();
+  boardLibraryNameInput.focus();
+  boardLibraryNameInput.select();
+}
+
+function closeBoardLibrarySaveDialog() {
+  boardLibrarySaveDialog.close("cancelled");
+}
+
+function restoreBoardLibraryDialogFocus() {
+  const returnFocus = boardLibraryDialogReturnFocus;
+  boardLibraryDialogReturnFocus = null;
+  if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
+}
+
+function saveSelectionToBoardLibrary(event) {
+  event.preventDefault();
+  if (!selectedObjects.length) {
+    boardLibrarySaveError.textContent = "Select artwork before saving it.";
+    boardLibrarySaveError.hidden = false;
+    return;
+  }
+
+  const name = boardLibraryNameInput.value.trim();
+  if (!name) {
+    boardLibraryNameInput.focus();
+    return;
+  }
+
+  try {
+    const character = createCharacterPackage(
+      board.objects,
+      board.assets,
+      board.rig,
+      selectedObjects.map((object) => object.id),
+      name,
+    );
+    const item = createVisualBoardLibraryItem(character, {
+      id: createId(),
+      name,
+      createdAt: Date.now(),
+    });
+    const previousLibrary = boardLibrary;
+    boardLibrary = addVisualBoardLibraryItem(boardLibrary, item);
+    if (!saveVisualBoardLibrary()) {
+      boardLibrary = previousLibrary;
+      throw new CharacterFileError("The library is full. Download or remove saved assets first.");
+    }
+
+    boardLibrarySaveDialog.close("saved");
+    toggleBoardLibraryPanel(true);
+    renderBoardLibrary();
+    boardLibraryList
+      .querySelector(`[data-library-item-id="${CSS.escape(item.id)}"] [data-library-action="insert"]`)
+      ?.focus({ preventScroll: true });
+    announceStatus(`${item.name} saved to Board library`);
+  } catch (error) {
+    console.error("Unable to save selection to the Visual Board library.", error);
+    boardLibrarySaveError.textContent = error instanceof CharacterFileError
+      ? error.message
+      : "This selection could not be saved to the library.";
+    boardLibrarySaveError.hidden = false;
+  }
+}
+
+function insertBoardLibraryItem(itemId) {
+  const item = boardLibrary.items.find((candidate) => candidate.id === itemId);
+  if (!item) return;
+  try {
+    const imported = instantiateCharacter(
+      item.character,
+      createId,
+      getCanvasCenterWorldPoint(),
+    );
+    const importedObjects = imported.objects.map(normalizeObject).filter(Boolean);
+    if (!importedObjects.length) {
+      throw new CharacterFileError("The saved asset does not contain usable artwork.");
+    }
+    checkpoint();
+    Object.assign(board.assets, imported.assets);
+    board.objects.push(...importedObjects);
+    board.rig = normalizeRig({
+      bodies: [...board.rig.bodies, ...imported.rig.bodies],
+      joints: [...board.rig.joints, ...imported.rig.joints],
+    }, board.objects);
+    selectedObjects = importedObjects;
+    saveBoard();
+    updateSelectionControls();
+    drawBoard();
+    announceStatus(`${item.name} inserted with its groups, vertices, and locks`);
+    if (window.matchMedia("(max-width: 760px)").matches) toggleBoardLibraryPanel(false);
+  } catch (error) {
+    console.error(`Unable to insert ${item.name} from the Visual Board library.`, error);
+    announceStatus(
+      error instanceof CharacterFileError
+        ? error.message
+        : "The saved asset could not be inserted",
+    );
+  }
+}
+
+function downloadBoardLibraryItem(itemId) {
+  const item = boardLibrary.items.find((candidate) => candidate.id === itemId);
+  if (!item) return;
+  downloadAnimationBlob(
+    new Blob([JSON.stringify(item.character, null, 2)], { type: "application/json" }),
+    createCharacterFilename(item.name),
+  );
+  announceStatus(`${item.name} downloaded`);
+}
+
+function deleteBoardLibraryItem(itemId) {
+  const item = boardLibrary.items.find((candidate) => candidate.id === itemId);
+  if (!item) return;
+  if (!window.confirm(`Remove "${item.name}" from the Board library?`)) return;
+
+  const previousLibrary = boardLibrary;
+  boardLibrary = removeVisualBoardLibraryItem(boardLibrary, itemId);
+  if (!saveVisualBoardLibrary()) {
+    boardLibrary = previousLibrary;
+    announceStatus("The library change could not be saved");
+    return;
+  }
+  renderBoardLibrary();
+  announceStatus(`${item.name} removed from Board library`);
+}
+
+function handleBoardLibraryAction(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  const button = target?.closest("[data-library-action]");
+  if (!button) return;
+  const { libraryAction, libraryItemId } = button.dataset;
+  if (libraryAction === "insert") insertBoardLibraryItem(libraryItemId);
+  else if (libraryAction === "download") downloadBoardLibraryItem(libraryItemId);
+  else if (libraryAction === "delete") deleteBoardLibraryItem(libraryItemId);
 }
 
 function restoreAnimationLayout() {
@@ -2821,6 +3185,8 @@ function updateSelectionControls() {
   selectionActions.hidden = selectedObjects.length === 0;
   copySelectionButton.disabled = selectedObjects.length === 0;
   pasteSelectionButton.disabled = objectClipboard.length === 0;
+  saveToLibraryButton.disabled = selectedObjects.length === 0;
+  boardLibrarySaveSelectionButton.disabled = selectedObjects.length === 0;
   traceImageButton.hidden = !isImageSelection(selectedObjects);
   traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
   selectionCount.textContent = selectionUnitCount === 1
@@ -3801,6 +4167,7 @@ function handleKeyDown(event) {
     }
     return;
   }
+  if (boardLibrarySaveDialog.open) return;
   if (event.key === "Escape" && animationPreview.classList.contains("is-preview-maximized")) {
     event.preventDefault();
     exitAnimationPreviewFullscreen();
@@ -3818,6 +4185,11 @@ function handleKeyDown(event) {
     if (animationPanelOpen) {
       toggleAnimationPanel(false);
       animationToggleButton.focus({ preventScroll: true });
+      return;
+    }
+    if (boardLibraryPanelOpen) {
+      toggleBoardLibraryPanel(false);
+      boardLibraryToggleButton.focus({ preventScroll: true });
       return;
     }
     returnToSelectionMode();
@@ -4101,6 +4473,19 @@ document.querySelector("#close-animation").addEventListener("click", () => {
   toggleAnimationPanel(false);
   animationToggleButton.focus({ preventScroll: true });
 });
+boardLibraryToggleButton.addEventListener("click", () => toggleBoardLibraryPanel());
+boardLibraryCloseButton.addEventListener("click", () => {
+  toggleBoardLibraryPanel(false);
+  boardLibraryToggleButton.focus({ preventScroll: true });
+});
+boardLibrarySearch.addEventListener("input", renderBoardLibrary);
+boardLibraryList.addEventListener("click", handleBoardLibraryAction);
+boardLibrarySaveSelectionButton.addEventListener("click", openBoardLibrarySaveDialog);
+saveToLibraryButton.addEventListener("click", openBoardLibrarySaveDialog);
+boardLibrarySaveForm.addEventListener("submit", saveSelectionToBoardLibrary);
+boardLibrarySaveCancelButton.addEventListener("click", closeBoardLibrarySaveDialog);
+boardLibrarySaveCloseButton.addEventListener("click", closeBoardLibrarySaveDialog);
+boardLibrarySaveDialog.addEventListener("close", restoreBoardLibraryDialogFocus);
 document.querySelector("#add-animation-frame").addEventListener("click", addBlankAnimationFrame);
 duplicateAnimationFrameButton.addEventListener("click", duplicateSelectedAnimationFrame);
 deleteAnimationFrameButton.addEventListener("click", deleteSelectedAnimationFrame);
@@ -4248,9 +4633,11 @@ new ResizeObserver(resizeCanvas).observe(canvasFrame);
 initializeShapePickers();
 restoreAnimationLayout();
 animationPanel.inert = true;
+boardLibraryPanel.inert = true;
 setAnimationExportBusy(false);
 updateAnimationFullscreenButton();
 renderAnimationPanel();
+renderBoardLibrary();
 updateHistoryControls();
 updateSelectionControls();
 updateViewControls();
