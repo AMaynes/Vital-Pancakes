@@ -5,7 +5,8 @@
  *
  * Architectural Relationships
  * Called by: workspace.html.
- * Calls: app/store.js and the browser DOM, dialog, and service-worker APIs.
+ * Calls: app/store.js, the AI page host, and browser DOM, dialog, and
+ * service-worker APIs.
  *
  * External Resources
  * workspace.css, manifest.webmanifest, and sw.js.
@@ -17,13 +18,17 @@
 
 import {
   addItem,
+  createId,
   deleteItem,
   deleteSection,
   getSection,
   getWorkspace,
   isCoreSectionId,
+  saveWorkspace,
   updateItem,
 } from "./store.js?v=14";
+import { installAiPageHost } from "./ai-page-host.mjs";
+import { createWorkspaceAiAdapter } from "./workspace-ai-adapter.mjs";
 import {
   buildContentHash,
   CONTENT_VIEWS,
@@ -734,11 +739,81 @@ function renderToolsDashboard() {
   const toolsGrid = createElement("div", "tool-grid");
   [
     {
+      title: "AI Command Center",
+      copy: "Ask a local WebGPU model to draft validated commands, preview them, and apply them to an AI-capable tool.",
+      href: "tools/ai-command-center.html",
+      icon: "AI",
+      accent: "violet",
+    },
+    {
       title: "Visual Board",
-      copy: "A freeform canvas where diagrams, connectors, shapes, notes, and paint coexist.",
+      copy: "A freeform canvas with rigging, animation, image controls, reusable objects, and floor-plan templates.",
       href: "tools/visual-board.html",
       icon: "✣",
       accent: "blue",
+    },
+    {
+      title: "Overhead",
+      copy: "Capture thoughts, manage priorities and tasks, encrypt private records, track routines, and maintain inventory.",
+      href: "tools/overhead.html",
+      icon: "OH",
+      accent: "coral",
+    },
+    {
+      title: "File Drop",
+      copy: "Keep a private browser-local shelf of files, folders, collections, previews, recoverable trash, and backups.",
+      href: "tools/file-drop.html",
+      icon: "↓",
+      accent: "sage",
+    },
+    {
+      title: "Graphing Tool",
+      copy: "Import or enter data, build statistical charts, inspect summaries, and export reproducible graph projects.",
+      href: "tools/graphing.html",
+      icon: "⌁",
+      accent: "blue",
+    },
+    {
+      title: "Inference Tool",
+      copy: "Index selected local backups and use a local model to find cited connections, conflicts, and open questions.",
+      href: "tools/inference.html",
+      icon: "∴",
+      accent: "violet",
+    },
+    {
+      title: "Markdown & LaTeX Studio",
+      copy: "Write local Markdown, math, and LaTeX source with safe preview, recovery, versions, export, and optional AI review.",
+      href: "tools/markdown-studio.html",
+      icon: "M",
+      accent: "ochre",
+    },
+    {
+      title: "Tool Designer & Planner",
+      copy: "Turn rough ideas into reviewed requirements, implementation plans, agent prompts, and portable project packages.",
+      href: "tools/tool-designer.html",
+      icon: "◇",
+      accent: "violet",
+    },
+    {
+      title: "Color Aesthetic Generator",
+      copy: "Build perceptual palettes from harmonies, moods, seeds, or local images with role and contrast checks.",
+      href: "tools/color-aesthetic.html",
+      icon: "◐",
+      accent: "coral",
+    },
+    {
+      title: "Bracket Generator",
+      copy: "Run single elimination, double elimination, and round-robin tournaments with stable advancement and exports.",
+      href: "tools/bracket-generator.html",
+      icon: "⌜",
+      accent: "sage",
+    },
+    {
+      title: "Randomized Picker",
+      copy: "Choose, order, group, eliminate, or spin weighted lists with transparent probabilities and seeded sessions.",
+      href: "tools/randomized-picker.html",
+      icon: "?",
+      accent: "ochre",
     },
     {
       title: "PDF Signer",
@@ -2845,3 +2920,12 @@ if ("serviceWorker" in navigator) {
 }
 
 renderWorkspace();
+
+installAiPageHost(createWorkspaceAiAdapter({
+  readWorkspace: getWorkspace,
+  commitWorkspace: (workspace) => {
+    saveWorkspace(workspace);
+    window.requestAnimationFrame(renderWorkspace);
+  },
+  createId,
+}));

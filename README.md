@@ -35,7 +35,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Everyday Life** — Separate Cooking, Gym, and Cleaning areas for practical knowledge used at home.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Subject-specific working libraries for questions and ideas, structured studies, programming-language refreshers, algorithm labs, and project case studies, plus the existing notecard and educational collections.
-- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Master Lesson Builder, Caption Relay, Literature Curation, Travel Planner, Software Architect, File Converter, Scientific Calculator, and Budget & Finance tool without unrelated library content.
+- **Workspace** — A browser-local tool shelf spanning planning, files, graphing, knowledge inference, writing, visual design, tournaments, random selection, lessons, captions, finance, conversion, and the Visual Board.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the forest-and-circuit *Vital Pancakes* skull.
@@ -70,7 +70,7 @@ The editable areas use nine permanent core libraries. A new or previously empty 
 
 These nine core libraries cannot be added, renamed, or deleted. Their entries—including every starter example—remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library, while existing user-authored algorithms migrate into Personal Algorithms without being discarded.
 
-User-created entries, boards, caption projects, literature curations, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
+User-created entries, boards, caption projects, tool projects, literature curations, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 
 Existing `localStorage` namespaces retain their earlier `pinakes-vitae-*` and `artificially-neuroscience-*` identifiers. They are implementation-level compatibility keys, not public branding, and must remain unchanged unless a migration preserves previously saved user data.
 
@@ -83,6 +83,22 @@ Provides an infinite white workspace for freehand markup, straight lines, arrows
 Every supported line or shape can use solid, dashed, dotted, dash–dot, or long-dash ink. Marquee-selected objects can be copied and pasted, grouped into one movable piece, and released later. Internal editable vertices remain hidden while artwork is a rigid group. Selecting adjacent rigid groups and choosing Create vertices adds only their shared external joint; Lock size makes joint dragging choose the closest cursor position that preserves every attached locked distance exactly. Connected rigged groups move together as a character. The local Board library saves named selections with visual previews and preserves embedded images, groups, internal vertices, shared joints, object locks, and size locks when a saved asset is inserted again. Download character exports the same relationship-preserving package as a `.vp-character.json` file that can be dropped back onto the board.
 
 Image and Visual Board character files can be dropped directly onto the board without an upload control. Images are compressed and stored locally as movable, resizable, rotatable board objects. Nothing is uploaded.
+
+Selected images now support non-destructive source-coordinate crops, aspect presets, fit/fill/original-size actions, numeric and handle rotation, replacement, and horizontal or vertical flips. Complete selections and rigged groups flip around their collective center while retaining groups, vertices, joints, locks, arrow direction, and crop state; text remains readable unless glyph mirroring is explicitly enabled. Floor Plan mode adds scale-aware walls, doors, windows, stairs, labels, dimensions, common room symbols, snapping, alignment guides, starter rooms, and a blank house shell. Every floor-plan item remains an ordinary editable Board object that can be copied, animated, exported, or saved to the Board library.
+
+### Local-First Planning and Creation Suite
+
+- **Overhead** combines a brain dump, limited forefront priorities, recurring todo lists, Web Crypto-encrypted private sections, scheduled trackers, reminders, maintenance templates, and inventory warnings. Structured data and histories use IndexedDB; private content auto-locks and cannot be recovered without its password.
+- **File Drop** stores file bytes in IndexedDB without base64, adds folders, collections, search, favorites, safe previews, duplicate fingerprints, recoverable trash, quota warnings, manifests, and full backups. Active content is never executed and user files are never pre-cached.
+- **Graphing Tool** imports CSV, TSV, JSON, pasted tables, or manual data and renders line, bar, stacked, scatter, bubble, area, histogram, box, pie, donut, heatmap, and multi-series charts from a resettable transformation pipeline. Projects, clean data, SVG, PNG, and combined packages can be exported.
+- **Inference Tool** validates selected Vital Pancakes backup collections, excludes sensitive and binary material by default, creates a provenance-preserving local index, retrieves bounded evidence, and asks an explicitly loaded local WebLLM model for cited observations, inferences, hypotheses, and contradictions. Original records are never changed.
+- **Markdown & LaTeX Studio** provides multiple local documents, source/split/preview layouts, safe Markdown rendering, math preview, outlines, search/replace, autosave recovery, versions, backup/restore, source and sanitized HTML export, and review-before-apply local model actions. KaTeX is identified as math rendering rather than full LaTeX compilation.
+- **Tool Designer & Planner** turns an unstructured idea into locked requirements, goals, workflows, data and module plans, risk review, tests, acceptance criteria, implementation prompts, Markdown handoffs, and versioned project packages with local revision history.
+- **Color Aesthetic Generator** creates reproducible perceptual palettes from colors, harmonies, moods, seeds, or local image samples, then checks semantic-role contrast and color-vision simulations and exports code, data, and swatch sheets.
+- **Bracket Generator** supports single elimination, double elimination, round robin with playoffs, byes, deterministic tiebreaks, result invalidation, finals reset, scalable bracket views, mobile match lists, and print/data/project exports.
+- **Randomized Picker** supports weighted and unweighted draws, replacement rules, ordering, groups, elimination, seeded reproducibility, transparent probabilities, history, undo, and motion-independent wheel results.
+
+These tools share an archival responsive shell, versioned validation, browser-local persistence, and deterministic model tests. Large local-model weights load only after an explicit action and are excluded from the offline application shell.
 
 ### PDF Signer
 

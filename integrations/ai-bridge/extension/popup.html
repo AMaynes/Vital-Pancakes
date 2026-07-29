@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vital Pancakes AI Bridge</title>
+  <link rel="stylesheet" href="extension.css">
+</head>
+<body class="compact">
+  <main>
+    <h1>AI Bridge</h1>
+    <p id="gateway-status" class="status">Checking the local companion…</p>
+    <p id="page-status" class="status"></p>
+    <fieldset id="permission-controls">
+      <legend>Allow for this connection</legend>
+      <label class="check"><input type="checkbox" value="read-summary" checked> Summaries</label>
+      <label class="check"><input type="checkbox" value="read-content" checked> Full content</label>
+      <label class="check"><input type="checkbox" value="create"> Create</label>
+      <label class="check"><input type="checkbox" value="update"> Update / undo</label>
+      <label class="check"><input type="checkbox" value="delete"> Delete</label>
+      <label class="check"><input type="checkbox" value="export"> Export</label>
+      <label class="check"><input type="checkbox" value="file-access"> Selected files</label>
+      <label class="check"><input type="checkbox" value="sensitive-data"> Sensitive data</label>
+    </fieldset>
+    <div class="actions">
+      <button id="connect-page" type="button">Connect this tab</button>
+      <button id="disconnect-page" class="secondary" type="button">Disconnect</button>
+      <button id="open-options" class="quiet" type="button">Pairing settings</button>
+    </div>
+    <p id="message" class="message" role="status"></p>
+  </main>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -56,9 +56,17 @@ const PAGE_TRAILS = {
     segment("workspace", "workspace.html#area=tools"),
     segment("software-architect"),
   ],
+  "tools/ai-command-center.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("ai-command-center"),
+  ],
   "tools/budget-finance.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("budget-finance"),
+  ],
+  "tools/bracket-generator.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("bracket-generator"),
   ],
   "tools/caption-relay.html": [
     segment("workspace", "workspace.html#area=tools"),
@@ -67,6 +75,30 @@ const PAGE_TRAILS = {
   "tools/file-converter.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("file-converter"),
+  ],
+  "tools/file-drop.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("file-drop"),
+  ],
+  "tools/graphing.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("graphing-tool"),
+  ],
+  "tools/inference.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("inference-tool"),
+  ],
+  "tools/markdown-studio.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("markdown-and-latex-studio"),
+  ],
+  "tools/overhead.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("overhead"),
+  ],
+  "tools/randomized-picker.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("randomized-picker"),
   ],
   "tools/scientific-calculator.html": [
     segment("workspace", "workspace.html#area=tools"),
@@ -87,6 +119,14 @@ const PAGE_TRAILS = {
   "tools/travel-planner.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("travel-planner"),
+  ],
+  "tools/tool-designer.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("tool-designer-and-planner"),
+  ],
+  "tools/color-aesthetic.html": [
+    segment("workspace", "workspace.html#area=tools"),
+    segment("color-aesthetic-generator"),
   ],
   "tools/visual-board.html": [
     segment("workspace", "workspace.html#area=tools"),

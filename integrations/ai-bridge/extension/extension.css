@@ -1,0 +1,123 @@
+:root {
+  color-scheme: light;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #1f1812;
+  background: #f3ead6;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+body.compact {
+  width: 340px;
+}
+
+main {
+  box-sizing: border-box;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1,
+h2 {
+  margin: 0 0 12px;
+}
+
+h2 {
+  margin-top: 24px;
+  font-size: 1rem;
+}
+
+p {
+  line-height: 1.4;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  margin: 16px 0;
+  font-weight: 700;
+}
+
+fieldset {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 14px 0;
+  padding: 10px;
+  border: 1px solid #8c7758;
+}
+
+legend {
+  padding: 0 5px;
+  font-weight: 700;
+}
+
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 400;
+}
+
+label.check input {
+  width: auto;
+  margin: 0;
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #33261d;
+  background: #fffaf0;
+  font: 14px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button {
+  padding: 9px 12px;
+  border: 1px solid #2a1d15;
+  color: #fffaf0;
+  background: #5c171b;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button.secondary {
+  color: #2a1d15;
+  background: #d8c6a1;
+}
+
+button.quiet {
+  color: #2a1d15;
+  background: transparent;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.status,
+.message {
+  min-height: 1.4em;
+}
+
+.message {
+  color: #781d22;
+}
+
+code {
+  overflow-wrap: anywhere;
+}

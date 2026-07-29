@@ -36,6 +36,12 @@ import {
   normalizePlaceQuery,
   sanitizePlaceSearchResults,
 } from "./travel-place-search.mjs";
+import {
+  installCurrentToolAiHost,
+  rejectUnknownCommandFields,
+  requireCommandRecord,
+  requireCommandString,
+} from "./current-tool-ai-adapter.mjs";
 
 const STORAGE_KEY = "pinakes-vitae-travel-planner-v1";
 const PLACE_CACHE_KEY = "pinakes-vitae-travel-place-cache-v1";
@@ -747,3 +753,134 @@ window.addEventListener("resize", () => {
 });
 
 renderPlanner();
+
+installCurrentToolAiHost({
+  id: "travel-planner",
+  title: "Travel Planner",
+  description: "Reads and safely stages local itinerary events without invoking network place search.",
+  limitations: [
+    "Place search is not available through AI commands because it sends a query to an external geocoder.",
+    "Event deletion remains an explicit user action.",
+  ],
+  getSnapshot: () => ({
+    plans,
+    selectedDates,
+    displayedYear,
+    displayedMonth,
+  }),
+  getContext: (_options, snapshot) => ({
+    eventCount: snapshot.plans.length,
+    selectedDates: snapshot.selectedDates,
+    displayedMonth: {
+      year: snapshot.displayedYear,
+      month: snapshot.displayedMonth + 1,
+    },
+    dateRange: snapshot.plans.length
+      ? {
+        first: snapshot.plans[0].date,
+        last: snapshot.plans.at(-1).date,
+      }
+      : null,
+  }),
+  commitSnapshot(nextState) {
+    if (!eventPopover.hidden) {
+      throw new Error("Close the open event editor before applying AI changes.");
+    }
+    const nextPlans = sanitizeTravelPlans(nextState.plans);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: TRAVEL_PLANNER_VERSION,
+      plans: nextPlans,
+    }));
+    plans = nextPlans;
+    status.textContent = "AI changes saved locally";
+    status.classList.remove("has-error");
+    renderPlanner();
+  },
+  commands: [
+    {
+      type: "calendar.describe",
+      description: "Describe itinerary coverage without exposing event content.",
+      permissions: ["read-summary"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return {
+          value: {
+            eventCount: state.plans.length,
+            selectedDates: state.selectedDates,
+            dateRange: state.plans.length
+              ? { first: state.plans[0].date, last: state.plans.at(-1).date }
+              : null,
+          },
+        };
+      },
+    },
+    {
+      type: "plans.list",
+      description: "List itinerary events, optionally for one date.",
+      permissions: ["read-content"],
+      schema: {
+        type: "object",
+        properties: { date: { type: "string", format: "date" } },
+        additionalProperties: false,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["date"], commandIndex);
+        if (command.date === undefined) return { value: state.plans };
+        const date = requireCommandString(
+          command.date,
+          "date",
+          commandIndex,
+          { maximumLength: 10 },
+        );
+        if (!isValidDateKey(date)) throw new Error("date must use YYYY-MM-DD.");
+        return { value: getPlansForDate(state.plans, date) };
+      },
+    },
+    {
+      type: "plans.get",
+      description: "Read one itinerary event by stable ID.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["planId"], commandIndex);
+        const planId = requireCommandString(
+          command.planId,
+          "planId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        return { value: state.plans.find((plan) => plan.id === planId) ?? null };
+      },
+    },
+    {
+      type: "plans.upsert",
+      description: "Create or replace one validated itinerary event.",
+      permissions: ["create", "update"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["plan"],
+        properties: { plan: { type: "object" } },
+        additionalProperties: false,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["plan"], commandIndex);
+        const record = requireCommandRecord(command.plan, "plan", commandIndex);
+        const id = typeof record.id === "string" && record.id.trim()
+          ? record.id.trim()
+          : createPlanId();
+        const previous = state.plans.find((plan) => plan.id === id);
+        const candidate = { ...(previous ?? {}), ...record, id };
+        const nextPlans = upsertTravelPlan(state.plans, candidate);
+        const saved = nextPlans.find((plan) => plan.id === id);
+        if (!saved) {
+          throw new Error("The event needs a title and valid YYYY-MM-DD date.");
+        }
+        return {
+          state: { ...state, plans: nextPlans },
+          ...(previous ? { updatedIds: [id] } : { createdIds: [id] }),
+          value: saved,
+        };
+      },
+    },
+  ],
+});

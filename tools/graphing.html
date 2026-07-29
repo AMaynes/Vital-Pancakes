@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="A browser-local data editor, chart designer, statistics viewer, and reproducible graph exporter.">
+  <title>Graphing Tool · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=25">
+  <link rel="stylesheet" href="workspace-suite.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=13"></script>
+  <style>
+    .graph-preview { min-height: 420px; overflow: auto; border: 1px solid var(--line); background: #fff; }
+    .graph-preview svg { display: block; width: 100%; height: auto; }
+    .graph-editor input { min-width: 120px; width: 100%; border: 0; background: transparent; }
+    .graph-spec-grid { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); }
+    @media print { .site-header, .suite-topbar, .suite-rail, .graph-no-print { display: none !important; } .suite-layout { display: block; } .suite-main { padding: 0; } }
+  </style>
+</head>
+<body class="suite-body">
+  <a class="skip-link" href="#tool-main">Skip to Graphing Tool</a>
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Vital Pancakes home"><span class="brand-mark" aria-hidden="true">VP</span><span>Vital Pancakes</span></a>
+    <nav aria-label="Primary navigation"><a href="../workspace.html#area=everyday">Everyday Life</a><a href="../research-literature.html">Research &amp; Literature</a><a href="../workspace.html#area=studies">Studies &amp; Projects</a><a href="../workspace.html#area=tools" aria-current="page">Workspace</a><a href="../download-app.html">Download App</a></nav>
+  </header>
+  <div class="suite-shell">
+    <header class="suite-topbar">
+      <div><h1>Graphing Tool</h1><p>Local data · reproducible charts</p></div>
+      <div class="suite-actions graph-no-print">
+        <button class="button button-quiet" id="graph-open" type="button">Open project</button>
+        <button class="button button-primary" id="graph-save" type="button">Save project</button>
+        <input id="graph-open-input" type="file" accept=".vpgraph.json,application/json" hidden>
+      </div>
+    </header>
+    <div class="suite-layout">
+      <aside class="suite-rail graph-no-print">
+        <div class="suite-tabs" role="tablist" aria-label="Graphing workflow">
+          <button type="button" role="tab" aria-selected="true" aria-controls="graph-panel-data" data-tab="data">1. Data</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="graph-panel-transform" data-tab="transform">2. Transform</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="graph-panel-chart" data-tab="chart">3. Chart</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="graph-panel-export" data-tab="export">4. Export</button>
+        </div>
+      </aside>
+      <main class="suite-main" id="tool-main">
+        <section class="suite-panel" id="graph-panel-data" role="tabpanel">
+          <header class="suite-panel-header"><div><h2>Source Data</h2><p id="graph-data-status">Manual editor</p></div><div class="suite-actions"><button class="button button-quiet" id="graph-add-row" type="button">+ Row</button><button class="button button-quiet" id="graph-add-column" type="button">+ Column</button></div></header>
+          <div class="suite-grid">
+            <article class="suite-card">
+              <h3>Import</h3>
+              <label class="suite-field"><span>CSV, TSV, or JSON</span><input id="graph-file" type="file" accept=".csv,.tsv,.json,text/csv,text/tab-separated-values,application/json"></label>
+              <label class="suite-field"><span>Paste a table</span><textarea id="graph-paste" placeholder="category,value&#10;A,10&#10;B,14"></textarea></label>
+              <div class="suite-actions"><select class="suite-select" id="graph-paste-format"><option value="csv">CSV</option><option value="tsv">TSV</option><option value="json">JSON</option></select><button class="button button-primary" id="graph-parse-paste" type="button">Load pasted data</button></div>
+              <progress class="suite-progress" id="graph-import-progress" max="1" value="0" hidden></progress>
+            </article>
+            <article class="suite-card">
+              <h3>Column Types</h3>
+              <div id="graph-schema"></div>
+              <p class="suite-status" id="graph-invalid-status"></p>
+            </article>
+          </div>
+          <div class="suite-table-wrap" style="margin-top:14px"><table class="suite-table graph-editor"><thead id="graph-editor-head"></thead><tbody id="graph-editor-body"></tbody></table></div>
+        </section>
+
+        <section class="suite-panel" id="graph-panel-transform" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Transformation Pipeline</h2><p>Resettable · source data stays unchanged</p></div><button class="button button-quiet" id="graph-reset-transforms" type="button">Reset pipeline</button></header>
+          <form class="suite-card suite-form-grid" id="graph-filter-form">
+            <label class="suite-field"><span>Column</span><select name="column" id="graph-filter-column"></select></label>
+            <label class="suite-field"><span>Condition</span><select name="operator"><option value="equals">Equals</option><option value="not-equals">Not equal</option><option value="contains">Contains</option><option value="greater">Greater than</option><option value="less">Less than</option><option value="missing">Is missing</option></select></label>
+            <label class="suite-field"><span>Value</span><input name="value"></label>
+            <button class="button button-primary" type="submit">Add filter</button>
+          </form>
+          <form class="suite-card suite-form-grid" id="graph-sort-form">
+            <label class="suite-field"><span>Sort column</span><select name="column" id="graph-sort-column"></select></label>
+            <label class="suite-field"><span>Direction</span><select name="direction"><option value="asc">Ascending</option><option value="desc">Descending</option></select></label>
+            <button class="button button-primary" type="submit">Add sort</button>
+          </form>
+          <ul class="suite-list" id="graph-transform-list"></ul>
+        </section>
+
+        <section class="suite-panel" id="graph-panel-chart" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Chart Designer</h2><p id="graph-chart-status">Live preview</p></div></header>
+          <div class="suite-two-pane">
+            <form class="suite-card suite-form-grid graph-spec-grid graph-no-print" id="graph-spec-form">
+              <label class="suite-field"><span>Chart type</span><select name="type"><option value="line">Line</option><option value="multi-line">Multi-line</option><option value="bar">Bar</option><option value="grouped-bar">Grouped bar</option><option value="stacked-bar">Stacked bar</option><option value="scatter">Scatter</option><option value="bubble">Bubble</option><option value="area">Area</option><option value="histogram">Histogram</option><option value="box">Box plot</option><option value="pie">Pie</option><option value="donut">Donut</option><option value="heatmap">Heatmap</option></select></label>
+              <label class="suite-field"><span>X / category</span><select name="x"></select></label>
+              <label class="suite-field"><span>Y / value</span><select name="y"></select></label>
+              <label class="suite-field"><span>Series / group</span><select name="series"></select></label>
+              <label class="suite-field"><span>Bubble size</span><select name="size"></select></label>
+              <label class="suite-field"><span>Aggregation</span><select name="aggregation"><option value="none">None</option><option value="sum">Sum</option><option value="mean">Mean</option><option value="median">Median</option><option value="min">Minimum</option><option value="max">Maximum</option><option value="count">Count</option></select></label>
+              <label class="suite-field"><span>Histogram bins</span><input name="bins" type="number" min="1" max="100"></label>
+              <label class="suite-field"><span>X scale</span><select name="scaleX"><option value="linear">Linear</option><option value="log">Logarithmic</option></select></label>
+              <label class="suite-field"><span>Y scale</span><select name="scaleY"><option value="linear">Linear</option><option value="log">Logarithmic</option></select></label>
+              <label class="suite-field"><span>Accent</span><input name="accent" type="color"></label>
+              <label class="suite-field"><span>Background</span><input name="background" type="color"></label>
+              <label class="suite-field suite-field-wide"><span>Title</span><input name="title"></label>
+              <label class="suite-field"><span>X label</span><input name="xLabel"></label>
+              <label class="suite-field"><span>Y label</span><input name="yLabel"></label>
+              <label class="suite-field"><span>Units</span><input name="units"></label>
+              <label class="suite-field suite-field-wide"><span>Annotations, one per line</span><textarea name="annotations"></textarea></label>
+              <label class="suite-field"><span><input name="legend" type="checkbox"> Legend</span></label>
+              <label class="suite-field"><span><input name="labels" type="checkbox"> Point labels</span></label>
+            </form>
+            <div>
+              <div class="suite-warning graph-no-print" id="graph-validation" hidden></div>
+              <div class="graph-preview" id="graph-preview"></div>
+              <div class="suite-card"><h3>Selected-column statistics</h3><div class="suite-grid suite-grid-tight" id="graph-statistics"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="suite-panel" id="graph-panel-export" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Export</h2><p>Graph, clean data, and reproducible project</p></div></header>
+          <div class="suite-grid">
+            <article class="suite-card"><h3>Graph</h3><div class="suite-actions"><button class="button button-primary" id="graph-export-png" type="button">PNG</button><button class="button button-quiet" id="graph-export-svg" type="button">SVG</button><button class="button button-quiet" id="graph-print" type="button">Print / PDF</button></div></article>
+            <article class="suite-card"><h3>Clean data</h3><div class="suite-actions"><button class="button button-primary" id="graph-export-csv" type="button">CSV</button><button class="button button-quiet" id="graph-export-json" type="button">JSON</button></div></article>
+            <article class="suite-card"><h3>Reproducibility</h3><div class="suite-actions"><button class="button button-primary" id="graph-export-project" type="button">.vpgraph.json</button><button class="button button-quiet" id="graph-export-package" type="button">Combined package</button></div></article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="graphing.js?v=2"></script>
+</body>
+</html>

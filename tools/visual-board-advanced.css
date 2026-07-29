@@ -1,0 +1,354 @@
+.tool-workspace {
+  --floor-plan-panel-width: min(380px, 38vw);
+}
+
+.tool-workspace.is-floor-plan-open {
+  grid-template-columns: minmax(0, 1fr) var(--floor-plan-panel-width);
+}
+
+.floor-plan-panel {
+  position: relative;
+  z-index: 15;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  grid-column: 2;
+  grid-row: 2;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--line-strong);
+  background: #f7f4ec;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(24px);
+  transition: opacity 140ms ease, transform 180ms ease;
+  visibility: hidden;
+}
+
+.tool-workspace.is-floor-plan-open .floor-plan-panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.floor-plan-header {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+
+.floor-plan-header h2,
+.floor-plan-header span,
+.floor-plan-scroll h3 {
+  margin: 0;
+}
+
+.floor-plan-header h2 {
+  font-size: 14px;
+}
+
+.floor-plan-header span {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.floor-plan-scroll {
+  display: grid;
+  gap: 18px;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.floor-plan-scroll section {
+  display: grid;
+  gap: 9px;
+}
+
+.floor-plan-scroll h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.floor-plan-field-grid,
+.image-size-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.floor-plan-field-grid label,
+.image-edit-controls label {
+  display: grid;
+  gap: 4px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.floor-plan-field-grid input,
+.floor-plan-field-grid select,
+.image-edit-controls input,
+.image-edit-controls select {
+  min-width: 0;
+  height: 34px;
+  padding: 5px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.floor-plan-check,
+.image-edit-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.floor-plan-button-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.floor-plan-button-grid button,
+.floor-plan-template-list button,
+.image-edit-controls button,
+.image-replace-button {
+  min-height: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.floor-plan-button-grid button:hover,
+.floor-plan-template-list button:hover,
+.image-edit-controls button:hover,
+.image-replace-button:hover {
+  border-color: var(--coral);
+  color: var(--coral-dark);
+}
+
+.floor-plan-template-list {
+  display: grid;
+  gap: 6px;
+}
+
+.floor-plan-template-list button {
+  padding: 8px;
+  text-align: left;
+}
+
+.image-edit-dialog {
+  width: min(840px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: #f7f4ec;
+  color: var(--ink);
+}
+
+.image-edit-dialog::backdrop {
+  background: rgb(20 19 17 / 55%);
+}
+
+.image-edit-dialog form {
+  display: grid;
+  max-height: calc(100vh - 24px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.image-edit-dialog header,
+.image-edit-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+
+.image-edit-dialog footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+}
+
+.image-edit-dialog h2,
+.image-edit-dialog p {
+  margin: 0;
+}
+
+.image-edit-dialog h2 {
+  font-size: 16px;
+}
+
+.image-edit-dialog p {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.image-edit-layout {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 14px;
+  padding: 14px;
+  overflow: auto;
+}
+
+.image-crop-stage {
+  position: relative;
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background:
+    linear-gradient(45deg, #ddd 25%, transparent 25%) 0 0 / 20px 20px,
+    linear-gradient(45deg, transparent 75%, #ddd 75%) 0 0 / 20px 20px,
+    linear-gradient(45deg, transparent 75%, #ddd 75%) 10px -10px / 20px 20px,
+    linear-gradient(45deg, #ddd 25%, #fff 25%) 10px -10px / 20px 20px;
+}
+
+.image-crop-stage img {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  user-select: none;
+}
+
+.image-crop-box {
+  position: absolute;
+  border: 2px solid #b7382f;
+  background: rgb(183 56 47 / 10%);
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 38%);
+  cursor: move;
+  touch-action: none;
+}
+
+.image-crop-box:focus-visible {
+  outline: 3px solid #23766f;
+  outline-offset: 2px;
+}
+
+.image-crop-handle {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  border: 1px solid #fff;
+  background: #b7382f;
+  cursor: nwse-resize;
+}
+
+.image-edit-controls {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+.image-action-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.image-action-row:first-of-type {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.image-replace-button {
+  display: grid;
+  place-items: center;
+}
+
+.image-replace-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.image-edit-error {
+  margin-top: 8px;
+  color: #8d1d17;
+}
+
+@media (max-width: 760px) {
+  .tool-shell,
+  .tool-topbar,
+  .tool-workspace {
+    min-width: 0;
+  }
+
+  .tool-shell {
+    overflow: hidden;
+  }
+
+  .tool-topbar {
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tool-topbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tool-title-group,
+  .tool-topbar-actions {
+    flex: 0 0 auto;
+  }
+
+  .tool-workspace,
+  .tool-workspace.is-floor-plan-open {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .floor-plan-panel {
+    position: absolute;
+    top: 38px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-width: 100%;
+    grid-column: auto;
+    grid-row: auto;
+    box-shadow: var(--shadow-md);
+  }
+
+  .image-edit-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .image-crop-stage {
+    min-height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .floor-plan-button-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

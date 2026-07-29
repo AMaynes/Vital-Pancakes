@@ -28,6 +28,7 @@ vital-pancakes/
 │   ├── ai-command-registry.mjs — Routes previewed and applied commands through registered tool adapters.
 │   ├── ai-page-host.mjs — Exposes the shared versioned AI page API and message bridge.
 │   ├── ai-tool-catalog.mjs — Registers AI-addressable tools and their adapter modules.
+│   ├── workspace-ai-adapter.mjs — Provides bounded semantic commands for Workspace libraries and entries.
 │   ├── content-view.mjs — Normalizes retained List/Grid preferences and creates collection deep links.
 │   ├── content-view.test.mjs — Verifies collection view preferences and encoded entry routes.
 │   ├── main.js — Renders workspace routes, libraries, and editors.
@@ -46,6 +47,47 @@ vital-pancakes/
 │   └── app-preview-studies.svg — Phone preview of study libraries.
 ├── tools/
 │   ├── tool.css — Shares full-screen and windowed tool layouts and controls.
+│   ├── current-tool-ai-adapter.mjs — Provides validated page-local command contracts for maintained tools.
+│   ├── visual-board-ai-adapter.mjs — Provides geometry-aware commands for Board objects, rigs, and floor plans.
+│   ├── ai-command-center.* — Hosts local command drafting, preview, permissions, and explicit apply workflows.
+│   ├── workspace-suite.css — Shares the dense archival shell used by the newer local-first tools.
+│   ├── local-toolkit.mjs — Provides shared IndexedDB repositories, backups, downloads, imports, IDs, and undo.
+│   ├── suite-ui.mjs — Provides accessible tabs, dialogs, toasts, and compact DOM helpers.
+│   ├── local-webllm-client.mjs — Coordinates explicit local model loading, streaming, cancellation, and cleanup.
+│   ├── local-webllm-worker.js — Runs lazy-loaded WebLLM inference away from the interface.
+│   ├── overhead.html / overhead.js — Hosts and coordinates the personal command center.
+│   ├── overhead-model.mjs — Owns recurrence, tracker, inventory, validation, migration, and Web Crypto envelopes.
+│   ├── overhead-model.test.mjs — Verifies due states, recurrence, trackers, inventory, encryption, and migration.
+│   ├── file-drop.html / file-drop.js — Hosts and coordinates the browser-local file vault.
+│   ├── file-drop-model.mjs — Owns safe filenames, folders, duplicate detection, preview policy, trash, and manifests.
+│   ├── file-drop-hash-worker.js — Fingerprints imported files with progress and cancellation.
+│   ├── file-drop-model.test.mjs — Verifies folders, duplicates, manifests, filenames, trash, and preview safety.
+│   ├── graphing.html / graphing.js — Hosts data entry, chart configuration, summaries, and exports.
+│   ├── graphing-model.mjs — Parses, types, filters, aggregates, bins, validates, and migrates graph projects.
+│   ├── graphing-renderer.mjs — Builds accessible SVG specifications for every supported chart.
+│   ├── graphing-worker.js — Parses and transforms larger datasets off the main thread.
+│   ├── graphing-*.test.mjs — Verifies parsing, transformations, statistics, chart validation, rendering, and migration.
+│   ├── inference.html / inference.js — Hosts selected-backup indexing and cited local-model analyses.
+│   ├── inference-model.mjs — Owns backup exclusion, provenance, chunking, retrieval, citations, and conversion.
+│   ├── inference-index-worker.js — Builds checkpointable local search indexes with cancellation.
+│   ├── inference-model.test.mjs — Verifies exclusions, provenance, retrieval, citation enforcement, and conversion.
+│   ├── markdown-studio.html / markdown-studio.js — Hosts local Markdown, math, and LaTeX-source editing.
+│   ├── markdown-studio-model.mjs — Owns safe rendering, outlines, versions, diffs, statistics, and backup validation.
+│   ├── markdown-studio-model.test.mjs — Verifies sanitization, parsing boundaries, outlines, diffs, and backups.
+│   ├── tool-designer.html / tool-designer.js — Hosts the guided tool-design and implementation-prompt workshop.
+│   ├── tool-designer-model.mjs — Normalizes requirements, merges templates, reviews scope, versions, and exports.
+│   ├── tool-designer-model.test.mjs — Verifies normalization, templates, history, validation, and prompt completeness.
+│   ├── color-aesthetic.html / color-aesthetic.js — Hosts perceptual palette generation, previews, and exports.
+│   ├── color-aesthetic-model.mjs — Owns color conversions, harmonies, roles, contrast, seeds, and migration.
+│   ├── color-aesthetic-worker.js — Extracts image palettes locally without blocking the interface.
+│   ├── color-aesthetic-model.test.mjs — Verifies conversions, harmonies, seeds, roles, contrast, and clustering.
+│   ├── bracket-generator.html / bracket-generator.js — Hosts tournament setup, scoring, bracket views, and exports.
+│   ├── bracket-model.mjs — Owns seeding, byes, advancement, loser routing, finals reset, and standings.
+│   ├── bracket-renderer.mjs — Renders scalable brackets and compact match lists.
+│   ├── bracket-*.test.mjs — Verifies every tournament mode, invalidation, routing, ties, rendering, and migration.
+│   ├── randomized-picker.html / randomized-picker.js — Hosts weighted draws, ordering, grouping, elimination, and wheel mode.
+│   ├── randomized-picker-model.mjs — Owns parsing, probabilities, seeded randomness, sampling, grouping, and history.
+│   ├── randomized-picker-model.test.mjs — Verifies deterministic draws, weights, duplicates, grouping, undo, and imports.
 │   ├── budget-finance.html — Hosts recurring budgets, investment and loan analysis, and tax search.
 │   ├── budget-finance.css — Styles the tabbed finance workspace, tables, metrics, and tax results.
 │   ├── budget-finance.js — Coordinates local finance state, form editing, schedules, and tax filtering.
@@ -60,6 +102,11 @@ vital-pancakes/
 │   ├── scientific-calculator-engine.test.mjs — Verifies precedence, precision, functions, angle modes, and rejected syntax.
 │   ├── visual-board.html — Hosts diagramming and painting.
 │   ├── visual-board.js — Coordinates the infinite canvas, tools, persistence, and export.
+│   ├── visual-board-advanced.css — Styles image controls and the Floor Plan panel.
+│   ├── visual-board-image.mjs — Owns non-destructive source-coordinate crop geometry.
+│   ├── visual-board-transform.mjs — Flips selections and calculates alignment guides without breaking relationships.
+│   ├── visual-board-floor-plan.mjs — Creates ordinary editable floor-plan symbols and starter rooms.
+│   ├── visual-board-{image,transform,floor-plan}.test.mjs — Verifies crop, flip, joint, dimension, snapping, and migration geometry.
 │   ├── visual-board-animation.mjs — Normalizes animation frames and playback timing.
 │   ├── visual-board-animation.test.mjs — Verifies animation state, timing, and playable frames.
 │   ├── visual-board-character.mjs — Exports and restores portable characters with embedded assets and rig settings.
@@ -291,6 +338,14 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 `visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps group, divided-shape, and vertex-network identifiers without mutating the originals. `visual-board-character.mjs` packages selected connected artwork, embedded images, groups, internal vertices, external joints, and both lock types into a remapped `.vp-character.json` file that can be dropped back onto the board. `visual-board-library.mjs` stores those complete packages as named, searchable local assets so inserting a library item remaps every identifier without flattening its structure. `visual-board-rigging.mjs` creates only the contact joint shared by selected rigid groups and solves the closest exact position allowed by locked distances. `visual-board-geometry.mjs` isolates reusable geometry, while `visual-board-vertices.mjs` retains the internal editable-line network used after a group is released.
 
+`visual-board-image.mjs` stores crop rectangles in source-image coordinates and supplies fit, fill, reset, replacement, and draw geometry without iterative recompression. `visual-board-transform.mjs` mirrors complete selections and only their fully selected rig joints while preserving IDs, locks, vertices, arrows, crop state, and readable text. `visual-board-floor-plan.mjs` creates walls, doors, swing arcs, windows, dimensions, room symbols, and starter rooms through the existing object and group schema. The Board UI adds numeric and handle image controls, alignment guides, configurable floor-plan scale/units/grid/wall thickness, and library-compatible templates; version 12 migrates prior boards without flattening them.
+
+### Local-First Workspace Suite
+
+`workspace-suite.css`, `suite-ui.mjs`, and `local-toolkit.mjs` share the responsive archival shell, accessible controls, IndexedDB records/blobs, versioned backups, conflict-safe imports, downloads, and bounded undo used by Overhead, File Drop, Graphing Tool, Inference Tool, Markdown & LaTeX Studio, Tool Designer & Planner, Color Aesthetic Generator, Bracket Generator, and Randomized Picker. Domain rules stay in adjacent pure model modules with deterministic Node tests; parsing, hashing, image clustering, graph transformation, backup indexing, and local-model inference move to workers where warranted.
+
+`local-webllm-client.mjs` and `local-webllm-worker.js` provide explicit WebGPU compatibility checks, lazy model loading, streamed output, cancellation, and memory cleanup for Inference and Tool Designer. Imported text is wrapped as untrusted data, model output remains reviewable, large weights are never application-shell assets, and no tool adds an account, backend, analytics, or required cloud storage. File Drop bytes and Overhead private records stay outside service-worker caches; the latter uses password-derived authenticated Web Crypto envelopes and never stores plaintext passwords or decrypted records.
+
 ### PDF Signer
 
 `pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js, manages page navigation and selectable, movable, resizable, or deletable signature and date placements, and embeds the remaining fields into a downloadable PDF with PDF-Lib. Selected fields expose an inline trash control and can also be deleted from the toolbar or keyboard. `pdf-signer-placements.mjs` owns immutable removal from export state, with an adjacent Node test suite.
@@ -309,7 +364,7 @@ The deterministic pipeline is split across extraction, normalization, outline, c
 
 ### Caption Relay
 
-`caption-relay.html`, `.css`, and `.js` provide one persistent **Capture → Translate → Display** workspace. Capture uses `getDisplayMedia`, an `AudioContext`, an AudioWorklet, worker inference, a bounded queue, processed-sample timing, optional wake lock, and IndexedDB checkpoints. It keeps the browser-required video track alive while consuming only audio, starts its movie clock on the first audible shared samples, and never persists raw movie media. At 1×, a worker records compact same-source fingerprints; accelerated captures multiply every detected audio timestamp by the selected constant rate and use a normalized English cue index for later matching.
+`caption-relay.html`, `.css`, and `.js` provide one persistent **Capture → Translate → Display** workspace. Capture uses `getDisplayMedia`, an `AudioContext`, an AudioWorklet, worker inference, a bounded queue, processed-sample timing, optional wake lock, and IndexedDB checkpoints. It never stops the required video track while assuming audio will survive, and never persists raw movie media. At 1×, a worker records compact same-source fingerprints; accelerated captures multiply every detected audio timestamp by the selected constant rate and use a normalized English cue index for later matching.
 
 Package, format, timing, transcript, translation, fingerprint, text-match, and synchronization rules are pure modules with deterministic Node tests. The versioned `.vpcaptions.json` validator bounds size and cue counts, rejects raw media and malformed data, migrates schema 0, preserves compatible unknown fields, and keeps source cue IDs and integer timestamps stable. Imported caption text reaches the interface and overlays through form values or `textContent`, never unsafe HTML.
 

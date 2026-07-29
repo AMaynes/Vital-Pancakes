@@ -24,6 +24,12 @@ import {
   upsertAnalysis,
   upsertCuration,
 } from "./literature-curator-model.mjs";
+import {
+  installCurrentToolAiHost,
+  rejectUnknownCommandFields,
+  requireCommandRecord,
+  requireCommandString,
+} from "./current-tool-ai-adapter.mjs";
 
 const STORAGE_KEY = "vital-pancakes-literature-curation-v1";
 
@@ -481,3 +487,185 @@ document.querySelectorAll("[data-close-dialog]").forEach((button) => {
 });
 
 render();
+
+installCurrentToolAiHost({
+  id: "literature-curator",
+  title: "Literature Curation",
+  description: "Reads and safely stages local evidence curations and analyses.",
+  limitations: [
+    "AI export and destructive deletion remain explicit user actions.",
+    "Source files are not available through this adapter.",
+  ],
+  getSnapshot: () => ({
+    curations,
+    activeCurationId,
+  }),
+  getContext: (_options, snapshot) => ({
+    activeCurationId: snapshot.activeCurationId,
+    curationCount: snapshot.curations.length,
+    curations: snapshot.curations.map((curation) => ({
+      id: curation.id,
+      targetType: curation.targetType,
+      analysisCount: curation.analyses.length,
+      relationships: countRelationships(curation.analyses),
+      updatedAt: curation.updatedAt,
+    })),
+  }),
+  commitSnapshot(nextState) {
+    const nextCurations = sanitizeLiteratureCurations(nextState.curations);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: LITERATURE_CURATION_VERSION,
+      curations: nextCurations,
+    }));
+    curations = nextCurations;
+    activeCurationId = curations.some(
+      (curation) => curation.id === nextState.activeCurationId,
+    )
+      ? nextState.activeCurationId
+      : curations[0]?.id ?? null;
+    status.textContent = "AI changes saved locally";
+    status.classList.remove("has-error");
+    render();
+  },
+  commands: [
+    {
+      type: "curations.list",
+      description: "List curation summaries and evidence relationship counts.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return {
+          value: state.curations.map((curation) => ({
+            id: curation.id,
+            title: curation.title,
+            targetType: curation.targetType,
+            analysisCount: curation.analyses.length,
+            relationships: countRelationships(curation.analyses),
+            updatedAt: curation.updatedAt,
+          })),
+        };
+      },
+    },
+    {
+      type: "curations.get",
+      description: "Read one complete curation and its analyses.",
+      permissions: ["read-content"],
+      schema: {
+        type: "object",
+        required: ["curationId"],
+        properties: { curationId: { type: "string" } },
+        additionalProperties: false,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["curationId"], commandIndex);
+        const curationId = requireCommandString(
+          command.curationId,
+          "curationId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        return {
+          value: state.curations.find((curation) => curation.id === curationId) ?? null,
+        };
+      },
+    },
+    {
+      type: "curations.upsert",
+      description: "Create or replace one validated curation record.",
+      permissions: ["create", "update"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["curation"],
+        properties: { curation: { type: "object" } },
+        additionalProperties: false,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["curation"], commandIndex);
+        const record = requireCommandRecord(command.curation, "curation", commandIndex);
+        const now = new Date().toISOString();
+        const id = typeof record.id === "string" && record.id.trim()
+          ? record.id.trim()
+          : createId();
+        const previous = state.curations.find((curation) => curation.id === id);
+        const candidate = {
+          ...(previous ?? {}),
+          ...record,
+          id,
+          createdAt: previous?.createdAt || record.createdAt || now,
+          updatedAt: now,
+          analyses: Array.isArray(record.analyses)
+            ? record.analyses
+            : previous?.analyses ?? [],
+        };
+        const nextCurations = upsertCuration(state.curations, candidate);
+        if (!nextCurations.some((curation) => curation.id === id)) {
+          throw new Error("The curation needs a title.");
+        }
+        return {
+          state: { curations: nextCurations, activeCurationId: id },
+          ...(previous ? { updatedIds: [id] } : { createdIds: [id] }),
+          value: { curationId: id },
+        };
+      },
+    },
+    {
+      type: "analyses.upsert",
+      description: "Create or replace one validated analysis inside a curation.",
+      permissions: ["create", "update"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["curationId", "analysis"],
+        properties: {
+          curationId: { type: "string" },
+          analysis: { type: "object" },
+        },
+        additionalProperties: false,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(
+          command,
+          ["curationId", "analysis"],
+          commandIndex,
+        );
+        const curationId = requireCommandString(
+          command.curationId,
+          "curationId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        const curation = state.curations.find((entry) => entry.id === curationId);
+        if (!curation) throw new Error("The target curation does not exist.");
+        const record = requireCommandRecord(command.analysis, "analysis", commandIndex);
+        const now = new Date().toISOString();
+        const id = typeof record.id === "string" && record.id.trim()
+          ? record.id.trim()
+          : createId();
+        const previous = curation.analyses.find((analysis) => analysis.id === id);
+        const candidate = {
+          ...(previous ?? {}),
+          ...record,
+          id,
+          createdAt: previous?.createdAt || record.createdAt || now,
+          updatedAt: now,
+        };
+        const nextCurations = upsertAnalysis(
+          state.curations,
+          curationId,
+          candidate,
+        );
+        if (!nextCurations
+          .find((entry) => entry.id === curationId)
+          ?.analyses.some((analysis) => analysis.id === id)) {
+          throw new Error("The analysis needs a source title.");
+        }
+        return {
+          state: { curations: nextCurations, activeCurationId: curationId },
+          ...(previous ? { updatedIds: [id] } : { createdIds: [id] }),
+          value: { curationId, analysisId: id },
+        };
+      },
+    },
+  ],
+});

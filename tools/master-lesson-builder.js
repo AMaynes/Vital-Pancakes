@@ -54,6 +54,10 @@ import {
   validateLesson,
   validatePersistedBook,
 } from "./master-lesson-validation.mjs";
+import {
+  installCurrentToolAiHost,
+  rejectUnknownCommandFields,
+} from "./current-tool-ai-adapter.mjs";
 
 const elements = Object.fromEntries([
   "webgpu-status", "model-select", "load-model", "cancel-model", "model-progress-wrap",
@@ -1445,3 +1449,113 @@ function showToast(message, error = false) {
     window.setTimeout(() => toast.remove(), 250);
   }, 3600);
 }
+
+installCurrentToolAiHost({
+  id: "master-lesson-builder",
+  title: "Master Lesson Builder",
+  description: "Describes local textbook projects, outlines, and the selected generated lesson.",
+  limitations: [
+    "AI commands do not receive raw textbook pages or retrieval chunks.",
+    "File import, model loading, generation, deletion, and export remain explicit user workflows.",
+  ],
+  getSnapshot: () => ({
+    books: books.map((book) => ({
+      id: book.id,
+      title: book.title,
+      fileName: book.fileName,
+      fileType: book.fileType,
+      pageCount: book.pageCount,
+      selectedNodeId: book.selectedNodeId,
+      processing: book.processing,
+      createdAt: book.createdAt,
+      updatedAt: book.updatedAt,
+    })),
+    activeBook: activeBook
+      ? {
+        id: activeBook.id,
+        title: activeBook.title,
+        fileName: activeBook.fileName,
+        fileType: activeBook.fileType,
+        pageCount: activeBook.pageCount,
+        outline: activeBook.outline,
+        selectedNodeId: activeBook.selectedNodeId,
+        processing: activeBook.processing,
+      }
+      : null,
+    activeLesson: activeLesson ? createEmptyLesson(activeLesson) : null,
+    generation: {
+      running: generationRunning,
+      modelReady,
+      loadedModelId,
+      job: activeJob,
+    },
+  }),
+  getContext: (_options, snapshot) => ({
+    bookCount: snapshot.books.length,
+    activeBook: snapshot.activeBook
+      ? {
+        id: snapshot.activeBook.id,
+        pageCount: snapshot.activeBook.pageCount,
+        selectedNodeId: snapshot.activeBook.selectedNodeId,
+        outlineNodeCount: snapshot.activeBook.outline?.nodes?.length ?? 0,
+      }
+      : null,
+    selectedLesson: snapshot.activeLesson
+      ? {
+        sectionCount: snapshot.activeLesson.sections.length,
+        sourcePageCount: snapshot.activeLesson.sourcePages.length,
+      }
+      : null,
+    generation: {
+      running: snapshot.generation.running,
+      modelReady: snapshot.generation.modelReady,
+      loadedModelId: snapshot.generation.loadedModelId,
+      jobState: snapshot.generation.job?.state ?? null,
+    },
+  }),
+  commands: [
+    {
+      type: "books.list",
+      description: "List local textbook projects without source page text.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return { value: state.books };
+      },
+    },
+    {
+      type: "outline.get",
+      description: "Read the active book's chapter and lesson outline.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return {
+          value: state.activeBook
+            ? {
+              bookId: state.activeBook.id,
+              title: state.activeBook.title,
+              outline: state.activeBook.outline,
+              selectedNodeId: state.activeBook.selectedNodeId,
+            }
+            : null,
+        };
+      },
+    },
+    {
+      type: "lesson.get",
+      description: "Read the currently selected generated lesson and citations.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return {
+          value: state.activeLesson
+            ? {
+              bookId: state.activeBook?.id ?? null,
+              lesson: state.activeLesson,
+            }
+            : null,
+        };
+      },
+    },
+  ],
+});

@@ -4,6 +4,10 @@
  */
 
 import { getConverterStatus } from "./file-converter-state.mjs";
+import {
+  installCurrentToolAiHost,
+  rejectUnknownCommandFields,
+} from "./current-tool-ai-adapter.mjs";
 
 const CONVERTER_URL = "./file-converter-app/index.html";
 const LOAD_TIMEOUT_MS = 15_000;
@@ -75,3 +79,32 @@ window.addEventListener("online", reloadConverter);
 window.addEventListener("offline", renderStatus);
 
 reloadConverter();
+
+installCurrentToolAiHost({
+  id: "file-converter",
+  title: "File Converter",
+  description: "Reports whether the embedded local conversion application is ready.",
+  limitations: [
+    "The embedded converter does not expose a stable command bridge yet.",
+    "AI cannot select local files, configure conversions, run engines, or download output.",
+  ],
+  getSnapshot: () => ({
+    online: navigator.onLine,
+    loaded,
+    timedOut,
+  }),
+  getContext: (_options, snapshot) => ({
+    status: getConverterStatus(snapshot),
+  }),
+  commands: [
+    {
+      type: "status.get",
+      description: "Report converter availability and loading state.",
+      permissions: ["read-summary"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return { value: getConverterStatus(state) };
+      },
+    },
+  ],
+});

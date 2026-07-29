@@ -20,6 +20,12 @@ import {
   normalizeNodeName,
   removeArchitectureNode,
 } from "./architecture-model.mjs";
+import {
+  installCurrentToolAiHost,
+  rejectUnknownCommandFields,
+  requireCommandRecord,
+  requireCommandString,
+} from "./current-tool-ai-adapter.mjs";
 
 const ARCHITECTURE_KEY = "artificially-neuroscience-architecture-v1";
 const SAVE_DELAY = 220;
@@ -393,3 +399,177 @@ sheet.addEventListener("drop", (event) => {
 
 saveArchitecture();
 renderArchitecture();
+
+installCurrentToolAiHost({
+  id: "software-architect",
+  title: "Software Architect",
+  description: "Reads and safely stages the local folder-and-file architecture model.",
+  limitations: [
+    "Node deletion, complete clearing, and file export remain explicit user actions.",
+    "Commands model structure only and do not create files on the computer.",
+  ],
+  getSnapshot: () => ({
+    architecture,
+    selectedId,
+  }),
+  getContext: (_options, snapshot) => ({
+    rootId: snapshot.architecture.rootId,
+    selectedId: snapshot.selectedId,
+    nodeCount: snapshot.architecture.nodes.length,
+    folderCount: snapshot.architecture.nodes.filter((node) => node.type === "folder").length,
+    fileCount: snapshot.architecture.nodes.filter((node) => node.type === "file").length,
+  }),
+  commitSnapshot(nextState) {
+    if (draggedId) throw new Error("Finish the current drag before applying AI changes.");
+    const nextArchitecture = normalizeArchitecture(nextState.architecture);
+    localStorage.setItem(ARCHITECTURE_KEY, JSON.stringify(nextArchitecture));
+    window.clearTimeout(saveTimer);
+    architecture = nextArchitecture;
+    selectedId = architecture.nodes.some((node) => node.id === nextState.selectedId)
+      ? nextState.selectedId
+      : ROOT_NODE_ID;
+    status.textContent = "AI changes saved locally";
+    status.classList.remove("has-error");
+    renderArchitecture();
+  },
+  commands: [
+    {
+      type: "tree.describe",
+      description: "Read the flat parent-linked architecture tree.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return { value: state.architecture };
+      },
+    },
+    {
+      type: "nodes.get",
+      description: "Read one architecture node and its direct children.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["nodeId"], commandIndex);
+        const nodeId = requireCommandString(
+          command.nodeId,
+          "nodeId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        const node = state.architecture.nodes.find((candidate) => candidate.id === nodeId);
+        return {
+          value: node
+            ? {
+              node,
+              children: getArchitectureChildren(state.architecture.nodes, node.id),
+            }
+            : null,
+        };
+      },
+    },
+    {
+      type: "nodes.create",
+      description: "Create one folder or file under an existing folder.",
+      permissions: ["create"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["node"],
+        properties: { node: { type: "object" } },
+        additionalProperties: false,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["node"], commandIndex);
+        const input = requireCommandRecord(command.node, "node", commandIndex);
+        const unknown = Object.keys(input).find(
+          (field) => !["id", "type", "parentId", "name", "notes"].includes(field),
+        );
+        if (unknown) throw new Error(`Unsupported node field: ${unknown}.`);
+        if (input.type !== undefined && !["file", "folder"].includes(input.type)) {
+          throw new Error("node.type must be file or folder.");
+        }
+        const type = input.type === "file" ? "file" : "folder";
+        const id = input.id !== undefined
+          ? requireCommandString(input.id, "node.id", commandIndex, { maximumLength: 128 })
+          : createId();
+        if (!/^[a-zA-Z0-9._:/-]+$/.test(id)) {
+          throw new Error("node.id contains unsupported characters.");
+        }
+        if (state.architecture.nodes.some((node) => node.id === id)) {
+          throw new Error("That node ID already exists.");
+        }
+        const node = addArchitectureNode(state.architecture, {
+          id,
+          type,
+          parentId: input.parentId,
+        });
+        node.name = normalizeNodeName(input.name, type);
+        node.notes = String(input.notes ?? "").slice(0, 20_000);
+        return {
+          state: { ...state, selectedId: id },
+          createdIds: [id],
+          value: node,
+        };
+      },
+    },
+    {
+      type: "nodes.update",
+      description: "Update the name, notes, or collapsed state of one node.",
+      permissions: ["update"],
+      mutates: true,
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["nodeId", "patch"], commandIndex);
+        const nodeId = requireCommandString(
+          command.nodeId,
+          "nodeId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        const patch = requireCommandRecord(command.patch, "patch", commandIndex);
+        const unknown = Object.keys(patch).find(
+          (field) => !["name", "notes", "collapsed"].includes(field),
+        );
+        if (unknown) throw new Error(`Unsupported node patch field: ${unknown}.`);
+        const node = state.architecture.nodes.find((candidate) => candidate.id === nodeId);
+        if (!node) throw new Error("The node does not exist.");
+        if (patch.name !== undefined) node.name = normalizeNodeName(patch.name, node.type);
+        if (patch.notes !== undefined) node.notes = String(patch.notes).slice(0, 20_000);
+        if (patch.collapsed !== undefined && node.type === "folder") {
+          node.collapsed = Boolean(patch.collapsed);
+        }
+        return {
+          state: { ...state, selectedId: nodeId },
+          updatedIds: [nodeId],
+          value: node,
+        };
+      },
+    },
+    {
+      type: "nodes.move",
+      description: "Move one node into another folder while preventing cycles.",
+      permissions: ["update"],
+      mutates: true,
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["nodeId", "folderId"], commandIndex);
+        const nodeId = requireCommandString(
+          command.nodeId,
+          "nodeId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        const folderId = requireCommandString(
+          command.folderId,
+          "folderId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        if (!moveNodeToFolder(state.architecture, nodeId, folderId)) {
+          throw new Error("The node cannot be moved to that folder.");
+        }
+        return {
+          state: { ...state, selectedId: nodeId },
+          updatedIds: [nodeId],
+          value: { nodeId, folderId },
+        };
+      },
+    },
+  ],
+});

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="Create, score, save, print, and export single-elimination, double-elimination, and round-robin tournaments.">
+  <title>Bracket Generator · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=25">
+  <link rel="stylesheet" href="workspace-suite.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=13"></script>
+  <style>
+    .bracket-canvas { max-width:100%; overflow:auto; border:1px solid var(--line); cursor:grab; background:var(--paper); }
+    .bracket-canvas.is-panning { cursor:grabbing; user-select:none; }
+    .bracket-canvas svg { display:block; max-width:none; }
+    .bracket-mobile-list { display:none; }
+    @media (max-width:760px) { .bracket-canvas { display:none; } .bracket-mobile-list { display:grid; } }
+    @media print { .site-header,.suite-topbar,.suite-rail,.bracket-controls,.bracket-mobile-list { display:none!important; } .suite-layout { display:block; } .suite-main { padding:0; } .bracket-canvas { display:block;overflow:visible;border:0; } }
+  </style>
+</head>
+<body class="suite-body">
+  <a class="skip-link" href="#tool-main">Skip to Bracket Generator</a>
+  <header class="site-header"><a class="brand" href="../index.html" aria-label="Vital Pancakes home"><span class="brand-mark" aria-hidden="true">VP</span><span>Vital Pancakes</span></a><nav aria-label="Primary navigation"><a href="../workspace.html#area=everyday">Everyday Life</a><a href="../research-literature.html">Research &amp; Literature</a><a href="../workspace.html#area=studies">Studies &amp; Projects</a><a href="../workspace.html#area=tools" aria-current="page">Workspace</a><a href="../download-app.html">Download App</a></nav></header>
+  <div class="suite-shell">
+    <header class="suite-topbar">
+      <div><h1>Bracket Generator</h1><p id="bracket-status">Local tournament manager</p></div>
+      <div class="suite-actions"><button class="button button-quiet" id="bracket-undo" type="button">Undo</button><button class="button button-quiet" id="bracket-duplicate" type="button">Duplicate</button><button class="button button-quiet" id="bracket-open" type="button">Open</button><button class="button button-primary" id="bracket-save-project" type="button">Save project</button><input id="bracket-open-input" type="file" accept=".vpbracket.json,application/json" hidden></div>
+    </header>
+    <div class="suite-layout">
+      <aside class="suite-rail">
+        <div class="suite-tabs" role="tablist" aria-label="Tournament workflow">
+          <button type="button" role="tab" aria-selected="true" aria-controls="bracket-panel-setup" data-tab="setup">Setup</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="bracket-panel-bracket" data-tab="bracket">Bracket</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="bracket-panel-matches" data-tab="matches">Matches</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="bracket-panel-standings" data-tab="standings">Standings</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="bracket-panel-export" data-tab="export">Export</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="bracket-panel-saved" data-tab="saved">Saved</button>
+        </div>
+      </aside>
+      <main class="suite-main" id="tool-main">
+        <section class="suite-panel" id="bracket-panel-setup" role="tabpanel">
+          <header class="suite-panel-header"><div><h2>Tournament Setup</h2><p>Stable participant IDs · deterministic routes</p></div></header>
+          <form class="suite-card suite-form-grid" id="bracket-setup-form">
+            <label class="suite-field"><span>Name</span><input name="name" required value="New Tournament"></label>
+            <label class="suite-field"><span>Format</span><select name="type"><option value="single">Single elimination</option><option value="double">Double elimination</option><option value="round-robin">Round robin</option></select></label>
+            <label class="suite-field"><span>Seeding</span><select name="seeding"><option value="manual">Manual order</option><option value="ranked">Ranked</option><option value="random">Randomized</option></select></label>
+            <label class="suite-field"><span><input name="thirdPlace" type="checkbox"> Third-place match</span></label>
+            <label class="suite-field suite-field-wide"><span>Participants · one per line, optional “name, rank”</span><textarea name="participants" required>Ada, 1&#10;Grace, 2&#10;Edsger, 3&#10;Donald, 4</textarea></label>
+            <button class="button button-primary" type="submit">Create tournament</button>
+          </form>
+        </section>
+        <section class="suite-panel" id="bracket-panel-bracket" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2 id="bracket-title">Bracket</h2><p>Drag to pan · SVG remains crisp</p></div><span class="suite-status" id="bracket-champion"></span></header>
+          <div class="bracket-canvas" id="bracket-canvas"></div>
+          <div class="bracket-mobile-list suite-list" id="bracket-mobile-list"></div>
+        </section>
+        <section class="suite-panel" id="bracket-panel-matches" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Matches</h2><p>Scores, winner, notes, status, schedule</p></div></header>
+          <div class="suite-toolbar"><select class="suite-select" id="bracket-match-filter"><option value="">All brackets</option><option value="winners">Winners</option><option value="losers">Losers</option><option value="final">Final</option><option value="placement">Placement</option><option value="round-robin">Round robin</option></select></div>
+          <ul class="suite-list" id="bracket-match-list"></ul>
+        </section>
+        <section class="suite-panel" id="bracket-panel-standings" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Standings</h2><p id="bracket-standings-rules">Round-robin tiebreak rules</p></div><button class="button button-quiet" id="bracket-create-playoff" type="button">Create top-four playoff</button></header>
+          <div class="suite-table-wrap"><table class="suite-table"><thead><tr><th>#</th><th>Participant</th><th>P</th><th>W</th><th>D</th><th>L</th><th>For</th><th>Against</th><th>Diff</th><th>Pts</th></tr></thead><tbody id="bracket-standings-body"></tbody></table></div>
+        </section>
+        <section class="suite-panel" id="bracket-panel-export" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Export</h2><p>Print, images, results, project, static summary</p></div></header>
+          <div class="suite-grid"><article class="suite-card"><h3>Print</h3><button class="button button-primary" id="bracket-print" type="button">Print / PDF</button></article><article class="suite-card"><h3>Image</h3><div class="suite-actions"><button class="button button-primary" id="bracket-svg" type="button">SVG</button><button class="button button-quiet" id="bracket-png" type="button">PNG</button></div></article><article class="suite-card"><h3>Data</h3><div class="suite-actions"><button class="button button-primary" id="bracket-csv" type="button">Results CSV</button><button class="button button-quiet" id="bracket-static" type="button">Static result HTML</button></div></article></div>
+        </section>
+        <section class="suite-panel" id="bracket-panel-saved" role="tabpanel" hidden><header class="suite-panel-header"><div><h2>Saved Tournaments</h2><p>Autosaved locally</p></div></header><ul class="suite-list" id="bracket-saved-list"></ul></section>
+      </main>
+    </div>
+  </div>
+  <dialog class="suite-dialog" id="bracket-match-dialog"><form class="suite-dialog-inner" id="bracket-match-form"><header class="suite-panel-header"><div><h2 id="bracket-match-title">Match</h2><p id="bracket-match-competitors"></p></div></header><input name="matchId" type="hidden"><div class="suite-form-grid"><label class="suite-field"><span>Score A</span><input name="scoreA" type="number" step="any"></label><label class="suite-field"><span>Score B</span><input name="scoreB" type="number" step="any"></label><label class="suite-field"><span>Winner</span><select name="winnerId" id="bracket-match-winner"><option value="">From score</option></select></label><label class="suite-field"><span>Status before result</span><select name="status"><option value="pending">Pending</option><option value="scheduled">Scheduled</option><option value="in-progress">In progress</option></select></label><label class="suite-field"><span>Scheduled time</span><input name="scheduledAt" type="datetime-local"></label><label class="suite-field suite-field-wide"><span>Notes</span><textarea name="notes"></textarea></label></div><div class="suite-dialog-actions"><button class="button button-quiet" id="bracket-clear-result" type="button">Clear result</button><button class="button button-quiet" id="bracket-close-match" type="button">Cancel</button><button class="button button-primary" type="submit">Save match</button></div></form></dialog>
+  <script type="module" src="bracket-generator.js?v=2"></script>
+</body>
+</html>

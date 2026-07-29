@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="A private, browser-local command center for tasks, priorities, trackers, private records, and inventory.">
+  <title>Overhead · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=25">
+  <link rel="stylesheet" href="workspace-suite.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=13"></script>
+</head>
+<body class="suite-body">
+  <a class="skip-link" href="#tool-main">Skip to Overhead</a>
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Vital Pancakes home"><span class="brand-mark" aria-hidden="true">VP</span><span>Vital Pancakes</span></a>
+    <nav aria-label="Primary navigation">
+      <a href="../workspace.html#area=everyday">Everyday Life</a>
+      <a href="../research-literature.html">Research &amp; Literature</a>
+      <a href="../workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="../workspace.html#area=tools" aria-current="page">Workspace</a>
+      <a href="../download-app.html">Download App</a>
+    </nav>
+  </header>
+  <div class="suite-shell">
+    <header class="suite-topbar">
+      <div><h1>Overhead</h1><p>Private personal command center</p></div>
+      <div class="suite-actions">
+        <button class="button button-quiet" id="overhead-undo" type="button" disabled>Undo</button>
+        <button class="button button-quiet" id="overhead-redo" type="button" disabled>Redo</button>
+        <button class="button button-quiet" id="overhead-import" type="button">Import</button>
+        <button class="button button-primary" id="overhead-export" type="button">Backup</button>
+        <input id="overhead-import-input" type="file" accept="application/json,.json" hidden>
+      </div>
+    </header>
+    <div class="suite-layout">
+      <aside class="suite-rail">
+        <div class="suite-tabs" role="tablist" aria-label="Overhead sections">
+          <button type="button" role="tab" aria-selected="true" aria-controls="panel-brain" data-tab="brain">Brain Dump</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="panel-forefront" data-tab="forefront">Mental Forefront</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="panel-todos" data-tab="todos">Todo Lists</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="panel-private" data-tab="private">Private Information</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="panel-trackers" data-tab="trackers">Trackers &amp; Reminders</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="panel-inventory" data-tab="inventory">Inventory</button>
+        </div>
+      </aside>
+      <main class="suite-main" id="tool-main">
+        <section class="suite-panel" id="panel-brain" role="tabpanel">
+          <header class="suite-panel-header"><div><h2>Brain Dump</h2><p>Capture first. Organize second.</p></div></header>
+          <form class="suite-card" id="brain-form">
+            <label class="suite-field"><span>Quick capture</span><textarea name="text" required autofocus placeholder="What is in your head?"></textarea></label>
+            <div class="suite-form-grid">
+              <label class="suite-field"><span>Tags</span><input name="tags" placeholder="home, idea, later"></label>
+              <button class="button button-primary" type="submit">Capture</button>
+            </div>
+          </form>
+          <div class="suite-toolbar">
+            <input class="suite-input" id="brain-search" type="search" placeholder="Search captures">
+            <select class="suite-select" id="brain-bulk-action" aria-label="Bulk action">
+              <option value="">Bulk action…</option><option value="archive">Archive</option><option value="pin">Pin</option><option value="delete">Delete</option>
+            </select>
+            <button class="button button-quiet" id="brain-apply-bulk" type="button">Apply</button>
+          </div>
+          <ul class="suite-list" id="brain-list"></ul>
+        </section>
+
+        <section class="suite-panel" id="panel-forefront" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Mental Forefront</h2><p>Keep the active set deliberately small.</p></div><span class="suite-status" id="forefront-count"></span></header>
+          <div class="suite-warning" id="forefront-warning" hidden>More than five priorities are competing for the foreground. Move some back to the inbox or todo lists.</div>
+          <form class="suite-card suite-form-grid" id="forefront-form">
+            <label class="suite-field"><span>Priority</span><input name="title" required></label>
+            <label class="suite-field"><span>Deadline</span><input name="deadline" type="date"></label>
+            <label class="suite-field"><span>Linked task</span><select name="taskId" id="forefront-task"></select></label>
+            <label class="suite-field suite-field-wide"><span>Notes</span><textarea name="notes"></textarea></label>
+            <button class="button button-primary" type="submit">Add priority</button>
+          </form>
+          <ul class="suite-list" id="forefront-list"></ul>
+        </section>
+
+        <section class="suite-panel" id="panel-todos" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Todo Lists</h2><p>Plan, repeat, complete, review.</p></div><button class="button button-quiet" id="add-list" type="button">+ List</button></header>
+          <form class="suite-card suite-form-grid" id="todo-form">
+            <label class="suite-field"><span>Task</span><input name="title" required></label>
+            <label class="suite-field"><span>List</span><select name="listId" id="todo-list-select"></select></label>
+            <label class="suite-field"><span>Priority</span><select name="priority"><option>normal</option><option>high</option><option>low</option></select></label>
+            <label class="suite-field"><span>Due</span><input name="dueDate" type="date"></label>
+            <label class="suite-field"><span>Recurrence</span><select name="recurrence"><option value="none">None</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label>
+            <label class="suite-field"><span>Subtasks</span><input name="subtasks" placeholder="Comma separated"></label>
+            <label class="suite-field suite-field-wide"><span>Notes</span><textarea name="notes"></textarea></label>
+            <button class="button button-primary" type="submit">Add task</button>
+          </form>
+          <div class="suite-toolbar" role="group" aria-label="Todo view">
+            <select class="suite-select" id="todo-view"><option value="all">All open</option><option value="today">Today</option><option value="upcoming">Upcoming</option><option value="overdue">Overdue</option><option value="unscheduled">Unscheduled</option><option value="completed">Completion history</option></select>
+            <select class="suite-select" id="todo-list-filter"><option value="">All lists</option></select>
+          </div>
+          <ul class="suite-list" id="todo-list"></ul>
+        </section>
+
+        <section class="suite-panel" id="panel-private" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Private Information</h2><p>Password-derived AES-GCM encryption</p></div><button class="button button-quiet" id="lock-private" type="button">Lock all</button></header>
+          <div class="suite-warning"><strong>There is no password recovery.</strong> Vital Pancakes never stores the password or decrypted content. Back up encrypted sections and remember each password.</div>
+          <form class="suite-card suite-form-grid" id="private-form">
+            <label class="suite-field"><span>Section name</span><input name="title" required></label>
+            <label class="suite-field"><span>Password</span><input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
+            <label class="suite-field suite-field-wide"><span>Private content</span><textarea name="content" required></textarea></label>
+            <button class="button button-primary" type="submit">Encrypt section</button>
+          </form>
+          <ul class="suite-list" id="private-list"></ul>
+        </section>
+
+        <section class="suite-panel" id="panel-trackers" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Trackers &amp; Reminders</h2><p>Local history with in-app due states</p></div><button class="button button-quiet" id="enable-notifications" type="button">Browser notifications</button></header>
+          <div class="suite-warning">In-app reminders are reliable while Overhead is open. Browser and operating-system notifications may not arrive after the app is closed.</div>
+          <form class="suite-card suite-form-grid" id="tracker-form">
+            <label class="suite-field"><span>Name</span><input name="name" required></label>
+            <label class="suite-field"><span>Type</span><select name="type"><option value="boolean">Yes / no</option><option value="count">Count</option><option value="duration">Duration</option><option value="measurement">Measurement</option><option value="free-text">Free text</option></select></label>
+            <label class="suite-field"><span>Schedule</span><select name="schedule"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="interval">Interval</option><option value="custom">Custom weekdays</option></select></label>
+            <label class="suite-field"><span>Interval days</span><input name="intervalDays" type="number" min="1" value="1"></label>
+            <label class="suite-field"><span>Template</span><select id="tracker-template"><option value="">Custom</option></select></label>
+            <button class="button button-primary" type="submit">Add tracker</button>
+          </form>
+          <div class="suite-grid" id="tracker-list"></div>
+        </section>
+
+        <section class="suite-panel" id="panel-inventory" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Inventory</h2><p>Stock, expiration, and restock decisions</p></div><select class="suite-select" id="inventory-view"><option value="all">All items</option><option value="low">Low stock</option><option value="expiring">Expiring soon</option><option value="restock">Restock list</option></select></header>
+          <form class="suite-card suite-form-grid" id="inventory-form">
+            <label class="suite-field"><span>Item</span><input name="name" required></label>
+            <label class="suite-field"><span>Category</span><input name="category"></label>
+            <label class="suite-field"><span>Quantity</span><input name="quantity" type="number" min="0" step="any" value="1"></label>
+            <label class="suite-field"><span>Minimum desired</span><input name="minimum" type="number" min="0" step="any" value="1"></label>
+            <label class="suite-field"><span>Location</span><input name="location"></label>
+            <label class="suite-field"><span>Expiration</span><input name="expirationDate" type="date"></label>
+            <label class="suite-field"><span>Purchase date</span><input name="purchaseDate" type="date"></label>
+            <label class="suite-field suite-field-wide"><span>Notes</span><textarea name="notes"></textarea></label>
+            <button class="button button-primary" type="submit">Add item</button>
+          </form>
+          <ul class="suite-list" id="inventory-list"></ul>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="overhead.js?v=2"></script>
+</body>
+</html>

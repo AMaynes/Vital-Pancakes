@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="Generate accessible, perceptual palettes from colors, moods, harmony rules, seeds, or local images.">
+  <title>Color Aesthetic Generator · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=25">
+  <link rel="stylesheet" href="workspace-suite.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=13"></script>
+  <style>
+    .palette-strip { display:grid; grid-template-columns:repeat(var(--count, 6), minmax(80px, 1fr)); min-height:190px; overflow:auto; border:1px solid var(--line-strong); }
+    .palette-color { position:relative; display:flex; min-width:80px; align-items:flex-end; padding:10px; border:0; color:#fff; text-shadow:0 1px 3px #000; cursor:pointer; }
+    .palette-color.is-selected { outline:4px solid var(--ink); outline-offset:-4px; }
+    .palette-color span { display:block; font-size:10px; font-weight:800; }
+    .palette-color small { display:block; font-size:9px; }
+    .palette-lock { position:absolute; top:7px; right:7px; min-width:28px; min-height:28px; border:1px solid rgb(255 255 255 / 70%); border-radius:50%; background:rgb(0 0 0 / 25%); color:#fff; }
+    .palette-preview { padding:24px; border:1px solid var(--line); background:var(--preview-bg); color:var(--preview-text); }
+    .palette-preview button { border:0; padding:8px 12px; background:var(--preview-accent); color:var(--preview-bg); }
+    .palette-chart { display:flex; height:100px; align-items:end; gap:8px; }
+    .palette-chart span { flex:1; background:var(--bar); }
+    @media (max-width:760px) { .palette-strip { grid-auto-flow:column; grid-template-columns:none; grid-auto-columns:120px; } }
+  </style>
+</head>
+<body class="suite-body">
+  <a class="skip-link" href="#tool-main">Skip to Color Aesthetic Generator</a>
+  <header class="site-header"><a class="brand" href="../index.html" aria-label="Vital Pancakes home"><span class="brand-mark" aria-hidden="true">VP</span><span>Vital Pancakes</span></a><nav aria-label="Primary navigation"><a href="../workspace.html#area=everyday">Everyday Life</a><a href="../research-literature.html">Research &amp; Literature</a><a href="../workspace.html#area=studies">Studies &amp; Projects</a><a href="../workspace.html#area=tools" aria-current="page">Workspace</a><a href="../download-app.html">Download App</a></nav></header>
+  <div class="suite-shell">
+    <header class="suite-topbar">
+      <div><h1>Color Aesthetic Generator</h1><p>Perceptual palettes · accessibility checks</p></div>
+      <div class="suite-actions"><button class="button button-quiet" id="palette-favorite" type="button">Favorite</button><button class="button button-quiet" id="palette-open" type="button">Open</button><button class="button button-primary" id="palette-save" type="button">Save project</button><input id="palette-open-input" type="file" accept=".vppalette.json,application/json" hidden></div>
+    </header>
+    <div class="suite-layout">
+      <aside class="suite-rail">
+        <div class="suite-tabs" role="tablist" aria-label="Palette workflow">
+          <button type="button" role="tab" aria-selected="true" aria-controls="palette-panel-generate" data-tab="generate">Generate</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="palette-panel-adjust" data-tab="adjust">Adjust</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="palette-panel-preview" data-tab="preview">Preview &amp; Check</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="palette-panel-history" data-tab="history">History</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="palette-panel-export" data-tab="export">Export</button>
+        </div>
+      </aside>
+      <main class="suite-main" id="tool-main">
+        <section class="suite-panel" id="palette-panel-generate" role="tabpanel">
+          <header class="suite-panel-header"><div><h2>Generate Palettes</h2><p>Lock colors before regenerating</p></div><button class="button button-primary" id="palette-generate" type="button">Generate candidates</button></header>
+          <form class="suite-card suite-form-grid" id="palette-options">
+            <label class="suite-field"><span>Base color</span><input name="base" type="color" value="#7b211a"></label>
+            <label class="suite-field"><span>Harmony</span><select name="harmony"><option value="analogous">Analogous</option><option value="complementary">Complementary</option><option value="monochromatic">Monochromatic</option><option value="triadic">Triadic</option><option value="tetradic">Tetradic</option><option value="split-complementary">Split complementary</option></select></label>
+            <label class="suite-field"><span>Style</span><select name="style"><option value="custom">Custom</option><option value="warm">Warm</option><option value="cool">Cool</option><option value="muted">Muted</option><option value="pastel">Pastel</option><option value="vibrant">Vibrant</option><option value="dark">Dark</option><option value="light">Light</option><option value="archival">Archival</option><option value="natural">Natural</option></select></label>
+            <label class="suite-field"><span>Colors</span><input name="count" type="number" min="2" max="12" value="6"></label>
+            <label class="suite-field"><span>Seed</span><input name="seed" placeholder="Optional reproducible seed"></label>
+            <label class="suite-field"><span>Mood keywords</span><input name="mood" placeholder="quiet, clinical, autumn"></label>
+            <label class="suite-field"><span>Extract from image</span><input id="palette-image" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          </form>
+          <div class="suite-grid" id="palette-candidates"></div>
+          <canvas id="palette-image-canvas" hidden></canvas>
+        </section>
+        <section class="suite-panel" id="palette-panel-adjust" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Adjust Palette</h2><p>Drag swatches to reorder · click to edit</p></div><button class="button button-quiet" id="palette-assign-roles" type="button">Assign semantic roles</button></header>
+          <div class="palette-strip" id="palette-strip"></div>
+          <div class="suite-grid" style="margin-top:14px">
+            <form class="suite-card" id="palette-adjust-form">
+              <h3 id="palette-selected-title">Selected color</h3>
+              <label class="suite-field"><span>Hex</span><input name="hex" pattern="#?[0-9A-Fa-f]{6}"></label>
+              <label class="suite-field"><span>Hue</span><input name="hue" type="range" min="0" max="360" step="1"><output id="palette-hue-output"></output></label>
+              <label class="suite-field"><span>Chroma</span><input name="chroma" type="range" min="0" max="0.35" step="0.005"><output id="palette-chroma-output"></output></label>
+              <label class="suite-field"><span>Lightness</span><input name="lightness" type="range" min="0.05" max="0.98" step="0.01"><output id="palette-lightness-output"></output></label>
+              <label class="suite-field"><span>Role</span><select name="role"><option value="">Unassigned</option><option value="background">Background</option><option value="surface">Surface</option><option value="text">Text</option><option value="accent">Accent</option><option value="success">Success</option><option value="warning">Warning</option><option value="danger">Danger</option></select></label>
+            </form>
+            <article class="suite-card"><h3>Active palette</h3><p>Locked colors remain unchanged when you regenerate. Semantic roles drive the interface and contrast previews.</p><button class="button button-primary" id="palette-regenerate-unlocked" type="button">Regenerate unlocked</button></article>
+          </div>
+        </section>
+        <section class="suite-panel" id="palette-panel-preview" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Preview &amp; Accessibility</h2><p>Interfaces, charts, type, and color-vision checks</p></div><select class="suite-select" id="palette-vision"><option value="">Standard vision</option><option value="protanopia">Protanopia</option><option value="deuteranopia">Deuteranopia</option><option value="tritanopia">Tritanopia</option></select></header>
+          <div class="suite-grid">
+            <article class="palette-preview" id="palette-ui-preview"><h3>Sample interface</h3><p>The palette should preserve a clear reading order and usable controls.</p><button type="button">Primary action</button></article>
+            <article class="suite-card"><h3>Typography</h3><div id="palette-type-preview"><p style="font-size:28px">Display heading</p><p>Body text should remain calm, readable, and clearly separated from its surface.</p></div></article>
+            <article class="suite-card"><h3>Chart</h3><div class="palette-chart" id="palette-chart-preview"></div></article>
+          </div>
+          <div class="suite-card"><h3>Role contrast</h3><div class="suite-grid suite-grid-tight" id="palette-contrast"></div></div>
+        </section>
+        <section class="suite-panel" id="palette-panel-history" role="tabpanel" hidden><header class="suite-panel-header"><div><h2>History &amp; Favorites</h2><p>Restore previous generations</p></div></header><h3>History</h3><div class="suite-grid" id="palette-history"></div><h3>Favorites</h3><div class="suite-grid" id="palette-favorites"></div></section>
+        <section class="suite-panel" id="palette-panel-export" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Export</h2><p>Developer and design formats</p></div></header>
+          <div class="suite-grid">
+            <article class="suite-card"><h3>Code</h3><div class="suite-actions"><button class="button button-primary" data-palette-export="css" type="button">CSS variables</button><button class="button button-quiet" data-palette-export="scss" type="button">SCSS</button><button class="button button-quiet" data-palette-export="json" type="button">JSON</button><button class="button button-quiet" data-palette-export="text" type="button">Plain text</button></div></article>
+            <article class="suite-card"><h3>Swatch sheet</h3><div class="suite-actions"><button class="button button-primary" data-palette-export="svg" type="button">SVG</button><button class="button button-quiet" data-palette-export="png" type="button">PNG</button></div></article>
+            <article class="suite-card"><h3>Clipboard</h3><button class="button button-primary" id="palette-copy-all" type="button">Copy entire palette</button></article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="color-aesthetic.js?v=2"></script>
+</body>
+</html>

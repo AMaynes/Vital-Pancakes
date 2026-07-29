@@ -15,15 +15,18 @@ function cloneValue(value) {
  * @param {Array<object>} objects Current board objects.
  * @param {Array<object>} selectedObjects Current selected object references.
  * @param {object} rig Current rigid-body joints and dimension locks.
- * @returns {{objects: Array<object>, selectedIds: Array<string>, rig: object}}
+ * @param {{settings?: object, view?: object}} extras Optional board context.
+ * @returns {{objects: Array<object>, selectedIds: Array<string>, rig: object, settings?: object, view?: object}}
  */
-export function createBoardHistoryEntry(objects, selectedObjects, rig = null) {
+export function createBoardHistoryEntry(objects, selectedObjects, rig = null, extras = {}) {
   return {
     objects: cloneValue(objects),
     selectedIds: selectedObjects
       .map((object) => object?.id)
       .filter((id) => typeof id === "string" && id.length > 0),
     rig: cloneValue(rig),
+    ...(extras.settings ? { settings: cloneValue(extras.settings) } : {}),
+    ...(extras.view ? { view: cloneValue(extras.view) } : {}),
   };
 }
 
@@ -33,7 +36,7 @@ export function createBoardHistoryEntry(objects, selectedObjects, rig = null) {
  *
  * @param {{objects?: Array<object>, selectedIds?: Array<string>}} entry History entry.
  * @param {(object: object) => object | null} normalizeObject Object migration callback.
- * @returns {{objects: Array<object>, selectedObjects: Array<object>, rig: object}}
+ * @returns {{objects: Array<object>, selectedObjects: Array<object>, rig: object, settings?: object, view?: object}}
  */
 export function restoreBoardHistoryEntry(entry, normalizeObject = (object) => object) {
   const objects = (Array.isArray(entry?.objects) ? cloneValue(entry.objects) : [])
@@ -44,5 +47,11 @@ export function restoreBoardHistoryEntry(entry, normalizeObject = (object) => ob
     .map((id) => objectsById.get(id))
     .filter(Boolean);
 
-  return { objects, selectedObjects, rig: cloneValue(entry?.rig) };
+  return {
+    objects,
+    selectedObjects,
+    rig: cloneValue(entry?.rig),
+    ...(entry?.settings ? { settings: cloneValue(entry.settings) } : {}),
+    ...(entry?.view ? { view: cloneValue(entry.view) } : {}),
+  };
 }

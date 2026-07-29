@@ -1,0 +1,31 @@
+name: Node tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Test app and tools
+        run: node --test app/*.test.mjs tools/*.test.mjs
+
+      - name: Install local bridge dependencies
+        run: npm ci --prefix integrations/ai-bridge
+
+      - name: Test local MCP bridge
+        run: npm test --prefix integrations/ai-bridge

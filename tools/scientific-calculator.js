@@ -5,6 +5,11 @@ import {
   evaluateScientificExpression,
   normalizeAngleMode,
 } from "./scientific-calculator-engine.mjs?v=1";
+import {
+  installCurrentToolAiHost,
+  rejectUnknownCommandFields,
+  requireCommandString,
+} from "./current-tool-ai-adapter.mjs";
 
 const HISTORY_KEY = "vital-pancakes-scientific-calculator-history-v1";
 const SETTINGS_KEY = "vital-pancakes-scientific-calculator-settings-v1";
@@ -422,3 +427,100 @@ function hideError() {
 function setSaveStatus(message) {
   saveStatus.textContent = message;
 }
+
+installCurrentToolAiHost({
+  id: "scientific-calculator",
+  title: "Scientific Calculator",
+  description: "Evaluates bounded scientific expressions with the calculator's safe math engine.",
+  limitations: [
+    "AI evaluation does not alter the visible expression, answer, memory, or history.",
+    "History and memory changes remain explicit calculator actions.",
+  ],
+  getSnapshot: () => ({
+    expression: expressionInput.value,
+    displayedResult: resultOutput.textContent,
+    angleMode: settings.angleMode,
+    answer: formatStoredNumber(answer),
+    memory: formatStoredNumber(memory),
+    history,
+  }),
+  getContext: (_options, snapshot) => ({
+    angleMode: snapshot.angleMode,
+    expressionPresent: Boolean(snapshot.expression.trim()),
+    historyCount: snapshot.history.length,
+    memoryStored: snapshot.memory !== "0",
+  }),
+  commands: [
+    {
+      type: "expression.evaluate",
+      description: "Evaluate one safe real-valued scientific expression without recording it.",
+      permissions: [],
+      schema: {
+        type: "object",
+        required: ["expression"],
+        properties: {
+          expression: { type: "string", maxLength: 500 },
+          angleMode: { enum: ["deg", "rad", "grad"] },
+          ans: { type: ["string", "number"] },
+        },
+        additionalProperties: false,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(
+          command,
+          ["expression", "angleMode", "ans"],
+          commandIndex,
+        );
+        const expression = requireCommandString(
+          command.expression,
+          "expression",
+          commandIndex,
+          { maximumLength: 500 },
+        );
+        if (
+          command.angleMode !== undefined
+          && !Object.values(ANGLE_MODES).includes(command.angleMode)
+        ) {
+          throw new Error("angleMode must be deg, rad, or grad.");
+        }
+        if (
+          command.ans !== undefined
+          && typeof command.ans !== "string"
+          && typeof command.ans !== "number"
+        ) {
+          throw new Error("ans must be a string or number.");
+        }
+        const angleMode = command.angleMode ?? state.angleMode;
+        const evaluated = evaluateScientificExpression(math, expression, {
+          angleMode,
+          ans: command.ans ?? state.answer,
+        });
+        return {
+          value: {
+            expression,
+            display: evaluated.display,
+            angleMode,
+          },
+        };
+      },
+    },
+    {
+      type: "state.get",
+      description: "Read the current expression, answer, memory, settings, and history.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return { value: state };
+      },
+    },
+    {
+      type: "history.list",
+      description: "Read the locally stored calculation history.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return { value: state.history };
+      },
+    },
+  ],
+});

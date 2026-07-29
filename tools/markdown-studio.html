@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="A local Markdown, math, and LaTeX source studio with safe preview, versions, export, and optional local AI review.">
+  <title>Markdown &amp; LaTeX Studio · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=25">
+  <link rel="stylesheet" href="workspace-suite.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=13"></script>
+  <style>
+    .studio-layout { display:grid; grid-template-columns:190px minmax(0,1fr); min-height:calc(100vh - 108px); }
+    .studio-outline { padding:12px; overflow:auto; border-right:1px solid var(--line); }
+    .studio-outline button { display:block; width:100%; padding:5px; border:0; background:transparent; text-align:left; }
+    .studio-work { min-width:0; padding:12px; }
+    .studio-editor-layout { display:grid; grid-template-columns:1fr; min-height:calc(100vh - 250px); }
+    .studio-editor-layout[data-layout="split"] { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+    .studio-editor-layout[data-layout="preview"] .studio-source { display:none; }
+    .studio-source { display:grid; grid-template-columns:auto minmax(0,1fr); min-width:0; border:1px solid var(--line); background:#fffdf8; }
+    .studio-lines { min-width:44px; padding:10px 7px; overflow:hidden; border-right:1px solid var(--line); color:var(--ink-faint); background:#eee9de; font:11px/1.55 ui-monospace,monospace; text-align:right; user-select:none; }
+    .studio-textarea { width:100%; min-height:calc(100vh - 250px); padding:10px; resize:none; border:0; outline:0; background:#fffdf8; color:var(--ink); font:12px/1.55 ui-monospace,monospace; white-space:pre; overflow:auto; }
+    .studio-preview { min-width:0; padding:22px clamp(15px,4vw,52px); overflow:auto; border:1px solid var(--line); background:#fffdf8; color:var(--ink); }
+    .studio-preview h1,.studio-preview h2,.studio-preview h3 { letter-spacing:0; }
+    .studio-preview pre { overflow:auto; padding:12px; background:#1e1d1a; color:#f5f1e7; }
+    .studio-preview blockquote { margin-left:0; padding-left:14px; border-left:4px solid var(--ochre); }
+    .studio-preview .math-render { display:inline-block; max-width:100%; overflow:auto; }
+    .studio-preview .math-render[data-display="true"] { display:block; margin:18px 0; text-align:center; }
+    .studio-diff-line { display:block; padding:2px 5px; white-space:pre-wrap; font-family:ui-monospace,monospace; }
+    .studio-diff-add { background:#e2f0e7; }
+    .studio-diff-remove { background:#f8dfdc; text-decoration:line-through; }
+    @media (max-width:760px) { .studio-layout { grid-template-columns:1fr; } .studio-outline { max-height:130px; border-right:0; border-bottom:1px solid var(--line); } .studio-editor-layout[data-layout="split"] { grid-template-columns:1fr; } }
+    @media print { .site-header,.suite-topbar,.studio-outline,.studio-toolbar,.studio-source { display:none!important; } .studio-layout,.studio-editor-layout { display:block; } .studio-preview { border:0; padding:0; } }
+  </style>
+</head>
+<body class="suite-body">
+  <a class="skip-link" href="#studio-editor">Skip to document editor</a>
+  <header class="site-header"><a class="brand" href="../index.html" aria-label="Vital Pancakes home"><span class="brand-mark" aria-hidden="true">VP</span><span>Vital Pancakes</span></a><nav aria-label="Primary navigation"><a href="../workspace.html#area=everyday">Everyday Life</a><a href="../research-literature.html">Research &amp; Literature</a><a href="../workspace.html#area=studies">Studies &amp; Projects</a><a href="../workspace.html#area=tools" aria-current="page">Workspace</a><a href="../download-app.html">Download App</a></nav></header>
+  <div class="suite-shell">
+    <header class="suite-topbar">
+      <div><h1>Markdown &amp; LaTeX Studio</h1><p id="studio-save-status">Saved locally</p></div>
+      <div class="suite-actions">
+        <select class="suite-select" id="studio-document-select" aria-label="Document"></select>
+        <button class="button button-quiet" id="studio-new" type="button">New</button>
+        <button class="button button-quiet" id="studio-delete" type="button">Delete</button>
+        <button class="button button-quiet" id="studio-open" type="button">Open file</button>
+        <button class="button button-quiet" id="studio-backup" type="button">Backup</button>
+        <button class="button button-quiet" id="studio-import-backup" type="button">Restore backup</button>
+        <button class="button button-primary" id="studio-export-source" type="button">Export source</button>
+        <input id="studio-open-input" type="file" accept=".md,.markdown,.tex,text/markdown,text/plain" hidden>
+        <input id="studio-backup-input" type="file" accept="application/json,.json" hidden>
+      </div>
+    </header>
+    <div class="studio-layout">
+      <aside class="studio-outline"><strong class="suite-label">Outline</strong><nav id="studio-outline" aria-label="Document outline"></nav><hr><strong class="suite-label">Versions</strong><div id="studio-versions"></div></aside>
+      <main class="studio-work">
+        <div class="suite-toolbar studio-toolbar">
+          <select class="suite-select" id="studio-mode" aria-label="Document mode"><option value="markdown">Markdown</option><option value="markdown-math">Markdown + math</option><option value="latex">LaTeX source</option></select>
+          <div class="suite-inline" role="group" aria-label="Editor layout"><button class="button button-quiet" data-studio-layout="source" type="button">Source</button><button class="button button-quiet" data-studio-layout="split" type="button">Split</button><button class="button button-quiet" data-studio-layout="preview" type="button">Preview</button></div>
+          <input class="suite-input" id="studio-search" type="search" placeholder="Find">
+          <input class="suite-input" id="studio-replace" placeholder="Replace">
+          <button class="button button-quiet" id="studio-find-next" type="button">Find next</button>
+          <button class="button button-quiet" id="studio-replace-one" type="button">Replace</button>
+          <button class="button button-quiet" id="studio-replace-all" type="button">Replace all</button>
+          <button class="button button-quiet" id="studio-print" type="button">Print / PDF</button>
+          <button class="button button-quiet" id="studio-export-html" type="button">Safe HTML</button>
+          <span class="suite-status" id="studio-stats"></span>
+        </div>
+        <div class="suite-warning" id="studio-latex-note" hidden>KaTeX previews mathematical expressions only. This studio does not claim to compile arbitrary LaTeX documents, packages, bibliographies, or custom macros into PDF.</div>
+        <div class="studio-editor-layout" id="studio-editor-layout" data-layout="split">
+          <div class="studio-source"><div class="studio-lines" id="studio-lines" aria-hidden="true">1</div><textarea class="studio-textarea" id="studio-editor" spellcheck="false" aria-label="Document source"></textarea></div>
+          <article class="studio-preview" id="studio-preview" tabindex="0"></article>
+        </div>
+        <section class="suite-card studio-toolbar" style="margin-top:10px">
+          <strong>Local model assistance</strong>
+          <select class="suite-select" id="studio-model"><option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Small model</option><option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Medium model</option></select>
+          <button class="button button-quiet" id="studio-load-model" type="button">Load model</button>
+          <select class="suite-select" id="studio-action"><option value="explain">Explain selection</option><option value="clarity">Improve clarity</option><option value="syntax">Correct syntax</option><option value="outline">Generate outline</option><option value="expand">Expand section</option><option value="condense">Condense section</option><option value="table">Convert prose to table</option><option value="equations">Suggest equations/examples</option></select>
+          <label><input id="studio-approve-context" type="checkbox"> Use whole document when no selection</label>
+          <button class="button button-primary" id="studio-run-action" type="button">Review suggestion</button>
+          <span class="suite-status" id="studio-model-status">No model loaded</span>
+        </section>
+      </main>
+    </div>
+  </div>
+  <dialog class="suite-dialog" id="studio-review-dialog">
+    <div class="suite-dialog-inner">
+      <header class="suite-panel-header"><div><h2>Review Suggested Edit</h2><p>Nothing changes until accepted</p></div></header>
+      <div class="suite-two-pane"><article class="suite-card"><h3>Original</h3><pre id="studio-review-original" style="white-space:pre-wrap"></pre></article><article class="suite-card"><h3>Suggestion</h3><textarea class="suite-textarea" id="studio-review-suggestion"></textarea></article></div>
+      <div class="suite-card"><h3>Line diff</h3><div id="studio-review-diff"></div></div>
+      <div class="suite-dialog-actions"><button class="button button-quiet" id="studio-reject-edit" type="button">Reject</button><button class="button button-primary" id="studio-accept-edit" type="button">Accept replacement</button></div>
+    </div>
+  </dialog>
+  <script type="module" src="markdown-studio.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+.ai-center-body {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.ai-center-shell {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.ai-center-topbar {
+  flex: none;
+  min-height: 48px;
+  padding-block: 0.3rem;
+}
+
+.ai-model-controls {
+  flex-wrap: wrap;
+}
+
+.ai-model-controls select,
+#target-tool {
+  min-height: 2.35rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+
+.ai-status-badge {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ai-status-badge.is-ready {
+  border-color: #3f654c;
+  color: #294a34;
+}
+
+.ai-status-badge.is-error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.ai-model-progress {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(180px, 2fr);
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-soft);
+  font-size: 0.78rem;
+}
+
+.ai-model-progress progress {
+  width: 100%;
+}
+
+.ai-center-workspace {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(300px, 390px) minmax(0, 1fr);
+}
+
+.ai-command-panel {
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid var(--line-strong);
+  background: var(--paper);
+}
+
+.ai-panel-section {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ai-panel-section .eyebrow {
+  margin: 0;
+}
+
+.ai-panel-section label,
+.ai-section-heading strong {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.ai-panel-section textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 0.65rem;
+  border: 1px solid var(--line-strong);
+  background: #fffdf8;
+  line-height: 1.45;
+}
+
+#command-editor {
+  min-height: 250px;
+  font: 0.75rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  tab-size: 2;
+}
+
+.ai-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  color: var(--ink-soft);
+  font-weight: 500 !important;
+  line-height: 1.35;
+}
+
+.ai-wide-button {
+  justify-content: center;
+  width: 100%;
+}
+
+.ai-privacy-note,
+.ai-inline-status {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.ai-inline-status.is-error {
+  color: var(--danger);
+}
+
+.ai-inline-status.is-success {
+  color: #315d3f;
+}
+
+.ai-section-heading,
+.ai-command-actions,
+.ai-tool-stage > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.ai-command-actions {
+  justify-content: flex-end;
+}
+
+.ai-command-result {
+  max-height: 210px;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  font: 0.72rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.ai-command-result:empty {
+  display: none;
+}
+
+.ai-tool-stage {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto 1fr;
+  background: var(--surface);
+}
+
+.ai-tool-stage > header {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ai-tool-stage h2,
+.ai-tool-stage p {
+  margin: 0;
+}
+
+#tool-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--paper);
+}
+
+@media (max-width: 900px) {
+  .ai-center-body {
+    height: auto;
+    overflow: auto;
+  }
+
+  .ai-center-shell {
+    height: auto;
+  }
+
+  .ai-center-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-command-panel {
+    max-height: none;
+    border-right: 0;
+  }
+
+  .ai-tool-stage {
+    min-height: 75dvh;
+  }
+}

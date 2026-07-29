@@ -29,6 +29,11 @@ import {
   sanitizeAnnotations,
   undoAnnotationHistory,
 } from "./literature-analyzer-model.mjs";
+import {
+  installCurrentToolAiHost,
+  rejectUnknownCommandFields,
+  requireCommandString,
+} from "./current-tool-ai-adapter.mjs";
 
 const { PDFDocument, StandardFonts, rgb } = globalThis.PDFLib;
 globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc = "../vendor/pdf.worker.min.js";
@@ -1402,3 +1407,73 @@ document.addEventListener("keydown", (event) => {
 setMode("highlight");
 applyCommentLayout();
 updateControls();
+
+installCurrentToolAiHost({
+  id: "literature-analyzer",
+  title: "Literature Analyzer",
+  description: "Reads the active source and its locally stored annotation record.",
+  limitations: [
+    "AI commands cannot choose a local PDF or bypass embedded-site restrictions.",
+    "Highlight geometry editing and annotated-file export remain explicit page actions.",
+  ],
+  getSnapshot: () => ({
+    source: source ? { ...source } : null,
+    currentPage: source?.type === "pdf" ? currentPageNumber : null,
+    pageCount: pdfDocument?.numPages ?? null,
+    annotations: annotations.map((annotation) => ({ ...annotation })),
+    selectedAnnotationId,
+    commentLayout,
+  }),
+  getContext: (_options, snapshot) => ({
+    source: snapshot.source ? { loaded: true, type: snapshot.source.type } : null,
+    currentPage: snapshot.currentPage,
+    pageCount: snapshot.pageCount,
+    annotationCount: snapshot.annotations.length,
+    selectedAnnotationId: snapshot.selectedAnnotationId,
+    commentLayout: snapshot.commentLayout,
+  }),
+  commands: [
+    {
+      type: "source.describe",
+      description: "Describe the active PDF or website source.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return {
+          value: {
+            source: state.source,
+            currentPage: state.currentPage,
+            pageCount: state.pageCount,
+            annotationCount: state.annotations.length,
+          },
+        };
+      },
+    },
+    {
+      type: "annotations.list",
+      description: "List annotation geometry, colors, and attached comments.",
+      permissions: ["read-content"],
+      schema: {
+        type: "object",
+        properties: { annotationId: { type: "string" } },
+        additionalProperties: false,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["annotationId"], commandIndex);
+        const annotationId = command.annotationId === undefined
+          ? ""
+          : requireCommandString(
+            command.annotationId,
+            "annotationId",
+            commandIndex,
+            { maximumLength: 128 },
+          );
+        return {
+          value: annotationId
+            ? state.annotations.filter((annotation) => annotation.id === annotationId)
+            : state.annotations,
+        };
+      },
+    },
+  ],
+});

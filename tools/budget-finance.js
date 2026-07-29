@@ -13,6 +13,11 @@ import {
   createTaxDirectory,
   searchTaxDirectory,
 } from "./tax-directory.mjs?v=1";
+import {
+  installCurrentToolAiHost,
+  rejectUnknownCommandFields,
+  requireCommandRecord,
+} from "./current-tool-ai-adapter.mjs";
 
 const STORAGE_KEY = "vital-pancakes-budget-finance-v1";
 const TAB_NAMES = ["budget", "investment", "loan", "tax"];
@@ -606,3 +611,105 @@ function hideError(element) {
 function getFinanceError(error) {
   return error instanceof FinanceInputError ? error.message : "The projection could not be calculated.";
 }
+
+installCurrentToolAiHost({
+  id: "budget-finance",
+  title: "Budget & Finance",
+  description: "Runs deterministic budgeting, investment, loan, and tax-directory calculations.",
+  limitations: [
+    "Calculation commands do not alter saved financial data.",
+    "Saved financial values require explicit sensitive-data permission.",
+    "Results are educational calculations, not financial or tax advice.",
+  ],
+  getSnapshot: () => ({ state }),
+  getContext: (_options, snapshot) => ({
+    activeTab: snapshot.state.activeTab,
+    budgetItemCount: snapshot.state.budget.items.length,
+    hasInvestmentScenario: Boolean(snapshot.state.investment),
+    hasLoanScenario: Boolean(snapshot.state.loan),
+    taxDirectoryReviewed: TAX_DIRECTORY_REVIEWED_DATE,
+  }),
+  commands: [
+    {
+      type: "budget.calculate",
+      description: "Project caller-supplied recurring income and expenses over a date range.",
+      permissions: [],
+      schema: {
+        type: "object",
+        required: ["items", "range"],
+        properties: {
+          items: { type: "array" },
+          range: { type: "object" },
+        },
+        additionalProperties: false,
+      },
+      execute(_state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["items", "range"], commandIndex);
+        if (!Array.isArray(command.items)) throw new Error("items must be a list.");
+        const range = requireCommandRecord(command.range, "range", commandIndex);
+        return { value: calculateBudgetProjection(command.items, range) };
+      },
+    },
+    {
+      type: "investment.calculate",
+      description: "Calculate growth for caller-supplied investment assumptions.",
+      permissions: [],
+      execute(_state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["input"], commandIndex);
+        const input = requireCommandRecord(command.input, "input", commandIndex);
+        return { value: calculateInvestmentGrowth(input) };
+      },
+    },
+    {
+      type: "loan.calculate",
+      description: "Calculate a fixed-rate amortization schedule from caller-supplied assumptions.",
+      permissions: [],
+      execute(_state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["input"], commandIndex);
+        const input = requireCommandRecord(command.input, "input", commandIndex);
+        return { value: calculateLoanAmortization(input) };
+      },
+    },
+    {
+      type: "tax.search",
+      description: "Search the bundled official-government tax resource directory.",
+      permissions: [],
+      execute(_state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["filters"], commandIndex);
+        const filters = command.filters === undefined
+          ? {}
+          : requireCommandRecord(command.filters, "filters", commandIndex);
+        return {
+          value: {
+            reviewedDate: TAX_DIRECTORY_REVIEWED_DATE,
+            irsStateDirectoryUrl: IRS_STATE_DIRECTORY_URL,
+            records: searchTaxDirectory(taxDirectory, filters),
+          },
+        };
+      },
+    },
+    {
+      type: "state.get",
+      description: "Read all locally saved budget and scenario inputs.",
+      permissions: ["read-content", "sensitive-data"],
+      execute(snapshot, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return { value: snapshot.state };
+      },
+    },
+    {
+      type: "budget.current-project",
+      description: "Project the locally saved budget over its configured date range.",
+      permissions: ["read-content", "sensitive-data"],
+      execute(snapshot, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return {
+          value: calculateBudgetProjection(
+            snapshot.state.budget.items,
+            snapshot.state.budget,
+          ),
+        };
+      },
+    },
+  ],
+});

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="Turn a rough tool idea into a complete, reviewable Vital Pancakes design and coding-agent prompt.">
+  <title>Tool Designer &amp; Planner · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=25">
+  <link rel="stylesheet" href="workspace-suite.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=13"></script>
+  <style>
+    .designer-section { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+    .designer-section textarea { grid-column:1/-1; min-height:150px; }
+    .designer-issue[data-severity="error"] { border-left:5px solid var(--coral); }
+    .designer-issue[data-severity="warning"] { border-left:5px solid var(--ochre); }
+  </style>
+</head>
+<body class="suite-body">
+  <a class="skip-link" href="#tool-main">Skip to Tool Designer</a>
+  <header class="site-header"><a class="brand" href="../index.html" aria-label="Vital Pancakes home"><span class="brand-mark" aria-hidden="true">VP</span><span>Vital Pancakes</span></a><nav aria-label="Primary navigation"><a href="../workspace.html#area=everyday">Everyday Life</a><a href="../research-literature.html">Research &amp; Literature</a><a href="../workspace.html#area=studies">Studies &amp; Projects</a><a href="../workspace.html#area=tools" aria-current="page">Workspace</a><a href="../download-app.html">Download App</a></nav></header>
+  <div class="suite-shell">
+    <header class="suite-topbar">
+      <div><h1>Tool Designer &amp; Planner</h1><p id="designer-save-status">Local project workshop</p></div>
+      <div class="suite-actions"><button class="button button-quiet" id="designer-new" type="button">New</button><button class="button button-quiet" id="designer-duplicate" type="button">Duplicate</button><button class="button button-quiet" id="designer-open" type="button">Import</button><button class="button button-primary" id="designer-save" type="button">Save revision</button><input id="designer-open-input" type="file" accept=".vptool.json,application/json" hidden></div>
+    </header>
+    <div class="suite-layout">
+      <aside class="suite-rail">
+        <div class="suite-tabs" role="tablist" aria-label="Design workflow">
+          <button type="button" role="tab" aria-selected="true" aria-controls="designer-panel-brain" data-tab="brain">1. Brain Dump</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="designer-panel-clarify" data-tab="clarify">2. Clarify</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="designer-panel-design" data-tab="design">3. Design</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="designer-panel-review" data-tab="review">4. Review</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="designer-panel-export" data-tab="export">5. Export</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="designer-panel-projects" data-tab="projects">Projects</button>
+        </div>
+      </aside>
+      <main class="suite-main" id="tool-main">
+        <section class="suite-panel" id="designer-panel-brain" role="tabpanel">
+          <header class="suite-panel-header"><div><h2>Brain Dump</h2><p>No technical vocabulary required</p></div></header>
+          <form class="suite-card suite-form-grid" id="designer-brain-form">
+            <label class="suite-field"><span>Tool name</span><input name="name" required></label>
+            <label class="suite-field"><span>Starting template</span><select name="template" id="designer-template"></select></label>
+            <label class="suite-field suite-field-wide"><span>Rough idea</span><textarea name="brainDump" required placeholder="Describe what you wish existed, how you imagine using it, and what would make it useful."></textarea></label>
+            <label class="suite-field suite-field-wide"><span>Reference notes (treated as untrusted text only)</span><input id="designer-reference-file" type="file" accept=".txt,.md,.json,text/plain,application/json" multiple></label>
+            <div id="designer-reference-list"></div>
+            <button class="button button-primary" type="submit">Save idea</button>
+          </form>
+        </section>
+        <section class="suite-panel" id="designer-panel-clarify" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Clarify</h2><p>Focused decisions only</p></div><button class="button button-primary" id="designer-generate" type="button">Generate design</button></header>
+          <form class="suite-card suite-form-grid" id="designer-answers-form">
+            <label class="suite-field"><span>Who uses it?</span><input name="users" placeholder="Me, household, researchers…"></label>
+            <label class="suite-field suite-field-wide"><span>What should it accomplish?</span><textarea name="purpose"></textarea></label>
+            <label class="suite-field"><span>Inputs</span><textarea name="inputs" placeholder="One per line"></textarea></label>
+            <label class="suite-field"><span>Outputs</span><textarea name="outputs" placeholder="One per line"></textarea></label>
+            <label class="suite-field"><span>Privacy boundary</span><select name="privacy"><option value="browser-local">Entirely browser-local</option><option value="explicit external requests">Local except explicit external requests</option><option value="backend permitted">A backend is explicitly permitted</option></select></label>
+            <label class="suite-field"><span>Storage</span><input name="storage"></label>
+            <label class="suite-field"><span>Platform limits</span><input name="platform"></label>
+            <label class="suite-field suite-field-wide"><span>Must-have behavior</span><textarea name="mustHave" placeholder="One requirement per line"></textarea></label>
+            <label class="suite-field suite-field-wide"><span>Explicit non-goals</span><textarea name="exclusions" placeholder="What should this not become?"></textarea></label>
+          </form>
+          <section class="suite-card">
+            <div class="suite-inline"><strong>Optional local model refinement</strong><select class="suite-select" id="designer-model"><option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Small model</option><option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Medium model</option></select><button class="button button-quiet" id="designer-load-model" type="button">Load model</button><label><input id="designer-use-model" type="checkbox"> Refine generated design locally</label><span class="suite-status" id="designer-model-status">No model loaded</span></div>
+          </section>
+        </section>
+        <section class="suite-panel" id="designer-panel-design" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Design</h2><p>Edit freely · lock stable requirements</p></div><button class="button button-quiet" id="designer-regenerate" type="button">Regenerate unlocked</button></header>
+          <div class="suite-grid" id="designer-design-sections"></div>
+        </section>
+        <section class="suite-panel" id="designer-panel-review" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Review</h2><p>Contradictions, gaps, scope, assumptions</p></div><button class="button button-primary" id="designer-run-review" type="button">Review now</button></header>
+          <div class="suite-grid" id="designer-review-issues"></div>
+          <div class="suite-card"><h3>Revision comparison</h3><div class="suite-form-grid"><label class="suite-field"><span>Earlier revision</span><select id="designer-revision-a"></select></label><label class="suite-field"><span>Later revision</span><select id="designer-revision-b"></select></label></div><pre id="designer-revision-diff" style="white-space:pre-wrap"></pre></div>
+        </section>
+        <section class="suite-panel" id="designer-panel-export" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Export</h2><p>Plan, coding prompt, project, or handoff</p></div></header>
+          <div class="suite-grid">
+            <article class="suite-card"><h3>Human-readable plan</h3><button class="button button-primary" data-designer-export="plan" type="button">Markdown plan</button></article>
+            <article class="suite-card"><h3>Implementation prompt</h3><button class="button button-primary" data-designer-export="prompt" type="button">Standalone prompt</button></article>
+            <article class="suite-card"><h3>Project package</h3><button class="button button-primary" data-designer-export="project" type="button">.vptool.json</button></article>
+            <article class="suite-card"><h3>Compact handoff</h3><button class="button button-primary" data-designer-export="summary" type="button">Handoff summary</button></article>
+          </div>
+          <label class="suite-field"><span>Prompt preview</span><textarea id="designer-prompt-preview" style="min-height:420px"></textarea></label>
+        </section>
+        <section class="suite-panel" id="designer-panel-projects" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Saved Projects</h2><p>Search, reopen, duplicate, delete</p></div><input class="suite-input" id="designer-project-search" type="search" placeholder="Search projects"></header>
+          <ul class="suite-list" id="designer-project-list"></ul>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="tool-designer.js?v=2"></script>
+</body>
+</html>

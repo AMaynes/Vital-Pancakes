@@ -17,6 +17,10 @@
 
 import { createId } from "../app/store.js";
 import { removePlacementById } from "./pdf-signer-placements.mjs";
+import {
+  installCurrentToolAiHost,
+  rejectUnknownCommandFields,
+} from "./current-tool-ai-adapter.mjs";
 
 const { PDFDocument } = globalThis.PDFLib;
 globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc = "../vendor/pdf.worker.min.js";
@@ -518,3 +522,57 @@ signatureLayer.addEventListener("pointerup", endPlacementGesture);
 signatureLayer.addEventListener("pointercancel", endPlacementGesture);
 dateInput.value = getTodayInputValue();
 updateControls();
+
+installCurrentToolAiHost({
+  id: "pdf-signer",
+  title: "PDF Signer",
+  description: "Describes the locally opened PDF and its current field placements.",
+  limitations: [
+    "AI commands cannot choose a local PDF file.",
+    "Signature placement changes and signed-PDF export remain explicit user actions.",
+    "PDF bytes are never included in AI context.",
+  ],
+  getSnapshot: () => ({
+    document: {
+      loaded: Boolean(pdfDocument),
+      name: pdfDocument ? pdfFileName : "",
+      currentPage: pdfDocument ? currentPageNumber : 0,
+      pageCount: pdfDocument?.numPages ?? 0,
+    },
+    placements: placements.map((placement) => ({ ...placement })),
+    selectedPlacementId,
+  }),
+  getContext: (_options, snapshot) => ({
+    document: {
+      loaded: snapshot.document.loaded,
+      currentPage: snapshot.document.currentPage,
+      pageCount: snapshot.document.pageCount,
+    },
+    placementCount: snapshot.placements.length,
+    placementKinds: Object.fromEntries(["signature", "date"].map((kind) => [
+      kind,
+      snapshot.placements.filter((placement) => placement.kind === kind).length,
+    ])),
+    selectedPlacementId: snapshot.selectedPlacementId,
+  }),
+  commands: [
+    {
+      type: "document.describe",
+      description: "Describe the open PDF without exposing its bytes.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return { value: state.document };
+      },
+    },
+    {
+      type: "placements.list",
+      description: "List placed signature and date fields, including their text and normalized geometry.",
+      permissions: ["read-content", "sensitive-data"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return { value: state.placements };
+      },
+    },
+  ],
+});

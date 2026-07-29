@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="Find evidence-grounded connections in selected Vital Pancakes backups using a local WebLLM model.">
+  <title>Inference Tool · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="stylesheet" href="../workspace.css?v=25">
+  <link rel="stylesheet" href="workspace-suite.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=13"></script>
+  <style>
+    .inference-kind { border-left:5px solid var(--forest); }
+    .inference-kind[data-kind="hypothesis"] { border-left-color:var(--ochre); }
+    .inference-kind[data-kind="contradiction"] { border-left-color:var(--coral); }
+    .inference-kind[data-kind="inference"] { border-left-color:#5a668b; }
+    .inference-evidence { margin-top:9px; padding:9px; border-left:2px solid var(--line-strong); font-size:11px; }
+  </style>
+</head>
+<body class="suite-body">
+  <a class="skip-link" href="#tool-main">Skip to Inference Tool</a>
+  <header class="site-header"><a class="brand" href="../index.html" aria-label="Vital Pancakes home"><span class="brand-mark" aria-hidden="true">VP</span><span>Vital Pancakes</span></a><nav aria-label="Primary navigation"><a href="../workspace.html#area=everyday">Everyday Life</a><a href="../research-literature.html">Research &amp; Literature</a><a href="../workspace.html#area=studies">Studies &amp; Projects</a><a href="../workspace.html#area=tools" aria-current="page">Workspace</a><a href="../download-app.html">Download App</a></nav></header>
+  <div class="suite-shell">
+    <header class="suite-topbar">
+      <div><h1>Inference Tool</h1><p>Local knowledge connection finder</p></div>
+      <div class="suite-actions">
+        <select class="suite-select" id="inference-model"><option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Small local model</option><option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Medium local model</option></select>
+        <button class="button button-primary" id="inference-load-model" type="button">Load model</button>
+        <button class="button button-quiet" id="inference-unload-model" type="button">Unload</button>
+      </div>
+    </header>
+    <div class="suite-layout">
+      <aside class="suite-rail">
+        <div class="suite-tabs" role="tablist" aria-label="Inference workflow">
+          <button type="button" role="tab" aria-selected="true" aria-controls="inference-panel-import" data-tab="import">1. Import</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="inference-panel-index" data-tab="index">2. Index</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="inference-panel-analyze" data-tab="analyze">3. Analyze</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="inference-panel-results" data-tab="results">4. Results</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="inference-panel-sessions" data-tab="sessions">Sessions</button>
+        </div>
+      </aside>
+      <main class="suite-main" id="tool-main">
+        <section class="suite-panel" id="inference-panel-import" role="tabpanel">
+          <header class="suite-panel-header"><div><h2>Import a Backup</h2><p>User-selected collections only</p></div></header>
+          <div class="suite-warning"><strong>Nothing is uploaded.</strong> Encrypted/private sections, passwords, binary file contents, and sensitive metadata are excluded by default and cannot be selected here.</div>
+          <label class="suite-drop-zone" id="inference-drop-zone"><span><strong>Choose a Vital Pancakes JSON backup</strong><br><small>Large imports are indexed locally and may use substantial browser storage.</small></span><input id="inference-file" type="file" accept=".json,application/json"></label>
+          <div class="suite-card" id="inference-collections" hidden><h3>Collections allowed for analysis</h3><div class="suite-grid suite-grid-tight" id="inference-collection-list"></div></div>
+        </section>
+        <section class="suite-panel" id="inference-panel-index" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Local Search Index</h2><p id="inference-index-summary">No index</p></div><button class="button button-primary" id="inference-build-index" type="button">Build index</button></header>
+          <div class="suite-card"><p id="inference-index-progress-text">Select collections from an imported backup.</p><progress class="suite-progress" id="inference-index-progress" max="1" value="0"></progress><div class="suite-actions"><button class="button button-quiet" id="inference-cancel-index" type="button">Cancel</button><button class="button button-quiet suite-danger" id="inference-delete-index" type="button">Delete derived index</button></div></div>
+          <div class="suite-table-wrap"><table class="suite-table"><thead><tr><th>Source</th><th>Collection</th><th>Chunks</th></tr></thead><tbody id="inference-source-table"></tbody></table></div>
+        </section>
+        <section class="suite-panel" id="inference-panel-analyze" role="tabpanel" hidden>
+          <header class="suite-panel-header"><div><h2>Evidence-Grounded Analysis</h2><p id="inference-model-status">No local model loaded</p></div></header>
+          <form class="suite-card suite-form-grid" id="inference-analysis-form">
+            <label class="suite-field"><span>Mode</span><select name="mode"><option value="relationships">Relationships between subjects</option><option value="themes">Recurring themes</option><option value="evidence">Supporting and conflicting evidence</option><option value="duplicates">Duplicate or overlapping notes</option><option value="missing-links">Missing links and unanswered questions</option><option value="timeline">Timeline or causal hypotheses</option><option value="study-ideas">Potential study ideas</option><option value="why-connected">Why might these be connected?</option><option value="question">Ask the knowledge base</option></select></label>
+            <label class="suite-field suite-field-wide"><span>Subjects or question</span><textarea name="question" required placeholder="What relationship should be investigated?"></textarea></label>
+            <label class="suite-field"><span>Evidence chunks</span><input name="limit" type="number" min="3" max="20" value="8"></label>
+            <button class="button button-primary" id="inference-run" type="submit">Analyze locally</button>
+            <button class="button button-quiet" id="inference-cancel-analysis" type="button">Cancel</button>
+          </form>
+          <div class="suite-card"><p id="inference-generation-status">Load a model after building an index. Imported content is treated as untrusted data, never model instructions.</p><progress class="suite-progress" id="inference-model-progress" max="1" value="0"></progress><pre id="inference-stream" style="white-space:pre-wrap;max-height:220px;overflow:auto"></pre></div>
+          <div class="suite-card"><h3>Retrieved evidence</h3><ul class="suite-list" id="inference-evidence-preview"></ul></div>
+        </section>
+        <section class="suite-panel" id="inference-panel-results" role="tabpanel" hidden><header class="suite-panel-header"><div><h2>Inferences</h2><p>Review before accepting or converting</p></div><button class="button button-quiet" id="inference-export" type="button">Export session</button></header><div class="suite-grid" id="inference-results"></div></section>
+        <section class="suite-panel" id="inference-panel-sessions" role="tabpanel" hidden><header class="suite-panel-header"><div><h2>Saved Sessions</h2><p>Separate from source data</p></div></header><ul class="suite-list" id="inference-sessions"></ul></section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="inference.js?v=2"></script>
+</body>
+</html>

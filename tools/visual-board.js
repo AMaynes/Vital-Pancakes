@@ -103,10 +103,38 @@ import {
   rotatePoint,
   snapValue,
 } from "./visual-board-geometry.mjs?v=8";
+import {
+  cropToAspect,
+  fillCropToFrame,
+  fitFrameToCrop,
+  getImageDrawArguments,
+  mapCropToReplacement,
+  normalizeImageCrop,
+  resetImageCrop,
+} from "./visual-board-image.mjs?v=1";
+import {
+  flipBoardSelection,
+  getAlignmentSnap,
+} from "./visual-board-transform.mjs?v=1";
+import {
+  FLOOR_PLAN_ELEMENTS,
+  FLOOR_PLAN_TEMPLATES,
+  createFloorPlanElement,
+  createFloorPlanTemplate,
+  formatFloorPlanDimension,
+  normalizeFloorPlanSettings,
+} from "./visual-board-floor-plan.mjs?v=1";
+import { installAiPageHost } from "../app/ai-page-host.mjs";
+import { AI_PERMISSION_LEVELS } from "../app/ai-command-protocol.mjs";
+import {
+  createVisualBoardAiAdapter,
+  getVisualBoardAiCapabilities,
+  getVisualBoardAiExamples,
+} from "./visual-board-ai-adapter.mjs?v=2";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
-const BOARD_VERSION = 10;
+const BOARD_VERSION = 12;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -226,10 +254,40 @@ const interpolationProgressBar = document.querySelector("#interpolation-progress
 const interpolationError = document.querySelector("#interpolation-error");
 const confirmInterpolationButton = document.querySelector("#confirm-interpolation");
 const cancelInterpolationButton = document.querySelector("#cancel-interpolation");
+const aiCommandsButton = document.querySelector("#open-ai-commands");
+const aiCommandsDialog = document.querySelector("#ai-commands-dialog");
+const aiCommandsEditor = document.querySelector("#ai-commands-editor");
+const aiCommandsStatus = document.querySelector("#ai-commands-status");
+const aiCommandsResult = document.querySelector("#ai-commands-result");
+const aiCommandsExample = document.querySelector("#ai-commands-example");
+const flipHorizontalButton = document.querySelector("#flip-horizontal");
+const flipVerticalButton = document.querySelector("#flip-vertical");
+const mirrorTextToggle = document.querySelector("#mirror-text-toggle");
+const editImageButton = document.querySelector("#edit-image");
+const floorPlanToggleButton = document.querySelector("#toggle-floor-plan");
+const floorPlanPanel = document.querySelector("#floor-plan-panel");
+const floorPlanUnits = document.querySelector("#floor-plan-units");
+const floorPlanScale = document.querySelector("#floor-plan-scale");
+const floorPlanWallThickness = document.querySelector("#floor-plan-wall-thickness");
+const floorPlanGridSize = document.querySelector("#floor-plan-grid-size");
+const floorPlanGuides = document.querySelector("#floor-plan-guides");
+const imageEditDialog = document.querySelector("#image-edit-dialog");
+const imageEditForm = document.querySelector("#image-edit-form");
+const imageCropStage = document.querySelector("#image-crop-stage");
+const imageCropPreview = document.querySelector("#image-crop-preview");
+const imageCropBox = document.querySelector("#image-crop-box");
+const imageCropAspect = document.querySelector("#image-crop-aspect");
+const imageWidthInput = document.querySelector("#image-frame-width");
+const imageHeightInput = document.querySelector("#image-frame-height");
+const imageDimensionsLock = document.querySelector("#image-dimensions-lock");
+const imageRotationInput = document.querySelector("#image-rotation");
+const imageReplaceInput = document.querySelector("#image-replace-file");
+const imageEditError = document.querySelector("#image-edit-error");
 
 let board = loadBoard();
 let boardLibrary = loadVisualBoardLibrary();
 let viewport = { ...board.view };
+let lastSavedBoardContentSignature = getBoardContentSignature(board);
 let history = [];
 let future = [];
 let activeTool = "select";
@@ -258,6 +316,10 @@ let interpolationRequest = null;
 let interpolationAbortController = null;
 let interpolationInProgress = false;
 let interpolationReturnFocus = null;
+let floorPlanPanelOpen = Boolean(board.settings.floorPlan?.enabled);
+let imageEditSession = null;
+let alignmentGuides = [];
+let mirrorTextOnFlip = false;
 let shapeToolChoices = {
   "2d": shape2dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
   "3d": shape3dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
@@ -275,6 +337,65 @@ function finiteNumber(value, fallback) {
   return Number.isFinite(Number(value)) ? Number(value) : fallback;
 }
 
+function normalizeBoardSettings(value = {}) {
+  return {
+    grid: value.grid ?? true,
+    snap: value.snap ?? false,
+    floorPlan: normalizeFloorPlanSettings(value.floorPlan),
+  };
+}
+
+function normalizeObjectSemantic(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const tags = [...new Set((Array.isArray(value.tags) ? value.tags : [])
+    .map((tag) => String(tag).trim().slice(0, 48))
+    .filter(Boolean))]
+    .slice(0, 20);
+  const semantic = {
+    label: String(value.label ?? "").trim().slice(0, 240),
+    role: String(value.role ?? "").trim().slice(0, 80),
+    tags,
+    generatedBy: String(value.generatedBy ?? "").trim().slice(0, 80),
+    diagramId: String(value.diagramId ?? "").trim().slice(0, 128),
+    clientRef: String(value.clientRef ?? "").trim().slice(0, 128),
+    sourceId: String(value.sourceId ?? "").trim().slice(0, 128),
+    targetId: String(value.targetId ?? "").trim().slice(0, 128),
+  };
+  const compact = Object.fromEntries(Object.entries(semantic).filter(([, item]) => (
+    Array.isArray(item) ? item.length : item
+  )));
+  return Object.keys(compact).length ? compact : null;
+}
+
+function getBoardContentSignature(candidate) {
+  return JSON.stringify({
+    objects: candidate.objects,
+    assets: candidate.assets,
+    rig: candidate.rig,
+    animation: candidate.animation,
+    settings: candidate.settings,
+  });
+}
+
+function getAiContextRevision() {
+  const context = JSON.stringify({
+    contentRevision: board.revision ?? 0,
+    selectedIds: selectedObjects.map((object) => object.id).sort(),
+    viewport: [
+      Math.round(viewport.x * 100),
+      Math.round(viewport.y * 100),
+      Math.round(viewport.zoom * 10_000),
+    ],
+    libraryIds: boardLibrary.items.map((item) => item.id).sort(),
+  });
+  let hash = 2_166_136_261;
+  for (let index = 0; index < context.length; index += 1) {
+    hash ^= context.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return hash >>> 0;
+}
+
 /**
  * Loads saved content and migrates legacy notes and shape geometry without
  * changing the established localStorage namespace.
@@ -290,16 +411,14 @@ function loadBoard() {
       .filter(Boolean);
     return {
       version: BOARD_VERSION,
+      revision: Math.max(0, Math.floor(finiteNumber(savedBoard?.revision, 0))),
       objects,
       assets: savedBoard?.assets && typeof savedBoard.assets === "object"
         ? savedBoard.assets
         : {},
       rig: normalizeRig(savedBoard?.rig, objects),
       animation: normalizeAnimation(savedBoard?.animation),
-      settings: {
-        grid: savedBoard?.settings?.grid ?? true,
-        snap: savedBoard?.settings?.snap ?? false,
-      },
+      settings: normalizeBoardSettings(savedBoard?.settings),
       view: {
         x: finiteNumber(savedBoard?.view?.x, 0),
         y: finiteNumber(savedBoard?.view?.y, 0),
@@ -315,11 +434,16 @@ function loadBoard() {
 function createEmptyBoard() {
   return {
     version: BOARD_VERSION,
+    revision: 0,
     objects: [],
     assets: {},
     rig: createEmptyRig(),
     animation: normalizeAnimation(),
-    settings: { grid: true, snap: false },
+    settings: {
+      grid: true,
+      snap: false,
+      floorPlan: normalizeFloorPlanSettings(),
+    },
     view: { x: 0, y: 0, zoom: 1 },
   };
 }
@@ -349,10 +473,11 @@ function normalizeObject(rawObject, options = {}) {
   if (!rawObject || typeof rawObject !== "object") return null;
 
   const type = rawObject.type === "note" ? "textbox" : rawObject.type;
+  const isFloorPlanWall = rawObject.semantic?.role === "floor-plan-wall";
   const strokeWidth = clamp(
     finiteNumber(rawObject.strokeWidth ?? rawObject.width, 3),
     1,
-    24,
+    isFloorPlanWall ? 240 : 24,
   );
   const common = {
     id: rawObject.id || createId(),
@@ -362,6 +487,9 @@ function normalizeObject(rawObject, options = {}) {
     dashPattern: DASH_PATTERNS.has(rawObject.dashPattern) ? rawObject.dashPattern : "solid",
     locked: Boolean(rawObject.locked),
     dimensionsLocked: Boolean(rawObject.dimensionsLocked),
+    ...(normalizeObjectSemantic(rawObject.semantic)
+      ? { semantic: normalizeObjectSemantic(rawObject.semantic) }
+      : {}),
     ...(typeof rawObject.groupId === "string" && rawObject.groupId
       ? { groupId: rawObject.groupId }
       : {}),
@@ -494,6 +622,8 @@ function normalizeObject(rawObject, options = {}) {
   }
 
   if (type === "image" && rawObject.assetId) {
+    const sourceWidth = Math.max(0, finiteNumber(rawObject.sourceWidth, 0));
+    const sourceHeight = Math.max(0, finiteNumber(rawObject.sourceHeight, 0));
     return normalizeShape({
       ...common,
       x: finiteNumber(rawObject.x, 0),
@@ -503,6 +633,17 @@ function normalizeObject(rawObject, options = {}) {
       rotation: finiteNumber(rawObject.rotation, 0),
       assetId: rawObject.assetId,
       name: typeof rawObject.name === "string" ? rawObject.name : "Dropped image",
+      ...(sourceWidth && sourceHeight
+        ? {
+          sourceWidth,
+          sourceHeight,
+          crop: rawObject.crop
+            ? normalizeImageCrop(rawObject.crop, sourceWidth, sourceHeight)
+            : resetImageCrop(sourceWidth, sourceHeight),
+        }
+        : {}),
+      flipX: Boolean(rawObject.flipX),
+      flipY: Boolean(rawObject.flipY),
     });
   }
 
@@ -511,12 +652,19 @@ function normalizeObject(rawObject, options = {}) {
 
 function saveBoard() {
   board.view = { ...viewport };
+  const previousRevision = board.revision ?? 0;
+  const nextContentSignature = getBoardContentSignature(board);
+  if (nextContentSignature !== lastSavedBoardContentSignature) {
+    board.revision = previousRevision + 1;
+  }
   try {
     localStorage.setItem(BOARD_KEY, JSON.stringify(board));
+    lastSavedBoardContentSignature = nextContentSignature;
     saveStatus.textContent = "Saved locally";
     saveStatus.classList.remove("has-error");
     return true;
   } catch (error) {
+    board.revision = previousRevision;
     console.error("Unable to save the visual board.", error);
     saveStatus.textContent = "Storage is full";
     saveStatus.classList.add("has-error");
@@ -538,7 +686,12 @@ function announceStatus(message) {
 }
 
 function checkpoint() {
-  history.push(createBoardHistoryEntry(board.objects, selectedObjects, board.rig));
+  history.push(createBoardHistoryEntry(
+    board.objects,
+    selectedObjects,
+    board.rig,
+    { settings: board.settings, view: viewport },
+  ));
   if (history.length > HISTORY_LIMIT) history.shift();
   future = [];
   updateHistoryControls();
@@ -578,24 +731,33 @@ function worldToScreen(worldPoint) {
 
 function getSnappedPoint(point) {
   if (!board.settings.snap) return point;
+  const gridSize = getGridSize();
   return {
-    x: snapValue(point.x, GRID_SIZE),
-    y: snapValue(point.y, GRID_SIZE),
+    x: snapValue(point.x, gridSize),
+    y: snapValue(point.y, gridSize),
   };
+}
+
+function getGridSize() {
+  return board.settings.floorPlan?.enabled
+    ? normalizeFloorPlanSettings(board.settings.floorPlan).gridSize
+    : GRID_SIZE;
 }
 
 function getCubeDepth(object, snapToGrid = false) {
   const minimumDimension = Math.min(Math.abs(object.w), Math.abs(object.h));
   if (!snapToGrid) return Math.max(1, minimumDimension * 0.22);
-  const gridSizedDimension = Math.max(GRID_SIZE * 2, minimumDimension);
-  const desiredDepth = snapValue(gridSizedDimension * 0.22, GRID_SIZE);
-  return clamp(desiredDepth, GRID_SIZE, gridSizedDimension - GRID_SIZE);
+  const gridSize = getGridSize();
+  const gridSizedDimension = Math.max(gridSize * 2, minimumDimension);
+  const desiredDepth = snapValue(gridSizedDimension * 0.22, gridSize);
+  return clamp(desiredDepth, gridSize, gridSizedDimension - gridSize);
 }
 
 function alignCubeToGrid(object) {
   if (object.shapeKind !== "cube" || !board.settings.snap) return object;
-  object.w = Math.max(GRID_SIZE * 2, object.w);
-  object.h = Math.max(GRID_SIZE * 2, object.h);
+  const gridSize = getGridSize();
+  object.w = Math.max(gridSize * 2, object.w);
+  object.h = Math.max(gridSize * 2, object.h);
   const depth = getCubeDepth(object, true);
   object.shapeDepthX = depth;
   object.shapeDepthY = depth;
@@ -622,6 +784,7 @@ function drawBoard(includeInteractionUi = true) {
 
   board.objects.forEach(drawObject);
   if (workingObject) drawObject(workingObject);
+  drawAlignmentGuides();
 
   if (includeInteractionUi) {
     drawMarquee();
@@ -633,12 +796,13 @@ function drawBoard(includeInteractionUi = true) {
 }
 
 function drawGrid(pixelRatio) {
+  const gridSize = getGridSize();
   const cssWidth = canvas.width / pixelRatio;
   const cssHeight = canvas.height / pixelRatio;
   const worldRight = viewport.x + cssWidth / viewport.zoom;
   const worldBottom = viewport.y + cssHeight / viewport.zoom;
-  const firstX = Math.floor(viewport.x / GRID_SIZE) * GRID_SIZE;
-  const firstY = Math.floor(viewport.y / GRID_SIZE) * GRID_SIZE;
+  const firstX = Math.floor(viewport.x / gridSize) * gridSize;
+  const firstY = Math.floor(viewport.y / gridSize) * gridSize;
 
   context.save();
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -646,15 +810,15 @@ function drawGrid(pixelRatio) {
 
   const drawGridTier = (major) => {
     context.beginPath();
-    for (let worldX = firstX; worldX <= worldRight; worldX += GRID_SIZE) {
-      const isMajor = Math.round(worldX / GRID_SIZE) % 5 === 0;
+    for (let worldX = firstX; worldX <= worldRight; worldX += gridSize) {
+      const isMajor = Math.round(worldX / gridSize) % 5 === 0;
       if (isMajor !== major) continue;
       const screenX = (worldX - viewport.x) * viewport.zoom;
       context.moveTo(screenX, 0);
       context.lineTo(screenX, cssHeight);
     }
-    for (let worldY = firstY; worldY <= worldBottom; worldY += GRID_SIZE) {
-      const isMajor = Math.round(worldY / GRID_SIZE) % 5 === 0;
+    for (let worldY = firstY; worldY <= worldBottom; worldY += gridSize) {
+      const isMajor = Math.round(worldY / gridSize) % 5 === 0;
       if (isMajor !== major) continue;
       const screenY = (worldY - viewport.y) * viewport.zoom;
       context.moveTo(0, screenY);
@@ -664,7 +828,7 @@ function drawGrid(pixelRatio) {
     context.stroke();
   };
 
-  if (GRID_SIZE * viewport.zoom >= 9) drawGridTier(false);
+  if (gridSize * viewport.zoom >= 9) drawGridTier(false);
   drawGridTier(true);
   context.restore();
 }
@@ -712,6 +876,9 @@ function drawObject(object) {
         drawImageObject(object);
       }
     });
+  }
+  if (object.semantic?.role === "floor-plan-dimension") {
+    drawFloorPlanDimensionLabel(object);
   }
   context.restore();
 }
@@ -796,6 +963,10 @@ function drawConnector(object) {
 }
 
 function drawTextbox(object) {
+  withObjectFlip(object, () => drawTextboxContent(object));
+}
+
+function drawTextboxContent(object) {
   const text = object.text.trim() ? object.text : "blank textbox";
   const isPlaceholder = !object.text.trim();
   const padding = 6;
@@ -884,7 +1055,16 @@ function drawColoredText(text, textStart, x, y, object, isPlaceholder) {
 function drawImageObject(object) {
   const image = getCachedImage(object);
   if (image?.complete && image.naturalWidth) {
-    context.drawImage(image, object.x, object.y, object.w, object.h);
+    withObjectFlip(object, () => {
+      context.drawImage(
+        image,
+        ...getImageDrawArguments(
+          object,
+          object.sourceWidth || image.naturalWidth,
+          object.sourceHeight || image.naturalHeight,
+        ),
+      );
+    });
     return;
   }
 
@@ -896,6 +1076,71 @@ function drawImageObject(object) {
   context.fillStyle = "#8d8d8d";
   context.font = `${12 / viewport.zoom}px sans-serif`;
   context.fillText("Loading image…", object.x + 10 / viewport.zoom, object.y + 18 / viewport.zoom);
+  context.restore();
+}
+
+function withObjectFlip(object, callback) {
+  if (!object.flipX && !object.flipY) {
+    callback();
+    return;
+  }
+  const center = getShapeCenter(object);
+  context.save();
+  context.translate(center.x, center.y);
+  context.scale(object.flipX ? -1 : 1, object.flipY ? -1 : 1);
+  context.translate(-center.x, -center.y);
+  callback();
+  context.restore();
+}
+
+function drawFloorPlanDimensionLabel(object) {
+  const center = {
+    x: (object.x + object.endX) / 2,
+    y: (object.y + object.endY) / 2,
+  };
+  const label = formatFloorPlanDimension(
+    { x: object.x, y: object.y },
+    { x: object.endX, y: object.endY },
+    board.settings.floorPlan,
+  );
+  context.save();
+  context.setLineDash([]);
+  context.font = `${12 / viewport.zoom}px Arial, Helvetica, sans-serif`;
+  context.textAlign = "center";
+  context.textBaseline = "bottom";
+  const width = context.measureText(label).width + 8 / viewport.zoom;
+  context.fillStyle = "#ffffff";
+  context.fillRect(
+    center.x - width / 2,
+    center.y - 18 / viewport.zoom,
+    width,
+    16 / viewport.zoom,
+  );
+  context.fillStyle = "#24231f";
+  context.fillText(label, center.x, center.y - 4 / viewport.zoom);
+  context.restore();
+}
+
+function drawAlignmentGuides() {
+  if (!alignmentGuides.length) return;
+  const bounds = canvas.getBoundingClientRect();
+  const worldRight = viewport.x + bounds.width / viewport.zoom;
+  const worldBottom = viewport.y + bounds.height / viewport.zoom;
+  context.save();
+  context.strokeStyle = "#23766f";
+  context.lineWidth = 1 / viewport.zoom;
+  context.setLineDash([5 / viewport.zoom, 4 / viewport.zoom]);
+  alignmentGuides.forEach((guide) => {
+    context.beginPath();
+    if (guide.axis === "vertical") {
+      context.moveTo(guide.value, viewport.y);
+      context.lineTo(guide.value, worldBottom);
+    } else {
+      context.moveTo(viewport.x, guide.value);
+      context.lineTo(worldRight, guide.value);
+    }
+    context.stroke();
+  });
   context.restore();
 }
 
@@ -1712,8 +1957,28 @@ function updateMoveInteraction(screenPoint, worldPoint) {
   let deltaX = worldPoint.x - interaction.startWorld.x;
   let deltaY = worldPoint.y - interaction.startWorld.y;
   if (board.settings.snap) {
-    deltaX = snapValue(interaction.initialBounds.x + deltaX, GRID_SIZE) - interaction.initialBounds.x;
-    deltaY = snapValue(interaction.initialBounds.y + deltaY, GRID_SIZE) - interaction.initialBounds.y;
+    const gridSize = getGridSize();
+    deltaX = snapValue(interaction.initialBounds.x + deltaX, gridSize) - interaction.initialBounds.x;
+    deltaY = snapValue(interaction.initialBounds.y + deltaY, gridSize) - interaction.initialBounds.y;
+  }
+  alignmentGuides = [];
+  if (board.settings.floorPlan?.enabled && board.settings.floorPlan.alignmentGuides !== false) {
+    const movingIds = new Set(interaction.objects.map((object) => object.id));
+    const candidateBounds = {
+      ...interaction.initialBounds,
+      x: interaction.initialBounds.x + deltaX,
+      y: interaction.initialBounds.y + deltaY,
+    };
+    const alignment = getAlignmentSnap(
+      candidateBounds,
+      board.objects
+        .filter((object) => !movingIds.has(object.id))
+        .map(getObjectBounds),
+      8 / viewport.zoom,
+    );
+    deltaX += alignment.deltaX;
+    deltaY += alignment.deltaY;
+    alignmentGuides = alignment.guides;
   }
 
   interaction.objects.filter((object) => !object.locked).forEach((object) => {
@@ -1794,6 +2059,7 @@ function finishPointerInteraction(event, cancelled) {
 
   const finishedInteraction = interaction;
   interaction = null;
+  alignmentGuides = [];
 
   if (finishedInteraction.kind === "draw") {
     if (!cancelled) commitWorkingObject();
@@ -1948,15 +2214,23 @@ function undo() {
   closeTextEditor();
   const snapshot = history.pop();
   if (!snapshot) return;
-  future.push(createBoardHistoryEntry(board.objects, selectedObjects, board.rig));
+  future.push(createBoardHistoryEntry(
+    board.objects,
+    selectedObjects,
+    board.rig,
+    { settings: board.settings, view: viewport },
+  ));
   const restored = restoreBoardHistoryEntry(snapshot, normalizeObject);
   board.objects = restored.objects;
   board.rig = normalizeRig(restored.rig, board.objects);
+  if (restored.settings) board.settings = normalizeBoardSettings(restored.settings);
+  if (restored.view) viewport = { ...restored.view };
   selectedObjects = restored.selectedObjects;
   resetPendingStyleChanges();
   saveBoard();
   updateHistoryControls();
   updateSelectionControls();
+  updateViewControls();
   drawBoard();
 }
 
@@ -1964,15 +2238,23 @@ function redo() {
   closeTextEditor();
   const snapshot = future.pop();
   if (!snapshot) return;
-  history.push(createBoardHistoryEntry(board.objects, selectedObjects, board.rig));
+  history.push(createBoardHistoryEntry(
+    board.objects,
+    selectedObjects,
+    board.rig,
+    { settings: board.settings, view: viewport },
+  ));
   const restored = restoreBoardHistoryEntry(snapshot, normalizeObject);
   board.objects = restored.objects;
   board.rig = normalizeRig(restored.rig, board.objects);
+  if (restored.settings) board.settings = normalizeBoardSettings(restored.settings);
+  if (restored.view) viewport = { ...restored.view };
   selectedObjects = restored.selectedObjects;
   resetPendingStyleChanges();
   saveBoard();
   updateHistoryControls();
   updateSelectionControls();
+  updateViewControls();
   drawBoard();
 }
 
@@ -2020,6 +2302,7 @@ function handleWheel(event) {
 function toggleAnimationPanel(forceOpen = !animationPanelOpen) {
   animationPanelOpen = Boolean(forceOpen);
   if (animationPanelOpen && boardLibraryPanelOpen) toggleBoardLibraryPanel(false);
+  if (animationPanelOpen && floorPlanPanelOpen) toggleFloorPlanPanel(false);
   if (!animationPanelOpen) {
     stopAnimationPlayback();
     exitAnimationPreviewFullscreen();
@@ -2040,6 +2323,7 @@ function toggleAnimationPanel(forceOpen = !animationPanelOpen) {
 function toggleBoardLibraryPanel(forceOpen = !boardLibraryPanelOpen) {
   boardLibraryPanelOpen = Boolean(forceOpen);
   if (boardLibraryPanelOpen && animationPanelOpen) toggleAnimationPanel(false);
+  if (boardLibraryPanelOpen && floorPlanPanelOpen) toggleFloorPlanPanel(false);
   toolWorkspace.classList.toggle("is-library-open", boardLibraryPanelOpen);
   boardLibraryPanel.setAttribute("aria-hidden", String(!boardLibraryPanelOpen));
   boardLibraryPanel.inert = !boardLibraryPanelOpen;
@@ -2052,6 +2336,379 @@ function toggleBoardLibraryPanel(forceOpen = !boardLibraryPanelOpen) {
     ? boardLibrarySaveSelectionButton
     : boardLibrarySearch;
   focusTarget.focus({ preventScroll: true });
+}
+
+function toggleFloorPlanPanel(forceOpen = !floorPlanPanelOpen) {
+  floorPlanPanelOpen = Boolean(forceOpen);
+  if (floorPlanPanelOpen && animationPanelOpen) toggleAnimationPanel(false);
+  if (floorPlanPanelOpen && boardLibraryPanelOpen) toggleBoardLibraryPanel(false);
+  board.settings.floorPlan = normalizeFloorPlanSettings({
+    ...board.settings.floorPlan,
+    enabled: floorPlanPanelOpen,
+  });
+  toolWorkspace.classList.toggle("is-floor-plan-open", floorPlanPanelOpen);
+  floorPlanPanel.setAttribute("aria-hidden", String(!floorPlanPanelOpen));
+  floorPlanPanel.inert = !floorPlanPanelOpen;
+  floorPlanToggleButton.setAttribute("aria-expanded", String(floorPlanPanelOpen));
+  floorPlanToggleButton.classList.toggle("is-active", floorPlanPanelOpen);
+  syncFloorPlanControls();
+  saveBoard();
+  drawBoard();
+  if (floorPlanPanelOpen) {
+    floorPlanPanel.querySelector("button, input, select")?.focus({ preventScroll: true });
+  }
+}
+
+function renderFloorPlanCatalog() {
+  const elementContainer = document.querySelector("#floor-plan-elements");
+  const templateContainer = document.querySelector("#floor-plan-templates");
+  elementContainer.replaceChildren(...FLOOR_PLAN_ELEMENTS.map((kind) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.floorElement = kind;
+    button.textContent = formatCatalogName(kind);
+    return button;
+  }));
+  templateContainer.replaceChildren(...FLOOR_PLAN_TEMPLATES.map((kind) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.floorTemplate = kind;
+    button.textContent = formatCatalogName(kind);
+    return button;
+  }));
+}
+
+function formatCatalogName(value) {
+  return String(value)
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function syncFloorPlanControls() {
+  const settings = normalizeFloorPlanSettings(board.settings.floorPlan);
+  floorPlanUnits.value = settings.units;
+  floorPlanScale.value = String(settings.pixelsPerUnit);
+  floorPlanWallThickness.value = String(settings.wallThickness);
+  floorPlanGridSize.value = String(settings.gridSize);
+  floorPlanGuides.checked = settings.alignmentGuides;
+}
+
+function updateFloorPlanSettings() {
+  board.settings.floorPlan = normalizeFloorPlanSettings({
+    enabled: floorPlanPanelOpen,
+    units: floorPlanUnits.value,
+    pixelsPerUnit: floorPlanScale.value,
+    wallThickness: floorPlanWallThickness.value,
+    gridSize: floorPlanGridSize.value,
+    alignmentGuides: floorPlanGuides.checked,
+  });
+  syncFloorPlanControls();
+  saveBoard();
+  drawBoard();
+}
+
+function insertFloorPlanObjects(kind, isTemplate) {
+  const origin = getCanvasCenterWorldPoint();
+  const settings = normalizeFloorPlanSettings(board.settings.floorPlan);
+  const created = isTemplate
+    ? createFloorPlanTemplate(kind, origin, settings, createId)
+    : createFloorPlanElement(kind, origin, settings, createId);
+  const objects = created.map((object) => normalizeObject(object)).filter(Boolean);
+  if (!objects.length) return;
+  checkpoint();
+  board.objects.push(...objects);
+  selectedObjects = objects;
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  announceStatus(`${formatCatalogName(kind)} added`);
+}
+
+function flipSelection(axis) {
+  const targets = getConnectedRigObjects(selectedObjects);
+  if (!targets.length || targets.some((object) => object.locked)) {
+    announceStatus("Unlock the complete connected selection before flipping");
+    return;
+  }
+  checkpoint();
+  const result = flipBoardSelection(targets, board.rig, axis, {
+    mirrorText: mirrorTextOnFlip,
+  });
+  result.objects.forEach((source) => {
+    const target = board.objects.find((object) => object.id === source.id);
+    if (target) replaceObjectProperties(target, source);
+  });
+  board.rig = normalizeRig(result.rig, board.objects);
+  selectedObjects = result.objects
+    .map((object) => board.objects.find((candidate) => candidate.id === object.id))
+    .filter(Boolean);
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  announceStatus(axis === "horizontal" ? "Selection flipped horizontally" : "Selection flipped vertically");
+}
+
+async function openImageEditDialog() {
+  const object = selectedObjects.length === 1 && selectedObjects[0].type === "image"
+    ? selectedObjects[0]
+    : null;
+  if (!object || object.locked) return;
+  const asset = board.assets[object.assetId];
+  if (!asset?.dataUrl) {
+    announceStatus("The selected image data is unavailable");
+    return;
+  }
+  let sourceWidth = object.sourceWidth || asset.width;
+  let sourceHeight = object.sourceHeight || asset.height;
+  if (!sourceWidth || !sourceHeight) {
+    try {
+      const image = await loadImageSource(asset.dataUrl);
+      sourceWidth = image.naturalWidth;
+      sourceHeight = image.naturalHeight;
+    } catch {
+      sourceWidth = object.w;
+      sourceHeight = object.h;
+    }
+  }
+  sourceWidth = Math.max(1, sourceWidth);
+  sourceHeight = Math.max(1, sourceHeight);
+  imageEditSession = {
+    objectId: object.id,
+    object: cloneValue(object),
+    assetId: object.assetId,
+    sourceWidth,
+    sourceHeight,
+    crop: normalizeImageCrop(object.crop, sourceWidth, sourceHeight),
+    dataUrl: asset.dataUrl,
+    name: asset.name || object.name,
+    replacement: null,
+  };
+  imageCropAspect.value = "free";
+  imageWidthInput.value = String(Math.round(Math.abs(object.w)));
+  imageHeightInput.value = String(Math.round(Math.abs(object.h)));
+  imageRotationInput.value = String(Math.round((object.rotation || 0) * 180 / Math.PI * 100) / 100);
+  imageDimensionsLock.checked = true;
+  imageReplaceInput.value = "";
+  imageEditError.hidden = true;
+  imageCropPreview.src = asset.dataUrl;
+  imageEditDialog.showModal();
+  window.requestAnimationFrame(updateImageCropBox);
+}
+
+function closeImageEditDialog() {
+  imageEditSession = null;
+  if (imageEditDialog.open) imageEditDialog.close();
+  editImageButton.focus({ preventScroll: true });
+}
+
+function updateImageCropBox() {
+  if (!imageEditSession || !imageCropPreview.complete) return;
+  const stageBounds = imageCropStage.getBoundingClientRect();
+  const imageBounds = imageCropPreview.getBoundingClientRect();
+  const crop = normalizeImageCrop(
+    imageEditSession.crop,
+    imageEditSession.sourceWidth,
+    imageEditSession.sourceHeight,
+  );
+  const left = imageBounds.left - stageBounds.left
+    + crop.x / imageEditSession.sourceWidth * imageBounds.width;
+  const top = imageBounds.top - stageBounds.top
+    + crop.y / imageEditSession.sourceHeight * imageBounds.height;
+  imageCropBox.style.left = `${left}px`;
+  imageCropBox.style.top = `${top}px`;
+  imageCropBox.style.width = `${crop.width / imageEditSession.sourceWidth * imageBounds.width}px`;
+  imageCropBox.style.height = `${crop.height / imageEditSession.sourceHeight * imageBounds.height}px`;
+}
+
+function updateCropAspect() {
+  if (!imageEditSession || imageCropAspect.value === "free") return;
+  imageEditSession.crop = cropToAspect(
+    imageEditSession.crop,
+    Number(imageCropAspect.value),
+    imageEditSession.sourceWidth,
+    imageEditSession.sourceHeight,
+  );
+  updateImageCropBox();
+}
+
+function beginCropPointerInteraction(event) {
+  if (!imageEditSession || event.button !== 0) return;
+  event.preventDefault();
+  const resizing = event.target instanceof Element
+    && Boolean(event.target.closest(".image-crop-handle"));
+  const imageBounds = imageCropPreview.getBoundingClientRect();
+  const original = cloneValue(imageEditSession.crop);
+  imageCropBox.setPointerCapture?.(event.pointerId);
+
+  const move = (moveEvent) => {
+    const deltaX = (moveEvent.clientX - event.clientX) / imageBounds.width
+      * imageEditSession.sourceWidth;
+    const deltaY = (moveEvent.clientY - event.clientY) / imageBounds.height
+      * imageEditSession.sourceHeight;
+    if (resizing) {
+      let width = Math.max(1, original.width + deltaX);
+      let height = Math.max(1, original.height + deltaY);
+      const aspect = Number(imageCropAspect.value);
+      if (Number.isFinite(aspect) && aspect > 0) height = width / aspect;
+      imageEditSession.crop = normalizeImageCrop(
+        { ...original, width, height },
+        imageEditSession.sourceWidth,
+        imageEditSession.sourceHeight,
+      );
+    } else {
+      imageEditSession.crop = normalizeImageCrop({
+        ...original,
+        x: Math.max(0, Math.min(
+          imageEditSession.sourceWidth - original.width,
+          original.x + deltaX,
+        )),
+        y: Math.max(0, Math.min(
+          imageEditSession.sourceHeight - original.height,
+          original.y + deltaY,
+        )),
+      }, imageEditSession.sourceWidth, imageEditSession.sourceHeight);
+    }
+    updateImageCropBox();
+  };
+  const finish = (upEvent) => {
+    imageCropBox.removeEventListener("pointermove", move);
+    imageCropBox.removeEventListener("pointerup", finish);
+    imageCropBox.removeEventListener("pointercancel", finish);
+    if (imageCropBox.hasPointerCapture?.(upEvent.pointerId)) {
+      imageCropBox.releasePointerCapture(upEvent.pointerId);
+    }
+  };
+  imageCropBox.addEventListener("pointermove", move);
+  imageCropBox.addEventListener("pointerup", finish);
+  imageCropBox.addEventListener("pointercancel", finish);
+}
+
+function moveCropWithKeyboard(event) {
+  if (!imageEditSession || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+    return;
+  }
+  event.preventDefault();
+  const step = event.shiftKey ? 10 : 1;
+  const deltaX = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+  const deltaY = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+  const crop = imageEditSession.crop;
+  imageEditSession.crop = normalizeImageCrop({
+    ...crop,
+    x: Math.max(0, Math.min(imageEditSession.sourceWidth - crop.width, crop.x + deltaX)),
+    y: Math.max(0, Math.min(imageEditSession.sourceHeight - crop.height, crop.y + deltaY)),
+  }, imageEditSession.sourceWidth, imageEditSession.sourceHeight);
+  updateImageCropBox();
+}
+
+function updateImageFrameDimension(changedDimension) {
+  if (!imageEditSession) return;
+  const width = Math.max(1, Number(imageWidthInput.value) || 1);
+  const height = Math.max(1, Number(imageHeightInput.value) || 1);
+  const previousRatio = Math.abs(imageEditSession.object.w / imageEditSession.object.h) || 1;
+  if (imageDimensionsLock.checked) {
+    if (changedDimension === "width") imageHeightInput.value = String(Math.round(width / previousRatio));
+    else imageWidthInput.value = String(Math.round(height * previousRatio));
+  }
+  imageEditSession.object.w = Math.max(1, Number(imageWidthInput.value) || 1);
+  imageEditSession.object.h = Math.max(1, Number(imageHeightInput.value) || 1);
+}
+
+function handleImageEditAction(action) {
+  if (!imageEditSession) return;
+  if (action === "reset-crop") {
+    imageEditSession.crop = resetImageCrop(
+      imageEditSession.sourceWidth,
+      imageEditSession.sourceHeight,
+    );
+    imageCropAspect.value = "free";
+  } else if (action === "fit") {
+    imageEditSession.object = fitFrameToCrop(imageEditSession.object, imageEditSession.crop);
+  } else if (action === "fill") {
+    imageEditSession.crop = fillCropToFrame(
+      imageEditSession.crop,
+      imageEditSession.object,
+      imageEditSession.sourceWidth,
+      imageEditSession.sourceHeight,
+    );
+  } else if (action === "original") {
+    imageEditSession.object.w = imageEditSession.crop.width;
+    imageEditSession.object.h = imageEditSession.crop.height;
+  } else if (action === "rotate-left" || action === "rotate-right") {
+    const direction = action === "rotate-left" ? -1 : 1;
+    imageEditSession.object.rotation += direction * Math.PI / 2;
+  }
+  imageWidthInput.value = String(Math.round(Math.abs(imageEditSession.object.w)));
+  imageHeightInput.value = String(Math.round(Math.abs(imageEditSession.object.h)));
+  imageRotationInput.value = String(
+    Math.round(imageEditSession.object.rotation * 180 / Math.PI * 100) / 100,
+  );
+  updateImageCropBox();
+}
+
+async function replaceEditedImage(file) {
+  if (!imageEditSession || !file?.type.startsWith("image/")) return;
+  imageEditError.hidden = true;
+  try {
+    const prepared = await prepareImage(file);
+    imageEditSession.crop = mapCropToReplacement(
+      imageEditSession.crop,
+      imageEditSession.sourceWidth,
+      imageEditSession.sourceHeight,
+      prepared.width,
+      prepared.height,
+    );
+    imageEditSession.sourceWidth = prepared.width;
+    imageEditSession.sourceHeight = prepared.height;
+    imageEditSession.dataUrl = prepared.dataUrl;
+    imageEditSession.name = prepared.name;
+    imageEditSession.replacement = prepared;
+    imageCropPreview.src = prepared.dataUrl;
+  } catch (error) {
+    console.error("Unable to replace the selected image.", error);
+    imageEditError.textContent = "That image could not be read.";
+    imageEditError.hidden = false;
+  }
+}
+
+function applyImageEdits(event) {
+  event.preventDefault();
+  if (!imageEditSession) return;
+  const target = board.objects.find((object) => object.id === imageEditSession.objectId);
+  if (!target || target.locked) {
+    closeImageEditDialog();
+    return;
+  }
+  checkpoint();
+  target.x = imageEditSession.object.x;
+  target.y = imageEditSession.object.y;
+  target.w = Math.max(1, Number(imageWidthInput.value) || imageEditSession.object.w);
+  target.h = Math.max(1, Number(imageHeightInput.value) || imageEditSession.object.h);
+  target.rotation = Number(imageRotationInput.value || 0) * Math.PI / 180;
+  target.sourceWidth = imageEditSession.sourceWidth;
+  target.sourceHeight = imageEditSession.sourceHeight;
+  target.crop = normalizeImageCrop(
+    imageEditSession.crop,
+    imageEditSession.sourceWidth,
+    imageEditSession.sourceHeight,
+  );
+  if (imageEditSession.replacement) {
+    target.name = imageEditSession.name;
+    board.assets[target.assetId] = {
+      dataUrl: imageEditSession.dataUrl,
+      name: imageEditSession.name,
+      width: imageEditSession.sourceWidth,
+      height: imageEditSession.sourceHeight,
+    };
+    imageCache.delete(target.assetId);
+  }
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  imageEditSession = null;
+  imageEditDialog.close();
+  editImageButton.focus({ preventScroll: true });
+  announceStatus("Image controls applied");
 }
 
 function renderBoardLibrary() {
@@ -3189,6 +3846,16 @@ function updateSelectionControls() {
   boardLibrarySaveSelectionButton.disabled = selectedObjects.length === 0;
   traceImageButton.hidden = !isImageSelection(selectedObjects);
   traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
+  const singleImageSelected = selectedObjects.length === 1
+    && selectedObjects[0].type === "image";
+  editImageButton.hidden = !singleImageSelected;
+  editImageButton.disabled = !singleImageSelected || selectedObjects[0]?.locked;
+  const hasLockedSelection = selectedObjects.some((object) => object.locked);
+  flipHorizontalButton.disabled = hasLockedSelection;
+  flipVerticalButton.disabled = hasLockedSelection;
+  mirrorTextToggle.hidden = !selectedObjects.some((object) => object.type === "textbox");
+  mirrorTextToggle.classList.toggle("is-active", mirrorTextOnFlip);
+  mirrorTextToggle.setAttribute("aria-pressed", String(mirrorTextOnFlip));
   selectionCount.textContent = selectionUnitCount === 1
     ? "1 selected"
     : `${selectionUnitCount} selected`;
@@ -3326,29 +3993,46 @@ async function createTracedImageObject(imageObject) {
   const asset = board.assets[imageObject.assetId];
   if (!asset?.dataUrl) return null;
   const image = await loadImageSource(asset.dataUrl);
+  const sourceWidth = imageObject.sourceWidth || image.naturalWidth;
+  const sourceHeight = imageObject.sourceHeight || image.naturalHeight;
+  const crop = normalizeImageCrop(imageObject.crop, sourceWidth, sourceHeight);
   const scale = Math.min(
     1,
-    MAX_TRACE_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight),
+    MAX_TRACE_DIMENSION / Math.max(crop.width, crop.height),
   );
-  const width = Math.max(1, Math.round(image.naturalWidth * scale));
-  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const width = Math.max(1, Math.round(crop.width * scale));
+  const height = Math.max(1, Math.round(crop.height * scale));
   const stagingCanvas = document.createElement("canvas");
   stagingCanvas.width = width;
   stagingCanvas.height = height;
   const stagingContext = stagingCanvas.getContext("2d", { willReadFrequently: true });
   stagingContext.fillStyle = "#ffffff";
   stagingContext.fillRect(0, 0, width, height);
-  stagingContext.drawImage(image, 0, 0, width, height);
+  stagingContext.drawImage(
+    image,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    width,
+    height,
+  );
   const traced = traceBlackAndWhiteImage(
     stagingContext.getImageData(0, 0, width, height),
   );
   if (!traced.paths.length) return null;
 
   const center = getShapeCenter(imageObject);
-  const paths = traced.paths.map((path) => path.map((point) => rotatePoint({
-    x: imageObject.x + point.x / width * imageObject.w,
-    y: imageObject.y + point.y / height * imageObject.h,
-  }, center, imageObject.rotation ?? 0)));
+  const paths = traced.paths.map((path) => path.map((point) => {
+    const xProgress = imageObject.flipX ? 1 - point.x / width : point.x / width;
+    const yProgress = imageObject.flipY ? 1 - point.y / height : point.y / height;
+    return rotatePoint({
+      x: imageObject.x + xProgress * imageObject.w,
+      y: imageObject.y + yProgress * imageObject.h,
+    }, center, imageObject.rotation ?? 0);
+  }));
   return {
     id: createId(),
     type: "trace",
@@ -3689,7 +4373,7 @@ function copySelection() {
 function pasteSelection() {
   if (!objectClipboard.length) return;
   pasteGeneration += 1;
-  const offset = GRID_SIZE * pasteGeneration;
+  const offset = getGridSize() * pasteGeneration;
   const pastedObjects = duplicateBoardObjects(
     objectClipboard,
     createId,
@@ -3891,6 +4575,13 @@ function updateViewControls() {
   snapToggle.classList.toggle("is-active", board.settings.snap);
   gridToggle.setAttribute("aria-pressed", String(board.settings.grid));
   snapToggle.setAttribute("aria-pressed", String(board.settings.snap));
+  floorPlanPanelOpen = Boolean(board.settings.floorPlan?.enabled);
+  toolWorkspace.classList.toggle("is-floor-plan-open", floorPlanPanelOpen);
+  floorPlanPanel.setAttribute("aria-hidden", String(!floorPlanPanelOpen));
+  floorPlanPanel.inert = !floorPlanPanelOpen;
+  floorPlanToggleButton.setAttribute("aria-expanded", String(floorPlanPanelOpen));
+  floorPlanToggleButton.classList.toggle("is-active", floorPlanPanelOpen);
+  syncFloorPlanControls();
 }
 
 /**
@@ -4354,6 +5045,8 @@ async function addImageFiles(files, placementPoint) {
     board.assets[assetId] = {
       dataUrl: prepared.dataUrl,
       name: prepared.name,
+      width: prepared.width,
+      height: prepared.height,
     };
     const displayScale = Math.min(1, 720 / prepared.width, 520 / prepared.height);
     const object = {
@@ -4366,6 +5059,11 @@ async function addImageFiles(files, placementPoint) {
       rotation: 0,
       assetId,
       name: prepared.name,
+      sourceWidth: prepared.width,
+      sourceHeight: prepared.height,
+      crop: resetImageCrop(prepared.width, prepared.height),
+      flipX: false,
+      flipY: false,
       color: "#000000",
       strokeWidth: 1,
       dashPattern: "solid",
@@ -4410,6 +5108,202 @@ async function prepareImage(file) {
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+function getVisualBoardAiState() {
+  return {
+    board: {
+      version: BOARD_VERSION,
+      revision: getAiContextRevision(),
+      objects: cloneValue(board.objects),
+      assets: Object.fromEntries(
+        Object.entries(board.assets).map(([assetId, asset]) => [
+          assetId,
+          { name: asset?.name ?? "Local image", bytesIncluded: false },
+        ]),
+      ),
+      rig: cloneValue(board.rig),
+      settings: cloneValue(board.settings),
+    },
+    selectedIds: selectedObjects.map((object) => object.id),
+    viewport: {
+      ...viewport,
+      width: Math.max(1, canvasFrame.clientWidth),
+      height: Math.max(1, canvasFrame.clientHeight),
+    },
+  };
+}
+
+function getVisualBoardAiBusyReason() {
+  if (interaction || workingObject) return "the active drawing or pointer action";
+  if (textEditorSession) return "editing the current textbox";
+  if (traceInProgress) return "the current image trace";
+  if (interpolationInProgress) return "the current frame interpolation";
+  if (animationExportInProgress) return "the current animation export";
+  if (colorChangeActive || widthChangeActive || textColorChangeActive) {
+    return "the active style adjustment";
+  }
+  return null;
+}
+
+function commitVisualBoardAiState(nextState, details = {}) {
+  const busyReason = getVisualBoardAiBusyReason();
+  if (busyReason) throw new Error(`Finish ${busyReason} before applying AI commands.`);
+
+  const objects = nextState.board.objects
+    .map((object) => normalizeObject(object))
+    .filter(Boolean);
+  if (objects.length !== nextState.board.objects.length) {
+    throw new Error("The generated board contained an unsupported object.");
+  }
+  const objectIds = new Set(objects.map((object) => object.id));
+  if (objectIds.size !== objects.length) {
+    throw new Error("The generated board contained duplicate object identifiers.");
+  }
+
+  const candidateViewport = {
+    x: finiteNumber(nextState.viewport?.x, viewport.x),
+    y: finiteNumber(nextState.viewport?.y, viewport.y),
+    zoom: clamp(finiteNumber(nextState.viewport?.zoom, viewport.zoom), MIN_ZOOM, MAX_ZOOM),
+  };
+  const candidate = {
+    ...board,
+    version: BOARD_VERSION,
+    objects,
+    rig: normalizeRig(nextState.board.rig, objects),
+    settings: normalizeBoardSettings({
+      ...board.settings,
+      ...nextState.board.settings,
+    }),
+    view: candidateViewport,
+  };
+  const candidateContentSignature = getBoardContentSignature(candidate);
+  candidate.revision = (board.revision ?? 0)
+    + (candidateContentSignature === lastSavedBoardContentSignature ? 0 : 1);
+
+  // Persist the complete candidate before replacing live references. A quota
+  // failure therefore leaves the visible board and history untouched.
+  localStorage.setItem(BOARD_KEY, JSON.stringify(candidate));
+
+  checkpoint();
+  board = candidate;
+  viewport = candidateViewport;
+  lastSavedBoardContentSignature = candidateContentSignature;
+  const objectsById = new Map(board.objects.map((object) => [object.id, object]));
+  selectedObjects = (nextState.selectedIds ?? [])
+    .map((identifier) => objectsById.get(identifier))
+    .filter(Boolean);
+  closeTextEditor();
+  updateHistoryControls();
+  updateSelectionControls();
+  updateViewControls();
+  drawBoard();
+  announceStatus(details.summary || "AI command applied");
+  return getAiContextRevision();
+}
+
+function exportVisualBoardForAi(options = {}) {
+  const includeAssets = Boolean(options.includeAssets);
+  return {
+    format: "vital-pancakes-visual-board",
+    version: BOARD_VERSION,
+    exportedAt: new Date().toISOString(),
+    board: {
+      ...cloneValue(board),
+      assets: includeAssets
+        ? cloneValue(board.assets)
+        : Object.fromEntries(Object.entries(board.assets).map(([assetId, asset]) => [
+          assetId,
+          { name: asset?.name ?? "Local image", omitted: true },
+        ])),
+      view: { ...viewport },
+    },
+  };
+}
+
+const visualBoardAiApi = installAiPageHost(createVisualBoardAiAdapter({
+  getState: getVisualBoardAiState,
+  getRevision: getAiContextRevision,
+  isBusy: getVisualBoardAiBusyReason,
+  commit: commitVisualBoardAiState,
+  createId,
+  undo: () => {
+    const before = history.length;
+    undo();
+    return { changed: history.length !== before, revision: getAiContextRevision() };
+  },
+  redo: () => {
+    const before = future.length;
+    redo();
+    return { changed: future.length !== before, revision: getAiContextRevision() };
+  },
+  exportBoard: exportVisualBoardForAi,
+}));
+
+function createAiCommandExampleEnvelope(command = getVisualBoardAiExamples()[0].command) {
+  return {
+    protocolVersion: 1,
+    requestId: `visual-board-${Date.now().toString(36)}`,
+    tool: "visual-board",
+    mode: "preview",
+    expectedRevision: getAiContextRevision(),
+    commands: [command],
+  };
+}
+
+function openAiCommandsDialog() {
+  if (!aiCommandsEditor.value.trim()) {
+    aiCommandsEditor.value = JSON.stringify(createAiCommandExampleEnvelope(), null, 2);
+  }
+  aiCommandsStatus.textContent = "Commands are validated before they can change the board.";
+  aiCommandsResult.textContent = "";
+  aiCommandsDialog.showModal();
+  aiCommandsEditor.focus();
+}
+
+function parseAiCommandEditor() {
+  try {
+    return JSON.parse(aiCommandsEditor.value);
+  } catch (error) {
+    throw new Error(`Invalid JSON: ${error.message}`);
+  }
+}
+
+async function runAiCommandEditor(mode) {
+  try {
+    const envelope = parseAiCommandEditor();
+    envelope.mode = mode;
+    if (mode === "apply" && envelope.commands.some((command) => (
+      ["objects.delete", "objects.disconnect"].includes(command.type)
+    ))) {
+      const confirmed = window.confirm("Apply this destructive AI command?");
+      if (!confirmed) return;
+    }
+    aiCommandsStatus.textContent = mode === "preview" ? "Preparing preview…" : "Applying…";
+    const receipt = await visualBoardAiApi.dispatch(envelope, {
+      grantedPermissions: AI_PERMISSION_LEVELS,
+    });
+    aiCommandsResult.textContent = JSON.stringify(receipt, null, 2);
+    aiCommandsStatus.textContent = receipt.ok
+      ? mode === "preview"
+        ? `Preview ready · ${receipt.result?.summary ?? "valid command"}`
+        : `Applied · ${receipt.result?.summary ?? "board updated"}`
+      : `${receipt.error.code}: ${receipt.error.message}`;
+  } catch (error) {
+    aiCommandsStatus.textContent = error.message || "Unable to read this command.";
+    aiCommandsResult.textContent = "";
+  }
+}
+
+function loadSelectedAiExample() {
+  const examples = getVisualBoardAiExamples();
+  const example = examples[Number(aiCommandsExample.value)] ?? examples[0];
+  aiCommandsEditor.value = JSON.stringify(
+    createAiCommandExampleEnvelope(example.command),
+    null,
+    2,
+  );
+  aiCommandsStatus.textContent = `${example.name} example loaded.`;
 }
 
 drawingTools.addEventListener("click", (event) => {
@@ -4478,6 +5372,20 @@ boardLibraryCloseButton.addEventListener("click", () => {
   toggleBoardLibraryPanel(false);
   boardLibraryToggleButton.focus({ preventScroll: true });
 });
+floorPlanToggleButton.addEventListener("click", () => toggleFloorPlanPanel());
+document.querySelector("#close-floor-plan").addEventListener("click", () => {
+  toggleFloorPlanPanel(false);
+  floorPlanToggleButton.focus({ preventScroll: true });
+});
+floorPlanPanel.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const elementButton = target?.closest("[data-floor-element]");
+  if (elementButton) insertFloorPlanObjects(elementButton.dataset.floorElement, false);
+  const templateButton = target?.closest("[data-floor-template]");
+  if (templateButton) insertFloorPlanObjects(templateButton.dataset.floorTemplate, true);
+});
+[floorPlanUnits, floorPlanScale, floorPlanWallThickness, floorPlanGridSize, floorPlanGuides]
+  .forEach((control) => control.addEventListener("change", updateFloorPlanSettings));
 boardLibrarySearch.addEventListener("input", renderBoardLibrary);
 boardLibraryList.addEventListener("click", handleBoardLibraryAction);
 boardLibrarySaveSelectionButton.addEventListener("click", openBoardLibrarySaveDialog);
@@ -4569,6 +5477,13 @@ lockSelectionButton.addEventListener("click", toggleSelectionLock);
 lockDimensionsButton.addEventListener("click", toggleSelectionDimensionLock);
 groupSelectionButton.addEventListener("click", groupSelection);
 traceImageButton.addEventListener("click", traceSelectedImages);
+editImageButton.addEventListener("click", openImageEditDialog);
+flipHorizontalButton.addEventListener("click", () => flipSelection("horizontal"));
+flipVerticalButton.addEventListener("click", () => flipSelection("vertical"));
+mirrorTextToggle.addEventListener("click", () => {
+  mirrorTextOnFlip = !mirrorTextOnFlip;
+  updateSelectionControls();
+});
 mergeVerticesButton.addEventListener("click", mergeSelectionVertices);
 curveVerticesButton.addEventListener("click", convertCurveSelectionToVertices);
 ungroupSelectionButton.addEventListener("click", releaseSelection);
@@ -4601,6 +5516,69 @@ snapToggle.addEventListener("click", () => {
   saveBoard();
   drawBoard();
 });
+aiCommandsButton.addEventListener("click", openAiCommandsDialog);
+imageEditForm.addEventListener("submit", applyImageEdits);
+document.querySelector("#cancel-image-edit").addEventListener("click", closeImageEditDialog);
+document.querySelector("#close-image-edit").addEventListener("click", closeImageEditDialog);
+imageEditDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeImageEditDialog();
+});
+imageCropPreview.addEventListener("load", updateImageCropBox);
+imageCropBox.addEventListener("pointerdown", beginCropPointerInteraction);
+imageCropBox.addEventListener("keydown", moveCropWithKeyboard);
+imageCropAspect.addEventListener("change", updateCropAspect);
+imageWidthInput.addEventListener("change", () => updateImageFrameDimension("width"));
+imageHeightInput.addEventListener("change", () => updateImageFrameDimension("height"));
+imageRotationInput.addEventListener("change", () => {
+  if (imageEditSession) {
+    imageEditSession.object.rotation = Number(imageRotationInput.value || 0) * Math.PI / 180;
+  }
+});
+imageReplaceInput.addEventListener("change", () => {
+  replaceEditedImage(imageReplaceInput.files?.[0]);
+});
+imageEditDialog.addEventListener("click", (event) => {
+  const button = event.target instanceof Element
+    ? event.target.closest("[data-image-action]")
+    : null;
+  if (button) handleImageEditAction(button.dataset.imageAction);
+});
+document.querySelector("#load-ai-command-example").addEventListener(
+  "click",
+  loadSelectedAiExample,
+);
+document.querySelector("#copy-ai-command-schema").addEventListener("click", async () => {
+  const capabilities = getVisualBoardAiCapabilities();
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(capabilities, null, 2));
+    aiCommandsStatus.textContent = "Capabilities copied.";
+  } catch {
+    aiCommandsResult.textContent = JSON.stringify(capabilities, null, 2);
+    aiCommandsStatus.textContent = "Clipboard access was unavailable; capabilities are shown below.";
+  }
+});
+document.querySelector("#format-ai-commands").addEventListener("click", () => {
+  try {
+    aiCommandsEditor.value = JSON.stringify(parseAiCommandEditor(), null, 2);
+    aiCommandsStatus.textContent = "Command JSON formatted.";
+  } catch (error) {
+    aiCommandsStatus.textContent = error.message;
+  }
+});
+document.querySelector("#clear-ai-commands").addEventListener("click", () => {
+  aiCommandsEditor.value = "";
+  aiCommandsResult.textContent = "";
+  aiCommandsStatus.textContent = "Command editor cleared.";
+});
+document.querySelector("#preview-ai-commands").addEventListener(
+  "click",
+  () => runAiCommandEditor("preview"),
+);
+document.querySelector("#apply-ai-commands").addEventListener(
+  "click",
+  () => runAiCommandEditor("apply"),
+);
 
 document.querySelector("#clear-board").addEventListener("click", () => {
   const confirmed = window.confirm("Clear the entire board? This cannot be undone.");
@@ -4626,11 +5604,19 @@ document.addEventListener("paste", handleClipboardPaste);
 window.addEventListener("resize", () => {
   applyAnimationPanelWidth(getCurrentAnimationPanelWidth());
   applyAnimationPreviewHeight(getCurrentAnimationPreviewHeight());
+  updateImageCropBox();
   resizeCanvas();
 });
 new ResizeObserver(resizeCanvas).observe(canvasFrame);
 
 initializeShapePickers();
+renderFloorPlanCatalog();
+syncFloorPlanControls();
+toolWorkspace.classList.toggle("is-floor-plan-open", floorPlanPanelOpen);
+floorPlanPanel.setAttribute("aria-hidden", String(!floorPlanPanelOpen));
+floorPlanPanel.inert = !floorPlanPanelOpen;
+floorPlanToggleButton.setAttribute("aria-expanded", String(floorPlanPanelOpen));
+floorPlanToggleButton.classList.toggle("is-active", floorPlanPanelOpen);
 restoreAnimationLayout();
 animationPanel.inert = true;
 boardLibraryPanel.inert = true;

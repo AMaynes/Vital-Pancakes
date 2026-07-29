@@ -1,0 +1,24 @@
+{
+  "name": "@vital-pancakes/ai-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local MCP and Chrome bridge for the Vital Pancakes AI command API.",
+  "type": "module",
+  "bin": {
+    "vital-pancakes-mcp": "./src/index.mjs"
+  },
+  "scripts": {
+    "start": "node src/index.mjs",
+    "setup": "node scripts/create-pairing-token.mjs",
+    "test": "node --test test/*.test.mjs",
+    "inspect": "npx @modelcontextprotocol/inspector node src/index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "ws": "8.21.1",
+    "zod": "4.4.3"
+  }
+}
