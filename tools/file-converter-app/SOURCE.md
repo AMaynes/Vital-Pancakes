@@ -10,7 +10,8 @@ The complete upstream source is available at:
 
 The modified source files used for this build are included in `source/`.
 Changes add the byte-for-byte round-trip control, exact byte comparison, result
-reporting, timing guidance, and local integration styling.
+reporting, timing guidance, local integration styling, and the upstream
+TurboWarp unpackager's JSZip browser dependency.
 
 The production build uses Vite with `--base=./`. Large engine URLs in generated
 JavaScript are rewritten from `/convert/` or local emitted binaries to

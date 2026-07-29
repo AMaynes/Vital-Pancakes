@@ -43,3 +43,12 @@ test("converter entry references local build assets that exist", async () => {
     assert.ok((await readFile(asset)).byteLength > 0, `${reference} should exist`);
   }));
 });
+
+test("TurboWarp receives its browser JSZip dependency before the app starts", async () => {
+  const html = await readFile(resolve(appDirectory, "index.html"), "utf8");
+  const jsZipPosition = html.indexOf("./assets/jszip-3.11.1.min.js");
+  const appPosition = html.indexOf("./assets/index-CqjCqN4s.js");
+
+  assert.ok(jsZipPosition >= 0);
+  assert.ok(appPosition > jsZipPosition);
+});
