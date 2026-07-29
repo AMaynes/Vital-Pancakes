@@ -91,6 +91,21 @@ vital-pancakes/
 │   ├── literature-analyzer.js — Owns source loading, persistence, comments, and exports.
 │   ├── literature-analyzer-model.mjs — Provides highlight geometry, stored-data validation, and bounded history.
 │   ├── literature-analyzer-model.test.mjs — Verifies highlighting, PDF coordinates, and undo/redo history.
+│   ├── master-lesson-builder.html — Hosts local textbook upload, outline, lesson editor, preview, and chat.
+│   ├── master-lesson-builder.css — Styles the responsive three-pane lesson workspace.
+│   ├── master-lesson-builder.js — Coordinates extraction, persistence, generation, editing, export, and Studies saves.
+│   ├── master-lesson-worker.js — Lazy-loads WebLLM and runs model inference away from the interface.
+│   ├── master-lesson-extraction.mjs — Extracts numbered PDF, TXT, and Markdown pages.
+│   ├── master-lesson-text.mjs — Normalizes page text and repeated page furniture.
+│   ├── master-lesson-outline.mjs — Detects and validates editable chapter and lesson hierarchies.
+│   ├── master-lesson-chunking.mjs — Creates bounded overlapping chunks with page citations.
+│   ├── master-lesson-retrieval.mjs — Provides deterministic local BM25 textbook retrieval.
+│   ├── master-lesson-prompts.mjs — Builds source-grounded prompts with untrusted-source boundaries.
+│   ├── master-lesson-validation.mjs — Repairs structured JSON and rejects invented citations.
+│   ├── master-lesson-queue.mjs — Owns resumable generation, pause, retry, and cancellation state.
+│   ├── master-lesson-db.mjs — Stores books, pages, chunks, summaries, lessons, and jobs in IndexedDB.
+│   ├── master-lesson-study.mjs — Converts approved lessons into compatible Studies entries.
+│   ├── master-lesson-core.test.mjs — Verifies chunking, citations, outline, retrieval, queues, prompts, and Study conversion.
 │   ├── literature-curator.html — Hosts idea, claim, and hypothesis evidence curation.
 │   ├── literature-curator.css — Styles the curation index and evidence matrix.
 │   ├── literature-curator.js — Owns local curation editing, persistence, and Markdown export.
@@ -260,6 +275,12 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 `literature-analyzer.html` and `literature-analyzer.css` provide a split source, comment, and reading workspace with inline comment cards and a toggleable right-side comment rail. `literature-analyzer.js` opens local PDFs or sandboxed website frames, stores source-specific highlights and comments locally, owns 300-step undo and redo for annotation changes, exports annotated PDF pages with a comment appendix, and creates PNG or PDF annotation maps for webpages whose pixels remain protected by cross-origin browser security. `literature-analyzer-model.mjs` provides normalized geometry, stored-data validation, and immutable bounded annotation-history operations.
 
 `literature-analyzer-model.mjs` owns normalized rectangle creation, persisted annotation validation, and PDF coordinate conversion. Its Node test suite covers reverse drags, clamping, minimum sizes, malformed storage, and the PDF vertical-axis transform.
+
+### Master Lesson Builder
+
+`master-lesson-builder.html`, `.css`, and `.js` provide the book library, drag-and-drop extraction, WebGPU status, explicit model loading, editable outline, lesson editor and preview, source-grounded chat, progress controls, exports, and Studies integration. Text-based PDFs use bundled PDF.js; TXT and Markdown use native file reading. Scanned PDFs are detected from insufficient extractable text and require external OCR.
+
+The deterministic pipeline is split across extraction, normalization, outline, chunking, BM25 retrieval, prompt, validation, queue, IndexedDB, and Study-conversion modules. Source pages stay attached through chunking, and model citations survive validation only when the cited page belongs to the cited supplied chunk. WebLLM 0.2.83 is lazy-loaded inside `master-lesson-worker.js`; small and medium model artifacts use WebLLM's IndexedDB cache and are intentionally absent from the application-shell precache. Reloaded running jobs recover paused and reuse completed chunk summaries.
 
 ### Literature Curation
 

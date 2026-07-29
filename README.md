@@ -35,7 +35,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Everyday Life** — Separate Cooking, Gym, and Cleaning areas for practical knowledge used at home.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Subject-specific working libraries for questions and ideas, structured studies, programming-language refreshers, algorithm labs, and project case studies, plus the existing notecard and educational collections.
-- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Literature Curation, Travel Planner, Software Architect, File Converter, Scientific Calculator, and Budget & Finance tool without unrelated library content.
+- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Master Lesson Builder, Literature Curation, Travel Planner, Software Architect, File Converter, Scientific Calculator, and Budget & Finance tool without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the forest-and-circuit *Vital Pancakes* skull.
@@ -93,6 +93,14 @@ Opens PDFs locally with bundled PDF.js, supports page navigation, creates signat
 Opens local PDFs or a live embedded website, supports click-and-drag highlights with a comment attached to every mark, restores annotations by source, and exports annotated records as PNG or PDF. Comments appear in compact cards directly above their highlights by default and can be moved into a dedicated right-side rail with one toolbar toggle. A 300-step undo and redo history covers highlight creation, recoloring, comment edits, deletion, and complete clearing, with buttons plus standard Command/Ctrl keyboard shortcuts. PDF export writes highlights into the original pages and adds numbered comment pages.
 
 Websites remain governed by their own embedding policies. Because browsers prevent one website from reading another website's rendered pixels, webpage exports preserve the source URL, highlight map, and comments rather than copying the remote page itself.
+
+### Master Lesson Builder
+
+Processes text-based PDF, TXT, and Markdown books entirely in the browser. It extracts numbered pages with bundled PDF.js, removes repeated page furniture, proposes an editable chapter and lesson outline, creates bounded overlapping chunks, and stores books, source text, summaries, lessons, and resumable progress in IndexedDB. Scanned PDFs with little extractable text are rejected with an OCR explanation instead of being treated as processed books.
+
+An explicitly loaded small or medium WebLLM model runs in a dedicated Web Worker through WebGPU. Model files are downloaded from the WebLLM distribution on first use, cached by WebLLM in browser storage, and excluded from the normal service-worker precache. Deterministic BM25 retrieval limits chat to relevant source chunks; generated page citations are discarded unless they match a real retrieved chunk and page. Approved lessons remain editable, export as Markdown or JSON, and save into Studies as backward-compatible lesson entries without changing existing inquiry dossiers.
+
+Books and generated content never leave the browser. The first model load requires a network connection, a WebGPU-capable browser, sufficient storage, and approximately 0.9 GB of GPU memory for the small model or 2.3 GB for the medium model. Local model output remains probabilistic and should be checked against its cited source pages.
 
 ### Literature Curation
 
@@ -180,7 +188,8 @@ Production is hosted from the `main` branch with GitHub Pages. Publishing requir
 
 ## Dependencies
 
-- A current browser with ES modules, Canvas 2D, service workers, localStorage, and dialog support
+- A current browser with ES modules, Canvas 2D, service workers, localStorage, IndexedDB, and dialog support
+- WebGPU for Master Lesson Builder model inference; WebLLM 0.2.83 lazy-loads from its documented CDN only after an explicit model-load action
 - Python 3 for the documented local server command
 - Node.js 18 or newer for the maintained test suite
 - GitHub Pages for production hosting

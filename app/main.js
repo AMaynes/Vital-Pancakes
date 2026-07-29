@@ -169,6 +169,17 @@ const SECTION_PRESENTATIONS = {
   },
 };
 
+const LESSON_STUDY_PRESENTATION = {
+  mode: "saved-lesson",
+  kicker: "SOURCE-GROUNDED LESSON",
+  introduction: "Approved lessons keep objectives, explanations, examples, review material, and checked textbook page references together in one editable record.",
+  stages: [
+    ["L", "Learn", "Follow the explanation from objectives through worked material."],
+    ["R", "Review", "Use questions and flashcards for active recall."],
+    ["S", "Source", "Return to the recorded textbook pages when a claim needs checking."],
+  ],
+};
+
 const AREA_EVERYDAY = "everyday";
 const AREA_STUDIES = "studies";
 const AREA_TOOLS = "tools";
@@ -744,6 +755,13 @@ function renderToolsDashboard() {
       accent: "sage",
     },
     {
+      title: "Master Lesson Builder",
+      copy: "Process textbooks locally, approve their outline, generate editable lessons, and chat with checked page citations.",
+      href: "tools/master-lesson-builder.html",
+      icon: "▥",
+      accent: "coral",
+    },
+    {
       title: "Literature Curation",
       copy: "Organize literature analyses around an idea, claim, or hypothesis and compare how each source relates.",
       href: "tools/literature-curator.html",
@@ -1279,7 +1297,7 @@ function createEntryIndexCard(section, item, index) {
     createElement(
       "span",
       "card-kicker",
-      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${SECTION_LABELS[section.type] ?? "ENTRY"}`,
+      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${getEntryTypeLabel(section, item)}`,
     ),
     createElement("h2", "", item.title),
     createElement("p", "", item.summary || "Open this entry to view its complete record."),
@@ -1328,7 +1346,7 @@ function renderEntryDetail(section, item) {
     createElement(
       "p",
       "eyebrow",
-      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${SECTION_LABELS[section.type] ?? "ENTRY"}`,
+      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${getEntryTypeLabel(section, item)}`,
     ),
     createElement("h1", "", item.title),
     createElement("p", "page-description", item.summary || section.description),
@@ -1345,7 +1363,9 @@ function renderEntryDetail(section, item) {
 
   const lead = createElement("div", "entry-detail-lead");
   const context = createElement("section", "entry-detail-context");
-  const presentation = SECTION_PRESENTATIONS[section.type];
+  const presentation = item.format === "lesson"
+    ? LESSON_STUDY_PRESENTATION
+    : SECTION_PRESENTATIONS[section.type];
   context.append(
     createElement("p", "card-kicker", presentation?.kicker ?? "WORKING RECORD"),
     createElement(
@@ -1377,6 +1397,10 @@ function renderEntryDetail(section, item) {
   body.append(createEntryBody(section, item));
   detail.append(heading, lead, body);
   appMain.append(detail);
+}
+
+function getEntryTypeLabel(section, item) {
+  return item?.format === "lesson" ? "LESSON" : SECTION_LABELS[section.type] ?? "ENTRY";
 }
 
 /**
@@ -1561,7 +1585,7 @@ function createEntryCard(section, item) {
     createElement(
       "span",
       "card-kicker",
-      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${SECTION_LABELS[section.type] ?? "ENTRY"}`,
+      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${getEntryTypeLabel(section, item)}`,
     ),
     createElement("h2", "", item.title),
   );
@@ -1718,6 +1742,9 @@ function createCleaningBody(section, item) {
  * @returns {HTMLElement} Study content.
  */
 function createStudyBody(item) {
+  if (item.format === "lesson" && item.lesson) {
+    return createLessonStudyBody(item);
+  }
   const body = createElement("div", "entry-body study-dossier");
   const premise = createElement("div", "study-premise");
   if (item.researchQuestion) premise.append(createDefinition("Research question", item.researchQuestion));
@@ -1740,6 +1767,84 @@ function createStudyBody(item) {
   if (item.notes) body.append(createDefinition("Supporting notes", item.notes));
   appendTagGroup(body, "Tags", item.tags);
   return body;
+}
+
+/**
+ * Renders a source-grounded lesson without changing inquiry-style Study entries.
+ *
+ * @param {object} item Lesson-format Study record.
+ * @returns {HTMLElement} Structured lesson content.
+ */
+function createLessonStudyBody(item) {
+  const lesson = item.lesson ?? {};
+  const body = createElement("div", "entry-body saved-lesson");
+  const titlePage = createElement("header", "saved-lesson-title-page");
+  titlePage.append(
+    createElement("span", "card-kicker", [lesson.chapter, lesson.subchapter].filter(Boolean).join(" · ") || "SAVED LESSON"),
+    createElement("h2", "", lesson.title || item.title),
+  );
+  if (lesson.subtitle) titlePage.append(createElement("p", "", lesson.subtitle));
+  if (lesson.sourceTitle) titlePage.append(createElement("small", "", `Source · ${lesson.sourceTitle}`));
+  body.append(titlePage);
+  if (lesson.overview) body.append(createDefinition("Overview", lesson.overview));
+  appendLessonList(body, "Learning objectives", lesson.learningObjectives);
+  appendLessonList(body, "Prerequisites", lesson.prerequisites);
+  if (lesson.keyConcepts?.length) {
+    const concepts = createElement("section", "saved-lesson-grid");
+    concepts.append(createElement("h3", "", "Key concepts"));
+    const grid = createElement("div");
+    lesson.keyConcepts.forEach(({ term, explanation }) => {
+      const concept = createElement("article");
+      concept.append(createElement("strong", "", term), createElement("p", "", explanation));
+      grid.append(concept);
+    });
+    concepts.append(grid);
+    body.append(concepts);
+  }
+  (lesson.sections ?? []).forEach((section) => {
+    const lessonSection = createElement("section", "saved-lesson-section");
+    lessonSection.append(createElement("h3", "", section.heading), createElement("p", "", section.content));
+    appendSourcePages(lessonSection, section.citations?.map(({ page }) => page));
+    body.append(lessonSection);
+  });
+  appendLessonList(body, "Worked examples", lesson.workedExamples);
+  appendLessonList(body, "Common misconceptions", lesson.commonMisconceptions);
+  appendLessonList(body, "Review questions", lesson.reviewQuestions);
+  if (lesson.flashcards?.length) {
+    const flashcards = createElement("section", "saved-lesson-grid");
+    flashcards.append(createElement("h3", "", "Flashcards"));
+    const grid = createElement("div");
+    lesson.flashcards.forEach(({ question, answer }) => {
+      const card = createElement("article");
+      card.append(createElement("strong", "", question), createElement("p", "", answer));
+      grid.append(card);
+    });
+    flashcards.append(grid);
+    body.append(flashcards);
+  }
+  if (lesson.recap) body.append(createDefinition("Recap", lesson.recap));
+  appendSourcePages(body, lesson.sourcePages ?? item.sourcePages);
+  appendTagGroup(body, "Tags", item.tags);
+  return body;
+}
+
+function appendLessonList(parent, label, values = []) {
+  if (!values?.length) return;
+  const section = createElement("section", "saved-lesson-list");
+  section.append(createElement("h3", "", label));
+  const list = document.createElement("ul");
+  values.forEach((value) => list.append(createElement("li", "", value)));
+  section.append(list);
+  parent.append(section);
+}
+
+function appendSourcePages(parent, pages = []) {
+  const uniquePages = [...new Set((pages ?? []).map(Number).filter(Number.isInteger))].sort((a, b) => a - b);
+  if (!uniquePages.length) return;
+  const group = createElement("div", "saved-lesson-pages");
+  group.append(createElement("span", "", "Source pages"));
+  uniquePages.forEach((page) => group.append(createElement("strong", "", String(page))));
+  parent.append(group);
 }
 
 /**
@@ -2199,17 +2304,21 @@ function createItemFields(section, item) {
       createField("Steps · one per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write only the steps you actually need"),
     );
   } else if (section.type === "study") {
-    fields.push(
-      createField("Research question", "researchQuestion", "textarea", item?.researchQuestion ?? "", false, "Specific enough that evidence could answer it"),
-      createField("Prediction or hypothesis", "hypothesis", "textarea", item?.hypothesis ?? "", false, "What do you expect, and why?"),
-      createField("Method", "method", "textarea", item?.method ?? "", false, "How will the question be investigated?"),
-      createField("Evidence to collect · one per line", "evidence", "textarea", (item?.evidence ?? []).join("\n"), false, "Measurements, observations, sources, or comparison points"),
-      createField("Findings", "findings", "textarea", item?.findings ?? "", false, "What does the evidence presently support?"),
-      createField("Limitations", "limitations", "textarea", item?.limitations ?? "", false, "What weakens, narrows, or complicates the conclusion?"),
-      createField("Next test", "nextSteps", "textarea", item?.nextSteps ?? "", false, "The smallest useful follow-up"),
-      createField("Supporting notes", "notes", "textarea", item?.notes ?? "", false, "Context that does not belong in the evidence or conclusion"),
-      createField("Tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "Optional subject labels"),
-    );
+    if (item?.format === "lesson" && item.lesson) {
+      fields.push(...createLessonStudyFields(item));
+    } else {
+      fields.push(
+        createField("Research question", "researchQuestion", "textarea", item?.researchQuestion ?? "", false, "Specific enough that evidence could answer it"),
+        createField("Prediction or hypothesis", "hypothesis", "textarea", item?.hypothesis ?? "", false, "What do you expect, and why?"),
+        createField("Method", "method", "textarea", item?.method ?? "", false, "How will the question be investigated?"),
+        createField("Evidence to collect · one per line", "evidence", "textarea", (item?.evidence ?? []).join("\n"), false, "Measurements, observations, sources, or comparison points"),
+        createField("Findings", "findings", "textarea", item?.findings ?? "", false, "What does the evidence presently support?"),
+        createField("Limitations", "limitations", "textarea", item?.limitations ?? "", false, "What weakens, narrows, or complicates the conclusion?"),
+        createField("Next test", "nextSteps", "textarea", item?.nextSteps ?? "", false, "The smallest useful follow-up"),
+        createField("Supporting notes", "notes", "textarea", item?.notes ?? "", false, "Context that does not belong in the evidence or conclusion"),
+        createField("Tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "Optional subject labels"),
+      );
+    }
   } else if (section.type === "language") {
     fields.push(
       createField("Quick Facts · one per line", "quickFacts", "textarea", (item?.quickFacts ?? []).join("\n"), false, "Use: Label | explanation"),
@@ -2296,6 +2405,46 @@ function createItemFields(section, item) {
   }
 
   return fields;
+}
+
+function createLessonStudyFields(item) {
+  const lesson = item.lesson;
+  return [
+    createHiddenField("format", "lesson"),
+    createHiddenField("sourceBookId", item.sourceBookId ?? ""),
+    createHiddenField("sourceLessonId", item.sourceLessonId ?? ""),
+    createField("Subtitle", "lessonSubtitle", "text", lesson.subtitle ?? "", false, "Optional lesson subtitle"),
+    createField("Textbook title", "lessonSourceTitle", "text", lesson.sourceTitle ?? item.sourceTitle ?? "", false, "Original source title"),
+    createField("Chapter", "lessonChapter", "text", lesson.chapter ?? "", false, "Parent chapter"),
+    createField("Subchapter", "lessonSubchapter", "text", lesson.subchapter ?? "", false, "Lesson section"),
+    createField("Overview", "lessonOverview", "textarea", lesson.overview ?? "", false, "Lesson orientation"),
+    createField("Learning objectives · one per line", "lessonLearningObjectives", "textarea", (lesson.learningObjectives ?? []).join("\n"), false, "What the learner should be able to do"),
+    createField("Prerequisites · one per line", "lessonPrerequisites", "textarea", (lesson.prerequisites ?? []).join("\n"), false, "Knowledge needed first"),
+    createField("Key concepts · term | explanation", "lessonKeyConcepts", "textarea", (lesson.keyConcepts ?? []).map(({ term, explanation }) => `${term} | ${explanation}`).join("\n"), false, "One concept per line"),
+    createField("Complete sections", "lessonSections", "textarea", formatLessonSections(lesson.sections), false, "Use ## Heading, content, and Sources: 1, 2"),
+    createField("Worked examples · one per line", "lessonWorkedExamples", "textarea", (lesson.workedExamples ?? []).join("\n"), false, "Concrete applications"),
+    createField("Common misconceptions · one per line", "lessonMisconceptions", "textarea", (lesson.commonMisconceptions ?? []).join("\n"), false, "Mistakes and corrections"),
+    createField("Review questions · one per line", "lessonReviewQuestions", "textarea", (lesson.reviewQuestions ?? []).join("\n"), false, "Questions for active recall"),
+    createField("Flashcards · question | answer", "lessonFlashcards", "textarea", (lesson.flashcards ?? []).map(({ question, answer }) => `${question} | ${answer}`).join("\n"), false, "One flashcard per line"),
+    createField("Recap", "lessonRecap", "textarea", lesson.recap ?? "", false, "Closing summary"),
+    createField("Tags · comma separated", "tags", "text", (item.tags ?? []).join(", "), false, "Chapter, subchapter, and subject labels"),
+  ];
+}
+
+function createHiddenField(name, value) {
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = name;
+  input.value = value;
+  return input;
+}
+
+function formatLessonSections(sections = []) {
+  return sections.map((section) => [
+    `## ${section.heading}`,
+    section.content,
+    `Sources: ${[...new Set((section.citations ?? []).map(({ page }) => page))].join(", ")}`,
+  ].join("\n")).join("\n\n");
 }
 
 /**
@@ -2463,6 +2612,22 @@ function readItemForm(section) {
     return { ...base, trigger: String(formData.get("trigger") ?? "").trim(), steps: lineList("steps") };
   }
   if (section.type === "study") {
+    if (formData.get("format") === "lesson") {
+      const existing = editingItemId
+        ? section.items.find((item) => item.id === editingItemId)
+        : null;
+      const lesson = readLessonStudyForm(formData, existing?.lesson);
+      return {
+        ...base,
+        format: "lesson",
+        lesson,
+        sourceBookId: String(formData.get("sourceBookId") ?? ""),
+        sourceLessonId: String(formData.get("sourceLessonId") ?? ""),
+        sourceTitle: lesson.sourceTitle,
+        sourcePages: lesson.sourcePages,
+        tags: commaList("tags"),
+      };
+    }
     return {
       ...base,
       researchQuestion: String(formData.get("researchQuestion") ?? "").trim(),
@@ -2538,6 +2703,65 @@ function readItemForm(section) {
     notes: String(formData.get("notes") ?? "").trim(),
     tags: commaList("tags"),
   };
+}
+
+function readLessonStudyForm(formData, existingLesson = {}) {
+  const lines = (name) => String(formData.get(name) ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const pairs = (name, firstKey, secondKey) => lines(name).map((line) => {
+    const separator = line.indexOf("|");
+    return {
+      [firstKey]: (separator < 0 ? line : line.slice(0, separator)).trim(),
+      [secondKey]: (separator < 0 ? "" : line.slice(separator + 1)).trim(),
+    };
+  });
+  const sections = parseLessonSections(String(formData.get("lessonSections") ?? ""), existingLesson.sections);
+  const sourcePages = [...new Set(sections.flatMap((section) => section.citations.map(({ page }) => page)))].sort((a, b) => a - b);
+  return {
+    title: String(formData.get("title") ?? "").trim(),
+    subtitle: String(formData.get("lessonSubtitle") ?? "").trim(),
+    sourceTitle: String(formData.get("lessonSourceTitle") ?? "").trim(),
+    chapter: String(formData.get("lessonChapter") ?? "").trim(),
+    subchapter: String(formData.get("lessonSubchapter") ?? "").trim(),
+    overview: String(formData.get("lessonOverview") ?? "").trim(),
+    learningObjectives: lines("lessonLearningObjectives"),
+    prerequisites: lines("lessonPrerequisites"),
+    keyConcepts: pairs("lessonKeyConcepts", "term", "explanation"),
+    sections,
+    workedExamples: lines("lessonWorkedExamples"),
+    commonMisconceptions: lines("lessonMisconceptions"),
+    reviewQuestions: lines("lessonReviewQuestions"),
+    flashcards: pairs("lessonFlashcards", "question", "answer"),
+    recap: String(formData.get("lessonRecap") ?? "").trim(),
+    sourcePages,
+  };
+}
+
+function parseLessonSections(value, existingSections = []) {
+  return String(value ?? "")
+    .split(/(?=^##\s+)/m)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block, index) => {
+      const lines = block.split("\n");
+      const heading = lines.shift()?.replace(/^##\s*/, "").trim() || `Lesson section ${index + 1}`;
+      const sourceLineIndex = lines.findIndex((line) => /^Sources:\s*/i.test(line));
+      const pageText = sourceLineIndex >= 0 ? lines.splice(sourceLineIndex, 1)[0] : "";
+      const pages = [...new Set(
+        (pageText.match(/\d+/g) ?? []).map(Number).filter((page) => Number.isInteger(page) && page > 0),
+      )];
+      const priorCitations = existingSections[index]?.citations ?? [];
+      return {
+        heading,
+        content: lines.join("\n").trim(),
+        citations: pages.map((page) => (
+          priorCitations.find((citation) => citation.page === page)
+          ?? { page, chunkId: "saved-study" }
+        )),
+      };
+    });
 }
 
 /**

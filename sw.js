@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v37";
+const CACHE_NAME = "vital-pancakes-app-v43";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -24,12 +24,12 @@ const APP_SHELL = [
   "./index.html",
   "./style.css?v=18",
   "./site-navigation.css?v=20",
-  "./site-navigation.js?v=10",
+  "./site-navigation.js?v=11",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
   "./workspace.html",
-  "./workspace.css?v=24",
+  "./workspace.css?v=25",
   "./manifest.webmanifest",
   "./assets/vital-pancakes-logo-transparent-black.png?v=1",
   "./assets/vital-pancakes-logo-transparent-white.png?v=1",
@@ -37,7 +37,7 @@ const APP_SHELL = [
   "./assets/app-icon-512.png",
   "./assets/app-preview-workspace.svg?v=4",
   "./assets/app-preview-studies.svg?v=2",
-  "./app/main.js?v=14",
+  "./app/main.js?v=15",
   "./app/content-view.mjs",
   "./app/tag-filter.mjs?v=1",
   "./app/store.js?v=14",
@@ -73,6 +73,20 @@ const APP_SHELL = [
   "./tools/literature-analyzer.css?v=2",
   "./tools/literature-analyzer.js?v=3",
   "./tools/literature-analyzer-model.mjs",
+  "./tools/master-lesson-builder.html",
+  "./tools/master-lesson-builder.css?v=2",
+  "./tools/master-lesson-builder.js?v=6",
+  "./tools/master-lesson-chunking.mjs",
+  "./tools/master-lesson-db.mjs",
+  "./tools/master-lesson-extraction.mjs?v=2",
+  "./tools/master-lesson-outline.mjs?v=3",
+  "./tools/master-lesson-prompts.mjs",
+  "./tools/master-lesson-queue.mjs",
+  "./tools/master-lesson-retrieval.mjs",
+  "./tools/master-lesson-study.mjs",
+  "./tools/master-lesson-text.mjs?v=2",
+  "./tools/master-lesson-validation.mjs",
+  "./tools/master-lesson-worker.js?v=1",
   "./tools/literature-curator.html",
   "./tools/literature-curator.css?v=1",
   "./tools/literature-curator.js?v=1",

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>Master Lesson Builder · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="../workspace.css?v=25">
+  <link rel="stylesheet" href="tool.css?v=33">
+  <link rel="stylesheet" href="master-lesson-builder.css?v=2">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script src="../vendor/pdf.min.js"></script>
+  <script type="module" src="../site-navigation.js?v=11"></script>
+</head>
+<body class="tool-body lesson-builder-body">
+  <a class="skip-link" href="#tool-main">Skip to lesson builder</a>
+
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Vital Pancakes home">
+      <span class="brand-mark" aria-hidden="true">VP</span>
+      <span>Vital Pancakes</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../workspace.html#area=everyday">Everyday Life</a>
+      <a href="../research-literature.html">Research &amp; Literature</a>
+      <a href="../workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="../workspace.html#area=tools" aria-current="page">Workspace</a>
+      <a href="../download-app.html">Download App</a>
+    </nav>
+  </header>
+
+  <div class="tool-shell lesson-builder-shell">
+    <header class="tool-topbar lesson-builder-topbar">
+      <div class="tool-title-group">
+        <div>
+          <h1>Master Lesson Builder</h1>
+          <small>LOCAL TEXTBOOK LESSONS · SOURCE-GROUNDED CHAT</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions lesson-model-actions">
+        <span class="lesson-status-badge" id="webgpu-status">Checking WebGPU</span>
+        <label class="lesson-model-picker">
+          <span class="visually-hidden">Local model</span>
+          <select id="model-select">
+            <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Small · about 0.9 GB memory</option>
+            <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Medium · about 2.3 GB memory</option>
+          </select>
+          <small id="model-estimate">About 0.8 GB download · 0.9 GB GPU memory</small>
+        </label>
+        <button class="button button-primary" id="load-model" type="button">Load model</button>
+      </div>
+    </header>
+
+    <div class="lesson-model-progress" id="model-progress-wrap" hidden>
+      <progress id="model-progress" max="1" value="0"></progress>
+      <span id="model-progress-text">Preparing local model</span>
+      <button class="button button-small" id="cancel-model" type="button">Cancel</button>
+    </div>
+
+    <main class="lesson-builder-workspace" id="tool-main">
+      <aside class="lesson-book-panel">
+        <section class="lesson-upload" id="lesson-upload" tabindex="0" role="button" aria-label="Choose or drop a textbook">
+          <input id="book-file" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" hidden>
+          <strong>Drop in a textbook</strong>
+          <span>Text PDF, TXT, or Markdown</span>
+          <button class="button button-quiet" id="choose-book" type="button">Choose file</button>
+        </section>
+        <div class="lesson-privacy-note">
+          <strong>Stays on this device</strong>
+          <p>Books, extracted text, lessons, and model work remain in this browser. Nothing is uploaded.</p>
+        </div>
+        <header class="lesson-panel-heading">
+          <div>
+            <span>LIBRARY</span>
+            <h2>Local books</h2>
+          </div>
+        </header>
+        <div class="lesson-book-list" id="book-list">
+          <p class="lesson-empty-copy">Processed books will appear here.</p>
+        </div>
+      </aside>
+
+      <section class="lesson-main-panel">
+        <div class="lesson-empty-state" id="lesson-empty-state">
+          <span aria-hidden="true">⌑</span>
+          <h2>Build lessons from a real source</h2>
+          <p>Upload a text-based book, approve its detected outline, then generate only the lessons you need.</p>
+        </div>
+
+        <div class="lesson-book-workspace" id="lesson-book-workspace" hidden>
+          <header class="lesson-book-header">
+            <div>
+              <span id="book-file-meta">LOCAL BOOK</span>
+              <input id="book-title" aria-label="Book title" maxlength="300">
+            </div>
+            <div class="lesson-book-actions">
+              <button class="button button-quiet" id="export-book-json" type="button">Export JSON</button>
+              <button class="button button-danger-quiet" id="delete-book" type="button">Delete book</button>
+            </div>
+          </header>
+
+          <section class="lesson-processing-strip" id="processing-strip" hidden>
+            <div>
+              <strong id="processing-title">Processing book</strong>
+              <span id="processing-message"></span>
+            </div>
+            <progress id="processing-progress" max="1" value="0"></progress>
+            <div class="lesson-processing-actions">
+              <button class="button button-small" id="pause-generation" type="button">Pause</button>
+              <button class="button button-small" id="resume-generation" type="button">Resume</button>
+              <button class="button button-small" id="retry-generation" type="button">Retry</button>
+              <button class="button button-danger-quiet button-small" id="cancel-generation" type="button">Cancel</button>
+            </div>
+          </section>
+
+          <div class="lesson-tabs" role="tablist" aria-label="Book workspace">
+            <button type="button" role="tab" aria-selected="true" data-lesson-tab="outline">Outline</button>
+            <button type="button" role="tab" aria-selected="false" data-lesson-tab="lesson">Lesson editor</button>
+            <button type="button" role="tab" aria-selected="false" data-lesson-tab="preview">Preview</button>
+          </div>
+
+          <section class="lesson-tab-panel" id="outline-panel" data-lesson-panel="outline">
+            <header class="lesson-section-toolbar">
+              <div>
+                <h2>Approve the outline</h2>
+                <p>Edit titles, levels, and source-page ranges before generation.</p>
+              </div>
+              <div>
+                <button class="button button-quiet" id="add-outline-chapter" type="button">+ Chapter</button>
+                <button class="button button-quiet" id="add-outline-lesson" type="button">+ Lesson</button>
+                <button class="button button-primary" id="save-outline" type="button">Save outline</button>
+              </div>
+            </header>
+            <div class="lesson-generation-bar">
+              <button class="button button-quiet" id="generate-selected-lesson" type="button">Generate selected lesson</button>
+              <button class="button button-quiet" id="generate-selected-chapter" type="button">Generate selected chapter</button>
+              <button class="button button-primary" id="generate-book" type="button">Generate entire book</button>
+            </div>
+            <section class="lesson-book-overview" id="book-overview" hidden></section>
+            <div class="lesson-outline" id="outline-tree" role="tree" aria-label="Editable book outline"></div>
+          </section>
+
+          <section class="lesson-tab-panel" id="lesson-editor-panel" data-lesson-panel="lesson" hidden>
+            <div class="lesson-editor-empty" id="lesson-editor-empty">
+              <h2>Select a lesson</h2>
+              <p>Choose a lesson from the outline, or generate one with the local model.</p>
+            </div>
+            <form id="lesson-editor" hidden>
+              <header class="lesson-section-toolbar">
+                <div>
+                  <span>EDITABLE LESSON</span>
+                  <h2 id="lesson-editor-heading">Lesson</h2>
+                </div>
+                <div>
+                  <button class="button button-quiet" id="export-lesson-json" type="button">JSON</button>
+                  <button class="button button-quiet" id="export-lesson-markdown" type="button">Markdown</button>
+                  <button class="button button-primary" id="save-to-studies" type="button">Save to Studies</button>
+                </div>
+              </header>
+              <div class="lesson-editor-fields" id="lesson-editor-fields"></div>
+            </form>
+          </section>
+
+          <section class="lesson-tab-panel lesson-preview" id="lesson-preview-panel" data-lesson-panel="preview" hidden>
+            <div id="lesson-preview-content">
+              <p class="lesson-empty-copy">Select or generate a lesson to preview it.</p>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <aside class="lesson-chat-panel">
+        <header class="lesson-panel-heading">
+          <div>
+            <span>TEXTBOOK CHAT</span>
+            <h2>Ask this book</h2>
+          </div>
+          <button class="icon-button" id="clear-chat" type="button" title="Clear chat" aria-label="Clear chat">×</button>
+        </header>
+        <p class="lesson-chat-grounding">Answers use retrieved excerpts only. Page citations are checked against the extracted source.</p>
+        <div class="lesson-chat-log" id="chat-log" aria-live="polite">
+          <p class="lesson-empty-copy">Load a book and local model, then ask a question.</p>
+        </div>
+        <form class="lesson-chat-form" id="chat-form">
+          <label for="chat-question">Question</label>
+          <textarea id="chat-question" rows="3" maxlength="2000" placeholder="What does the author mean by…?"></textarea>
+          <button class="button button-primary" type="submit">Ask textbook</button>
+        </form>
+      </aside>
+    </main>
+  </div>
+
+  <dialog class="app-dialog app-dialog-wide lesson-source-dialog" id="source-dialog">
+    <form method="dialog">
+      <header class="dialog-heading">
+        <div>
+          <p class="eyebrow" id="source-dialog-eyebrow">SOURCE PAGE</p>
+          <h2 id="source-dialog-title">Page 1</h2>
+        </div>
+        <button class="icon-button dialog-close" value="cancel" aria-label="Close">×</button>
+      </header>
+      <pre id="source-dialog-text"></pre>
+    </form>
+  </dialog>
+
+  <div class="toast-region" id="lesson-toast-region" aria-live="polite"></div>
+  <script type="module" src="master-lesson-builder.js?v=6"></script>
+</body>
+</html>

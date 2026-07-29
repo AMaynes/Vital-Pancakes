@@ -1811,6 +1811,118 @@ h3 {
   background: var(--coral-soft);
 }
 
+.saved-lesson {
+  gap: 12px;
+}
+
+.saved-lesson-title-page {
+  min-height: 190px;
+  padding: 28px 8px;
+  border-bottom: 3px double var(--line-strong);
+}
+
+.saved-lesson-title-page h2 {
+  max-width: 760px;
+  margin: 15px 0 7px;
+  font-size: 32px;
+}
+
+.saved-lesson-title-page p,
+.saved-lesson-title-page small {
+  display: block;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.saved-lesson-title-page small {
+  margin-top: 14px;
+  color: var(--ink-faint);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.saved-lesson-list,
+.saved-lesson-grid,
+.saved-lesson-section {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  background: #f6f3ec;
+}
+
+.saved-lesson-list h3,
+.saved-lesson-grid h3,
+.saved-lesson-section h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.saved-lesson-list ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.saved-lesson-list li,
+.saved-lesson-section p,
+.saved-lesson-grid article p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.saved-lesson-grid > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.saved-lesson-grid article {
+  padding: 10px;
+  border-left: 3px solid var(--ochre);
+  background: var(--card);
+}
+
+.saved-lesson-grid article strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.saved-lesson-section {
+  border-left: 3px solid var(--coral);
+  background: var(--card);
+}
+
+.saved-lesson-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.saved-lesson-pages span {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.saved-lesson-pages strong {
+  min-width: 22px;
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--coral);
+  font-size: 8px;
+  text-align: center;
+}
+
 .language-sheet {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -2771,6 +2883,10 @@ h3 {
   .workout-prescription,
   .language-sheet,
   .project-sequence {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-lesson-grid > div {
     grid-template-columns: 1fr;
   }
 
