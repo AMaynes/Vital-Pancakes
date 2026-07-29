@@ -46,6 +46,12 @@
       "short_name": "Travel",
       "url": "tools/travel-planner.html",
       "icons": [{ "src": "assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "File Converter",
+      "short_name": "Convert",
+      "url": "tools/file-converter.html",
+      "icons": [{ "src": "assets/app-icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

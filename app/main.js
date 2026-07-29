@@ -764,6 +764,13 @@ function renderToolsDashboard() {
       icon: "⌘",
       accent: "violet",
     },
+    {
+      title: "File Converter",
+      copy: "Convert images, audio, video, documents, archives, data, fonts, and specialist formats in your browser.",
+      href: "tools/file-converter.html",
+      icon: "⇄",
+      accent: "coral",
+    },
   ].forEach((tool) => toolsGrid.append(createToolCard(tool)));
 
   appMain.append(hero, toolsHeading, toolsGrid);

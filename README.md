@@ -35,7 +35,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Everyday Life** — Separate Cooking, Gym, and Cleaning areas for practical knowledge used at home.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Subject-specific working libraries for questions and ideas, structured studies, programming-language refreshers, algorithm labs, and project case studies, plus the existing notecard and educational collections.
-- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Literature Curation, Travel Planner, and Software Architect without unrelated library content.
+- **Workspace** — The Visual Board, PDF Signer, Literature Analyzer, Literature Curation, Travel Planner, Software Architect, and File Converter without unrelated library content.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the forest-and-circuit *Vital Pancakes* skull.
@@ -111,6 +111,14 @@ Event titles, strict `HH:MM` 24-hour times, places, and notes stay in the curren
 Provides a permanent `root/` folder and an editable file-tree workspace with aligned notes for every item. Folders and files spawn with blank placeholder names, can be renamed inline, and can be dragged into other folders. Individual nodes and the complete workspace can be cleared after a standard confirmation, with no password requirement.
 
 Software architecture data saves locally, preserves legacy file nodes and system scopes through migration, and can be exported as JSON.
+
+### File Converter
+
+Hosts a same-site build of the complete GPL-2.0 [Convert to it!](https://github.com/p2r3/convert) application as a full-height Workspace tool. Its conversion graph covers images, audio, video, documents, archives, data, fonts, code, databases, and specialist formats through browser-compatible engines including FFmpeg, ImageMagick, and Pandoc.
+
+The optional byte-for-byte check converts each result back to its starting format and compares every returned byte with the original before download. It reports exact matches, the first changed byte or length, and unavailable reverse routes. Because metadata and encoders can produce different bytes for equivalent content, an exact failure does not automatically mean visible or audible quality was lost.
+
+Files are processed by the converter inside the browser and are not uploaded by Vital Pancakes. The interface and format cache are available in the app shell; larger WebAssembly engines lazy-load from the official upstream deployment, so a conversion engine needs a network connection the first time it is used.
 
 ## Adding List Content
 

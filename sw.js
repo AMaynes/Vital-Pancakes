@@ -14,7 +14,7 @@
  * User-created localStorage data is outside service-worker storage and remains local.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v28";
+const CACHE_NAME = "vital-pancakes-app-v29";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -24,7 +24,7 @@ const APP_SHELL = [
   "./index.html",
   "./style.css?v=18",
   "./site-navigation.css?v=20",
-  "./site-navigation.js?v=7",
+  "./site-navigation.js?v=8",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
@@ -37,7 +37,7 @@ const APP_SHELL = [
   "./assets/app-icon-512.png",
   "./assets/app-preview-workspace.svg?v=4",
   "./assets/app-preview-studies.svg?v=2",
-  "./app/main.js?v=11",
+  "./app/main.js?v=12",
   "./app/content-view.mjs",
   "./app/tag-filter.mjs?v=1",
   "./app/store.js?v=14",
@@ -85,6 +85,14 @@ const APP_SHELL = [
   "./tools/architecture.html",
   "./tools/architecture.js?v=5",
   "./tools/architecture-model.mjs",
+  "./tools/file-converter.html",
+  "./tools/file-converter.css?v=1",
+  "./tools/file-converter.js?v=2",
+  "./tools/file-converter-state.mjs",
+  "./tools/file-converter-app/index.html",
+  "./tools/file-converter-app/cache.json",
+  "./tools/file-converter-app/assets/index-D8MU-ZYO.css",
+  "./tools/file-converter-app/assets/index-CqjCqN4s.js",
   "./vendor/mediabunny-1.51.0.min.mjs",
   "./vendor/pdf.min.js",
   "./vendor/pdf.worker.min.js",

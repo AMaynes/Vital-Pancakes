@@ -262,6 +262,12 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 `architecture-model.mjs` isolates model migration and tree policies so the permanent root, valid folder parents, descendant-aware movement, and recursive deletion can be tested without the browser. Legacy file nodes migrate beneath `root/`; legacy system scopes are retained inside `MigratedScopes/`.
 
+### File Converter
+
+`file-converter.html` hosts a same-site build of the complete upstream Convert to it! application inside the standard Workspace shell and links to its GPL-2.0 source. `file-converter-app/` contains the compiled interface, its exact upstream license and source-modification record, while large conversion engines lazy-load from the official upstream deployment. Its optional round-trip check converts each result back to the input format and performs an asynchronous exact-byte comparison before download.
+
+`file-converter.js` owns ready, timeout, offline, and retry states without reading selected files. `file-converter-state.mjs` keeps those host states deterministic, while `file-converter-byte-verification.mjs` mirrors the bundled exact comparison policy for independent tests of matches, file-count changes, length changes, and first differing offsets.
+
 ### `vendor/`
 
 Contains pinned minified Mediabunny 1.51.0, PDF.js 3.11.174, and PDF-Lib 1.17.1 browser assets so animation export, viewing, and signing do not depend on a network CDN.

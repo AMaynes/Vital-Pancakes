@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1e8">
+  <title>File Converter · Vital Pancakes</title>
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="../workspace.css?v=24">
+  <link rel="stylesheet" href="tool.css?v=30">
+  <link rel="stylesheet" href="file-converter.css?v=1">
+  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <script type="module" src="../site-navigation.js?v=8"></script>
+</head>
+<body class="tool-body">
+  <a class="skip-link" href="#tool-main">Skip to tool</a>
+
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Vital Pancakes home">
+      <span class="brand-mark" aria-hidden="true">VP</span>
+      <span>Vital Pancakes</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="../workspace.html#area=everyday">Everyday Life</a>
+      <a href="../research-literature.html">Research &amp; Literature</a>
+      <a href="../workspace.html#area=studies">Studies &amp; Projects</a>
+      <a href="../workspace.html#area=tools" aria-current="page">Workspace</a>
+      <a href="../download-app.html">Download App</a>
+    </nav>
+  </header>
+
+  <div class="tool-shell converter-shell">
+    <header class="tool-topbar">
+      <div class="tool-title-group converter-topbar-copy">
+        <div>
+          <h1>File Converter</h1>
+          <small>PRIVATE · ON-DEVICE · UNIVERSAL</small>
+        </div>
+      </div>
+      <div class="tool-topbar-actions converter-actions">
+        <span class="converter-status" id="converter-status" aria-live="polite">
+          Loading conversion engines
+        </span>
+        <a
+          class="button"
+          href="https://github.com/p2r3/convert"
+          target="_blank"
+          rel="noreferrer"
+          title="View the open-source converter"
+        >
+          Source
+        </a>
+        <a
+          class="button button-primary"
+          href="file-converter-app/index.html"
+          target="_blank"
+          rel="noreferrer"
+          title="Open the converter in a full browser tab"
+        >
+          Open full screen
+        </a>
+      </div>
+    </header>
+
+    <main class="converter-workspace" id="tool-main">
+      <div class="converter-loading" id="converter-loading">
+        <div class="converter-loading-copy">
+          <span class="converter-loader" aria-hidden="true"></span>
+          <p id="converter-loading-message">Loading the complete converter…</p>
+          <button class="button button-primary" id="retry-converter" type="button" hidden>Retry</button>
+        </div>
+      </div>
+      <iframe
+        class="converter-frame"
+        id="converter-frame"
+        src="about:blank"
+        title="File converter"
+        referrerpolicy="no-referrer"
+        allow="clipboard-read; clipboard-write"
+      ></iframe>
+    </main>
+  </div>
+
+  <script type="module" src="file-converter.js?v=2"></script>
+</body>
+</html>
