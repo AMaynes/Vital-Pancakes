@@ -99,6 +99,77 @@ the active local book.
 Replace `expectedRevision` with the current Visual Board revision. Preview and
 review the receipt before changing `mode` to `apply`.
 
+### Editable curve points and shared joints
+
+`curves.points.insert` adds each requested world-coordinate point at the nearest
+place on one target arc without flattening or replacing the curve.
+`vertices.create` keeps line and curve targets editable, inserts vertices at
+their crossings, and assigns one shared vertex ID to every incident path.
+
+```json
+{
+  "protocolVersion": 1,
+  "requestId": "curve-joints-1",
+  "tool": "visual-board",
+  "mode": "preview",
+  "expectedRevision": 42,
+  "commands": [
+    {
+      "type": "curves.points.insert",
+      "targets": { "ids": ["curve-id-from-context"] },
+      "points": [{ "x": 420, "y": 260 }]
+    },
+    {
+      "type": "vertices.create",
+      "targets": { "ids": ["curve-id-from-context", "line-id-from-context"] }
+    }
+  ]
+}
+```
+
+### User-owned floor-plan templates
+
+The Floor Plan panel can save selected vector objects as reusable templates.
+Templates can be listed, created, renamed, replaced from explicit targets,
+inserted, removed, and restored through the same adapter:
+
+- `floor-plan.templates.list`
+- `floor-plan.templates.create`
+- `floor-plan.templates.update`
+- `floor-plan.templates.replace`
+- `floor-plan.templates.insert`
+- `floor-plan.templates.remove`
+- `floor-plan.templates.restore`
+
+Built-in starter IDs can be replaced or hidden without modifying their bundled
+definitions; `restore` discards the replacement and makes the default visible
+again. Template contents remain editable and relationship-preserving. Raster
+images are rejected and should use the general Board Library instead.
+
+```json
+{
+  "protocolVersion": 1,
+  "requestId": "save-floor-plan-template-1",
+  "tool": "visual-board",
+  "mode": "preview",
+  "expectedRevision": 42,
+  "commands": [
+    {
+      "type": "floor-plan.templates.create",
+      "templateId": "courtyard-bedroom",
+      "name": "Courtyard bedroom",
+      "description": "Bedroom block with ensuite and garden doors.",
+      "targets": { "selection": true }
+    },
+    {
+      "type": "floor-plan.templates.insert",
+      "templateId": "courtyard-bedroom",
+      "placement": { "type": "point", "x": 900, "y": 400 }
+    }
+  ]
+}
+```
+
 ### Flowchart
 
 ```json
@@ -165,14 +236,23 @@ review the receipt before changing `mode` to `apply`.
 Visual Board publishes its current layer, material, fill-pattern, and vector-symbol
 catalog through `getCapabilities()`. Architectural commands are deterministic:
 
-- `architecture.areas.create`, `architecture.walls.create`,
-  `architecture.openings.create`, `architecture.symbols.place`,
+- `architecture.areas.create` and `architecture.paths.create` add exact polygonal
+  or curved caller-authored material regions.
+- `architecture.walls.create` adds independent segments.
+  `architecture.wallPaths.create` compiles connected runs, join/cap patches, and
+  genuine door/window gaps from explicit points and opening intervals.
+- `architecture.openings.create`, `architecture.symbols.place`,
   `architecture.labels.create`, and `architecture.dimensions.create` add exact
-  caller-supplied geometry.
-- `architecture.materials.apply` and `architecture.layers.set` change explicit
-  targets or replace the explicit layer stack.
-- `architecture.inspect` returns bounded object geometry and box-overlap results
-  without changing the board.
+  caller-supplied detail. Symbols preserve catalog proportions unless `fit` is
+  explicitly `stretch`.
+- `architecture.style.set`, `architecture.materials.apply`, and
+  `architecture.layers.set` change the explicit drawing system or targets.
+- `architecture.references.configure` turns existing local images into locked,
+  optionally export-hidden tracing references only with `consent: true`. Image
+  bytes are never included in AI context.
+- `architecture.inspect` returns bounded geometry and polygon-aware overlaps.
+  `architecture.validate` reports wall connectivity, room access, label
+  collisions, clearances, and symbol distortion. Both are query-only.
 
 The renderer does not choose a plan, infer rooms, place furniture, reroute walls,
 or improve a design. The calling model is the architect; Visual Board only
@@ -206,15 +286,28 @@ earlier in the same batch through stable client keys:
       ]
     },
     {
-      "type": "architecture.walls.create",
-      "walls": [
+      "type": "architecture.wallPaths.create",
+      "wallPaths": [
         {
-          "clientKey": "north-wall",
-          "start": { "x": 100, "y": 100 },
-          "end": { "x": 460, "y": 100 },
+          "clientKey": "room-shell",
+          "points": [
+            { "x": 100, "y": 100 }, { "x": 460, "y": 100 },
+            { "x": 460, "y": 360 }, { "x": 100, "y": 360 }
+          ],
+          "closed": true,
           "thickness": 12,
+          "join": "miter",
+          "materialId": "plaster",
+          "openings": [
+            {
+              "segmentIndex": 0,
+              "offset": 180,
+              "width": 90,
+              "kind": "door-french"
+            }
+          ],
           "layerId": "structure",
-          "style": { "fillColor": "#f4efe5", "color": "#2b2722" }
+          "style": { "lineWeight": "exterior" }
         }
       ]
     },
@@ -237,9 +330,11 @@ earlier in the same batch through stable client keys:
     {
       "type": "architecture.inspect",
       "targets": {
-        "clientKeys": ["room-floor", "north-wall", "bed"]
+        "clientKeys": ["room-floor", "bed"],
+        "wallPathId": "room-shell"
       },
-      "includeIntersections": true
+      "includeIntersections": true,
+      "includeConnectivity": true
     }
   ]
 }

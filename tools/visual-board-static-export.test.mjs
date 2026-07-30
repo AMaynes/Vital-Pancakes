@@ -8,7 +8,7 @@ import {
 
 function board(objects, options = {}) {
   return {
-    version: 13,
+    version: 14,
     revision: 1,
     objects,
     assets: options.assets ?? {},
@@ -280,6 +280,90 @@ test("existing drawing primitives and embedded raster images serialize as vector
   assert.doesNotMatch(svg, /<rect[^>]+fill="#ffffff" stroke="none"\/><g/);
 });
 
+test("professional architecture export preserves symbol proportions and export privacy", () => {
+  const document = board([
+    {
+      ...baseStyle,
+      id: "brick-court",
+      type: "area",
+      x: 0,
+      y: 0,
+      w: 220,
+      h: 140,
+      rotation: 0,
+      vertices: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 0, y: 1 },
+      ],
+      materialId: "brick",
+      layerId: "site",
+    },
+    {
+      ...baseStyle,
+      id: "contained-sofa",
+      type: "symbol",
+      symbolId: "sofa",
+      x: 10,
+      y: 10,
+      w: 100,
+      h: 100,
+      fit: "contain",
+      rotation: 0,
+      layerId: "furniture",
+    },
+    {
+      ...baseStyle,
+      id: "room-label",
+      type: "textbox",
+      x: 20,
+      y: 115,
+      w: 180,
+      h: 20,
+      rotation: 0,
+      text: "GREAT ROOM",
+      colorRanges: [],
+      fontSize: 13,
+      fontWeight: 700,
+      fontFamily: "sans",
+      scaleMode: "world",
+      textAlign: "center",
+      verticalAlign: "middle",
+      lineHeight: 1,
+      padding: 0,
+      layerId: "labels",
+    },
+    {
+      ...baseStyle,
+      id: "private-reference",
+      type: "image",
+      assetId: "reference",
+      x: 0,
+      y: 0,
+      w: 220,
+      h: 140,
+      rotation: 0,
+      hiddenInExport: true,
+      layerId: "site",
+    },
+  ], {
+    assets: {
+      reference: { dataUrl: "data:image/png;base64,PRIVATE" },
+    },
+  });
+
+  const svg = exportVisualBoardToSvg(document, {
+    viewBounds: { x: 0, y: 0, width: 220, height: 140 },
+  });
+
+  assert.match(svg, /data-symbol-id="sofa"/);
+  assert.match(svg, /<rect x="13" y="42" width="94" height="36"/);
+  assert.match(svg, /font-weight="700"/);
+  assert.match(svg, /M 0 \.5 H 24/);
+  assert.doesNotMatch(svg, /private-reference|PRIVATE/);
+});
+
 test("automatic export bounds include strokes and caller padding", () => {
   const document = board([{
     ...baseStyle,
@@ -315,4 +399,40 @@ test("explicit SVG view bounds reject invalid dimensions", () => {
     () => exportVisualBoardToSvg({ objects: null }),
     /objects array/,
   );
+});
+
+test("complex curve export preserves every cubic segment", () => {
+  const svg = exportVisualBoardToSvg(board([{
+    ...baseStyle,
+    id: "complex-curve",
+    type: "arc",
+    x: 0,
+    y: 0,
+    midX: 40,
+    midY: -20,
+    endX: 100,
+    endY: 0,
+    curvePoints: [
+      { x: 0, y: 0 },
+      { x: 40, y: -20 },
+      { x: 70, y: 30 },
+      { x: 100, y: 0 },
+    ],
+    curveHandles: [
+      {
+        control1: { x: 10, y: -10 },
+        control2: { x: 25, y: -20 },
+      },
+      {
+        control1: { x: 50, y: -20 },
+        control2: { x: 60, y: 30 },
+      },
+      {
+        control1: { x: 80, y: 30 },
+        control2: { x: 90, y: 10 },
+      },
+    ],
+  }]));
+
+  assert.match(svg, /M 0 0 C 10 -10 25 -20 40 -20 C 50 -20 60 30 70 30 C 80 30 90 10 100 0/);
 });

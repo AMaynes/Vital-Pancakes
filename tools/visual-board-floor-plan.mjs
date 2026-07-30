@@ -3,6 +3,10 @@
  * room templates.
  */
 
+import {
+  normalizeFloorPlanTemplateLibrary,
+} from "./visual-board-floor-plan-templates.mjs";
+
 export const FLOOR_PLAN_ELEMENTS = Object.freeze([
   "wall", "door", "window", "stairs", "room-label", "dimension",
   "bed", "sofa", "desk", "table", "toilet", "sink", "shower", "tub",
@@ -22,6 +26,10 @@ export function normalizeFloorPlanSettings(value = {}) {
     wallThickness: clamp(Number(value.wallThickness) || (units === "ft" ? 0.5 : 0.15), 0.02, 10),
     gridSize: clamp(Number(value.gridSize) || 32, 4, 200),
     alignmentGuides: value.alignmentGuides !== false,
+    templateLibrary: normalizeFloorPlanTemplateLibrary(
+      value.templateLibrary,
+      FLOOR_PLAN_TEMPLATES,
+    ),
   };
 }
 

@@ -4,13 +4,13 @@
  */
 
 import { createId } from "../app/store.js";
-import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=2";
+import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=3";
 import {
   CharacterFileError,
   createCharacterFilename,
   createCharacterPackage,
   instantiateCharacter,
-} from "./visual-board-character.mjs?v=1";
+} from "./visual-board-character.mjs?v=2";
 import {
   addVisualBoardLibraryItem,
   createEmptyVisualBoardLibrary,
@@ -42,11 +42,16 @@ import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
   setVertexNetworkPosition,
-} from "./visual-board-vertices.mjs?v=2";
+} from "./visual-board-vertices.mjs?v=3";
 import {
-  getQuadraticControlPoint,
-  getQuadraticCurvePoints,
-} from "./visual-board-curves.mjs?v=1";
+  getCurveBezierSegments,
+  getCurvePathPoints,
+  getCurveVertices,
+  insertCurveVertex,
+  normalizeCurveGeometry,
+  setCurveVertexPosition,
+  transformCurveGeometry,
+} from "./visual-board-curves.mjs?v=2";
 import { traceBlackAndWhiteImage } from "./visual-board-tracing.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
@@ -72,7 +77,7 @@ import {
   getSelectionUnits,
   resizeSelectionObjects,
   rotateSelectionObjects,
-} from "./visual-board-groups.mjs?v=2";
+} from "./visual-board-groups.mjs?v=3";
 import {
   createEmptyRig,
   createSharedGroupJoints,
@@ -102,7 +107,7 @@ import {
   resizeShapeFromCorner,
   rotatePoint,
   snapValue,
-} from "./visual-board-geometry.mjs?v=9";
+} from "./visual-board-geometry.mjs?v=10";
 import {
   cropToAspect,
   fillCropToFrame,
@@ -115,7 +120,7 @@ import {
 import {
   flipBoardSelection,
   getAlignmentSnap,
-} from "./visual-board-transform.mjs?v=2";
+} from "./visual-board-transform.mjs?v=3";
 import {
   FLOOR_PLAN_ELEMENTS,
   FLOOR_PLAN_TEMPLATES,
@@ -123,29 +128,40 @@ import {
   createFloorPlanTemplate,
   formatFloorPlanDimension,
   normalizeFloorPlanSettings,
-} from "./visual-board-floor-plan.mjs?v=1";
+} from "./visual-board-floor-plan.mjs?v=2";
+import {
+  addFloorPlanTemplate,
+  createFloorPlanTemplateRecord,
+  getFloorPlanTemplateCatalog,
+  getFloorPlanTemplateRecord,
+  removeFloorPlanTemplate,
+  replaceFloorPlanTemplate,
+  restoreBuiltInFloorPlanTemplate,
+  updateFloorPlanTemplate,
+} from "./visual-board-floor-plan-templates.mjs?v=1";
 import {
   ARCHITECTURE_FILL_PATTERNS,
+  fitArchitectureSymbolFrame,
   getArchitectureMaterial,
   getArchitectureSymbol,
   normalizeArchitectureSettings,
   sortArchitectureObjects,
-} from "./visual-board-architecture.mjs?v=1";
+} from "./visual-board-architecture.mjs?v=2";
 import {
   exportVisualBoardToSvg,
   getVisualBoardExportBounds,
-} from "./visual-board-static-export.mjs?v=1";
+} from "./visual-board-static-export.mjs?v=3";
 import { installAiPageHost } from "../app/ai-page-host.mjs";
 import { AI_PERMISSION_LEVELS } from "../app/ai-command-protocol.mjs";
 import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=3";
+} from "./visual-board-ai-adapter.mjs?v=6";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
-const BOARD_VERSION = 13;
+const BOARD_VERSION = 16;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -206,6 +222,7 @@ const groupSelectionButton = document.querySelector("#group-selection");
 const traceImageButton = document.querySelector("#trace-image");
 const mergeVerticesButton = document.querySelector("#merge-vertices");
 const curveVerticesButton = document.querySelector("#curve-vertices");
+const addCurveVertexButton = document.querySelector("#add-curve-vertex");
 const ungroupSelectionButton = document.querySelector("#ungroup-selection");
 const explodeSelectionButton = document.querySelector("#explode-selection");
 const reassembleSelectionButton = document.querySelector("#reassemble-selection");
@@ -287,6 +304,17 @@ const floorPlanScale = document.querySelector("#floor-plan-scale");
 const floorPlanWallThickness = document.querySelector("#floor-plan-wall-thickness");
 const floorPlanGridSize = document.querySelector("#floor-plan-grid-size");
 const floorPlanGuides = document.querySelector("#floor-plan-guides");
+const floorPlanSaveTemplateButton = document.querySelector("#floor-plan-save-template");
+const floorPlanTemplateList = document.querySelector("#floor-plan-templates");
+const floorPlanRestorableTemplates = document.querySelector("#floor-plan-restorable-templates");
+const floorPlanTemplateDialog = document.querySelector("#floor-plan-template-dialog");
+const floorPlanTemplateForm = document.querySelector("#floor-plan-template-form");
+const floorPlanTemplateDialogTitle = document.querySelector("#floor-plan-template-dialog-title");
+const floorPlanTemplateDialogCopy = document.querySelector("#floor-plan-template-dialog-copy");
+const floorPlanTemplateName = document.querySelector("#floor-plan-template-name");
+const floorPlanTemplateDescription = document.querySelector("#floor-plan-template-description");
+const floorPlanTemplateError = document.querySelector("#floor-plan-template-error");
+const floorPlanTemplateConfirm = document.querySelector("#confirm-floor-plan-template");
 const imageEditDialog = document.querySelector("#image-edit-dialog");
 const imageEditForm = document.querySelector("#image-edit-form");
 const imageCropStage = document.querySelector("#image-crop-stage");
@@ -333,9 +361,12 @@ let interpolationAbortController = null;
 let interpolationInProgress = false;
 let interpolationReturnFocus = null;
 let floorPlanPanelOpen = Boolean(board.settings.floorPlan?.enabled);
+let floorPlanTemplateDialogState = null;
+let floorPlanTemplateReturnFocus = null;
 let imageEditSession = null;
 let alignmentGuides = [];
 let mirrorTextOnFlip = false;
+let curveVertexInsertionActive = false;
 let shapeToolChoices = {
   "2d": shape2dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
   "3d": shape3dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
@@ -399,9 +430,15 @@ function normalizeObjectSemantic(value) {
     clientRef: String(value.clientRef ?? "").trim().slice(0, 128),
     sourceId: String(value.sourceId ?? "").trim().slice(0, 128),
     targetId: String(value.targetId ?? "").trim().slice(0, 128),
+    roomId: String(value.roomId ?? "").trim().slice(0, 128),
+    wallPathId: String(value.wallPathId ?? "").trim().slice(0, 128),
+    referenceId: String(value.referenceId ?? "").trim().slice(0, 128),
+    levelId: String(value.levelId ?? "").trim().slice(0, 128),
+    segmentIndex: Number.isInteger(value.segmentIndex) ? value.segmentIndex : null,
+    openingIndex: Number.isInteger(value.openingIndex) ? value.openingIndex : null,
   };
   const compact = Object.fromEntries(Object.entries(semantic).filter(([, item]) => (
-    Array.isArray(item) ? item.length : item
+    Array.isArray(item) ? item.length : item !== null && item !== ""
   )));
   return Object.keys(compact).length ? compact : null;
 }
@@ -444,9 +481,14 @@ function loadBoard() {
     const savedBoard = JSON.parse(localStorage.getItem(BOARD_KEY));
     const rawObjects = Array.isArray(savedBoard?.objects) ? savedBoard.objects : [];
     const snapToGrid = savedBoard?.settings?.snap ?? false;
+    const savedFloorPlan = normalizeFloorPlanSettings(savedBoard?.settings?.floorPlan);
     const savedZoom = clamp(finiteNumber(savedBoard?.view?.zoom, 1), MIN_ZOOM, MAX_ZOOM);
     const objects = rawObjects
-      .map((object) => normalizeObject(object, { snapToGrid, textZoom: savedZoom }))
+      .map((object) => normalizeObject(object, {
+        snapToGrid,
+        textZoom: savedZoom,
+        gridSize: savedFloorPlan.gridSize,
+      }))
       .filter(Boolean);
     return {
       version: BOARD_VERSION,
@@ -549,6 +591,7 @@ function normalizeObject(rawObject, options = {}) {
       : {}),
     ...(rawObject.flipX ? { flipX: true } : {}),
     ...(rawObject.flipY ? { flipY: true } : {}),
+    ...(rawObject.hiddenInExport ? { hiddenInExport: true } : {}),
     locked: Boolean(rawObject.locked),
     dimensionsLocked: Boolean(rawObject.dimensionsLocked),
     ...(normalizeObjectSemantic(rawObject.semantic)
@@ -577,7 +620,7 @@ function normalizeObject(rawObject, options = {}) {
     const startY = finiteNumber(rawObject.y, 0);
     const endX = finiteNumber(rawObject.endX, startX);
     const endY = finiteNumber(rawObject.endY, startY);
-    return {
+    const curve = normalizeCurveGeometry({
       ...common,
       x: startX,
       y: startY,
@@ -585,7 +628,21 @@ function normalizeObject(rawObject, options = {}) {
       midY: finiteNumber(rawObject.midY, (startY + endY) / 2),
       endX,
       endY,
-    };
+      curvePoints: rawObject.curvePoints,
+      curveHandles: rawObject.curveHandles,
+      curveVertexIds: rawObject.curveVertexIds,
+    });
+    const hasVertexNetwork = typeof rawObject.vertexNetworkId === "string"
+      && rawObject.vertexNetworkId
+      && Array.isArray(curve.curvePoints)
+      && Array.isArray(curve.curveVertexIds)
+      && curve.curveVertexIds.length === curve.curvePoints.length
+      && curve.curveVertexIds.every((vertexId) => (
+        typeof vertexId === "string" && vertexId
+      ));
+    if (hasVertexNetwork) curve.vertexNetworkId = rawObject.vertexNetworkId;
+    else delete curve.curveVertexIds;
+    return curve;
   }
 
   if (type === "trace") {
@@ -688,6 +745,7 @@ function normalizeObject(rawObject, options = {}) {
       h: Math.max(1, finiteNumber(rawObject.h, 100)),
       rotation: finiteNumber(rawObject.rotation, 0),
       symbolId,
+      fit: rawObject.fit === "stretch" ? "stretch" : "contain",
     });
   }
 
@@ -707,7 +765,11 @@ function normalizeObject(rawObject, options = {}) {
       ...(type === "shape" ? { shapeKind: rawObject.shapeKind } : {}),
     });
     if (normalized.shapeKind === "cube") {
-      const defaultDepth = getCubeDepth(normalized, options.snapToGrid);
+      const defaultDepth = getCubeDepth(
+        normalized,
+        options.snapToGrid,
+        options.gridSize,
+      );
       normalized.shapeDepthX = finiteNumber(rawObject.shapeDepthX, defaultDepth);
       normalized.shapeDepthY = finiteNumber(rawObject.shapeDepthY, defaultDepth);
     }
@@ -733,6 +795,11 @@ function normalizeObject(rawObject, options = {}) {
       colorRanges: sanitizeTextColorRanges(rawObject.colorRanges, text.length),
       fontSize,
       fontFamily,
+      fontWeight: clamp(
+        Math.round(finiteNumber(rawObject.fontWeight, 400) / 100) * 100,
+        300,
+        800,
+      ),
       scaleMode,
       textAlign: ["left", "center", "right"].includes(rawObject.textAlign)
         ? rawObject.textAlign
@@ -768,6 +835,14 @@ function normalizeObject(rawObject, options = {}) {
         : {}),
       flipX: Boolean(rawObject.flipX),
       flipY: Boolean(rawObject.flipY),
+      ...(rawObject.referenceImage
+        ? {
+          referenceImage: true,
+          referenceName: String(rawObject.referenceName ?? rawObject.name ?? "Reference")
+            .trim()
+            .slice(0, 120),
+        }
+        : {}),
     });
   }
 
@@ -868,10 +943,12 @@ function getGridSize() {
     : GRID_SIZE;
 }
 
-function getCubeDepth(object, snapToGrid = false) {
+function getCubeDepth(object, snapToGrid = false, gridSizeOverride = null) {
   const minimumDimension = Math.min(Math.abs(object.w), Math.abs(object.h));
   if (!snapToGrid) return Math.max(1, minimumDimension * 0.22);
-  const gridSize = getGridSize();
+  const gridSize = Number.isFinite(Number(gridSizeOverride))
+    ? Math.max(1, Number(gridSizeOverride))
+    : getGridSize();
   const gridSizedDimension = Math.max(gridSize * 2, minimumDimension);
   const desiredDepth = snapValue(gridSizedDimension * 0.22, gridSize);
   return clamp(desiredDepth, gridSize, gridSizedDimension - gridSize);
@@ -1086,7 +1163,10 @@ function getArchitecturePattern(patternId, fillColor, strokeColor) {
   tileContext.fillStyle = colorWithOpacity(strokeColor, 0.34);
   tileContext.lineWidth = 1;
 
-  if (["hatch", "crosshatch", "wood", "grass", "water", "stone", "pavers", "tile"].includes(patternId)) {
+  if ([
+    "hatch", "crosshatch", "wood", "grass", "water", "stone", "pavers", "tile",
+    "brick", "shingle", "marble", "slate", "mulch", "hedge",
+  ].includes(patternId)) {
     tileContext.beginPath();
   }
   if (["hatch", "crosshatch"].includes(patternId)) {
@@ -1148,16 +1228,74 @@ function getArchitecturePattern(patternId, fillColor, strokeColor) {
     tileContext.rect(18.5, 8.5, 11, 7);
     tileContext.rect(0.5, 16.5, 11, 7);
     tileContext.rect(12.5, 16.5, 11, 7);
+  } else if (patternId === "brick") {
+    [0.5, 8.5, 16.5].forEach((y, row) => {
+      tileContext.moveTo(0, y);
+      tileContext.lineTo(24, y);
+      const offset = row % 2 ? 0 : 6;
+      [offset, offset + 12, offset + 24].forEach((x) => {
+        tileContext.moveTo(x, y);
+        tileContext.lineTo(x, y + 8);
+      });
+    });
+  } else if (patternId === "shingle") {
+    [4, 12, 20].forEach((y, row) => {
+      const offset = row % 2 ? 4 : 0;
+      for (let x = offset; x < 28; x += 8) {
+        tileContext.moveTo(x - 4, y);
+        tileContext.quadraticCurveTo(x, y + 5, x + 4, y);
+      }
+    });
+  } else if (patternId === "marble") {
+    tileContext.moveTo(-2, 5);
+    tileContext.bezierCurveTo(5, 0, 8, 13, 15, 7);
+    tileContext.bezierCurveTo(20, 3, 22, 15, 28, 11);
+    tileContext.moveTo(3, 24);
+    tileContext.bezierCurveTo(8, 17, 14, 23, 22, 16);
+  } else if (patternId === "slate") {
+    tileContext.rect(0.5, 0.5, 11, 11);
+    tileContext.rect(12.5, 0.5, 11, 11);
+    tileContext.rect(0.5, 12.5, 11, 11);
+    tileContext.rect(12.5, 12.5, 11, 11);
+    tileContext.moveTo(0, 12);
+    tileContext.lineTo(12, 0);
+    tileContext.moveTo(12, 24);
+    tileContext.lineTo(24, 12);
+  } else if (patternId === "mulch") {
+    [[2, 6, 8, 3], [11, 5, 17, 9], [4, 17, 11, 13], [15, 20, 23, 15]]
+      .forEach(([x1, y1, x2, y2]) => {
+        tileContext.moveTo(x1, y1);
+        tileContext.quadraticCurveTo((x1 + x2) / 2, (y1 + y2) / 2 + 2, x2, y2);
+      });
+  } else if (patternId === "hedge") {
+    [[4, 18], [10, 10], [16, 20], [22, 9]].forEach(([x, y]) => {
+      tileContext.moveTo(x, y);
+      tileContext.quadraticCurveTo(x - 5, y - 6, x, y - 10);
+      tileContext.quadraticCurveTo(x + 5, y - 6, x, y);
+    });
   }
-  if (["hatch", "crosshatch", "wood", "grass", "water", "stone", "pavers", "tile"].includes(patternId)) {
+  if ([
+    "hatch", "crosshatch", "wood", "grass", "water", "stone", "pavers", "tile",
+    "brick", "shingle", "marble", "slate", "mulch", "hedge",
+  ].includes(patternId)) {
     tileContext.stroke();
   }
-  if (patternId === "dots") {
+  if (["dots", "sand", "asphalt"].includes(patternId)) {
     [[5, 5], [18, 9], [10, 19], [22, 22]].forEach(([x, y]) => {
       tileContext.beginPath();
-      tileContext.arc(x, y, 1.1, 0, Math.PI * 2);
+      tileContext.arc(x, y, patternId === "sand" ? 0.7 : 1.1, 0, Math.PI * 2);
       tileContext.fill();
     });
+    if (patternId === "asphalt") {
+      tileContext.beginPath();
+      tileContext.moveTo(2, 14);
+      tileContext.lineTo(7, 12);
+      tileContext.moveTo(14, 3);
+      tileContext.lineTo(19, 5);
+      tileContext.moveTo(15, 19);
+      tileContext.lineTo(21, 17);
+      tileContext.stroke();
+    }
   }
   const pattern = context.createPattern(tile, "repeat");
   architecturePatternCache.set(key, pattern);
@@ -1247,12 +1385,13 @@ function drawArchitectureDimension(object) {
 function drawArchitectureSymbol(object) {
   const definition = getArchitectureSymbol(object.symbolId);
   if (!definition) return;
+  const frame = fitArchitectureSymbolFrame(object, definition);
   withObjectFlip(object, () => {
-    definition.parts.forEach((part) => drawArchitectureSymbolPart(object, part));
+    definition.parts.forEach((part) => drawArchitectureSymbolPart(object, frame, part));
   });
 }
 
-function drawArchitectureSymbolPart(object, part) {
+function drawArchitectureSymbolPart(object, frame, part) {
   context.save();
   context.setLineDash([]);
   context.lineWidth = Math.max(0.7, (object.strokeWidth ?? 2) * (part.width ?? 1));
@@ -1260,10 +1399,10 @@ function drawArchitectureSymbolPart(object, part) {
   context.fillStyle = resolveSymbolPaint(part.fill, object, false);
 
   if (part.type === "rect" || part.type === "rounded-rect") {
-    const x = object.x + part.x * object.w;
-    const y = object.y + part.y * object.h;
-    const width = part.w * object.w;
-    const height = part.h * object.h;
+    const x = frame.x + part.x * frame.w;
+    const y = frame.y + part.y * frame.h;
+    const width = part.w * frame.w;
+    const height = part.h * frame.h;
     context.beginPath();
     if (part.type === "rounded-rect") {
       addRoundedRectanglePath(
@@ -1281,10 +1420,10 @@ function drawArchitectureSymbolPart(object, part) {
   } else if (part.type === "ellipse") {
     context.beginPath();
     context.ellipse(
-      object.x + (part.x + part.w / 2) * object.w,
-      object.y + (part.y + part.h / 2) * object.h,
-      part.w * object.w / 2,
-      part.h * object.h / 2,
+      frame.x + (part.x + part.w / 2) * frame.w,
+      frame.y + (part.y + part.h / 2) * frame.h,
+      part.w * frame.w / 2,
+      part.h * frame.h / 2,
       0,
       0,
       Math.PI * 2,
@@ -1293,23 +1432,23 @@ function drawArchitectureSymbolPart(object, part) {
     if (part.stroke) context.stroke();
   } else if (part.type === "line") {
     context.beginPath();
-    context.moveTo(object.x + part.x1 * object.w, object.y + part.y1 * object.h);
-    context.lineTo(object.x + part.x2 * object.w, object.y + part.y2 * object.h);
+    context.moveTo(frame.x + part.x1 * frame.w, frame.y + part.y1 * frame.h);
+    context.lineTo(frame.x + part.x2 * frame.w, frame.y + part.y2 * frame.h);
     context.stroke();
   } else if (part.type === "arc") {
     context.beginPath();
     context.arc(
-      object.x + part.cx * object.w,
-      object.y + part.cy * object.h,
-      part.radius * Math.min(object.w, object.h),
+      frame.x + part.cx * frame.w,
+      frame.y + part.cy * frame.h,
+      part.radius * Math.min(frame.w, frame.h),
       part.startAngle,
       part.endAngle,
     );
     context.stroke();
   } else if (part.type === "polygon") {
     const points = part.points.map(([x, y]) => ({
-      x: object.x + x * object.w,
-      y: object.y + y * object.h,
+      x: frame.x + x * frame.w,
+      y: frame.y + y * frame.h,
     }));
     context.beginPath();
     context.moveTo(points[0].x, points[0].y);
@@ -1368,15 +1507,20 @@ function drawLine(object) {
 }
 
 function drawArc(object) {
-  const control = getQuadraticControlPoint(object);
+  const segments = getCurveBezierSegments(object);
+  if (!segments.length) return;
   context.beginPath();
-  context.moveTo(object.x, object.y);
-  context.quadraticCurveTo(
-    control.x,
-    control.y,
-    object.endX,
-    object.endY,
-  );
+  context.moveTo(segments[0].start.x, segments[0].start.y);
+  segments.forEach((segment) => {
+    context.bezierCurveTo(
+      segment.control1.x,
+      segment.control1.y,
+      segment.control2.x,
+      segment.control2.y,
+      segment.end.x,
+      segment.end.y,
+    );
+  });
   context.stroke();
 }
 
@@ -1443,7 +1587,7 @@ function drawTextboxContent(object) {
   context.beginPath();
   context.rect(object.x, object.y, object.w, object.h);
   context.clip();
-  context.font = `${worldFontSize}px ${getTextFontCss(object.fontFamily)}`;
+  context.font = `${object.fontWeight ?? 400} ${worldFontSize}px ${getTextFontCss(object.fontFamily)}`;
   context.textBaseline = "top";
   const lines = wrapTextTokens(text, Math.max(20, object.w - padding * 2));
   const lineHeight = worldFontSize * (object.lineHeight ?? 1.25);
@@ -1745,9 +1889,7 @@ function drawObjectSelection(object, showHandles) {
     context.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
     if (showHandles && !object.locked) {
       context.setLineDash([]);
-      drawHandle({ x: object.x, y: object.y });
-      drawHandle({ x: object.midX, y: object.midY });
-      drawHandle({ x: object.endX, y: object.endY });
+      getCurveVertices(object).forEach((point) => drawHandle(point));
     }
   } else if (LINE_TYPES.has(object.type)) {
     const padding = Math.max(8 / viewport.zoom, object.strokeWidth / 2 + 4 / viewport.zoom);
@@ -1885,6 +2027,19 @@ function getConstrainedNetworkVertexPoint(objects, vertexId, target) {
     .find((vertex) => vertex.id === vertexId);
   if (!original) return target;
   const constraints = objects.flatMap((object) => {
+    if (object.type === "arc") {
+      const points = getCurveVertices(object);
+      return (object.curveVertexIds ?? []).flatMap((candidateId, index) => {
+        if (candidateId !== vertexId) return [];
+        return [points[index - 1], points[index + 1]]
+          .filter(Boolean)
+          .map((neighbor) => ({
+            x: neighbor.x,
+            y: neighbor.y,
+            radius: distanceBetween(original, neighbor),
+          }));
+      });
+    }
     if (object.startVertexId === vertexId) {
       return [{
         x: object.endX,
@@ -2006,15 +2161,10 @@ function findSelectionHandle(point) {
   }
 
   if (CURVE_TYPES.has(object.type)) {
-    if (distanceBetween(point, { x: object.midX, y: object.midY }) <= hitRadius) {
-      return { kind: "curve-middle", object };
-    }
-    if (distanceBetween(point, { x: object.x, y: object.y }) <= hitRadius) {
-      return { kind: "endpoint", object, endpoint: "start" };
-    }
-    if (distanceBetween(point, { x: object.endX, y: object.endY }) <= hitRadius) {
-      return { kind: "endpoint", object, endpoint: "end" };
-    }
+    const vertexIndex = getCurveVertices(object).findIndex((vertex) => (
+      distanceBetween(point, vertex) <= hitRadius
+    ));
+    if (vertexIndex >= 0) return { kind: "curve-vertex", object, vertexIndex };
   }
 
   if (LINE_TYPES.has(object.type)) {
@@ -2038,6 +2188,14 @@ function handlePointerDown(event) {
   const screenPoint = getCanvasPoint(event);
   const worldPoint = screenToWorld(screenPoint);
   hoverPoint = worldPoint;
+  if (
+    curveVertexInsertionActive
+    && activeTool === "select"
+    && event.button === 0
+  ) {
+    insertSelectedCurveVertexAt(worldPoint);
+    return;
+  }
   canvas.setPointerCapture(event.pointerId);
 
   if (activeTool === "pan" || event.button === 1 || spaceHeld) {
@@ -2342,11 +2500,10 @@ function handlePointerMove(event) {
       interaction.object.endY = point.y;
     }
     interaction.changed = true;
-  } else if (interaction.kind === "curve-middle") {
+  } else if (interaction.kind === "curve-vertex") {
     ensureInteractionCheckpoint();
     const point = getSnappedPoint(worldPoint);
-    interaction.object.midX = point.x;
-    interaction.object.midY = point.y;
+    setCurveVertexPosition(interaction.object, interaction.vertexIndex, point);
     interaction.changed = true;
   } else if (interaction.kind === "network-vertex") {
     ensureInteractionCheckpoint();
@@ -2514,14 +2671,19 @@ function moveObject(object, deltaX, deltaY) {
     });
     return;
   }
+  if (CURVE_TYPES.has(object.type)) {
+    replaceObjectProperties(
+      object,
+      transformCurveGeometry(object, (point) => ({
+        x: point.x + deltaX,
+        y: point.y + deltaY,
+      })),
+    );
+    return;
+  }
   object.x += deltaX;
   object.y += deltaY;
-  if (CURVE_TYPES.has(object.type)) {
-    object.midX += deltaX;
-    object.midY += deltaY;
-    object.endX += deltaX;
-    object.endY += deltaY;
-  } else if (LINE_TYPES.has(object.type)) {
+  if (LINE_TYPES.has(object.type)) {
     object.endX += deltaX;
     object.endY += deltaY;
   }
@@ -2561,7 +2723,7 @@ function finishPointerInteraction(event, cancelled) {
     "group-resize",
     "group-rotate",
     "endpoint",
-    "curve-middle",
+    "curve-vertex",
     "network-vertex",
     "rig-joint",
   ]
@@ -2838,6 +3000,7 @@ function toggleFloorPlanPanel(forceOpen = !floorPlanPanelOpen) {
   floorPlanToggleButton.setAttribute("aria-expanded", String(floorPlanPanelOpen));
   floorPlanToggleButton.classList.toggle("is-active", floorPlanPanelOpen);
   syncFloorPlanControls();
+  renderFloorPlanCatalog();
   saveBoard();
   drawBoard();
   if (floorPlanPanelOpen) {
@@ -2847,7 +3010,6 @@ function toggleFloorPlanPanel(forceOpen = !floorPlanPanelOpen) {
 
 function renderFloorPlanCatalog() {
   const elementContainer = document.querySelector("#floor-plan-elements");
-  const templateContainer = document.querySelector("#floor-plan-templates");
   elementContainer.replaceChildren(...FLOOR_PLAN_ELEMENTS.map((kind) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -2855,13 +3017,66 @@ function renderFloorPlanCatalog() {
     button.textContent = formatCatalogName(kind);
     return button;
   }));
-  templateContainer.replaceChildren(...FLOOR_PLAN_TEMPLATES.map((kind) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.floorTemplate = kind;
-    button.textContent = formatCatalogName(kind);
-    return button;
-  }));
+  const catalog = getFloorPlanTemplateCatalog(
+    board.settings.floorPlan?.templateLibrary,
+    FLOOR_PLAN_TEMPLATES,
+  );
+  floorPlanTemplateList.replaceChildren(
+    ...catalog.filter((item) => item.visible).map(createFloorPlanTemplateCard),
+  );
+  floorPlanRestorableTemplates.replaceChildren(
+    ...catalog.filter((item) => !item.visible).map(createRestorableFloorPlanTemplate),
+  );
+  floorPlanSaveTemplateButton.disabled = selectedObjects.length === 0;
+}
+
+function createFloorPlanTemplateCard(item) {
+  const card = document.createElement("div");
+  card.className = "floor-plan-template-card";
+  card.dataset.floorTemplateId = item.id;
+
+  const copy = document.createElement("div");
+  copy.className = "floor-plan-template-card-copy";
+  const name = document.createElement("strong");
+  name.textContent = item.name;
+  const metadata = document.createElement("span");
+  metadata.textContent = item.source === "built-in"
+    ? "Built in"
+    : `${item.source === "override" ? "Customized default" : "My template"} · ${item.objectCount} objects`;
+  copy.append(name, metadata);
+
+  const actions = document.createElement("div");
+  actions.className = "floor-plan-template-card-actions";
+  actions.append(
+    createFloorPlanTemplateAction("insert", item.id, "Insert"),
+    ...(item.editable ? [createFloorPlanTemplateAction("edit", item.id, "Edit")] : []),
+    createFloorPlanTemplateAction("replace", item.id, "Replace"),
+    ...(item.source === "override"
+      ? [createFloorPlanTemplateAction("restore", item.id, "Restore")]
+      : []),
+    createFloorPlanTemplateAction("remove", item.id, "Remove"),
+  );
+  card.append(copy, actions);
+  return card;
+}
+
+function createRestorableFloorPlanTemplate(item) {
+  const row = document.createElement("div");
+  row.className = "floor-plan-restorable-item";
+  const name = document.createElement("span");
+  name.textContent = `${item.name} removed`;
+  row.append(name, createFloorPlanTemplateAction("restore", item.id, "Restore"));
+  return row;
+}
+
+function createFloorPlanTemplateAction(action, templateId, label) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.floorTemplateAction = action;
+  button.dataset.floorTemplateId = templateId;
+  button.textContent = label;
+  button.title = `${label} ${formatCatalogName(templateId)}`;
+  return button;
 }
 
 function formatCatalogName(value) {
@@ -2882,6 +3097,7 @@ function syncFloorPlanControls() {
 
 function updateFloorPlanSettings() {
   board.settings.floorPlan = normalizeFloorPlanSettings({
+    ...board.settings.floorPlan,
     enabled: floorPlanPanelOpen,
     units: floorPlanUnits.value,
     pixelsPerUnit: floorPlanScale.value,
@@ -2909,6 +3125,228 @@ function insertFloorPlanObjects(kind, isTemplate) {
   updateSelectionControls();
   drawBoard();
   announceStatus(`${formatCatalogName(kind)} added`);
+}
+
+function insertSavedFloorPlanTemplate(templateId) {
+  const catalogItem = getFloorPlanTemplateCatalog(
+    board.settings.floorPlan?.templateLibrary,
+    FLOOR_PLAN_TEMPLATES,
+  ).find((item) => item.id === templateId && item.visible);
+  if (!catalogItem) return;
+
+  const origin = getCanvasCenterWorldPoint();
+  const record = getFloorPlanTemplateRecord(
+    board.settings.floorPlan?.templateLibrary,
+    templateId,
+    FLOOR_PLAN_TEMPLATES,
+  );
+  try {
+    const created = record
+      ? instantiateCharacter(record.character, createId, origin).objects
+      : createFloorPlanTemplate(
+        templateId,
+        origin,
+        normalizeFloorPlanSettings(board.settings.floorPlan),
+        createId,
+      );
+    const objects = created.map((object) => normalizeObject(object)).filter(Boolean);
+    if (!objects.length) throw new CharacterFileError("This template has no usable objects.");
+    checkpoint();
+    board.objects.push(...objects);
+    selectedObjects = objects;
+    saveBoard();
+    updateSelectionControls();
+    drawBoard();
+    announceStatus(`${catalogItem.name} inserted`);
+  } catch (error) {
+    console.error(`Unable to insert floor-plan template ${templateId}.`, error);
+    announceStatus("The floor-plan template could not be inserted");
+  }
+}
+
+function openFloorPlanTemplateDialog(mode, templateId = null, returnFocus = null) {
+  if (mode === "create" && !selectedObjects.length) return;
+  const record = templateId
+    ? getFloorPlanTemplateRecord(
+      board.settings.floorPlan?.templateLibrary,
+      templateId,
+      FLOOR_PLAN_TEMPLATES,
+    )
+    : null;
+  if (mode === "edit" && !record) return;
+
+  floorPlanTemplateDialogState = { mode, templateId };
+  floorPlanTemplateReturnFocus = returnFocus || document.activeElement;
+  floorPlanTemplateError.hidden = true;
+  floorPlanTemplateError.textContent = "";
+  floorPlanTemplateDialogTitle.textContent = mode === "edit"
+    ? "Edit floor-plan template"
+    : "Save floor-plan template";
+  floorPlanTemplateDialogCopy.textContent = mode === "edit"
+    ? "Change how this reusable building block appears in your template list."
+    : "The selected editable objects will become a reusable building block.";
+  floorPlanTemplateConfirm.textContent = mode === "edit" ? "Save changes" : "Save template";
+  floorPlanTemplateName.value = record?.name || `Floor-plan block ${
+    board.settings.floorPlan.templateLibrary.items.filter((item) => !item.replacesBuiltIn).length + 1
+  }`;
+  floorPlanTemplateDescription.value = record?.description || "";
+  floorPlanTemplateDialog.showModal();
+  floorPlanTemplateName.focus();
+  floorPlanTemplateName.select();
+}
+
+function closeFloorPlanTemplateDialog() {
+  floorPlanTemplateDialog.close("cancelled");
+}
+
+function restoreFloorPlanTemplateDialogFocus() {
+  const returnFocus = floorPlanTemplateReturnFocus;
+  floorPlanTemplateDialogState = null;
+  floorPlanTemplateReturnFocus = null;
+  if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
+}
+
+function createTemplateCharacterFromSelection(name) {
+  if (!selectedObjects.length) {
+    throw new CharacterFileError("Select editable floor-plan objects first.");
+  }
+  if (selectedObjects.some((object) => object.type === "image" || object.assetId)) {
+    throw new CharacterFileError(
+      "Floor-plan templates are vector-only. Save image-backed selections to the Board Library.",
+    );
+  }
+  return createCharacterPackage(
+    board.objects,
+    board.assets,
+    board.rig,
+    selectedObjects.map((object) => object.id),
+    name,
+  );
+}
+
+function saveFloorPlanTemplateDialog(event) {
+  event.preventDefault();
+  if (!floorPlanTemplateDialogState) return;
+  const name = floorPlanTemplateName.value.trim();
+  if (!name) {
+    floorPlanTemplateName.focus();
+    return;
+  }
+  const description = floorPlanTemplateDescription.value.trim();
+  try {
+    const currentLibrary = board.settings.floorPlan.templateLibrary;
+    const nextLibrary = floorPlanTemplateDialogState.mode === "edit"
+      ? updateFloorPlanTemplate(
+        currentLibrary,
+        floorPlanTemplateDialogState.templateId,
+        { name, description },
+        FLOOR_PLAN_TEMPLATES,
+      )
+      : addFloorPlanTemplate(
+        currentLibrary,
+        createFloorPlanTemplateRecord(createTemplateCharacterFromSelection(name), {
+          id: createId(),
+          name,
+          description,
+          createdAt: Date.now(),
+        }),
+        FLOOR_PLAN_TEMPLATES,
+      );
+    checkpoint();
+    board.settings.floorPlan = normalizeFloorPlanSettings({
+      ...board.settings.floorPlan,
+      templateLibrary: nextLibrary,
+    });
+    if (!saveBoard()) throw new CharacterFileError("The template could not be saved locally.");
+    floorPlanTemplateDialog.close("saved");
+    renderFloorPlanCatalog();
+    announceStatus(`${name} saved as a floor-plan template`);
+  } catch (error) {
+    console.error("Unable to save floor-plan template.", error);
+    floorPlanTemplateError.textContent = error instanceof CharacterFileError
+      || error instanceof TypeError
+      ? error.message
+      : "The floor-plan template could not be saved.";
+    floorPlanTemplateError.hidden = false;
+  }
+}
+
+function replaceSavedFloorPlanTemplate(templateId) {
+  if (!selectedObjects.length) {
+    announceStatus("Select the replacement floor-plan objects first");
+    return;
+  }
+  const item = getFloorPlanTemplateCatalog(
+    board.settings.floorPlan?.templateLibrary,
+    FLOOR_PLAN_TEMPLATES,
+  ).find((candidate) => candidate.id === templateId);
+  if (!item || !window.confirm(`Replace "${item.name}" with the current selection?`)) return;
+  try {
+    const nextLibrary = replaceFloorPlanTemplate(
+      board.settings.floorPlan.templateLibrary,
+      templateId,
+      createTemplateCharacterFromSelection(item.name),
+      { id: createId(), name: item.name, updatedAt: Date.now() },
+      FLOOR_PLAN_TEMPLATES,
+    );
+    checkpoint();
+    board.settings.floorPlan = normalizeFloorPlanSettings({
+      ...board.settings.floorPlan,
+      templateLibrary: nextLibrary,
+    });
+    saveBoard();
+    renderFloorPlanCatalog();
+    announceStatus(`${item.name} replaced from the current selection`);
+  } catch (error) {
+    console.error(`Unable to replace floor-plan template ${templateId}.`, error);
+    announceStatus(error.message || "The floor-plan template could not be replaced");
+  }
+}
+
+function removeSavedFloorPlanTemplate(templateId) {
+  const item = getFloorPlanTemplateCatalog(
+    board.settings.floorPlan?.templateLibrary,
+    FLOOR_PLAN_TEMPLATES,
+  ).find((candidate) => candidate.id === templateId);
+  if (!item || !window.confirm(`Remove "${item.name}" from Floor Plan templates?`)) return;
+  checkpoint();
+  const nextLibrary = removeFloorPlanTemplate(
+    board.settings.floorPlan.templateLibrary,
+    templateId,
+    FLOOR_PLAN_TEMPLATES,
+  );
+  board.settings.floorPlan = normalizeFloorPlanSettings({
+    ...board.settings.floorPlan,
+    templateLibrary: nextLibrary,
+  });
+  saveBoard();
+  renderFloorPlanCatalog();
+  announceStatus(`${item.name} removed`);
+}
+
+function restoreSavedFloorPlanTemplate(templateId) {
+  checkpoint();
+  const nextLibrary = restoreBuiltInFloorPlanTemplate(
+    board.settings.floorPlan.templateLibrary,
+    templateId,
+    FLOOR_PLAN_TEMPLATES,
+  );
+  board.settings.floorPlan = normalizeFloorPlanSettings({
+    ...board.settings.floorPlan,
+    templateLibrary: nextLibrary,
+  });
+  saveBoard();
+  renderFloorPlanCatalog();
+  announceStatus(`${formatCatalogName(templateId)} restored to its default`);
+}
+
+function handleFloorPlanTemplateAction(button) {
+  const { floorTemplateAction: action, floorTemplateId: templateId } = button.dataset;
+  if (action === "insert") insertSavedFloorPlanTemplate(templateId);
+  else if (action === "edit") openFloorPlanTemplateDialog("edit", templateId, button);
+  else if (action === "replace") replaceSavedFloorPlanTemplate(templateId);
+  else if (action === "remove") removeSavedFloorPlanTemplate(templateId);
+  else if (action === "restore") restoreSavedFloorPlanTemplate(templateId);
 }
 
 function flipSelection(axis) {
@@ -4455,6 +4893,7 @@ function updateSelectionControls() {
   pasteSelectionButton.disabled = objectClipboard.length === 0;
   saveToLibraryButton.disabled = selectedObjects.length === 0;
   boardLibrarySaveSelectionButton.disabled = selectedObjects.length === 0;
+  floorPlanSaveTemplateButton.disabled = selectedObjects.length === 0;
   traceImageButton.hidden = !isImageSelection(selectedObjects);
   traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
   const singleImageSelected = selectedObjects.length === 1
@@ -4470,6 +4909,14 @@ function updateSelectionControls() {
   selectionCount.textContent = selectionUnitCount === 1
     ? "1 selected"
     : `${selectionUnitCount} selected`;
+  const canAddCurveVertex = selectedObjects.length === 1
+    && CURVE_TYPES.has(selectedObjects[0].type)
+    && !selectedObjects[0].locked;
+  addCurveVertexButton.hidden = !canAddCurveVertex;
+  addCurveVertexButton.disabled = !canAddCurveVertex;
+  if (!canAddCurveVertex) curveVertexInsertionActive = false;
+  addCurveVertexButton.classList.toggle("is-active", curveVertexInsertionActive);
+  addCurveVertexButton.setAttribute("aria-pressed", String(curveVertexInsertionActive));
 
   updateTextStyleControls();
   if (!selectedObjects.length) return;
@@ -4684,6 +5131,7 @@ function canCreateLineVertexNetwork(objects) {
       !object.locked
       && (
         LINE_TYPES.has(object.type)
+        || CURVE_TYPES.has(object.type)
         || ["rectangle", "ellipse", "shape", "pen", "trace"].includes(object.type)
       )
     ));
@@ -4718,9 +5166,9 @@ function mergeSelectionVertices() {
   }
 
   const targets = new Set(selectedObjects);
-  const sourceLines = selectedObjects.flatMap(createVertexCandidateLines);
+  const sourcePaths = selectedObjects.flatMap(createVertexCandidateLines);
   const network = createEditableVertexNetwork(
-    sourceLines,
+    sourcePaths,
     createId,
     VERTEX_TOUCH_TOLERANCE,
   );
@@ -4745,6 +5193,7 @@ function mergeSelectionVertices() {
 
 function createVertexCandidateLines(object) {
   if (LINE_TYPES.has(object.type)) return [cloneValue(object)];
+  if (CURVE_TYPES.has(object.type)) return [cloneValue(object)];
   if (object.type === "pen") {
     return createLinesFromPaths([object.points], object, false);
   }
@@ -4797,11 +5246,55 @@ function canConvertCurveSelection(objects) {
     && objects.every((object) => !object.locked && CURVE_TYPES.has(object.type));
 }
 
+function toggleCurveVertexInsertion() {
+  const canAdd = selectedObjects.length === 1
+    && CURVE_TYPES.has(selectedObjects[0].type)
+    && !selectedObjects[0].locked;
+  if (!canAdd) return;
+  if (activeTool !== "select") setActiveTool("select");
+  curveVertexInsertionActive = !curveVertexInsertionActive;
+  updateSelectionControls();
+  updateCanvasCursor();
+  if (curveVertexInsertionActive) {
+    canvas.focus({ preventScroll: true });
+    announceStatus("Click anywhere on the selected curve to add a movable point");
+  } else {
+    announceStatus("Curve point insertion cancelled");
+  }
+}
+
+function insertSelectedCurveVertexAt(target) {
+  const object = selectedObjects.length === 1 ? selectedObjects[0] : null;
+  if (!object || !CURVE_TYPES.has(object.type) || object.locked) {
+    curveVertexInsertionActive = false;
+    updateSelectionControls();
+    return;
+  }
+  const result = insertCurveVertex(object, target);
+  curveVertexInsertionActive = false;
+  if (!result.inserted) {
+    updateSelectionControls();
+    announceStatus("A curve point could not be added there");
+    return;
+  }
+
+  checkpoint();
+  if (result.curve.vertexNetworkId && Array.isArray(result.curve.curveVertexIds)) {
+    result.curve.curveVertexIds[result.vertexIndex] = createId();
+  }
+  replaceObjectProperties(object, result.curve);
+  saveBoard();
+  updateSelectionControls();
+  updateCanvasCursor();
+  drawBoard();
+  announceStatus(`${getCurveVertices(object).length} editable curve points`);
+}
+
 function convertCurveSelectionToVertices() {
   if (!canConvertCurveSelection(selectedObjects)) return;
   const targets = new Set(selectedObjects);
   const sourceLines = selectedObjects.flatMap((object) => {
-    const points = getQuadraticCurvePoints(object, {
+    const points = getCurvePathPoints(object, {
       tolerance: 1,
       maximumSegmentLength: 36,
     });
@@ -4850,6 +5343,7 @@ function releaseSelection() {
       delete object.vertexNetworkId;
       delete object.startVertexId;
       delete object.endVertexId;
+      delete object.curveVertexIds;
       delete object.dimensionsLocked;
     }
   });
@@ -5193,6 +5687,7 @@ function updateViewControls() {
   floorPlanToggleButton.setAttribute("aria-expanded", String(floorPlanPanelOpen));
   floorPlanToggleButton.classList.toggle("is-active", floorPlanPanelOpen);
   syncFloorPlanControls();
+  renderFloorPlanCatalog();
 }
 
 /**
@@ -5287,6 +5782,7 @@ function initializeShapePickers() {
 }
 
 function setActiveTool(nextTool) {
+  if (nextTool !== "select") curveVertexInsertionActive = false;
   activeTool = nextTool;
   shapeToolChoices = retainShapeToolChoice(shapeToolChoices, activeTool);
   const shapeFamily = getShapeToolFamily(activeTool);
@@ -5315,6 +5811,10 @@ function updateCanvasCursor(worldPoint = hoverPoint) {
     canvas.style.cursor = "none";
     return;
   }
+  if (curveVertexInsertionActive) {
+    canvas.style.cursor = "crosshair";
+    return;
+  }
   if (activeTool !== "select") {
     canvas.style.cursor = "crosshair";
     return;
@@ -5322,7 +5822,7 @@ function updateCanvasCursor(worldPoint = hoverPoint) {
 
   const handle = worldPoint ? findSelectionHandle(worldPoint) : null;
   if (["rotate", "group-rotate"].includes(handle?.kind)) canvas.style.cursor = "crosshair";
-  else if (["endpoint", "curve-middle", "network-vertex", "rig-joint"].includes(handle?.kind)) {
+  else if (["endpoint", "curve-vertex", "network-vertex", "rig-joint"].includes(handle?.kind)) {
     canvas.style.cursor = "move";
   }
   else if (["resize", "group-resize"].includes(handle?.kind)) {
@@ -5344,6 +5844,7 @@ function openTextEditor(object, checkpointBeforeEdit = true) {
   editor.placeholder = "blank textbox";
   editor.setAttribute("aria-label", "Textbox content");
   editor.style.fontFamily = getTextFontCss(object.fontFamily);
+  editor.style.fontWeight = String(object.fontWeight ?? 400);
   canvasFrame.append(editor);
 
   const historyLength = history.length;
@@ -5409,6 +5910,7 @@ function positionTextEditor() {
     getTextWorldFontSize(object.fontSize, viewport.zoom, object.scaleMode) * viewport.zoom,
   )}px`;
   editor.style.fontFamily = getTextFontCss(object.fontFamily);
+  editor.style.fontWeight = String(object.fontWeight ?? 400);
   editor.style.color = object.color;
   editor.style.lineHeight = String(object.lineHeight ?? 1.25);
   editor.style.padding = `${Math.max(0, (object.padding ?? 6) * viewport.zoom)}px`;
@@ -5491,6 +5993,14 @@ function handleKeyDown(event) {
   const commandKey = event.metaKey || event.ctrlKey;
   if (event.key === "Escape") {
     event.preventDefault();
+    if (curveVertexInsertionActive) {
+      curveVertexInsertionActive = false;
+      updateSelectionControls();
+      updateCanvasCursor();
+      addCurveVertexButton.focus({ preventScroll: true });
+      announceStatus("Curve point insertion cancelled");
+      return;
+    }
     if (animationPanelOpen) {
       toggleAnimationPanel(false);
       animationToggleButton.focus({ preventScroll: true });
@@ -5999,9 +6509,22 @@ floorPlanPanel.addEventListener("click", (event) => {
   const target = event.target instanceof Element ? event.target : null;
   const elementButton = target?.closest("[data-floor-element]");
   if (elementButton) insertFloorPlanObjects(elementButton.dataset.floorElement, false);
-  const templateButton = target?.closest("[data-floor-template]");
-  if (templateButton) insertFloorPlanObjects(templateButton.dataset.floorTemplate, true);
+  const templateButton = target?.closest("[data-floor-template-action]");
+  if (templateButton) handleFloorPlanTemplateAction(templateButton);
 });
+floorPlanSaveTemplateButton.addEventListener("click", () => {
+  openFloorPlanTemplateDialog("create", null, floorPlanSaveTemplateButton);
+});
+floorPlanTemplateForm.addEventListener("submit", saveFloorPlanTemplateDialog);
+document.querySelector("#cancel-floor-plan-template").addEventListener(
+  "click",
+  closeFloorPlanTemplateDialog,
+);
+document.querySelector("#close-floor-plan-template-dialog").addEventListener(
+  "click",
+  closeFloorPlanTemplateDialog,
+);
+floorPlanTemplateDialog.addEventListener("close", restoreFloorPlanTemplateDialogFocus);
 [floorPlanUnits, floorPlanScale, floorPlanWallThickness, floorPlanGridSize, floorPlanGuides]
   .forEach((control) => control.addEventListener("change", updateFloorPlanSettings));
 boardLibrarySearch.addEventListener("input", renderBoardLibrary);
@@ -6104,6 +6627,7 @@ mirrorTextToggle.addEventListener("click", () => {
 });
 mergeVerticesButton.addEventListener("click", mergeSelectionVertices);
 curveVerticesButton.addEventListener("click", convertCurveSelectionToVertices);
+addCurveVertexButton.addEventListener("click", toggleCurveVertexInsertion);
 ungroupSelectionButton.addEventListener("click", releaseSelection);
 explodeSelectionButton.addEventListener("click", divideSelection);
 reassembleSelectionButton.addEventListener("click", reassembleSelection);

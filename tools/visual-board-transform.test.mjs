@@ -48,3 +48,44 @@ test("alignment guides snap edges and centers within tolerance", () => {
   assert.equal(snap.deltaY, 2);
   assert.deepEqual(snap.guides.map((guide) => guide.axis).sort(), ["horizontal", "vertical"]);
 });
+
+test("curve flips preserve editable knots and vertex identities", () => {
+  const curve = {
+    id: "curve",
+    type: "arc",
+    x: 0,
+    y: 0,
+    midX: 50,
+    midY: -20,
+    endX: 100,
+    endY: 0,
+    curvePoints: [
+      { x: 0, y: 0 },
+      { x: 50, y: -20 },
+      { x: 100, y: 0 },
+    ],
+    curveHandles: [
+      {
+        control1: { x: 20, y: -15 },
+        control2: { x: 35, y: -20 },
+      },
+      {
+        control1: { x: 65, y: -20 },
+        control2: { x: 80, y: -15 },
+      },
+    ],
+    curveVertexIds: ["a", "b", "c"],
+  };
+  const flipped = flipBoardSelection(
+    [curve],
+    { bodies: [], joints: [] },
+    "horizontal",
+  ).objects[0];
+
+  assert.deepEqual(flipped.curvePoints, [
+    { x: 100, y: 0 },
+    { x: 50, y: -20 },
+    { x: 0, y: 0 },
+  ]);
+  assert.deepEqual(flipped.curveVertexIds, ["a", "b", "c"]);
+});

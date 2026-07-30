@@ -11,7 +11,7 @@ import {
 function createState(objects = []) {
   return {
     board: {
-      version: 13,
+      version: 14,
       revision: 7,
       objects,
       assets: {
@@ -304,8 +304,10 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 2);
-  assert.equal(capabilities.commands.length, 25);
+  assert.equal(capabilities.version, 5);
+  assert.equal(capabilities.commands.length, 39);
+  assert.ok(capabilities.architectureCatalog.symbols.length >= 100);
+  assert.ok(capabilities.architectureCatalog.materials.length >= 20);
   capabilities.commands.forEach((command) => {
     assert.equal(command.schema.type, "object", command.type);
     assert.equal(command.schema.additionalProperties, false, command.type);
@@ -317,6 +319,182 @@ test("every advertised command has a field schema and unknown fields fail", () =
     objects: [{ objectType: "rectangle" }],
     typoPlacement: "center",
   }]), (error) => error.code === "unknown-command-field");
+});
+
+test("AI commands create complex curves and insert exact editable points", () => {
+  const created = execute(createState(), [{
+    type: "objects.create",
+    objects: [{
+      objectType: "arc",
+      clientKey: "motion-path",
+      curvePoints: [
+        { x: 0, y: 40 },
+        { x: 40, y: 0 },
+        { x: 80, y: 70 },
+        { x: 120, y: 20 },
+      ],
+    }],
+  }]);
+  const curve = created.state.board.objects[0];
+  assert.equal(curve.curvePoints.length, 4);
+  assert.equal(curve.curveHandles.length, 3);
+
+  const inserted = execute(created.state, [{
+    type: "curves.points.insert",
+    targets: { ids: [curve.id] },
+    points: [{ x: 95, y: 45 }],
+  }]);
+  assert.equal(inserted.state.board.objects[0].curvePoints.length, 5);
+  assert.equal(inserted.outputs[0].type, "curves.points.insert");
+  assert.equal(inserted.outputs[0].curvePointCount, 5);
+
+  const context = serializeVisualBoardContext(inserted.state, { detail: "geometry" });
+  assert.equal(context.objects[0].curvePointCount, 5);
+  assert.equal(context.objects[0].curvePoints.length, 5);
+});
+
+test("AI shared-vertex creation joins mixed line and curve intersections", () => {
+  const state = createState([
+    {
+      id: "curve",
+      type: "arc",
+      x: 0,
+      y: 50,
+      midX: 50,
+      midY: 0,
+      endX: 100,
+      endY: 50,
+      color: "#000000",
+      strokeWidth: 3,
+      dashPattern: "solid",
+      locked: false,
+    },
+    {
+      id: "line",
+      type: "line",
+      x: 0,
+      y: 25,
+      endX: 100,
+      endY: 25,
+      color: "#000000",
+      strokeWidth: 3,
+      dashPattern: "solid",
+      locked: false,
+    },
+  ]);
+  const result = execute(state, [{
+    type: "vertices.create",
+    targets: { ids: ["curve", "line"] },
+  }]);
+  const curve = result.state.board.objects.find((object) => object.type === "arc");
+  const lines = result.state.board.objects.filter((object) => object.type === "line");
+
+  assert.equal(lines.length, 3);
+  assert.equal(curve.curvePoints.length, 5);
+  assert.ok(curve.vertexNetworkId);
+  assert.ok(lines.every((line) => line.vertexNetworkId === curve.vertexNetworkId));
+  assert.equal(result.outputs[0].type, "vertices.create");
+});
+
+test("AI can create, edit, insert, remove, and list custom floor-plan templates", () => {
+  const state = createState([rectangle("room-block", 40, 60)]);
+  const result = execute(state, [
+    {
+      type: "floor-plan.templates.create",
+      templateId: "garden-suite",
+      name: "Garden suite",
+      description: "Bedroom and patio block",
+      targets: { ids: ["room-block"] },
+    },
+    {
+      type: "floor-plan.templates.update",
+      templateId: "garden-suite",
+      name: "Garden guest suite",
+    },
+    {
+      type: "floor-plan.templates.insert",
+      templateId: "garden-suite",
+      placement: { type: "point", x: 400, y: 300 },
+    },
+    {
+      type: "floor-plan.templates.list",
+    },
+  ]);
+
+  const library = result.state.board.settings.floorPlan.templateLibrary;
+  const saved = library.items.find((item) => item.id === "garden-suite");
+  const listOutput = result.outputs.find(
+    (output) => output.type === "floor-plan.templates.list",
+  );
+  assert.equal(saved.name, "Garden guest suite");
+  assert.equal(saved.character.objects.length, 1);
+  assert.equal(result.state.board.objects.length, 2);
+  assert.equal(listOutput.templates.find((item) => item.id === "garden-suite").source, "custom");
+
+  const removed = execute(result.state, [{
+    type: "floor-plan.templates.remove",
+    templateId: "garden-suite",
+  }]);
+  assert.equal(removed.state.board.settings.floorPlan.templateLibrary.items.length, 0);
+});
+
+test("AI can replace, hide, and restore built-in floor-plan templates", () => {
+  const state = createState([rectangle("replacement", 10, 20)]);
+  const customized = execute(state, [{
+    type: "floor-plan.templates.replace",
+    templateId: "bedroom",
+    name: "My bedroom",
+    targets: { ids: ["replacement"] },
+  }]);
+  const customizedContext = serializeVisualBoardContext(customized.state);
+  const bedroom = customizedContext.floorPlanTemplates.find(
+    (item) => item.id === "bedroom",
+  );
+
+  assert.equal(bedroom.source, "override");
+  assert.equal(bedroom.objectCount, 1);
+  assert.equal(JSON.stringify(customizedContext.settings).includes("\"objects\""), false);
+
+  const hidden = execute(customized.state, [{
+    type: "floor-plan.templates.remove",
+    templateId: "bedroom",
+  }]);
+  assert.equal(
+    hidden.state.board.settings.floorPlan.templateLibrary.hiddenBuiltIns.includes("bedroom"),
+    true,
+  );
+
+  const restored = execute(hidden.state, [{
+    type: "floor-plan.templates.restore",
+    templateId: "bedroom",
+  }]);
+  const restoredBedroom = serializeVisualBoardContext(restored.state)
+    .floorPlanTemplates.find((item) => item.id === "bedroom");
+  assert.equal(restoredBedroom.visible, true);
+  assert.equal(restoredBedroom.source, "built-in");
+});
+
+test("floor-plan templates reject image-backed targets", () => {
+  const image = {
+    id: "image-template",
+    type: "image",
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 100,
+    rotation: 0,
+    assetId: "image1",
+    color: "#000000",
+    strokeWidth: 1,
+    dashPattern: "solid",
+    locked: false,
+  };
+  assert.throws(() => execute(createState([image]), [{
+    type: "floor-plan.templates.create",
+    templateId: "image-room",
+    name: "Image room",
+    targets: { ids: ["image-template"] },
+  }]), (error) => error.code === "template-image-not-allowed");
 });
 
 test("architectural commands preserve exact caller geometry and compact symbol references", () => {
@@ -376,6 +554,143 @@ test("architectural commands preserve exact caller geometry and compact symbol r
   ]);
   assert.equal(symbol.semantic.clientRef, "primary-bed");
   assert.equal(result.receipt.clientKeyMap["primary-bed"], symbol.id);
+});
+
+test("wall paths compile real gaps, connected joins, and semantic opening records", () => {
+  const result = execute(createState(), [{
+    type: "architecture.wallPaths.create",
+    wallPaths: [{
+      clientKey: "shell",
+      points: [
+        { x: 0, y: 0 },
+        { x: 300, y: 0 },
+        { x: 300, y: 220 },
+      ],
+      thickness: 16,
+      join: "miter",
+      cap: "square",
+      materialId: "plaster",
+      openings: [
+        {
+          clientKey: "front-door",
+          segmentIndex: 0,
+          offset: 110,
+          width: 80,
+          kind: "door-single",
+        },
+        {
+          segmentIndex: 1,
+          offset: 50,
+          width: 100,
+          kind: "window-fixed",
+        },
+      ],
+      style: { lineWeight: "exterior" },
+    }],
+  }]);
+
+  const walls = result.state.board.objects.filter((object) => object.type === "wall");
+  const openings = result.state.board.objects.filter((object) => object.type === "symbol");
+  assert.equal(walls.length, 3);
+  assert.equal(openings.length, 2);
+  assert.ok(result.state.board.objects.some((object) => object.type === "area"));
+  assert.equal(openings[0].semantic.wallPathId, "shell");
+  assert.equal(openings[0].semantic.openingIndex, 0);
+  assert.equal(result.receipt.clientKeyMap.shell, walls[0].id);
+  assert.equal(result.receipt.clientKeyMap["front-door"], openings[0].id);
+  assert.equal(result.outputs[0].openingCount, undefined);
+  assert.equal(result.outputs[0].wallPaths[0].openingCount, 2);
+});
+
+test("curved paths and architecture style presets remain deterministic", () => {
+  const result = execute(createState(), [
+    {
+      type: "architecture.style.set",
+      preset: "presentation-soft",
+      lineWeights: { site: 5 },
+      typography: {
+        room: { fontFamily: "sans", fontSize: 13, fontWeight: 600, lineHeight: 1 },
+      },
+    },
+    {
+      type: "architecture.paths.create",
+      paths: [{
+        commands: [
+          { op: "M", x: 0, y: 0 },
+          { op: "C", c1x: 40, c1y: -20, c2x: 80, c2y: 20, x: 120, y: 0 },
+          { op: "L", x: 120, y: 80 },
+          { op: "Q", cx: 60, cy: 50, x: 0, y: 0 },
+          { op: "Z" },
+        ],
+        materialId: "mulch",
+        style: { lineWeight: "site" },
+      }],
+    },
+    {
+      type: "architecture.labels.create",
+      labels: [{
+        text: "GARDEN",
+        x: 20,
+        y: 20,
+        w: 80,
+        h: 30,
+        textStyle: "room",
+      }],
+    },
+  ]);
+
+  const area = result.state.board.objects.find((object) => object.type === "area");
+  const label = result.state.board.objects.find((object) => object.type === "textbox");
+  assert.equal(result.state.board.settings.architecture.stylePreset, "presentation-soft");
+  assert.equal(area.materialId, "mulch");
+  assert.equal(area.strokeWidth, 5);
+  assert.ok(area.vertices.length > 10);
+  assert.equal(label.fontSize, 13);
+  assert.equal(label.fontWeight, 600);
+});
+
+test("reference overlays require consent and never expose image bytes", () => {
+  const image = {
+    id: "reference-image",
+    type: "image",
+    x: 10,
+    y: 20,
+    w: 640,
+    h: 480,
+    rotation: 0,
+    assetId: "asset-secret",
+    name: "Reference.png",
+    color: "#000000",
+    strokeWidth: 1,
+    dashPattern: "solid",
+    locked: false,
+  };
+  const state = createState([image]);
+  state.board.assets["asset-secret"] = {
+    dataUrl: "data:image/png;base64,PRIVATE-BYTES",
+  };
+
+  assert.throws(() => execute(state, [{
+    type: "architecture.references.configure",
+    targets: { ids: ["reference-image"] },
+  }]), (error) => error.code === "reference-consent-required");
+
+  const result = execute(state, [{
+    type: "architecture.references.configure",
+    targets: { ids: ["reference-image"] },
+    consent: true,
+    referenceName: "Estate inspiration",
+    opacity: 0.25,
+  }]);
+  const configured = result.state.board.objects[0];
+  const context = serializeVisualBoardContext(result.state, { detail: "geometry" });
+
+  assert.equal(configured.referenceImage, true);
+  assert.equal(configured.locked, true);
+  assert.equal(configured.hiddenInExport, true);
+  assert.equal(configured.semantic.referenceId, "reference-image");
+  assert.equal(context.objects[0].reference.bytesIncluded, false);
+  assert.equal(JSON.stringify(context).includes("PRIVATE-BYTES"), false);
 });
 
 test("architecture labels remain world-scaled and clipped to exact boxes", () => {
@@ -472,6 +787,7 @@ test("semantic targets support exact diagram, role, and tag selectors", () => {
         diagramId: "estate-v2",
         role: "room",
         tags: ["estate", "floor-plan"],
+        wallPathId: "primary-shell",
       },
     }),
   ]);
@@ -482,6 +798,15 @@ test("semantic targets support exact diagram, role, and tag selectors", () => {
   }]);
 
   assert.deepEqual(result.state.board.objects.map((object) => object.opacity), [0.85, 0.85]);
+  const wallPathResult = execute(state, [{
+    type: "objects.update",
+    targets: { wallPathId: "primary-shell" },
+    patch: { opacity: 0.7 },
+  }]);
+  assert.deepEqual(
+    wallPathResult.state.board.objects.map((object) => object.opacity ?? 1),
+    [1, 0.7],
+  );
   assert.throws(() => execute(state, [{
     type: "objects.delete",
     targets: { typoSelector: "estate-v2" },

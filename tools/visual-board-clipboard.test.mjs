@@ -153,6 +153,21 @@ test("copying arcs and traces translates every editable point", () => {
       midY: 0,
       endX: 100,
       endY: 20,
+      curvePoints: [
+        { x: 0, y: 20 },
+        { x: 50, y: 0 },
+        { x: 100, y: 20 },
+      ],
+      curveHandles: [
+        {
+          control1: { x: 20, y: 5 },
+          control2: { x: 35, y: 0 },
+        },
+        {
+          control1: { x: 65, y: 0 },
+          control2: { x: 80, y: 5 },
+        },
+      ],
     },
     {
       id: "trace-1",
@@ -171,9 +186,54 @@ test("copying arcs and traces translates every editable point", () => {
     [copies[0].x, copies[0].y, copies[0].midX, copies[0].midY, copies[0].endX, copies[0].endY],
     [8, 32, 58, 12, 108, 32],
   );
+  assert.deepEqual(copies[0].curvePoints, [
+    { x: 8, y: 32 },
+    { x: 58, y: 12 },
+    { x: 108, y: 32 },
+  ]);
+  assert.deepEqual(copies[0].curveHandles[0], {
+    control1: { x: 28, y: 17 },
+    control2: { x: 43, y: 12 },
+  });
   assert.deepEqual(copies[1].paths[0], [
     { x: 18, y: 22 },
     { x: 28, y: 22 },
     { x: 28, y: 32 },
   ]);
+});
+
+test("copying a curve network remaps every shared curve vertex", () => {
+  const source = [{
+    id: "curve",
+    type: "arc",
+    x: 0,
+    y: 0,
+    midX: 50,
+    midY: -20,
+    endX: 100,
+    endY: 0,
+    curvePoints: [
+      { x: 0, y: 0 },
+      { x: 50, y: -20 },
+      { x: 100, y: 0 },
+    ],
+    curveHandles: [
+      {
+        control1: { x: 20, y: -15 },
+        control2: { x: 35, y: -20 },
+      },
+      {
+        control1: { x: 65, y: -20 },
+        control2: { x: 80, y: -15 },
+      },
+    ],
+    groupId: "group",
+    vertexNetworkId: "network",
+    curveVertexIds: ["a", "b", "c"],
+  }];
+
+  const [copy] = duplicateBoardObjects(source, identifierFactory(), { x: 8, y: 12 });
+  assert.notDeepEqual(copy.curveVertexIds, source[0].curveVertexIds);
+  assert.equal(new Set(copy.curveVertexIds).size, 3);
+  assert.equal(copy.vertexNetworkId === source[0].vertexNetworkId, false);
 });

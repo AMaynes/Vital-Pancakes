@@ -4,7 +4,8 @@ import {
   SHAPE_TYPES,
   getObjectBounds,
   getShapeCenter,
-} from "./visual-board-geometry.mjs?v=9";
+} from "./visual-board-geometry.mjs?v=10";
+import { transformCurveGeometry } from "./visual-board-curves.mjs?v=2";
 
 /**
  * Mirrors complete selections while retaining IDs, groups, locks, vertex
@@ -55,8 +56,10 @@ function flipObject(object, center, axis, mirrorText) {
     return transformed;
   }
   if (CURVE_TYPES.has(object.type)) {
-    Object.assign(transformed, reflectedCoordinates(object, center, axis, ["x", "y"], ["midX", "midY"], ["endX", "endY"]));
-    return transformed;
+    return transformCurveGeometry(
+      object,
+      (point) => reflectPoint(point, center, axis),
+    );
   }
   if (LINE_TYPES.has(object.type)) {
     Object.assign(transformed, reflectedCoordinates(object, center, axis, ["x", "y"], ["endX", "endY"]));

@@ -74,6 +74,27 @@
   text-transform: uppercase;
 }
 
+.floor-plan-section-heading,
+.floor-plan-template-card,
+.floor-plan-template-card-actions,
+.floor-plan-restorable-item {
+  display: flex;
+  align-items: center;
+}
+
+.floor-plan-section-heading,
+.floor-plan-template-card,
+.floor-plan-restorable-item {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.floor-plan-section-heading .button {
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 10px;
+}
+
 .floor-plan-field-grid,
 .image-size-grid {
   display: grid;
@@ -145,9 +166,75 @@
   gap: 6px;
 }
 
-.floor-plan-template-list button {
+.floor-plan-template-card {
+  min-width: 0;
   padding: 8px;
-  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--card);
+}
+
+.floor-plan-template-card-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.floor-plan-template-card-copy strong,
+.floor-plan-template-card-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floor-plan-template-card-copy strong {
+  font-size: 11px;
+}
+
+.floor-plan-template-card-copy span {
+  color: var(--ink-faint);
+  font-size: 9px;
+}
+
+.floor-plan-template-card-actions {
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.floor-plan-template-card-actions button,
+.floor-plan-restorable-item button {
+  min-height: 28px;
+  padding: 4px 6px;
+  font-size: 9px;
+}
+
+.floor-plan-template-card-actions button[data-floor-template-action="remove"] {
+  color: var(--danger);
+}
+
+.floor-plan-restorable-list {
+  display: grid;
+  gap: 4px;
+}
+
+.floor-plan-restorable-list:empty {
+  display: none;
+}
+
+.floor-plan-restorable-item {
+  padding: 6px 8px;
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-faint);
+  font-size: 10px;
+}
+
+.floor-plan-template-dialog {
+  width: min(520px, calc(100vw - 24px));
+}
+
+.floor-plan-template-dialog textarea {
+  min-height: 72px;
+  resize: vertical;
 }
 
 .image-edit-dialog {

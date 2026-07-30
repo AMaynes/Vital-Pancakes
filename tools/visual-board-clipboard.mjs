@@ -58,6 +58,11 @@ export function duplicateBoardObjects(sourceObjects, createIdentifier, offset = 
         duplicate.endVertexId,
         createIdentifier,
       );
+      if (Array.isArray(duplicate.curveVertexIds)) {
+        duplicate.curveVertexIds = duplicate.curveVertexIds.map((vertexId) => (
+          getMappedIdentifier(vertexIdentifiers, vertexId, createIdentifier)
+        ));
+      }
     }
 
     translateBoardObject(duplicate, offset.x, offset.y);
@@ -66,6 +71,7 @@ export function duplicateBoardObjects(sourceObjects, createIdentifier, offset = 
 }
 
 function getMappedIdentifier(identifiers, originalIdentifier, createIdentifier) {
+  if (typeof originalIdentifier !== "string" || !originalIdentifier) return null;
   if (!identifiers.has(originalIdentifier)) {
     identifiers.set(originalIdentifier, createIdentifier());
   }
@@ -87,6 +93,19 @@ function translateBoardObject(object, deltaX, deltaY) {
       point.y += deltaY;
     });
     return;
+  }
+
+  if (object.type === "arc" && Array.isArray(object.curvePoints)) {
+    object.curvePoints.forEach((point) => {
+      point.x += deltaX;
+      point.y += deltaY;
+    });
+    (object.curveHandles ?? []).forEach((handles) => {
+      handles.control1.x += deltaX;
+      handles.control1.y += deltaY;
+      handles.control2.x += deltaX;
+      handles.control2.y += deltaY;
+    });
   }
 
   if (Number.isFinite(object.x)) object.x += deltaX;

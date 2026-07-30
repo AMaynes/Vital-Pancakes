@@ -7,18 +7,22 @@
 
 import {
   ARCHITECTURE_FILL_PATTERNS,
+  fitArchitectureSymbolFrame,
   getArchitectureMaterial,
   getArchitectureSymbol,
   normalizeArchitectureSettings,
   resolveMaterialStyle,
   sortArchitectureObjects,
-} from "./visual-board-architecture.mjs?v=1";
-import { getQuadraticControlPoint } from "./visual-board-curves.mjs?v=1";
+} from "./visual-board-architecture.mjs?v=2";
+import {
+  getCurveBezierSegments,
+  getQuadraticControlPoint,
+} from "./visual-board-curves.mjs?v=2";
 import {
   getObjectBounds,
   getObjectSegments,
   getShapeCenter,
-} from "./visual-board-geometry.mjs?v=9";
+} from "./visual-board-geometry.mjs?v=10";
 import { normalizeImageCrop } from "./visual-board-image.mjs?v=1";
 import { getTextColorSegments } from "./visual-board-rich-text.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
@@ -124,7 +128,8 @@ function getExportObjects(board, includeHiddenLayers) {
       layers: architecture.layers.map((layer) => ({ ...layer, visible: true })),
     }
     : architecture;
-  return sortArchitectureObjects(board.objects, layerSettings);
+  return sortArchitectureObjects(board.objects, layerSettings)
+    .filter((object) => object.hiddenInExport !== true);
 }
 
 function getExportObjectBounds(object) {
@@ -327,11 +332,22 @@ function renderConnector(object, context) {
 }
 
 function renderArc(object, context) {
-  const control = getQuadraticControlPoint(object);
+  if (!Array.isArray(object.curvePoints)) {
+    const control = getQuadraticControlPoint(object);
+    const path = [
+      `M ${number(object.x, context.precision)} ${number(object.y, context.precision)}`,
+      `Q ${number(control.x, context.precision)} ${number(control.y, context.precision)}`,
+      `${number(object.endX, context.precision)} ${number(object.endY, context.precision)}`,
+    ].join(" ");
+    return `<path d="${path}" ${strokeAttributes(object, context)} fill="none"/>`;
+  }
+  const segments = getCurveBezierSegments(object);
+  if (!segments.length) return "";
   const path = [
-    `M ${number(object.x, context.precision)} ${number(object.y, context.precision)}`,
-    `Q ${number(control.x, context.precision)} ${number(control.y, context.precision)}`,
-    `${number(object.endX, context.precision)} ${number(object.endY, context.precision)}`,
+    `M ${number(segments[0].start.x, context.precision)} ${number(segments[0].start.y, context.precision)}`,
+    ...segments.map((segment) => (
+      `C ${number(segment.control1.x, context.precision)} ${number(segment.control1.y, context.precision)} ${number(segment.control2.x, context.precision)} ${number(segment.control2.y, context.precision)} ${number(segment.end.x, context.precision)} ${number(segment.end.y, context.precision)}`
+    )),
   ].join(" ");
   return `<path d="${path}" ${strokeAttributes(object, context)} fill="none"/>`;
 }
@@ -420,13 +436,14 @@ function getDimensionLayout(object) {
 function renderSymbol(object, context) {
   const definition = getArchitectureSymbol(object.symbolId);
   if (!definition) return "";
+  const frame = fitArchitectureSymbolFrame(object, definition);
   const parts = definition.parts
-    .map((part) => renderSymbolPart(part, object, context))
+    .map((part) => renderSymbolPart(part, object, frame, context))
     .join("");
   return `<g data-symbol-id="${escapeXml(String(object.symbolId))}">${parts}</g>`;
 }
 
-function renderSymbolPart(part, object, context) {
+function renderSymbolPart(part, object, frame, context) {
   const stroke = resolveSymbolPaint(part.stroke, object, true);
   const fill = resolveSymbolPaint(part.fill, object, false);
   const lineWidth = Math.max(
@@ -442,30 +459,30 @@ function renderSymbolPart(part, object, context) {
   ].join(" ");
 
   if (part.type === "rect" || part.type === "rounded-rect") {
-    const x = finiteNumber(object.x, 0) + finiteNumber(part.x, 0) * finiteNumber(object.w, 0);
-    const y = finiteNumber(object.y, 0) + finiteNumber(part.y, 0) * finiteNumber(object.h, 0);
-    const width = finiteNumber(part.w, 0) * finiteNumber(object.w, 0);
-    const height = finiteNumber(part.h, 0) * finiteNumber(object.h, 0);
+    const x = finiteNumber(frame.x, 0) + finiteNumber(part.x, 0) * finiteNumber(frame.w, 0);
+    const y = finiteNumber(frame.y, 0) + finiteNumber(part.y, 0) * finiteNumber(frame.h, 0);
+    const width = finiteNumber(part.w, 0) * finiteNumber(frame.w, 0);
+    const height = finiteNumber(part.h, 0) * finiteNumber(frame.h, 0);
     const radius = part.type === "rounded-rect"
       ? Math.min(Math.abs(width), Math.abs(height)) * finiteNumber(part.radius, 0)
       : 0;
     return `<rect x="${number(x, context.precision)}" y="${number(y, context.precision)}" width="${number(width, context.precision)}" height="${number(height, context.precision)}"${radius ? ` rx="${number(radius, context.precision)}" ry="${number(radius, context.precision)}"` : ""} ${paint}/>`;
   }
   if (part.type === "ellipse") {
-    const centerX = finiteNumber(object.x, 0)
-      + (finiteNumber(part.x, 0) + finiteNumber(part.w, 0) / 2) * finiteNumber(object.w, 0);
-    const centerY = finiteNumber(object.y, 0)
-      + (finiteNumber(part.y, 0) + finiteNumber(part.h, 0) / 2) * finiteNumber(object.h, 0);
-    return `<ellipse cx="${number(centerX, context.precision)}" cy="${number(centerY, context.precision)}" rx="${number(Math.abs(finiteNumber(part.w, 0) * finiteNumber(object.w, 0)) / 2, context.precision)}" ry="${number(Math.abs(finiteNumber(part.h, 0) * finiteNumber(object.h, 0)) / 2, context.precision)}" ${paint}/>`;
+    const centerX = finiteNumber(frame.x, 0)
+      + (finiteNumber(part.x, 0) + finiteNumber(part.w, 0) / 2) * finiteNumber(frame.w, 0);
+    const centerY = finiteNumber(frame.y, 0)
+      + (finiteNumber(part.y, 0) + finiteNumber(part.h, 0) / 2) * finiteNumber(frame.h, 0);
+    return `<ellipse cx="${number(centerX, context.precision)}" cy="${number(centerY, context.precision)}" rx="${number(Math.abs(finiteNumber(part.w, 0) * finiteNumber(frame.w, 0)) / 2, context.precision)}" ry="${number(Math.abs(finiteNumber(part.h, 0) * finiteNumber(frame.h, 0)) / 2, context.precision)}" ${paint}/>`;
   }
   if (part.type === "line") {
-    return `<line x1="${number(finiteNumber(object.x, 0) + finiteNumber(part.x1, 0) * finiteNumber(object.w, 0), context.precision)}" y1="${number(finiteNumber(object.y, 0) + finiteNumber(part.y1, 0) * finiteNumber(object.h, 0), context.precision)}" x2="${number(finiteNumber(object.x, 0) + finiteNumber(part.x2, 0) * finiteNumber(object.w, 0), context.precision)}" y2="${number(finiteNumber(object.y, 0) + finiteNumber(part.y2, 0) * finiteNumber(object.h, 0), context.precision)}" ${paint}/>`;
+    return `<line x1="${number(finiteNumber(frame.x, 0) + finiteNumber(part.x1, 0) * finiteNumber(frame.w, 0), context.precision)}" y1="${number(finiteNumber(frame.y, 0) + finiteNumber(part.y1, 0) * finiteNumber(frame.h, 0), context.precision)}" x2="${number(finiteNumber(frame.x, 0) + finiteNumber(part.x2, 0) * finiteNumber(frame.w, 0), context.precision)}" y2="${number(finiteNumber(frame.y, 0) + finiteNumber(part.y2, 0) * finiteNumber(frame.h, 0), context.precision)}" ${paint}/>`;
   }
   if (part.type === "arc") {
     const radius = finiteNumber(part.radius, 0)
-      * Math.min(Math.abs(finiteNumber(object.w, 0)), Math.abs(finiteNumber(object.h, 0)));
-    const centerX = finiteNumber(object.x, 0) + finiteNumber(part.cx, 0) * finiteNumber(object.w, 0);
-    const centerY = finiteNumber(object.y, 0) + finiteNumber(part.cy, 0) * finiteNumber(object.h, 0);
+      * Math.min(Math.abs(finiteNumber(frame.w, 0)), Math.abs(finiteNumber(frame.h, 0)));
+    const centerX = finiteNumber(frame.x, 0) + finiteNumber(part.cx, 0) * finiteNumber(frame.w, 0);
+    const centerY = finiteNumber(frame.y, 0) + finiteNumber(part.cy, 0) * finiteNumber(frame.h, 0);
     const startAngle = finiteNumber(part.startAngle, 0);
     const endAngle = finiteNumber(part.endAngle, 0);
     const start = {
@@ -483,8 +500,8 @@ function renderSymbolPart(part, object, context) {
   }
   if (part.type === "polygon" && Array.isArray(part.points)) {
     const points = part.points.map(([x, y]) => ({
-      x: finiteNumber(object.x, 0) + finiteNumber(x, 0) * finiteNumber(object.w, 0),
-      y: finiteNumber(object.y, 0) + finiteNumber(y, 0) * finiteNumber(object.h, 0),
+      x: finiteNumber(frame.x, 0) + finiteNumber(x, 0) * finiteNumber(frame.w, 0),
+      y: finiteNumber(frame.y, 0) + finiteNumber(y, 0) * finiteNumber(frame.h, 0),
     }));
     return `<polygon points="${pointsAttribute(points, context.precision)}" ${paint}/>`;
   }
@@ -580,6 +597,7 @@ function renderTextbox(object, index, context) {
     `<text clip-path="url(#${clipId})"`,
     ` font-family="${escapeXml(fontFamily)}"`,
     ` font-size="${number(fontSize, context.precision)}"`,
+    ` font-weight="${number(clamp(finiteNumber(object.fontWeight, 400), 300, 800), context.precision)}"`,
     ` text-anchor="${textAnchor}"`,
     ` dominant-baseline="text-before-edge"`,
     ` xml:space="preserve">`,
@@ -789,6 +807,22 @@ function renderPatternDefinition(id, pattern, fillColor, strokeColor, precision)
     details = `<path d="M 0 8 L 8 5 L 15 9 L 24 6 M 0 18 L 6 14 L 14 18 L 24 15 M 8 5 L 6 14 M 15 9 L 14 18" fill="none" stroke="${stroke}" stroke-opacity=".32" stroke-width="1"/>`;
   } else if (pattern === "pavers") {
     details = `<path d="M .5 .5 H 11.5 V 7.5 H .5 Z M 12.5 .5 H 23.5 V 7.5 H 12.5 Z M -5.5 8.5 H 5.5 V 15.5 H -5.5 Z M 6.5 8.5 H 17.5 V 15.5 H 6.5 Z M 18.5 8.5 H 29.5 V 15.5 H 18.5 Z M .5 16.5 H 11.5 V 23.5 H .5 Z M 12.5 16.5 H 23.5 V 23.5 H 12.5 Z" fill="none" stroke="${stroke}" stroke-opacity=".32" stroke-width="1"/>`;
+  } else if (pattern === "brick") {
+    details = `<path d="M 0 .5 H 24 M 0 8.5 H 24 M 0 16.5 H 24 M 6 .5 V 8.5 M 18 .5 V 8.5 M 0 8.5 V 16.5 M 12 8.5 V 16.5 M 24 8.5 V 16.5 M 6 16.5 V 24 M 18 16.5 V 24" fill="none" stroke="${stroke}" stroke-opacity=".32" stroke-width="1"/>`;
+  } else if (pattern === "shingle") {
+    details = `<path d="M -4 4 Q 0 9 4 4 Q 8 9 12 4 Q 16 9 20 4 Q 24 9 28 4 M 0 12 Q 4 17 8 12 Q 12 17 16 12 Q 20 17 24 12 M -4 20 Q 0 25 4 20 Q 8 25 12 20 Q 16 25 20 20 Q 24 25 28 20" fill="none" stroke="${stroke}" stroke-opacity=".32" stroke-width="1"/>`;
+  } else if (pattern === "marble") {
+    details = `<path d="M -2 5 C 5 0 8 13 15 7 C 20 3 22 15 28 11 M 3 24 C 8 17 14 23 22 16" fill="none" stroke="${stroke}" stroke-opacity=".28" stroke-width=".8"/>`;
+  } else if (pattern === "slate") {
+    details = `<path d="M .5 .5 H 11.5 V 11.5 H .5 Z M 12.5 .5 H 23.5 V 11.5 H 12.5 Z M .5 12.5 H 11.5 V 23.5 H .5 Z M 12.5 12.5 H 23.5 V 23.5 H 12.5 Z M 0 12 L 12 0 M 12 24 L 24 12" fill="none" stroke="${stroke}" stroke-opacity=".3" stroke-width="1"/>`;
+  } else if (pattern === "sand") {
+    details = `<g fill="${stroke}" fill-opacity=".28"><circle cx="5" cy="5" r=".7"/><circle cx="18" cy="9" r=".7"/><circle cx="10" cy="19" r=".7"/><circle cx="22" cy="22" r=".7"/><circle cx="3" cy="16" r=".55"/><circle cx="15" cy="3" r=".55"/></g>`;
+  } else if (pattern === "mulch") {
+    details = `<path d="M 2 6 Q 5 6 8 3 M 11 5 Q 14 9 17 9 M 4 17 Q 8 17 11 13 M 15 20 Q 19 19 23 15" fill="none" stroke="${stroke}" stroke-opacity=".34" stroke-width="1.2"/>`;
+  } else if (pattern === "hedge") {
+    details = `<path d="M 4 18 Q -1 12 4 8 Q 9 12 4 18 M 10 10 Q 5 4 10 0 Q 15 4 10 10 M 16 20 Q 11 14 16 10 Q 21 14 16 20 M 22 9 Q 17 3 22 -1 Q 27 3 22 9" fill="none" stroke="${stroke}" stroke-opacity=".36" stroke-width="1"/>`;
+  } else if (pattern === "asphalt") {
+    details = `<g fill="${stroke}" fill-opacity=".3"><circle cx="5" cy="5" r="1.1"/><circle cx="18" cy="9" r="1.1"/><circle cx="10" cy="19" r="1.1"/><circle cx="22" cy="22" r="1.1"/></g><path d="M 2 14 L 7 12 M 14 3 L 19 5 M 15 19 L 21 17" fill="none" stroke="${stroke}" stroke-opacity=".3" stroke-width="1"/>`;
   }
 
   return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${number(24, precision)}" height="${number(24, precision)}">${base}${details}</pattern>`;

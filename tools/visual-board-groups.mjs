@@ -6,6 +6,7 @@ import {
   getShapeCenter,
   rotatePoint,
 } from "./visual-board-geometry.mjs";
+import { transformCurveGeometry } from "./visual-board-curves.mjs?v=2";
 
 export function getSelectionUnits(objects) {
   const units = [];
@@ -155,18 +156,7 @@ function transformObject(object, transformPoint, scaleX, scaleY, rotationDelta) 
     return transformed;
   }
   if (CURVE_TYPES.has(object.type)) {
-    const start = transformCoordinates(object.x, object.y);
-    const middle = transformCoordinates(object.midX, object.midY);
-    const end = transformCoordinates(object.endX, object.endY);
-    return {
-      ...transformed,
-      x: start.x,
-      y: start.y,
-      midX: middle.x,
-      midY: middle.y,
-      endX: end.x,
-      endY: end.y,
-    };
+    return transformCurveGeometry(object, transformPoint);
   }
   if (LINE_TYPES.has(object.type)) {
     const start = transformCoordinates(object.x, object.y);

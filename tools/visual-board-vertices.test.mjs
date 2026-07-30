@@ -129,3 +129,109 @@ test("a line endpoint touching another line creates a T-junction", () => {
     3,
   );
 });
+
+test("a line crossing a curve creates shared joints without flattening the curve", () => {
+  const network = createEditableVertexNetwork([
+    {
+      id: "curve",
+      type: "arc",
+      x: 0,
+      y: 50,
+      midX: 50,
+      midY: 0,
+      endX: 100,
+      endY: 50,
+    },
+    {
+      id: "line",
+      type: "line",
+      x: 0,
+      y: 25,
+      endX: 100,
+      endY: 25,
+    },
+  ], identifierFactory(), 0.01);
+
+  const curve = network.objects.find((object) => object.type === "arc");
+  const lines = network.objects.filter((object) => object.type === "line");
+  assert.ok(curve);
+  assert.equal(lines.length, 3);
+  assert.equal(curve.curvePoints.length, 5);
+  const sharedIds = new Set(lines.flatMap((line) => [
+    line.startVertexId,
+    line.endVertexId,
+  ]).filter((id) => curve.curveVertexIds.includes(id)));
+  assert.equal(sharedIds.size, 2);
+});
+
+test("two curves can share an inserted crossing vertex", () => {
+  const network = createEditableVertexNetwork([
+    {
+      id: "horizontal",
+      type: "arc",
+      x: 0,
+      y: 50,
+      midX: 50,
+      midY: 50,
+      endX: 100,
+      endY: 50,
+    },
+    {
+      id: "vertical",
+      type: "arc",
+      x: 25,
+      y: 0,
+      midX: 25,
+      midY: 25,
+      endX: 25,
+      endY: 100,
+    },
+  ], identifierFactory(), 0.01);
+
+  assert.equal(network.objects.length, 2);
+  const [horizontal, vertical] = network.objects;
+  const sharedIds = horizontal.curveVertexIds.filter((id) => (
+    vertical.curveVertexIds.includes(id)
+  ));
+  assert.equal(new Set(sharedIds).size, 1);
+  assert.equal(horizontal.curvePoints.length, 4);
+  assert.equal(vertical.curvePoints.length, 4);
+});
+
+test("moving a shared curve joint reshapes every incident curve", () => {
+  const network = createEditableVertexNetwork([
+    {
+      id: "horizontal",
+      type: "arc",
+      x: 0,
+      y: 50,
+      midX: 50,
+      midY: 50,
+      endX: 100,
+      endY: 50,
+    },
+    {
+      id: "vertical",
+      type: "arc",
+      x: 25,
+      y: 0,
+      midX: 25,
+      midY: 25,
+      endX: 25,
+      endY: 100,
+    },
+  ], identifierFactory(), 0.01);
+  const [horizontal, vertical] = network.objects;
+  const sharedId = horizontal.curveVertexIds.find((id) => (
+    vertical.curveVertexIds.includes(id)
+  ));
+
+  assert.equal(
+    setVertexNetworkPosition(network.objects, sharedId, { x: 30, y: 60 }),
+    2,
+  );
+  const horizontalIndex = horizontal.curveVertexIds.indexOf(sharedId);
+  const verticalIndex = vertical.curveVertexIds.indexOf(sharedId);
+  assert.deepEqual(horizontal.curvePoints[horizontalIndex], { x: 30, y: 60 });
+  assert.deepEqual(vertical.curvePoints[verticalIndex], { x: 30, y: 60 });
+});

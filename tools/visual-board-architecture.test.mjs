@@ -7,17 +7,42 @@ import {
   getArchitectureMaterial,
   getArchitectureSymbol,
   normalizeArchitectureSettings,
+  resolveArchitectureLineWeight,
+  resolveArchitectureTypography,
   resolveMaterialStyle,
   sortArchitectureObjects,
 } from "./visual-board-architecture.mjs";
 
 test("bundled architectural catalogs expose stable vector assets and materials", () => {
   const catalog = getArchitectureCatalog();
-  assert.ok(catalog.symbols.length >= 30);
-  assert.ok(catalog.materials.length >= 12);
+  assert.ok(catalog.symbols.length >= 100);
+  assert.ok(catalog.materials.length >= 20);
+  assert.ok(catalog.fillPatterns.length >= 18);
+  assert.equal(catalog.stylePresets.length, 3);
   assert.equal(getArchitectureSymbol("bed-queen").category, "bedroom");
+  assert.equal(getArchitectureSymbol("tree-deciduous").preserveAspectRatio, true);
   assert.equal(getArchitectureMaterial("lawn").fillPattern, "grass");
   assert.equal(getArchitectureSymbol("missing"), null);
+});
+
+test("architecture style presets normalize coherent line weights and typography", () => {
+  const settings = normalizeArchitectureSettings({
+    stylePreset: "presentation-soft",
+    lineWeights: { exterior: 12 },
+    typography: {
+      room: { fontFamily: "sans", fontSize: 13, fontWeight: 600, lineHeight: 1 },
+    },
+  });
+
+  assert.equal(settings.stylePreset, "presentation-soft");
+  assert.equal(resolveArchitectureLineWeight("exterior", settings), 12);
+  assert.deepEqual(resolveArchitectureTypography("room", settings), {
+    role: "room",
+    fontFamily: "sans",
+    fontSize: 13,
+    fontWeight: 600,
+    lineHeight: 1,
+  });
 });
 
 test("architecture layers deterministically control visibility and stacking", () => {
@@ -88,4 +113,72 @@ test("geometry reports account for rotated architectural frames", () => {
   assert.ok(Math.abs(report.bounds.y + 40) < 1e-9);
   assert.ok(Math.abs(report.bounds.width - 20) < 1e-9);
   assert.ok(Math.abs(report.bounds.height - 100) < 1e-9);
+});
+
+test("geometry quality checks distinguish real openings from disconnected walls", () => {
+  const report = getArchitectureGeometryReport([
+    {
+      id: "wall-left",
+      type: "wall",
+      x: 0,
+      y: -5,
+      w: 40,
+      h: 10,
+      rotation: 0,
+      semantic: { wallPathId: "shell", segmentIndex: 0 },
+    },
+    {
+      id: "wall-right",
+      type: "wall",
+      x: 60,
+      y: -5,
+      w: 40,
+      h: 10,
+      rotation: 0,
+      semantic: { wallPathId: "shell", segmentIndex: 0 },
+    },
+    {
+      id: "door",
+      type: "symbol",
+      symbolId: "door-single",
+      x: 40,
+      y: -10,
+      w: 20,
+      h: 20,
+      rotation: 0,
+      semantic: {
+        role: "architecture-opening-cut",
+        wallPathId: "shell",
+        segmentIndex: 0,
+      },
+    },
+    {
+      id: "room-area",
+      type: "area",
+      x: 0,
+      y: 20,
+      w: 100,
+      h: 80,
+      rotation: 0,
+      vertices: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 0, y: 1 },
+      ],
+      semantic: { roomId: "living" },
+    },
+  ], {
+    includeConnectivity: true,
+    includeRoomAccess: true,
+  });
+
+  assert.deepEqual(
+    report.quality.disconnectedWallEndpoints.map((issue) => issue.endpoint),
+    ["start", "end"],
+  );
+  assert.deepEqual(report.quality.roomAccessIssues, [{
+    roomId: "living",
+    areaId: "room-area",
+  }]);
 });

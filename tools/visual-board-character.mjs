@@ -2,7 +2,7 @@
  * Portable Visual Board character packages with embedded local image assets.
  */
 
-import { getSelectionBounds, transformSelectionObjects } from "./visual-board-groups.mjs";
+import { getSelectionBounds, transformSelectionObjects } from "./visual-board-groups.mjs?v=3";
 import {
   getConnectedRigBodyIds,
   normalizeRig,
@@ -78,6 +78,7 @@ export function instantiateCharacter(rawCharacter, createIdentifier, placementPo
     rawCharacter.objects.flatMap((object) => [
       object.startVertexId,
       object.endVertexId,
+      ...(Array.isArray(object.curveVertexIds) ? object.curveVertexIds : []),
     ]).filter(Boolean),
     createIdentifier,
   );
@@ -101,6 +102,11 @@ export function instantiateCharacter(rawCharacter, createIdentifier, placementPo
     if (object.vertexNetworkId) object.vertexNetworkId = networkIds.get(object.vertexNetworkId);
     if (object.startVertexId) object.startVertexId = vertexIds.get(object.startVertexId);
     if (object.endVertexId) object.endVertexId = vertexIds.get(object.endVertexId);
+    if (Array.isArray(object.curveVertexIds)) {
+      object.curveVertexIds = object.curveVertexIds.map((vertexId) => (
+        vertexIds.get(vertexId) ?? vertexId
+      ));
+    }
     if (object.assemblyId) object.assemblyId = assemblyIds.get(object.assemblyId);
     if (object.assemblySource?.id) {
       object.assemblySource.id = assemblySourceIds.get(object.assemblySource.id);

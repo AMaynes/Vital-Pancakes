@@ -5,7 +5,7 @@
  * resizing, hit testing, and marquee selection deterministic and testable.
  */
 
-import { getQuadraticCurvePoints } from "./visual-board-curves.mjs?v=1";
+import { getCurvePathPoints } from "./visual-board-curves.mjs?v=2";
 
 export const SHAPE_TYPES = new Set([
   "rectangle",
@@ -275,7 +275,7 @@ function normalizedPointToWorld(object, point) {
  */
 export function getObjectSegments(object) {
   if (CURVE_TYPES.has(object.type)) {
-    return pointsToSegments(getQuadraticCurvePoints(object));
+    return pointsToSegments(getCurvePathPoints(object));
   }
 
   if (object.type === "trace") {
@@ -357,7 +357,7 @@ export function getObjectBounds(object) {
   }
 
   if (CURVE_TYPES.has(object.type)) {
-    return getPointsBounds(getQuadraticCurvePoints(object));
+    return getPointsBounds(getCurvePathPoints(object));
   }
 
   if (object.type === "trace") {

@@ -17,18 +17,50 @@ import {
   createFloorPlanElement,
   createFloorPlanTemplate,
   normalizeFloorPlanSettings,
-} from "./visual-board-floor-plan.mjs?v=1";
+} from "./visual-board-floor-plan.mjs?v=2";
+import {
+  addFloorPlanTemplate,
+  createFloorPlanTemplateRecord,
+  getFloorPlanTemplateCatalog,
+  getFloorPlanTemplateRecord,
+  removeFloorPlanTemplate,
+  replaceFloorPlanTemplate,
+  restoreBuiltInFloorPlanTemplate,
+  updateFloorPlanTemplate,
+} from "./visual-board-floor-plan-templates.mjs?v=1";
+import {
+  createCharacterPackage,
+  instantiateCharacter,
+} from "./visual-board-character.mjs?v=2";
+import {
+  getCurveVertices,
+  insertCurveVertex,
+  normalizeCurveGeometry,
+  transformCurveGeometry,
+} from "./visual-board-curves.mjs?v=2";
+import { createEditableVertexNetwork } from "./visual-board-vertices.mjs?v=3";
 import {
   ARCHITECTURE_FILL_PATTERNS,
   getArchitectureCatalog,
   getArchitectureGeometryReport,
+  getArchitectureStylePreset,
   getArchitectureMaterial,
   getArchitectureSymbol,
   normalizeArchitectureSettings,
+  resolveArchitectureLineWeight,
+  resolveArchitectureTypography,
   resolveMaterialStyle,
-} from "./visual-board-architecture.mjs?v=1";
-import { getObjectBounds } from "./visual-board-geometry.mjs?v=9";
-import { flipBoardSelection } from "./visual-board-transform.mjs?v=2";
+} from "./visual-board-architecture.mjs?v=2";
+import {
+  ARCHITECTURE_PATH_OPERATIONS,
+  ARCHITECTURE_SYMBOL_FITS,
+  ARCHITECTURE_WALL_CAPS,
+  ARCHITECTURE_WALL_JOINS,
+  buildWallPathGeometry,
+  sampleArchitecturePath,
+} from "./visual-board-architecture-geometry.mjs?v=1";
+import { getObjectBounds } from "./visual-board-geometry.mjs?v=10";
+import { flipBoardSelection } from "./visual-board-transform.mjs?v=3";
 
 const MAX_OBJECTS_PER_REQUEST = 500;
 const MAX_BOARD_OBJECTS = 10_000;
@@ -102,13 +134,60 @@ const ARCHITECTURE_SYMBOL_IDS = new Set(
 const ARCHITECTURE_MATERIAL_IDS = new Set(
   ARCHITECTURE_CATALOG.materials.map((item) => item.id),
 );
+const ARCHITECTURE_STYLE_PRESET_IDS = new Set(
+  ARCHITECTURE_CATALOG.stylePresets.map((item) => item.id),
+);
+const ARCHITECTURE_TEXT_STYLES = new Set([
+  "title",
+  "section",
+  "room",
+  "dimension",
+  "note",
+]);
+const ARCHITECTURE_LINE_WEIGHT_ROLES = new Set([
+  "detail",
+  "furniture",
+  "partition",
+  "exterior",
+  "site",
+  "boundary",
+  "dimension",
+]);
 const ARCHITECTURE_OBJECT_TYPES = Object.freeze([
   "area",
   "wall",
   "symbol",
   "dimension",
 ]);
-const OPENING_SYMBOL_IDS = new Set(["door-single", "door-double", "window"]);
+const OPENING_SYMBOL_IDS = new Set(
+  ARCHITECTURE_CATALOG.symbols
+    .filter((item) => item.category === "opening" || /^door-|^window/.test(item.id))
+    .map((item) => item.id),
+);
+const ARCHITECTURE_SEMANTIC_SCHEMA = Object.freeze({
+  type: "object",
+  properties: {
+    label: { type: "string", maxLength: 240 },
+    role: { type: "string", maxLength: 80 },
+    tags: {
+      type: "array",
+      maxItems: MAX_TAGS,
+      items: { type: "string", maxLength: MAX_TAG_LENGTH },
+    },
+    generatedBy: { type: "string", maxLength: 80 },
+    diagramId: { type: "string", maxLength: 128 },
+    clientRef: { type: "string", maxLength: 128 },
+    sourceId: { type: "string", maxLength: 128 },
+    targetId: { type: "string", maxLength: 128 },
+    roomId: { type: "string", maxLength: 128 },
+    wallPathId: { type: "string", maxLength: 128 },
+    referenceId: { type: "string", maxLength: 128 },
+    levelId: { type: "string", maxLength: 128 },
+    segmentIndex: { type: "integer", minimum: 0 },
+    openingIndex: { type: "integer", minimum: 0 },
+  },
+  additionalProperties: false,
+});
 
 const COMMAND_DEFINITIONS = Object.freeze([
   command("objects.create", ["create"], "Create one or more editable board objects."),
@@ -119,23 +198,37 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("selection.set", ["update"], "Set the current selection using stable references."),
   command("objects.group", ["update"], "Group target objects into one rigid selection unit."),
   command("objects.ungroup", ["update"], "Release target objects from their rigid groups."),
+  command("curves.points.insert", ["update"], "Insert exact movable points at requested positions on one editable curve."),
+  command("vertices.create", ["update"], "Create shared editable joints across selected lines and curves, including crossings."),
   command("objects.connect", ["create"], "Connect two objects with an arrow or line."),
   command("objects.disconnect", ["delete"], "Remove semantic connections between targets."),
   command("objects.layout", ["update"], "Arrange target objects with a deterministic layout."),
   command("template.insert", ["create"], "Insert a high-level reusable board template."),
   command("floor-plan.insert", ["create"], "Insert an editable floor-plan element or room template."),
+  command("floor-plan.templates.list", ["read-summary"], "List built-in, customized, saved, and removed floor-plan templates."),
+  command("floor-plan.templates.create", ["create"], "Save explicit editable board objects as a reusable floor-plan template."),
+  command("floor-plan.templates.update", ["update"], "Rename or describe an existing saved or customized floor-plan template."),
+  command("floor-plan.templates.replace", ["update"], "Replace a template's vector contents with explicit board objects."),
+  command("floor-plan.templates.remove", ["delete"], "Delete a saved template or hide a built-in template."),
+  command("floor-plan.templates.restore", ["update"], "Restore a built-in template and discard its replacement."),
+  command("floor-plan.templates.insert", ["create"], "Insert a visible saved, customized, or built-in floor-plan template."),
   command("diagram.create", ["create"], "Create a complete semantic diagram in one command."),
   command("viewport.focus", ["update"], "Focus the board viewport on targets or a point."),
   command("board.settings.update", ["update"], "Update grid, snapping, and floor-plan settings."),
   command("architecture.areas.create", ["create"], "Create exact filled architectural or landscape polygons."),
+  command("architecture.paths.create", ["create"], "Create exact curved material polygons from caller-authored path commands."),
   command("architecture.walls.create", ["create"], "Create exact wall segments without choosing their layout."),
+  command("architecture.wallPaths.create", ["create"], "Compile exact connected wall paths with real door and window gaps."),
   command("architecture.openings.create", ["create"], "Place exact door or window symbols chosen by the caller."),
   command("architecture.symbols.place", ["create"], "Place bundled vector symbols at exact frames and rotations."),
   command("architecture.labels.create", ["create"], "Create clipped, world-scaled architectural labels in exact boxes."),
   command("architecture.dimensions.create", ["create"], "Create exact architectural dimensions and labels."),
   command("architecture.materials.apply", ["update"], "Apply an exact bundled material to explicit targets."),
+  command("architecture.style.set", ["update"], "Set deterministic architectural palette, line-weight, and typography presets."),
   command("architecture.layers.set", ["update"], "Replace the deterministic architecture layer stack."),
+  command("architecture.references.configure", ["update"], "Configure explicit existing images as locked, local reference overlays."),
   command("architecture.inspect", ["read-summary"], "Measure explicit objects and report bounded intersections without changing the board."),
+  command("architecture.validate", ["read-summary"], "Report wall connectivity, access, clearance, label, and symbol-quality issues without changing the board."),
 ]);
 
 const TARGET_SCHEMA = Object.freeze({
@@ -147,9 +240,13 @@ const TARGET_SCHEMA = Object.freeze({
     selection: { type: "boolean" },
     semanticRef: {
       type: "string",
-      description: "Matches semantic.clientRef or semantic.diagramId.",
+      description: "Matches a stable semantic client, diagram, wall-path, room, level, or reference ID.",
     },
     diagramId: { type: "string" },
+    wallPathId: { type: "string" },
+    roomId: { type: "string" },
+    levelId: { type: "string" },
+    referenceId: { type: "string" },
     role: { type: "string" },
     tag: { type: "string" },
   },
@@ -188,8 +285,19 @@ const ARCHITECTURE_STYLE_SCHEMA = Object.freeze({
     opacity: { type: "number", minimum: 0, maximum: 1 },
     fillPattern: { enum: [...ARCHITECTURE_FILL_PATTERNS] },
     strokeWidth: { type: "number", minimum: 0.25, maximum: 240 },
+    lineWeight: { enum: [...ARCHITECTURE_LINE_WEIGHT_ROLES] },
     dashPattern: { enum: [...DASH_PATTERNS] },
-    shadow: { type: "object" },
+    shadow: {
+      type: "object",
+      properties: {
+        color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+        opacity: { type: "number", minimum: 0, maximum: 1 },
+        blur: { type: "number", minimum: 0, maximum: 100 },
+        offsetX: { type: "number", minimum: -500, maximum: 500 },
+        offsetY: { type: "number", minimum: -500, maximum: 500 },
+      },
+      additionalProperties: false,
+    },
   },
   additionalProperties: false,
 });
@@ -198,8 +306,89 @@ const ARCHITECTURE_ITEM_FIELDS = Object.freeze({
   clientKey: { type: "string" },
   layerId: { type: "string" },
   zIndex: { type: "number" },
-  semantic: { type: "object" },
+  semantic: ARCHITECTURE_SEMANTIC_SCHEMA,
   style: ARCHITECTURE_STYLE_SCHEMA,
+});
+
+const ARCHITECTURE_LINE_WEIGHTS_SCHEMA = Object.freeze({
+  type: "object",
+  properties: Object.fromEntries(
+    [...ARCHITECTURE_LINE_WEIGHT_ROLES].map((role) => [
+      role,
+      { type: "number", minimum: 0.25, maximum: 240 },
+    ]),
+  ),
+  additionalProperties: false,
+});
+
+const ARCHITECTURE_TYPOGRAPHY_SCHEMA = Object.freeze({
+  type: "object",
+  properties: Object.fromEntries(
+    [...ARCHITECTURE_TEXT_STYLES].map((role) => [
+      role,
+      {
+        type: "object",
+        properties: {
+          fontFamily: { enum: [...FONT_FAMILIES] },
+          fontSize: { type: "number", minimum: 6, maximum: 96 },
+          fontWeight: { type: "integer", minimum: 300, maximum: 800 },
+          lineHeight: { type: "number", minimum: 0.8, maximum: 3 },
+        },
+        additionalProperties: false,
+      },
+    ]),
+  ),
+  additionalProperties: false,
+});
+
+const ARCHITECTURE_PALETTE_SCHEMA = Object.freeze({
+  type: "object",
+  properties: Object.fromEntries(
+    Object.keys(ARCHITECTURE_CATALOG.stylePresets[0]?.palette ?? {}).map((role) => [
+      role,
+      { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+    ]),
+  ),
+  additionalProperties: false,
+});
+
+const ARCHITECTURE_PATH_COMMAND_SCHEMA = Object.freeze({
+  type: "object",
+  properties: {
+    op: { enum: [...ARCHITECTURE_PATH_OPERATIONS] },
+    x: { type: "number" },
+    y: { type: "number" },
+    cx: { type: "number" },
+    cy: { type: "number" },
+    c1x: { type: "number" },
+    c1y: { type: "number" },
+    c2x: { type: "number" },
+    c2y: { type: "number" },
+    rx: { type: "number", exclusiveMinimum: 0 },
+    ry: { type: "number", exclusiveMinimum: 0 },
+    startAngle: { type: "number" },
+    endAngle: { type: "number" },
+    clockwise: { type: "boolean" },
+    steps: { type: "integer", minimum: 4, maximum: 96 },
+  },
+  additionalProperties: false,
+});
+
+const ARCHITECTURE_WALL_OPENING_SCHEMA = Object.freeze({
+  type: "object",
+  required: ["segmentIndex", "offset", "width", "kind"],
+  properties: {
+    segmentIndex: { type: "integer", minimum: 0 },
+    offset: { type: "number", minimum: 0 },
+    width: { type: "number", exclusiveMinimum: 0 },
+    kind: { enum: [...OPENING_SYMBOL_IDS] },
+    hinge: { enum: ["left", "right"] },
+    side: { enum: ["inside", "outside"] },
+    sillDepth: { type: "number", exclusiveMinimum: 0 },
+    clientKey: { type: "string" },
+    semantic: { type: "object" },
+  },
+  additionalProperties: false,
 });
 
 const VISUAL_COMMAND_SCHEMAS = Object.freeze({
@@ -227,6 +416,13 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
             endY: { type: "number" },
             midX: { type: "number" },
             midY: { type: "number" },
+            curvePoints: {
+              type: "array",
+              minItems: 3,
+              maxItems: 128,
+              items: pointSchema(),
+              description: "Ordered on-curve vertices for a complex arc.",
+            },
             rotation: { type: "number", description: "Radians." },
             color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
             strokeWidth: { type: "number", minimum: 1, maximum: 24 },
@@ -309,6 +505,17 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
   }),
   "objects.group": targetCommandSchema(),
   "objects.ungroup": targetCommandSchema(),
+  "curves.points.insert": schema(["points"], {
+    targets: TARGET_SCHEMA,
+    target: TARGET_SCHEMA,
+    points: {
+      type: "array",
+      minItems: 1,
+      maxItems: 64,
+      items: pointSchema(),
+    },
+  }),
+  "vertices.create": targetCommandSchema(),
   "objects.connect": schema(["from", "to"], {
     from: REFERENCE_SCHEMA,
     to: REFERENCE_SCHEMA,
@@ -355,6 +562,34 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
         alignmentGuides: { type: "boolean" },
       },
     },
+  }),
+  "floor-plan.templates.list": schema([], {}),
+  "floor-plan.templates.create": schema(["templateId", "name", "targets"], {
+    templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    name: { type: "string", maxLength: 80 },
+    description: { type: "string", maxLength: 240 },
+    targets: TARGET_SCHEMA,
+  }),
+  "floor-plan.templates.update": schema(["templateId"], {
+    templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    name: { type: "string", maxLength: 80 },
+    description: { type: "string", maxLength: 240 },
+  }),
+  "floor-plan.templates.replace": schema(["templateId", "targets"], {
+    templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    name: { type: "string", maxLength: 80 },
+    description: { type: "string", maxLength: 240 },
+    targets: TARGET_SCHEMA,
+  }),
+  "floor-plan.templates.remove": schema(["templateId"], {
+    templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+  }),
+  "floor-plan.templates.restore": schema(["templateId"], {
+    templateId: { enum: [...FLOOR_PLAN_TEMPLATES] },
+  }),
+  "floor-plan.templates.insert": schema(["templateId"], {
+    templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    placement: PLACEMENT_SCHEMA,
   }),
   "diagram.create": schema(["diagramType"], {
     diagramType: { enum: [...DIAGRAM_TYPES] },
@@ -414,6 +649,29 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
       },
     },
   }),
+  "architecture.paths.create": schema(["paths"], {
+    paths: {
+      type: "array",
+      minItems: 1,
+      maxItems: 100,
+      items: {
+        type: "object",
+        required: ["commands", "materialId"],
+        properties: {
+          commands: {
+            type: "array",
+            minItems: 2,
+            maxItems: 256,
+            items: ARCHITECTURE_PATH_COMMAND_SCHEMA,
+          },
+          materialId: { enum: [...ARCHITECTURE_MATERIAL_IDS] },
+          curveSteps: { type: "integer", minimum: 4, maximum: 96 },
+          ...ARCHITECTURE_ITEM_FIELDS,
+        },
+        additionalProperties: false,
+      },
+    },
+  }),
   "architecture.walls.create": schema(["walls"], {
     walls: {
       type: "array",
@@ -426,6 +684,33 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
           start: pointSchema(),
           end: pointSchema(),
           thickness: { type: "number", exclusiveMinimum: 0 },
+          materialId: { enum: [...ARCHITECTURE_MATERIAL_IDS] },
+          ...ARCHITECTURE_ITEM_FIELDS,
+        },
+        additionalProperties: false,
+      },
+    },
+  }),
+  "architecture.wallPaths.create": schema(["wallPaths"], {
+    wallPaths: {
+      type: "array",
+      minItems: 1,
+      maxItems: 100,
+      items: {
+        type: "object",
+        required: ["points", "thickness"],
+        properties: {
+          points: { type: "array", minItems: 2, maxItems: 256, items: pointSchema() },
+          thickness: { type: "number", exclusiveMinimum: 0 },
+          closed: { type: "boolean" },
+          join: { enum: [...ARCHITECTURE_WALL_JOINS] },
+          cap: { enum: [...ARCHITECTURE_WALL_CAPS] },
+          materialId: { enum: [...ARCHITECTURE_MATERIAL_IDS] },
+          openings: {
+            type: "array",
+            maxItems: 200,
+            items: ARCHITECTURE_WALL_OPENING_SCHEMA,
+          },
           ...ARCHITECTURE_ITEM_FIELDS,
         },
         additionalProperties: false,
@@ -447,6 +732,7 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
           w: { type: "number", exclusiveMinimum: 0 },
           h: { type: "number", exclusiveMinimum: 0 },
           rotation: { type: "number", description: "Radians." },
+          fit: { enum: [...ARCHITECTURE_SYMBOL_FITS] },
           ...ARCHITECTURE_ITEM_FIELDS,
         },
         additionalProperties: false,
@@ -468,6 +754,7 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
           w: { type: "number", exclusiveMinimum: 0 },
           h: { type: "number", exclusiveMinimum: 0 },
           rotation: { type: "number", description: "Radians." },
+          fit: { enum: [...ARCHITECTURE_SYMBOL_FITS] },
           ...ARCHITECTURE_ITEM_FIELDS,
         },
         additionalProperties: false,
@@ -490,7 +777,9 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
           h: { type: "number", exclusiveMinimum: 0 },
           rotation: { type: "number", description: "Radians." },
           fontSize: { type: "number", minimum: 6, maximum: 96 },
+          fontWeight: { type: "integer", minimum: 300, maximum: 800 },
           fontFamily: { enum: [...FONT_FAMILIES] },
+          textStyle: { enum: [...ARCHITECTURE_TEXT_STYLES] },
           textAlign: { enum: ["left", "center", "right"] },
           verticalAlign: { enum: ["top", "middle", "bottom"] },
           lineHeight: { type: "number", minimum: 0.8, maximum: 3 },
@@ -527,6 +816,12 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
     materialId: { enum: [...ARCHITECTURE_MATERIAL_IDS] },
     fillOpacity: { type: "number", minimum: 0, maximum: 1 },
   }),
+  "architecture.style.set": schema(["preset"], {
+    preset: { enum: [...ARCHITECTURE_STYLE_PRESET_IDS] },
+    lineWeights: ARCHITECTURE_LINE_WEIGHTS_SCHEMA,
+    typography: ARCHITECTURE_TYPOGRAPHY_SCHEMA,
+    palette: ARCHITECTURE_PALETTE_SCHEMA,
+  }),
   "architecture.layers.set": schema(["layers"], {
     layers: {
       type: "array",
@@ -545,12 +840,33 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
       },
     },
   }),
+  "architecture.references.configure": schema(["targets", "consent"], {
+    targets: TARGET_SCHEMA,
+    consent: { const: true },
+    opacity: { type: "number", minimum: 0.05, maximum: 1 },
+    locked: { type: "boolean" },
+    hiddenInExport: { type: "boolean" },
+    referenceName: { type: "string", maxLength: 120 },
+  }),
   "architecture.inspect": schema([], {
     targets: TARGET_SCHEMA,
     target: TARGET_SCHEMA,
     includeIntersections: { type: "boolean" },
     includeWithinGroups: { type: "boolean" },
     clearance: { type: "number", minimum: 0, maximum: 100_000 },
+    includeConnectivity: { type: "boolean" },
+    endpointTolerance: { type: "number", minimum: 0.25, maximum: 1_000 },
+    includeLabelCollisions: { type: "boolean" },
+    includeRoomAccess: { type: "boolean" },
+    minimumClearance: { type: "number", minimum: 0, maximum: 100_000 },
+    aspectRatioTolerance: { type: "number", minimum: 0.05, maximum: 5 },
+  }),
+  "architecture.validate": schema([], {
+    targets: TARGET_SCHEMA,
+    target: TARGET_SCHEMA,
+    endpointTolerance: { type: "number", minimum: 0.25, maximum: 1_000 },
+    minimumClearance: { type: "number", minimum: 0, maximum: 100_000 },
+    aspectRatioTolerance: { type: "number", minimum: 0.05, maximum: 5 },
   }),
 });
 
@@ -669,7 +985,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 2,
+    version: 5,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -692,9 +1008,12 @@ export function getVisualBoardAiCapabilities() {
     },
     limitations: [
       "Image bytes, freehand point arrays, and trace paths are omitted from AI context.",
-      "Rigged characters can be mirrored, but generic duplication, resize, rotation, and layout remain unavailable.",
       "Commands cannot import local files or start animation rendering.",
       "Architectural commands render exact caller-supplied geometry and never choose or improve a layout.",
+      "Custom floor-plan templates preserve editable vector objects and relationships but reject image assets.",
+      "Reference images require an existing local board image plus explicit consent; their bytes are never exposed to providers.",
+      "Architecture validation reports deterministic geometry issues but does not redesign the caller's plan.",
+      "Shared-vertex creation accepts straight lines and curves; other outlined shapes must be divided first.",
     ],
     examples: getVisualBoardAiExamples(),
   };
@@ -702,6 +1021,21 @@ export function getVisualBoardAiCapabilities() {
 
 export function getVisualBoardAiExamples() {
   return [
+    {
+      name: "Add a complex curve point",
+      command: {
+        type: "curves.points.insert",
+        targets: { ids: ["curve-id-from-context"] },
+        points: [{ x: 420, y: 260 }],
+      },
+    },
+    {
+      name: "Join intersecting paths",
+      command: {
+        type: "vertices.create",
+        targets: { ids: ["curve-id", "line-id"] },
+      },
+    },
     {
       name: "Mind map",
       command: {
@@ -756,6 +1090,16 @@ export function getVisualBoardAiExamples() {
       },
     },
     {
+      name: "Save selection as a floor-plan template",
+      command: {
+        type: "floor-plan.templates.create",
+        templateId: "courtyard-bedroom",
+        name: "Courtyard bedroom",
+        description: "Bedroom block with ensuite and garden doors.",
+        targets: { selection: true },
+      },
+    },
+    {
       name: "Exact furnished room",
       command: {
         type: "architecture.symbols.place",
@@ -788,6 +1132,58 @@ export function getVisualBoardAiExamples() {
             zIndex: 10,
           },
         ],
+      },
+    },
+    {
+      name: "Connected wall path with real openings",
+      command: {
+        type: "architecture.wallPaths.create",
+        wallPaths: [{
+          clientKey: "living-shell",
+          points: [
+            { x: 100, y: 100 },
+            { x: 700, y: 100 },
+            { x: 700, y: 500 },
+          ],
+          thickness: 18,
+          join: "miter",
+          cap: "square",
+          openings: [
+            {
+              segmentIndex: 0,
+              offset: 260,
+              width: 110,
+              kind: "door-french",
+            },
+            {
+              segmentIndex: 1,
+              offset: 120,
+              width: 150,
+              kind: "window-fixed",
+            },
+          ],
+          materialId: "plaster",
+          style: { lineWeight: "exterior" },
+        }],
+      },
+    },
+    {
+      name: "Curved landscaped area",
+      command: {
+        type: "architecture.paths.create",
+        paths: [{
+          clientKey: "garden-bed",
+          commands: [
+            { op: "M", x: 80, y: 640 },
+            { op: "C", c1x: 240, c1y: 560, c2x: 520, c2y: 570, x: 700, y: 660 },
+            { op: "L", x: 680, y: 780 },
+            { op: "Q", cx: 340, cy: 700, x: 80, y: 640 },
+            { op: "Z" },
+          ],
+          layerId: "landscape",
+          materialId: "mulch",
+          style: { lineWeight: "site" },
+        }],
       },
     },
   ];
@@ -864,6 +1260,9 @@ export function executeVisualBoardCommands(sourceState, envelope, createIdentifi
 
 export function serializeVisualBoardContext(sourceState, options = {}) {
   const state = normalizeExecutionState(sourceState);
+  const floorPlanSettings = normalizeFloorPlanSettings(
+    state.board.settings.floorPlan,
+  );
   const detail = options?.detail === "geometry" ? "geometry" : "summary";
   const scope = ["selection", "viewport", "all"].includes(options?.scope)
     ? options.scope
@@ -891,6 +1290,7 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
       selected: selectedIds.has(object.id),
       locked: Boolean(object.locked),
       groupId: object.groupId ?? null,
+      vertexNetworkId: object.vertexNetworkId ?? null,
       layerId: object.layerId ?? "structure",
       zIndex: roundNumber(object.zIndex ?? 0),
       style: {
@@ -904,15 +1304,25 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
         materialId: object.materialId ?? null,
         accentColor: object.accentColor ?? null,
       },
+      hiddenInExport: Boolean(object.hiddenInExport),
       semantic: sanitizeSemantic(object.semantic),
     };
     if (object.type === "textbox") summary.text = String(object.text ?? "").slice(0, 1_000);
     if (object.type === "shape") summary.shapeKind = object.shapeKind;
-    if (object.type === "connector" || object.type === "line") {
+    if (["connector", "line", "arc"].includes(object.type)) {
       summary.end = {
         x: roundNumber(object.endX),
         y: roundNumber(object.endY),
       };
+    }
+    if (object.type === "arc") {
+      summary.curvePointCount = getCurveVertices(object).length;
+      if (detail === "geometry") {
+        summary.curvePoints = getCurveVertices(object).slice(0, 128).map((point) => ({
+          x: roundNumber(point.x),
+          y: roundNumber(point.y),
+        }));
+      }
     }
     if (detail === "geometry") {
       if (["rectangle", "ellipse", "shape", "textbox", "image", "area", "wall", "symbol"].includes(object.type)) {
@@ -931,17 +1341,25 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
         }));
       }
       if (object.type === "symbol") summary.symbolId = object.symbolId;
+      if (object.type === "symbol") summary.fit = object.fit ?? "contain";
       if (object.type === "wall") Object.assign(summary, serializeArchitectureObject(object));
       if (object.type === "dimension") Object.assign(summary, serializeArchitectureObject(object));
       if (object.type === "textbox") {
         summary.textStyle = {
           fontSize: roundNumber(object.fontSize),
           fontFamily: object.fontFamily,
+          fontWeight: roundNumber(object.fontWeight ?? 400),
           scaleMode: object.scaleMode ?? "world",
           textAlign: object.textAlign ?? "left",
           verticalAlign: object.verticalAlign ?? "top",
           lineHeight: roundNumber(object.lineHeight ?? 1.25),
           padding: roundNumber(object.padding ?? 6),
+        };
+      }
+      if (object.type === "image" && object.referenceImage === true) {
+        summary.reference = {
+          name: String(object.referenceName ?? "Reference").slice(0, 120),
+          bytesIncluded: false,
         };
       }
     }
@@ -957,7 +1375,22 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
       ...roundBounds(viewportBounds),
       zoom: roundNumber(state.viewport.zoom),
     },
-    settings: cloneJson(state.board.settings),
+    settings: {
+      ...cloneJson(state.board.settings),
+      floorPlan: {
+        enabled: floorPlanSettings.enabled,
+        units: floorPlanSettings.units,
+        pixelsPerUnit: floorPlanSettings.pixelsPerUnit,
+        wallThickness: floorPlanSettings.wallThickness,
+        gridSize: floorPlanSettings.gridSize,
+        alignmentGuides: floorPlanSettings.alignmentGuides,
+        templateLibrary: {
+          version: floorPlanSettings.templateLibrary.version,
+          savedTemplateCount: floorPlanSettings.templateLibrary.items.length,
+          hiddenBuiltIns: [...floorPlanSettings.templateLibrary.hiddenBuiltIns],
+        },
+      },
+    },
     objects,
     omittedObjectCount,
     assets: {
@@ -968,13 +1401,23 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
       detail,
       catalogAvailableInCapabilities: true,
     },
+    floorPlanTemplates: getFloorPlanTemplateCatalog(
+      floorPlanSettings.templateLibrary,
+      FLOOR_PLAN_TEMPLATES,
+    ),
   };
 }
 
 function executeCommand(runtime, commandValue, commandIndex) {
   const command = cloneJson(commandValue);
   assertOnlyCommandFields(command, commandIndex);
-  if (command.type !== "architecture.inspect") runtime.mutated = true;
+  if (![
+    "architecture.inspect",
+    "architecture.validate",
+    "floor-plan.templates.list",
+  ].includes(command.type)) {
+    runtime.mutated = true;
+  }
   switch (command.type) {
     case "objects.create":
       createObjects(runtime, command, commandIndex);
@@ -1000,6 +1443,12 @@ function executeCommand(runtime, commandValue, commandIndex) {
     case "objects.ungroup":
       ungroupObjects(runtime, command, commandIndex);
       break;
+    case "curves.points.insert":
+      insertCurvePoints(runtime, command, commandIndex);
+      break;
+    case "vertices.create":
+      createSharedPathVertices(runtime, command, commandIndex);
+      break;
     case "objects.connect":
       connectObjects(runtime, command, commandIndex);
       break;
@@ -1015,6 +1464,27 @@ function executeCommand(runtime, commandValue, commandIndex) {
     case "floor-plan.insert":
       insertFloorPlan(runtime, command, commandIndex);
       break;
+    case "floor-plan.templates.list":
+      listFloorPlanTemplates(runtime);
+      break;
+    case "floor-plan.templates.create":
+      createSavedFloorPlanTemplate(runtime, command, commandIndex);
+      break;
+    case "floor-plan.templates.update":
+      updateSavedFloorPlanTemplate(runtime, command, commandIndex);
+      break;
+    case "floor-plan.templates.replace":
+      replaceSavedFloorPlanTemplate(runtime, command, commandIndex);
+      break;
+    case "floor-plan.templates.remove":
+      removeSavedFloorPlanTemplate(runtime, command, commandIndex);
+      break;
+    case "floor-plan.templates.restore":
+      restoreSavedFloorPlanTemplate(runtime, command, commandIndex);
+      break;
+    case "floor-plan.templates.insert":
+      insertSavedFloorPlanTemplate(runtime, command, commandIndex);
+      break;
     case "diagram.create":
       createDiagram(runtime, command, commandIndex);
       break;
@@ -1027,8 +1497,14 @@ function executeCommand(runtime, commandValue, commandIndex) {
     case "architecture.areas.create":
       createArchitectureAreas(runtime, command, commandIndex);
       break;
+    case "architecture.paths.create":
+      createArchitecturePaths(runtime, command, commandIndex);
+      break;
     case "architecture.walls.create":
       createArchitectureWalls(runtime, command, commandIndex);
+      break;
+    case "architecture.wallPaths.create":
+      createArchitectureWallPaths(runtime, command, commandIndex);
       break;
     case "architecture.openings.create":
       createArchitectureOpenings(runtime, command, commandIndex);
@@ -1045,11 +1521,20 @@ function executeCommand(runtime, commandValue, commandIndex) {
     case "architecture.materials.apply":
       applyArchitectureMaterial(runtime, command, commandIndex);
       break;
+    case "architecture.style.set":
+      setArchitectureStyle(runtime, command, commandIndex);
+      break;
     case "architecture.layers.set":
       setArchitectureLayers(runtime, command, commandIndex);
       break;
+    case "architecture.references.configure":
+      configureArchitectureReferences(runtime, command, commandIndex);
+      break;
     case "architecture.inspect":
       inspectArchitecture(runtime, command, commandIndex);
+      break;
+    case "architecture.validate":
+      validateArchitecture(runtime, command, commandIndex);
       break;
     default:
       throw commandError(`Unsupported Visual Board command: ${command.type}.`, "unsupported-command", commandIndex);
@@ -1106,18 +1591,24 @@ function createObjectFromDraft(runtime, draftValue, defaultPoint, commandIndex) 
       semantic,
     };
   } else if (objectType === "arc") {
-    object = {
+    const curvePoints = draft.curvePoints === undefined
+      ? null
+      : requireCurvePoints(draft.curvePoints, "curvePoints", commandIndex);
+    object = normalizeCurveGeometry({
       id,
       type: "arc",
-      x,
-      y,
+      x: curvePoints?.[0]?.x ?? x,
+      y: curvePoints?.[0]?.y ?? y,
       midX: finiteCoordinate(draft.midX, x + 90, "midX", commandIndex),
       midY: finiteCoordinate(draft.midY, y - 55, "midY", commandIndex),
-      endX: finiteCoordinate(draft.endX, x + 180, "endX", commandIndex),
-      endY: finiteCoordinate(draft.endY, y, "endY", commandIndex),
+      endX: curvePoints?.at(-1)?.x
+        ?? finiteCoordinate(draft.endX, x + 180, "endX", commandIndex),
+      endY: curvePoints?.at(-1)?.y
+        ?? finiteCoordinate(draft.endY, y, "endY", commandIndex),
+      ...(curvePoints ? { curvePoints } : {}),
       ...style,
       semantic,
-    };
+    });
   } else if (objectType === "textbox") {
     const text = normalizeText(draft.text ?? draft.label, commandIndex);
     object = {
@@ -1410,6 +1901,8 @@ function duplicateObjects(runtime, command, commandIndex) {
   };
   const idMap = new Map();
   const groupMap = new Map();
+  const networkMap = new Map();
+  const vertexMap = new Map();
   const duplicates = targets.map((source) => {
     const duplicate = cloneJson(source);
     const identifier = runtime.createId();
@@ -1419,6 +1912,23 @@ function duplicateObjects(runtime, command, commandIndex) {
     if (source.groupId) {
       if (!groupMap.has(source.groupId)) groupMap.set(source.groupId, runtime.createId());
       duplicate.groupId = groupMap.get(source.groupId);
+    }
+    if (source.vertexNetworkId) {
+      if (!networkMap.has(source.vertexNetworkId)) {
+        networkMap.set(source.vertexNetworkId, runtime.createId());
+      }
+      duplicate.vertexNetworkId = networkMap.get(source.vertexNetworkId);
+      ["startVertexId", "endVertexId"].forEach((field) => {
+        if (!source[field]) return;
+        if (!vertexMap.has(source[field])) vertexMap.set(source[field], runtime.createId());
+        duplicate[field] = vertexMap.get(source[field]);
+      });
+      if (Array.isArray(source.curveVertexIds)) {
+        duplicate.curveVertexIds = source.curveVertexIds.map((vertexId) => {
+          if (!vertexMap.has(vertexId)) vertexMap.set(vertexId, runtime.createId());
+          return vertexMap.get(vertexId);
+        });
+      }
     }
     translateObject(duplicate, offset.x, offset.y);
     runtime.createdIds.push(identifier);
@@ -1475,7 +1985,120 @@ function ungroupObjects(runtime, command, commandIndex) {
     if (!groupIds.has(object.groupId)) return;
     delete object.groupId;
     delete object.rigidGroup;
+    delete object.vertexNetworkId;
+    delete object.startVertexId;
+    delete object.endVertexId;
+    delete object.curveVertexIds;
+    delete object.dimensionsLocked;
     runtime.updatedIds.add(object.id);
+  });
+}
+
+function insertCurvePoints(runtime, command, commandIndex) {
+  const targets = resolveTargets(
+    runtime,
+    command.targets ?? command.target,
+    commandIndex,
+  );
+  if (targets.length !== 1 || targets[0].type !== "arc") {
+    throw commandError(
+      "Curve point insertion requires exactly one arc target.",
+      "invalid-curve-target",
+      commandIndex,
+    );
+  }
+  const target = targets[0];
+  if (target.locked) {
+    throw commandError("Unlock the curve before adding points.", "object-locked", commandIndex);
+  }
+  const points = requireInsertionPoints(command.points, "points", commandIndex);
+  let curve = target;
+  const inserted = [];
+  points.forEach((point) => {
+    const result = insertCurveVertex(curve, point);
+    if (!result.inserted) {
+      throw commandError(
+        "A requested curve point could not be inserted.",
+        "curve-point-insertion-failed",
+        commandIndex,
+      );
+    }
+    curve = result.curve;
+    if (curve.vertexNetworkId && Array.isArray(curve.curveVertexIds)) {
+      curve.curveVertexIds[result.vertexIndex] = runtime.createId();
+    }
+    inserted.push({
+      index: result.vertexIndex,
+      x: result.point.x,
+      y: result.point.y,
+    });
+  });
+  replaceObjectValue(target, curve);
+  runtime.updatedIds.add(target.id);
+  runtime.state.selectedIds = [target.id];
+  runtime.outputs.push({
+    type: "curves.points.insert",
+    objectId: target.id,
+    inserted,
+    curvePointCount: getCurveVertices(target).length,
+  });
+}
+
+function createSharedPathVertices(runtime, command, commandIndex) {
+  const targets = resolveTargets(
+    runtime,
+    command.targets ?? command.target,
+    commandIndex,
+  );
+  if (targets.some((object) => object.locked)) {
+    throw commandError("Unlock paths before creating vertices.", "object-locked", commandIndex);
+  }
+  if (targets.some((object) => !["line", "connector", "arc"].includes(object.type))) {
+    throw commandError(
+      "Shared vertices can be created from line, connector, and arc targets.",
+      "invalid-vertex-path",
+      commandIndex,
+    );
+  }
+  if (targets.some((object) => object.rigidGroup)) {
+    throw commandError(
+      "Release rigid groups before creating path vertices.",
+      "rigid-group-not-supported",
+      commandIndex,
+    );
+  }
+
+  const network = createEditableVertexNetwork(
+    targets.map(cloneJson),
+    runtime.createId,
+    0.01,
+  );
+  if (!network) {
+    throw commandError(
+      "The selected paths could not form a vertex network.",
+      "vertex-network-failed",
+      commandIndex,
+    );
+  }
+  const targetIds = new Set(targets.map((object) => object.id));
+  const initialIds = new Set(runtime.state.board.objects.map((object) => object.id));
+  let inserted = false;
+  runtime.state.board.objects = runtime.state.board.objects.flatMap((object) => {
+    if (!targetIds.has(object.id)) return [object];
+    if (inserted) return [];
+    inserted = true;
+    return network.objects;
+  });
+  network.objects.forEach((object) => {
+    if (initialIds.has(object.id)) runtime.updatedIds.add(object.id);
+    else runtime.createdIds.push(object.id);
+  });
+  runtime.state.selectedIds = network.objects.map((object) => object.id);
+  runtime.outputs.push({
+    type: "vertices.create",
+    networkId: network.networkId,
+    objectIds: [...runtime.state.selectedIds],
+    vertexCount: network.vertices.length,
   });
 }
 
@@ -1640,6 +2263,221 @@ function insertFloorPlan(runtime, command, commandIndex) {
   runtime.state.selectedIds = objects.map((object) => object.id);
   runtime.createdIds.push(...runtime.state.selectedIds);
   runtime.state.board.settings.floorPlan = settings;
+}
+
+function listFloorPlanTemplates(runtime) {
+  runtime.outputs.push({
+    type: "floor-plan.templates.list",
+    templates: getFloorPlanTemplateCatalog(
+      runtime.state.board.settings.floorPlan.templateLibrary,
+      FLOOR_PLAN_TEMPLATES,
+    ),
+  });
+}
+
+function createSavedFloorPlanTemplate(runtime, command, commandIndex) {
+  const templateId = String(command.templateId ?? "");
+  if (FLOOR_PLAN_TEMPLATES.includes(templateId)) {
+    throw commandError(
+      "Use floor-plan.templates.replace to customize a built-in template.",
+      "built-in-template-id",
+      commandIndex,
+    );
+  }
+  const character = createFloorPlanTemplateCharacter(
+    runtime,
+    command.targets,
+    command.name,
+    commandIndex,
+  );
+  try {
+    const record = createFloorPlanTemplateRecord(character, {
+      id: templateId,
+      name: command.name,
+      description: command.description,
+      createdAt: Date.now(),
+    });
+    const library = addFloorPlanTemplate(
+      runtime.state.board.settings.floorPlan.templateLibrary,
+      record,
+      FLOOR_PLAN_TEMPLATES,
+    );
+    setFloorPlanTemplateLibrary(runtime, library);
+    runtime.outputs.push({
+      type: "floor-plan.templates.create",
+      template: getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
+        .find((item) => item.id === templateId),
+    });
+  } catch (error) {
+    throw commandError(error.message, "invalid-floor-plan-template", commandIndex);
+  }
+}
+
+function updateSavedFloorPlanTemplate(runtime, command, commandIndex) {
+  if (command.name === undefined && command.description === undefined) {
+    throw commandError(
+      "Template updates need a name or description.",
+      "empty-template-update",
+      commandIndex,
+    );
+  }
+  try {
+    const library = updateFloorPlanTemplate(
+      runtime.state.board.settings.floorPlan.templateLibrary,
+      command.templateId,
+      { name: command.name, description: command.description },
+      FLOOR_PLAN_TEMPLATES,
+    );
+    setFloorPlanTemplateLibrary(runtime, library);
+    runtime.outputs.push({
+      type: "floor-plan.templates.update",
+      template: getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
+        .find((item) => item.id === command.templateId),
+    });
+  } catch (error) {
+    throw commandError(error.message, "template-not-editable", commandIndex);
+  }
+}
+
+function replaceSavedFloorPlanTemplate(runtime, command, commandIndex) {
+  const character = createFloorPlanTemplateCharacter(
+    runtime,
+    command.targets,
+    command.name || command.templateId,
+    commandIndex,
+  );
+  try {
+    const library = replaceFloorPlanTemplate(
+      runtime.state.board.settings.floorPlan.templateLibrary,
+      command.templateId,
+      character,
+      {
+        id: runtime.createId(),
+        name: command.name,
+        description: command.description,
+        updatedAt: Date.now(),
+      },
+      FLOOR_PLAN_TEMPLATES,
+    );
+    setFloorPlanTemplateLibrary(runtime, library);
+    runtime.outputs.push({
+      type: "floor-plan.templates.replace",
+      template: getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
+        .find((item) => item.id === command.templateId),
+    });
+  } catch (error) {
+    throw commandError(error.message, "template-not-found", commandIndex);
+  }
+}
+
+function removeSavedFloorPlanTemplate(runtime, command, commandIndex) {
+  const catalog = getFloorPlanTemplateCatalog(
+    runtime.state.board.settings.floorPlan.templateLibrary,
+    FLOOR_PLAN_TEMPLATES,
+  );
+  if (!catalog.some((item) => item.id === command.templateId)) {
+    throw commandError(
+      "The floor-plan template does not exist.",
+      "template-not-found",
+      commandIndex,
+    );
+  }
+  const library = removeFloorPlanTemplate(
+    runtime.state.board.settings.floorPlan.templateLibrary,
+    command.templateId,
+    FLOOR_PLAN_TEMPLATES,
+  );
+  setFloorPlanTemplateLibrary(runtime, library);
+  runtime.outputs.push({
+    type: "floor-plan.templates.remove",
+    templateId: command.templateId,
+  });
+}
+
+function restoreSavedFloorPlanTemplate(runtime, command, commandIndex) {
+  try {
+    const library = restoreBuiltInFloorPlanTemplate(
+      runtime.state.board.settings.floorPlan.templateLibrary,
+      command.templateId,
+      FLOOR_PLAN_TEMPLATES,
+    );
+    setFloorPlanTemplateLibrary(runtime, library);
+    runtime.outputs.push({
+      type: "floor-plan.templates.restore",
+      template: getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
+        .find((item) => item.id === command.templateId),
+    });
+  } catch (error) {
+    throw commandError(error.message, "invalid-built-in-template", commandIndex);
+  }
+}
+
+function insertSavedFloorPlanTemplate(runtime, command, commandIndex) {
+  const library = runtime.state.board.settings.floorPlan.templateLibrary;
+  const catalogItem = getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
+    .find((item) => item.id === command.templateId && item.visible);
+  if (!catalogItem) {
+    throw commandError(
+      "The floor-plan template does not exist or is removed.",
+      "template-not-found",
+      commandIndex,
+    );
+  }
+
+  const placement = resolvePlacement(runtime.state, command.placement);
+  const record = getFloorPlanTemplateRecord(
+    library,
+    command.templateId,
+    FLOOR_PLAN_TEMPLATES,
+  );
+  const objects = record
+    ? instantiateCharacter(record.character, runtime.createId, placement).objects
+    : createFloorPlanTemplate(
+      command.templateId,
+      placement,
+      runtime.state.board.settings.floorPlan,
+      runtime.createId,
+    );
+  addArchitectureObjects(runtime, objects);
+  runtime.outputs.push({
+    type: "floor-plan.templates.insert",
+    templateId: command.templateId,
+    objectCount: objects.length,
+  });
+}
+
+function createFloorPlanTemplateCharacter(
+  runtime,
+  targetsValue,
+  name,
+  commandIndex,
+) {
+  const targets = resolveTargets(runtime, targetsValue, commandIndex);
+  if (targets.some((object) => object.type === "image" || object.assetId)) {
+    throw commandError(
+      "Floor-plan templates are vector-only; image-backed selections belong in the Board Library.",
+      "template-image-not-allowed",
+      commandIndex,
+    );
+  }
+  try {
+    return createCharacterPackage(
+      runtime.state.board.objects,
+      {},
+      runtime.state.board.rig,
+      targets.map((object) => object.id),
+      name,
+    );
+  } catch (error) {
+    throw commandError(error.message, "invalid-template-selection", commandIndex);
+  }
+}
+
+function setFloorPlanTemplateLibrary(runtime, library) {
+  runtime.state.board.settings.floorPlan = normalizeFloorPlanSettings({
+    ...runtime.state.board.settings.floorPlan,
+    templateLibrary: library,
+  });
 }
 
 function createDiagram(runtime, command, commandIndex) {
@@ -1824,38 +2662,115 @@ function createArchitectureAreas(runtime, command, commandIndex) {
     if (!ARCHITECTURE_MATERIAL_IDS.has(String(item.materialId ?? ""))) {
       throw commandError("Architecture areas require a supported materialId.", "invalid-material", commandIndex);
     }
-    const left = Math.min(...vertices.map((point) => point.x));
-    const top = Math.min(...vertices.map((point) => point.y));
-    const right = Math.max(...vertices.map((point) => point.x));
-    const bottom = Math.max(...vertices.map((point) => point.y));
-    if (right - left < 1 || bottom - top < 1) {
-      throw commandError("Architecture areas need non-zero width and height.", "invalid-area", commandIndex);
+    const id = runtime.createId();
+    const clientKey = registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
+    return createArchitectureAreaObject({
+      id,
+      item,
+      vertices,
+      clientKey,
+      commandIndex,
+      role: "architecture-area",
+      architectureSettings: runtime.state.board.settings.architecture,
+    });
+  });
+  addArchitectureObjects(runtime, objects);
+}
+
+function createArchitecturePaths(runtime, command, commandIndex) {
+  const items = requireArchitectureItems(command.paths, "paths", 100, commandIndex);
+  const objects = items.map((item, itemIndex) => {
+    assertArchitectureItemFields(
+      item,
+      ["commands", "materialId", "curveSteps", ...architectureCommonItemFields()],
+      `paths[${itemIndex}]`,
+      commandIndex,
+    );
+    if (!ARCHITECTURE_MATERIAL_IDS.has(String(item.materialId ?? ""))) {
+      throw commandError(
+        "Architecture paths require a supported materialId.",
+        "invalid-material",
+        commandIndex,
+      );
+    }
+    validateArchitecturePathCommands(
+      item.commands,
+      `paths[${itemIndex}].commands`,
+      commandIndex,
+    );
+    let sampled;
+    try {
+      sampled = sampleArchitecturePath(item.commands, {
+        curveSteps: clampNumber(item.curveSteps, 4, 96, 18),
+      });
+    } catch (error) {
+      throw commandError(error.message, "invalid-architecture-path", commandIndex);
+    }
+    if (!sampled.closed || sampled.points.length < 3) {
+      throw commandError(
+        "Filled architecture paths must end with Z and contain at least three points.",
+        "invalid-architecture-path",
+        commandIndex,
+      );
     }
     const id = runtime.createId();
     const clientKey = registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
-    return {
+    return createArchitectureAreaObject({
       id,
-      type: "area",
-      x: left,
-      y: top,
-      w: right - left,
-      h: bottom - top,
-      rotation: 0,
-      vertices: vertices.map((point) => ({
-        x: (point.x - left) / (right - left),
-        y: (point.y - top) / (bottom - top),
-      })),
-      ...normalizeArchitecturePaint(item, commandIndex, item.materialId),
-      ...normalizeArchitecturePlacementMetadata(item, commandIndex),
-      semantic: normalizeArchitectureSemantic(
-        item.semantic,
-        "architecture-area",
-        clientKey,
-        commandIndex,
-      ),
-    };
+      item,
+      vertices: sampled.points,
+      clientKey,
+      commandIndex,
+      role: "architecture-curved-area",
+      architectureSettings: runtime.state.board.settings.architecture,
+    });
   });
   addArchitectureObjects(runtime, objects);
+}
+
+function createArchitectureAreaObject({
+  id,
+  item,
+  vertices,
+  clientKey,
+  commandIndex,
+  role,
+  semanticOverride = null,
+  architectureSettings = null,
+}) {
+  const left = Math.min(...vertices.map((point) => point.x));
+  const top = Math.min(...vertices.map((point) => point.y));
+  const right = Math.max(...vertices.map((point) => point.x));
+  const bottom = Math.max(...vertices.map((point) => point.y));
+  if (right - left < 1 || bottom - top < 1) {
+    throw commandError("Architecture areas need non-zero width and height.", "invalid-area", commandIndex);
+  }
+  return {
+    id,
+    type: "area",
+    x: left,
+    y: top,
+    w: right - left,
+    h: bottom - top,
+    rotation: 0,
+    vertices: vertices.map((point) => ({
+      x: (point.x - left) / (right - left),
+      y: (point.y - top) / (bottom - top),
+    })),
+    ...normalizeArchitecturePaint(
+      item,
+      commandIndex,
+      item.materialId,
+      architectureSettings,
+    ),
+    ...normalizeArchitecturePlacementMetadata(item, commandIndex),
+    semantic: semanticOverride ?? normalizeArchitectureSemantic(
+      item.semantic,
+      role,
+      clientKey,
+      commandIndex,
+    ),
+  };
 }
 
 function createArchitectureWalls(runtime, command, commandIndex) {
@@ -1863,7 +2778,7 @@ function createArchitectureWalls(runtime, command, commandIndex) {
   const objects = items.map((item, itemIndex) => {
     assertArchitectureItemFields(
       item,
-      ["start", "end", "thickness", ...architectureCommonItemFields()],
+      ["start", "end", "thickness", "materialId", ...architectureCommonItemFields()],
       `walls[${itemIndex}]`,
       commandIndex,
     );
@@ -1876,7 +2791,12 @@ function createArchitectureWalls(runtime, command, commandIndex) {
     const thickness = finiteDimension(item.thickness, 1, "thickness", commandIndex);
     const id = runtime.createId();
     const clientKey = registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
-    const paint = normalizeArchitecturePaint(item, commandIndex);
+    const paint = normalizeArchitecturePaint(
+      item,
+      commandIndex,
+      item.materialId,
+      runtime.state.board.settings.architecture,
+    );
     return {
       id,
       type: "wall",
@@ -1899,13 +2819,231 @@ function createArchitectureWalls(runtime, command, commandIndex) {
   addArchitectureObjects(runtime, objects);
 }
 
+function createArchitectureWallPaths(runtime, command, commandIndex) {
+  const items = requireArchitectureItems(command.wallPaths, "wallPaths", 100, commandIndex);
+  const created = [];
+  const pathOutputs = [];
+
+  items.forEach((item, itemIndex) => {
+    assertArchitectureItemFields(
+      item,
+      [
+        "points", "thickness", "closed", "join", "cap", "openings", "materialId",
+        ...architectureCommonItemFields(),
+      ],
+      `wallPaths[${itemIndex}]`,
+      commandIndex,
+    );
+    const points = requireArchitecturePoints(
+      item.points,
+      `wallPaths[${itemIndex}].points`,
+      2,
+      256,
+      commandIndex,
+    );
+    const openings = validateWallPathOpenings(
+      item.openings,
+      `wallPaths[${itemIndex}].openings`,
+      commandIndex,
+    );
+    let geometry;
+    try {
+      geometry = buildWallPathGeometry({
+        points,
+        thickness: finiteDimension(item.thickness, 1, "thickness", commandIndex),
+        closed: Boolean(item.closed),
+        join: item.join,
+        cap: item.cap,
+        openings,
+      });
+    } catch (error) {
+      throw commandError(error.message, "invalid-wall-path", commandIndex);
+    }
+    if (geometry.issues.length) {
+      throw commandError(
+        `Wall path has invalid openings: ${geometry.issues[0].code}.`,
+        "invalid-wall-opening",
+        commandIndex,
+      );
+    }
+
+    const pathIdentifier = String(item.clientKey || runtime.createId());
+    const paint = normalizeArchitecturePaint(
+      item,
+      commandIndex,
+      item.materialId,
+      runtime.state.board.settings.architecture,
+    );
+    const placement = normalizeArchitecturePlacementMetadata(item, commandIndex);
+    const baseSemantic = normalizeArchitectureSemantic(
+      {
+        ...(item.semantic ?? {}),
+        wallPathId: pathIdentifier,
+      },
+      "architecture-wall-path",
+      "",
+      commandIndex,
+    );
+    const pathObjects = [];
+
+    geometry.wallRuns.forEach((run, runIndex) => {
+      const id = runtime.createId();
+      const wall = createWallObjectFromEndpoints({
+        id,
+        start: run.start,
+        end: run.end,
+        thickness: run.thickness,
+        paint,
+        placement,
+        semantic: {
+          ...baseSemantic,
+          role: "architecture-wall-face",
+          wallPathId: pathIdentifier,
+          segmentIndex: run.segmentIndex,
+          tags: mergeSemanticTags(baseSemantic.tags, ["wall-path", "wall-run"]),
+        },
+      });
+      pathObjects.push(wall);
+      if (runIndex === 0) {
+        registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
+      }
+    });
+
+    geometry.joints.forEach((joint, jointIndex) => {
+      const id = runtime.createId();
+      pathObjects.push(createArchitectureAreaObject({
+        id,
+        item: {
+          ...item,
+          materialId: item.materialId ?? "plaster",
+          style: {
+            ...(item.style ?? {}),
+            fillColor: paint.fillColor ?? paint.color,
+            color: paint.color,
+          },
+        },
+        vertices: joint.points,
+        clientKey: "",
+        commandIndex,
+        role: "architecture-wall-joint",
+        architectureSettings: runtime.state.board.settings.architecture,
+        semanticOverride: {
+          ...baseSemantic,
+          role: "architecture-wall-joint",
+          wallPathId: pathIdentifier,
+          segmentIndex: joint.segmentIndex,
+          tags: mergeSemanticTags(baseSemantic.tags, ["wall-path", "wall-joint"]),
+          clientRef: `${pathIdentifier}:joint:${jointIndex}`,
+        },
+      }));
+    });
+
+    geometry.openings.forEach((opening) => {
+      if (!OPENING_SYMBOL_IDS.has(opening.kind)) {
+        throw commandError(
+          `Unknown architectural opening: ${opening.kind}.`,
+          "invalid-symbol",
+          commandIndex,
+        );
+      }
+      const id = runtime.createId();
+      const openingClientKey = registerArchitectureClientKey(
+        runtime,
+        opening.clientKey,
+        id,
+        commandIndex,
+      );
+      const openingSemantic = normalizeArchitectureSemantic(
+        {
+          ...baseSemantic,
+          ...(opening.semantic ?? {}),
+          role: "architecture-opening-cut",
+          wallPathId: pathIdentifier,
+          segmentIndex: opening.segmentIndex,
+          openingIndex: opening.openingIndex,
+          tags: mergeSemanticTags(baseSemantic.tags, ["wall-path", "opening-cut"]),
+        },
+        "architecture-opening-cut",
+        openingClientKey,
+        commandIndex,
+        opening.kind,
+      );
+      pathObjects.push({
+        id,
+        type: "symbol",
+        symbolId: opening.kind,
+        x: opening.x,
+        y: opening.y,
+        w: opening.w,
+        h: opening.h,
+        rotation: opening.rotation,
+        fit: "contain",
+        ...(opening.flipX ? { flipX: true } : {}),
+        ...(opening.flipY ? { flipY: true } : {}),
+        color: paint.color,
+        strokeWidth: Math.max(0.6, Math.min(2, paint.strokeWidth)),
+        dashPattern: "solid",
+        fillColor: "#fbf8ef",
+        accentColor: "#708e98",
+        fillOpacity: 1,
+        opacity: 1,
+        fillPattern: "solid",
+        layerId: "openings",
+        zIndex: placement.zIndex + 10,
+        semantic: openingSemantic,
+      });
+    });
+
+    created.push(...pathObjects);
+    pathOutputs.push({
+      clientKey: item.clientKey ?? null,
+      wallPathId: pathIdentifier,
+      createdObjectCount: pathObjects.length,
+      runCount: geometry.wallRuns.length,
+      jointCount: geometry.joints.length,
+      openingCount: geometry.openings.length,
+    });
+  });
+
+  addArchitectureObjects(runtime, created);
+  runtime.outputs.push({ type: "architecture.wallPaths.create", wallPaths: pathOutputs });
+}
+
+function createWallObjectFromEndpoints({
+  id,
+  start,
+  end,
+  thickness,
+  paint,
+  placement,
+  semantic,
+}) {
+  const length = Math.hypot(end.x - start.x, end.y - start.y);
+  return {
+    id,
+    type: "wall",
+    x: (start.x + end.x) / 2 - length / 2,
+    y: (start.y + end.y) / 2 - thickness / 2,
+    w: length,
+    h: thickness,
+    rotation: Math.atan2(end.y - start.y, end.x - start.x),
+    ...paint,
+    fillColor: paint.fillColor ?? paint.color,
+    ...placement,
+    semantic,
+  };
+}
+
 function createArchitectureOpenings(runtime, command, commandIndex) {
   const items = requireArchitectureItems(command.openings, "openings", 200, commandIndex);
   placeArchitectureSymbolItems(runtime, items, commandIndex, {
     field: "openings",
     role: "architecture-opening",
     allowedSymbols: OPENING_SYMBOL_IDS,
-    allowedFields: ["kind", "x", "y", "w", "h", "rotation", ...architectureCommonItemFields()],
+    allowedFields: [
+      "kind", "x", "y", "w", "h", "rotation", "fit",
+      ...architectureCommonItemFields(),
+    ],
   });
 }
 
@@ -1915,7 +3053,10 @@ function placeArchitectureSymbols(runtime, command, commandIndex) {
     field: "symbols",
     role: "architecture-symbol",
     allowedSymbols: ARCHITECTURE_SYMBOL_IDS,
-    allowedFields: ["symbolId", "x", "y", "w", "h", "rotation", ...architectureCommonItemFields()],
+    allowedFields: [
+      "symbolId", "x", "y", "w", "h", "rotation", "fit",
+      ...architectureCommonItemFields(),
+    ],
   });
 }
 
@@ -1942,7 +3083,13 @@ function placeArchitectureSymbolItems(runtime, items, commandIndex, options) {
       w: finiteDimension(item.w, 100, "w", commandIndex),
       h: finiteDimension(item.h, 100, "h", commandIndex),
       rotation: finiteNumber(item.rotation, 0),
-      ...normalizeArchitecturePaint(item, commandIndex),
+      fit: item.fit === "stretch" ? "stretch" : "contain",
+      ...normalizeArchitecturePaint(
+        item,
+        commandIndex,
+        null,
+        runtime.state.board.settings.architecture,
+      ),
       ...normalizeArchitecturePlacementMetadata(item, commandIndex),
       semantic: normalizeArchitectureSemantic(
         item.semantic,
@@ -1962,13 +3109,20 @@ function createArchitectureLabels(runtime, command, commandIndex) {
     assertArchitectureItemFields(
       item,
       [
-        "text", "x", "y", "w", "h", "rotation", "fontSize", "fontFamily",
+        "text", "x", "y", "w", "h", "rotation", "fontSize", "fontWeight",
+        "fontFamily", "textStyle",
         "textAlign", "verticalAlign", "lineHeight", "padding",
         ...architectureCommonItemFields(),
       ],
       `labels[${itemIndex}]`,
       commandIndex,
     );
+    const typographyPreset = item.textStyle
+      ? resolveArchitectureTypography(
+        item.textStyle,
+        runtime.state.board.settings.architecture,
+      )
+      : null;
     const id = runtime.createId();
     const clientKey = registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
     return {
@@ -1981,8 +3135,16 @@ function createArchitectureLabels(runtime, command, commandIndex) {
       rotation: finiteNumber(item.rotation, 0),
       text: normalizeText(item.text, commandIndex),
       colorRanges: [],
-      fontSize: clampNumber(item.fontSize, 6, 96, 16),
-      fontFamily: FONT_FAMILIES.has(item.fontFamily) ? item.fontFamily : "sans",
+      fontSize: clampNumber(item.fontSize, 6, 96, typographyPreset?.fontSize ?? 16),
+      fontWeight: clampNumber(
+        item.fontWeight,
+        300,
+        800,
+        typographyPreset?.fontWeight ?? 400,
+      ),
+      fontFamily: FONT_FAMILIES.has(item.fontFamily)
+        ? item.fontFamily
+        : typographyPreset?.fontFamily ?? "sans",
       scaleMode: "world",
       textAlign: ["left", "center", "right"].includes(item.textAlign)
         ? item.textAlign
@@ -1990,9 +3152,19 @@ function createArchitectureLabels(runtime, command, commandIndex) {
       verticalAlign: ["top", "middle", "bottom"].includes(item.verticalAlign)
         ? item.verticalAlign
         : "top",
-      lineHeight: clampNumber(item.lineHeight, 0.8, 3, 1.2),
+      lineHeight: clampNumber(
+        item.lineHeight,
+        0.8,
+        3,
+        typographyPreset?.lineHeight ?? 1.2,
+      ),
       padding: clampNumber(item.padding, 0, 120, 6),
-      ...normalizeArchitecturePaint(item, commandIndex),
+      ...normalizeArchitecturePaint(
+        item,
+        commandIndex,
+        null,
+        runtime.state.board.settings.architecture,
+      ),
       ...normalizeArchitecturePlacementMetadata(item, commandIndex, "labels"),
       semantic: normalizeArchitectureSemantic(
         item.semantic,
@@ -2031,7 +3203,12 @@ function createArchitectureDimensions(runtime, command, commandIndex) {
       offset: finiteCoordinate(item.offset, 24, "offset", commandIndex),
       label: normalizeOptionalText(item.label, commandIndex),
       fontSize: clampNumber(item.fontSize, 6, 96, 12),
-      ...normalizeArchitecturePaint(item, commandIndex),
+      ...normalizeArchitecturePaint(
+        item,
+        commandIndex,
+        null,
+        runtime.state.board.settings.architecture,
+      ),
       ...normalizeArchitecturePlacementMetadata(item, commandIndex, "dimensions"),
       semantic: normalizeArchitectureSemantic(
         item.semantic,
@@ -2064,6 +3241,27 @@ function applyArchitectureMaterial(runtime, command, commandIndex) {
   });
 }
 
+function setArchitectureStyle(runtime, command, commandIndex) {
+  const presetId = String(command.preset ?? "");
+  if (!ARCHITECTURE_STYLE_PRESET_IDS.has(presetId)) {
+    throw commandError(
+      `Unknown architecture style preset: ${presetId || "(missing)"}.`,
+      "invalid-architecture-style-preset",
+      commandIndex,
+    );
+  }
+  const preset = getArchitectureStylePreset(presetId);
+  validateArchitectureStyleSettings(command, preset, commandIndex);
+  const current = runtime.state.board.settings.architecture ?? {};
+  runtime.state.board.settings.architecture = normalizeArchitectureSettings({
+    ...current,
+    stylePreset: presetId,
+    ...(command.lineWeights ? { lineWeights: command.lineWeights } : {}),
+    ...(command.typography ? { typography: command.typography } : {}),
+    ...(command.palette ? { palette: command.palette } : {}),
+  });
+}
+
 function setArchitectureLayers(runtime, command, commandIndex) {
   const layers = requireArchitectureItems(command.layers, "layers", 64, commandIndex);
   const seen = new Set();
@@ -2083,7 +3281,67 @@ function setArchitectureLayers(runtime, command, commandIndex) {
     }
     seen.add(id);
   });
-  runtime.state.board.settings.architecture = normalizeArchitectureSettings({ layers });
+  runtime.state.board.settings.architecture = normalizeArchitectureSettings({
+    ...runtime.state.board.settings.architecture,
+    layers,
+  });
+}
+
+function configureArchitectureReferences(runtime, command, commandIndex) {
+  if (command.consent !== true) {
+    throw commandError(
+      "Reference-image configuration requires consent: true.",
+      "reference-consent-required",
+      commandIndex,
+    );
+  }
+  const targets = resolveTargets(
+    runtime,
+    command.targets ?? command.target,
+    commandIndex,
+  );
+  if (!targets.every((object) => object.type === "image")) {
+    throw commandError(
+      "Reference-image targets must all be existing board images.",
+      "invalid-reference-target",
+      commandIndex,
+    );
+  }
+  const architecture = normalizeArchitectureSettings(
+    runtime.state.board.settings.architecture,
+  );
+  if (!architecture.layers.some((layer) => layer.id === "reference")) {
+    architecture.layers.push({
+      id: "reference",
+      name: "Reference",
+      order: -100,
+      visible: true,
+    });
+    runtime.state.board.settings.architecture = normalizeArchitectureSettings(architecture);
+  }
+  targets.forEach((object) => {
+    if (object.locked && object.referenceImage !== true) {
+      throw commandError(`Object ${object.id} is locked.`, "object-locked", commandIndex);
+    }
+    object.referenceImage = true;
+    object.referenceName = String(
+      command.referenceName ?? object.referenceName ?? object.name ?? "Reference",
+    ).trim().slice(0, 120) || "Reference";
+    object.opacity = clampNumber(command.opacity, 0.05, 1, object.opacity ?? 0.35);
+    object.locked = command.locked !== false;
+    object.hiddenInExport = command.hiddenInExport !== false;
+    object.layerId = "reference";
+    object.zIndex = -10_000;
+    object.semantic = normalizeSemantic({
+      ...(object.semantic ?? {}),
+      role: "architecture-reference-image",
+      label: object.referenceName,
+      referenceId: object.semantic?.referenceId || object.id,
+      tags: mergeSemanticTags(object.semantic?.tags, ["architecture-reference"]),
+      generatedBy: "ai-command",
+    });
+    runtime.updatedIds.add(object.id);
+  });
 }
 
 function inspectArchitecture(runtime, command, commandIndex) {
@@ -2099,9 +3357,40 @@ function inspectArchitecture(runtime, command, commandIndex) {
       includeIntersections: command.includeIntersections,
       includeWithinGroups: command.includeWithinGroups,
       clearance: clampNumber(command.clearance, 0, 100_000, 0),
+      includeConnectivity: command.includeConnectivity,
+      endpointTolerance: clampNumber(command.endpointTolerance, 0.25, 1_000, 2),
+      includeLabelCollisions: command.includeLabelCollisions,
+      includeRoomAccess: command.includeRoomAccess,
+      minimumClearance: clampNumber(command.minimumClearance, 0, 100_000, 0),
+      aspectRatioTolerance: clampNumber(command.aspectRatioTolerance, 0.05, 5, 0.2),
     }),
     objects: targets.slice(0, 500).map(serializeArchitectureObject),
     omittedObjectCount: Math.max(0, targets.length - 500),
+  });
+}
+
+function validateArchitecture(runtime, command, commandIndex) {
+  const targets = command.targets || command.target
+    ? resolveTargets(runtime, command.targets ?? command.target, commandIndex, { allowEmpty: true })
+    : runtime.state.board.objects.filter((object) => (
+      ARCHITECTURE_OBJECT_TYPES.includes(object.type)
+      || object.type === "textbox"
+      || object.semantic?.role?.startsWith("architecture-")
+    ));
+  const report = getArchitectureGeometryReport(targets, {
+    includeIntersections: false,
+    includeConnectivity: true,
+    endpointTolerance: clampNumber(command.endpointTolerance, 0.25, 1_000, 2),
+    includeLabelCollisions: true,
+    includeRoomAccess: true,
+    minimumClearance: clampNumber(command.minimumClearance, 0, 100_000, 0),
+    aspectRatioTolerance: clampNumber(command.aspectRatioTolerance, 0.05, 5, 0.2),
+  });
+  runtime.outputs.push({
+    type: "architecture.validate",
+    objectCount: report.objectCount,
+    bounds: report.bounds,
+    quality: report.quality,
   });
 }
 
@@ -2111,7 +3400,12 @@ function addArchitectureObjects(runtime, objects) {
   runtime.createdIds.push(...runtime.state.selectedIds);
 }
 
-function normalizeArchitecturePaint(item, commandIndex, materialId = null) {
+function normalizeArchitecturePaint(
+  item,
+  commandIndex,
+  materialId = null,
+  architectureSettings = null,
+) {
   const styleValue = item.style === undefined ? {} : item.style;
   if (!isRecord(styleValue)) {
     throw commandError("Architecture style must be an object.", "invalid-architecture-style", commandIndex);
@@ -2120,18 +3414,19 @@ function normalizeArchitecturePaint(item, commandIndex, materialId = null) {
     styleValue,
     [
       "color", "fillColor", "accentColor", "fillOpacity", "opacity",
-      "fillPattern", "strokeWidth", "dashPattern", "shadow",
+      "fillPattern", "strokeWidth", "lineWeight", "dashPattern", "shadow",
     ],
     "style",
     commandIndex,
   );
-  const resolvedMaterialId = materialId ?? styleValue.materialId;
+  const resolvedMaterialId = materialId;
   if (resolvedMaterialId && !ARCHITECTURE_MATERIAL_IDS.has(resolvedMaterialId)) {
     throw commandError(`Unknown architectural material: ${resolvedMaterialId}.`, "invalid-material", commandIndex);
   }
   const materialStyle = resolvedMaterialId
     ? resolveMaterialStyle(resolvedMaterialId, styleValue)
     : {};
+  const palette = normalizeArchitectureSettings(architectureSettings ?? {}).palette;
   const shadow = normalizeArchitectureShadow(styleValue.shadow, commandIndex);
   const fillPattern = styleValue.fillPattern ?? materialStyle.fillPattern ?? "solid";
   if (!ARCHITECTURE_FILL_PATTERNS.includes(fillPattern)) {
@@ -2140,8 +3435,13 @@ function normalizeArchitecturePaint(item, commandIndex, materialId = null) {
   return {
     color: styleValue.color !== undefined
       ? normalizeColor(styleValue.color, commandIndex)
-      : materialStyle.color ?? "#2b2722",
-    strokeWidth: clampNumber(styleValue.strokeWidth, 0.25, 240, 2),
+      : materialStyle.color ?? palette.ink,
+    strokeWidth: styleValue.strokeWidth !== undefined
+      ? clampNumber(styleValue.strokeWidth, 0.25, 240, 2)
+      : resolveArchitectureLineWeight(
+        styleValue.lineWeight ?? "detail",
+        architectureSettings,
+      ),
     dashPattern: DASH_PATTERNS.has(styleValue.dashPattern) ? styleValue.dashPattern : "solid",
     locked: false,
     ...(styleValue.fillColor !== undefined
@@ -2205,7 +3505,8 @@ function normalizeArchitectureSemantic(value, role, clientKey, commandIndex, lab
       value,
       [
         "label", "role", "tags", "generatedBy", "diagramId", "clientRef",
-        "sourceId", "targetId",
+        "sourceId", "targetId", "roomId", "wallPathId", "referenceId",
+        "levelId", "segmentIndex", "openingIndex",
       ],
       "semantic",
       commandIndex,
@@ -2255,6 +3556,209 @@ function requireArchitecturePoints(value, field, minimum, maximum, commandIndex)
   ));
 }
 
+function validateArchitecturePathCommands(value, field, commandIndex) {
+  if (!Array.isArray(value) || value.length < 2 || value.length > 256) {
+    throw commandError(
+      `${field} must contain between 2 and 256 commands.`,
+      "invalid-architecture-path",
+      commandIndex,
+    );
+  }
+  const allowedByOperation = {
+    M: ["op", "x", "y"],
+    L: ["op", "x", "y"],
+    Q: ["op", "x", "y", "cx", "cy", "steps"],
+    C: ["op", "x", "y", "c1x", "c1y", "c2x", "c2y", "steps"],
+    A: [
+      "op", "cx", "cy", "rx", "ry", "startAngle", "endAngle",
+      "clockwise", "steps",
+    ],
+    Z: ["op"],
+  };
+  value.forEach((item, itemIndex) => {
+    if (!isRecord(item)) {
+      throw commandError(
+        `${field}[${itemIndex}] must be an object.`,
+        "invalid-architecture-path",
+        commandIndex,
+      );
+    }
+    const operation = String(item.op ?? "").toUpperCase();
+    if (!ARCHITECTURE_PATH_OPERATIONS.includes(operation)) {
+      throw commandError(
+        `Unsupported architecture path operation: ${operation || "(missing)"}.`,
+        "invalid-architecture-path",
+        commandIndex,
+      );
+    }
+    assertArchitectureItemFields(
+      item,
+      allowedByOperation[operation],
+      `${field}[${itemIndex}]`,
+      commandIndex,
+    );
+  });
+}
+
+function validateWallPathOpenings(value, field, commandIndex) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 200) {
+    throw commandError(
+      `${field} must contain at most 200 openings.`,
+      "invalid-wall-opening",
+      commandIndex,
+    );
+  }
+  return value.map((item, itemIndex) => {
+    if (!isRecord(item)) {
+      throw commandError(
+        `${field}[${itemIndex}] must be an object.`,
+        "invalid-wall-opening",
+        commandIndex,
+      );
+    }
+    assertArchitectureItemFields(
+      item,
+      [
+        "segmentIndex", "offset", "width", "kind", "hinge", "side",
+        "sillDepth", "clientKey", "semantic",
+      ],
+      `${field}[${itemIndex}]`,
+      commandIndex,
+    );
+    const kind = String(item.kind ?? "");
+    if (!OPENING_SYMBOL_IDS.has(kind)) {
+      throw commandError(
+        `Unknown architectural opening: ${kind || "(missing)"}.`,
+        "invalid-symbol",
+        commandIndex,
+      );
+    }
+    const segmentIndex = Number(item.segmentIndex);
+    if (!Number.isInteger(segmentIndex) || segmentIndex < 0) {
+      throw commandError(
+        `${field}[${itemIndex}].segmentIndex must be a non-negative integer.`,
+        "invalid-wall-opening",
+        commandIndex,
+      );
+    }
+    if (item.semantic !== undefined) {
+      normalizeArchitectureSemantic(
+        item.semantic,
+        "architecture-opening-cut",
+        "",
+        commandIndex,
+        kind,
+      );
+    }
+    return {
+      segmentIndex,
+      offset: finiteCoordinate(item.offset, 0, "offset", commandIndex),
+      width: finiteDimension(item.width, 1, "width", commandIndex),
+      kind,
+      hinge: item.hinge === "right" ? "right" : "left",
+      side: item.side === "outside" ? "outside" : "inside",
+      sillDepth: item.sillDepth === undefined
+        ? undefined
+        : finiteDimension(item.sillDepth, 1, "sillDepth", commandIndex),
+      clientKey: item.clientKey,
+      semantic: item.semantic,
+    };
+  });
+}
+
+function validateArchitectureStyleSettings(command, preset, commandIndex) {
+  if (command.lineWeights !== undefined) {
+    if (!isRecord(command.lineWeights)) {
+      throw commandError("lineWeights must be an object.", "invalid-architecture-style", commandIndex);
+    }
+    assertArchitectureItemFields(
+      command.lineWeights,
+      [...ARCHITECTURE_LINE_WEIGHT_ROLES],
+      "lineWeights",
+      commandIndex,
+    );
+    Object.entries(command.lineWeights).forEach(([role, width]) => {
+      if (!Number.isFinite(Number(width)) || Number(width) < 0.25 || Number(width) > 240) {
+        throw commandError(
+          `lineWeights.${role} must be between 0.25 and 240.`,
+          "invalid-architecture-style",
+          commandIndex,
+        );
+      }
+    });
+  }
+  if (command.typography !== undefined) {
+    if (!isRecord(command.typography)) {
+      throw commandError("typography must be an object.", "invalid-architecture-style", commandIndex);
+    }
+    assertArchitectureItemFields(
+      command.typography,
+      [...ARCHITECTURE_TEXT_STYLES],
+      "typography",
+      commandIndex,
+    );
+    Object.entries(command.typography).forEach(([role, typographyValue]) => {
+      if (!isRecord(typographyValue)) {
+        throw commandError(
+          `typography.${role} must be an object.`,
+          "invalid-architecture-style",
+          commandIndex,
+        );
+      }
+      assertArchitectureItemFields(
+        typographyValue,
+        ["fontFamily", "fontSize", "fontWeight", "lineHeight"],
+        `typography.${role}`,
+        commandIndex,
+      );
+      if (
+        typographyValue.fontFamily !== undefined
+        && !FONT_FAMILIES.has(typographyValue.fontFamily)
+      ) {
+        throw commandError(
+          `typography.${role}.fontFamily is unsupported.`,
+          "invalid-architecture-style",
+          commandIndex,
+        );
+      }
+      [
+        ["fontSize", 6, 96],
+        ["fontWeight", 300, 800],
+        ["lineHeight", 0.8, 3],
+      ].forEach(([field, minimum, maximum]) => {
+        const fieldValue = typographyValue[field];
+        if (
+          fieldValue !== undefined
+          && (
+            !Number.isFinite(Number(fieldValue))
+            || Number(fieldValue) < minimum
+            || Number(fieldValue) > maximum
+          )
+        ) {
+          throw commandError(
+            `typography.${role}.${field} must be between ${minimum} and ${maximum}.`,
+            "invalid-architecture-style",
+            commandIndex,
+          );
+        }
+      });
+    });
+  }
+  if (command.palette !== undefined) {
+    if (!isRecord(command.palette)) {
+      throw commandError("palette must be an object.", "invalid-architecture-style", commandIndex);
+    }
+    assertArchitectureItemFields(
+      command.palette,
+      Object.keys(preset.palette),
+      "palette",
+      commandIndex,
+    );
+    Object.values(command.palette).forEach((color) => normalizeColor(color, commandIndex));
+  }
+}
+
 function requireArchitecturePoint(value, field, commandIndex) {
   if (!isRecord(value)) {
     throw commandError(`${field} must be a point.`, "invalid-point", commandIndex);
@@ -2285,6 +3789,13 @@ function architectureCommonItemFields() {
   return ["clientKey", "layerId", "zIndex", "semantic", "style"];
 }
 
+function mergeSemanticTags(currentTags, additions) {
+  return normalizeTags([
+    ...(Array.isArray(currentTags) ? currentTags : []),
+    ...(Array.isArray(additions) ? additions : []),
+  ]);
+}
+
 function serializeArchitectureObject(object) {
   const summary = {
     id: object.id,
@@ -2296,6 +3807,7 @@ function serializeArchitectureObject(object) {
     semantic: sanitizeSemantic(object.semantic),
   };
   if (object.type === "symbol") summary.symbolId = object.symbolId;
+  if (object.type === "symbol") summary.fit = object.fit ?? "contain";
   if (object.type === "wall") {
     const center = { x: object.x + object.w / 2, y: object.y + object.h / 2 };
     const halfLength = object.w / 2;
@@ -2629,6 +4141,10 @@ function resolveTargets(runtime, targetValue, commandIndex, options = {}) {
     "selection",
     "semanticRef",
     "diagramId",
+    "wallPathId",
+    "roomId",
+    "levelId",
+    "referenceId",
     "role",
     "tag",
   ]);
@@ -2657,6 +4173,10 @@ function resolveTargets(runtime, targetValue, commandIndex, options = {}) {
       .filter((object) => (
         object.semantic?.clientRef === target.semanticRef
         || object.semantic?.diagramId === target.semanticRef
+        || object.semantic?.wallPathId === target.semanticRef
+        || object.semantic?.roomId === target.semanticRef
+        || object.semantic?.levelId === target.semanticRef
+        || object.semantic?.referenceId === target.semanticRef
       ))
       .forEach((object) => identifiers.add(object.id));
   }
@@ -2665,6 +4185,12 @@ function resolveTargets(runtime, targetValue, commandIndex, options = {}) {
       .filter((object) => object.semantic?.diagramId === target.diagramId)
       .forEach((object) => identifiers.add(object.id));
   }
+  ["wallPathId", "roomId", "levelId", "referenceId"].forEach((field) => {
+    if (!target[field]) return;
+    runtime.state.board.objects
+      .filter((object) => object.semantic?.[field] === target[field])
+      .forEach((object) => identifiers.add(object.id));
+  });
   if (target.role) {
     runtime.state.board.objects
       .filter((object) => object.semantic?.role === target.role)
@@ -2764,18 +4290,23 @@ function getCombinedUnitBounds(units) {
 }
 
 function transformObject(object, center, transform) {
-  if (["line", "connector", "arc", "dimension"].includes(object.type)) {
+  if (object.type === "arc") {
+    replaceObjectValue(
+      object,
+      transformCurveGeometry(
+        object,
+        (point) => transformPoint(point, center, transform),
+      ),
+    );
+    return;
+  }
+  if (["line", "connector", "dimension"].includes(object.type)) {
     const start = transformPoint({ x: object.x, y: object.y }, center, transform);
     const end = transformPoint({ x: object.endX, y: object.endY }, center, transform);
     object.x = start.x;
     object.y = start.y;
     object.endX = end.x;
     object.endY = end.y;
-    if (object.type === "arc") {
-      const mid = transformPoint({ x: object.midX, y: object.midY }, center, transform);
-      object.midX = mid.x;
-      object.midY = mid.y;
-    }
     return;
   }
 
@@ -2829,6 +4360,16 @@ function translateObject(object, deltaX, deltaY) {
       point.x += deltaX;
       point.y += deltaY;
     });
+    return;
+  }
+  if (object.type === "arc") {
+    replaceObjectValue(
+      object,
+      transformCurveGeometry(object, (point) => ({
+        x: point.x + deltaX,
+        y: point.y + deltaY,
+      })),
+    );
     return;
   }
   ["x", "endX", "midX"].forEach((field) => {
@@ -3005,9 +4546,19 @@ function normalizeSemantic(value, fallbackLabel = "") {
     clientRef: String(semantic.clientRef ?? "").trim().slice(0, 128),
     sourceId: String(semantic.sourceId ?? "").trim().slice(0, 128),
     targetId: String(semantic.targetId ?? "").trim().slice(0, 128),
+    roomId: String(semantic.roomId ?? "").trim().slice(0, 128),
+    wallPathId: String(semantic.wallPathId ?? "").trim().slice(0, 128),
+    referenceId: String(semantic.referenceId ?? "").trim().slice(0, 128),
+    levelId: String(semantic.levelId ?? "").trim().slice(0, 128),
+    segmentIndex: Number.isInteger(Number(semantic.segmentIndex))
+      ? Number(semantic.segmentIndex)
+      : null,
+    openingIndex: Number.isInteger(Number(semantic.openingIndex))
+      ? Number(semantic.openingIndex)
+      : null,
   };
   return Object.fromEntries(Object.entries(normalized).filter(([, item]) => (
-    Array.isArray(item) ? item.length : item !== ""
+    Array.isArray(item) ? item.length : item !== "" && item !== null
   )));
 }
 
@@ -3063,6 +4614,57 @@ function finiteCoordinate(value, fallback, field, commandIndex) {
     throw commandError(`${field} is outside the supported board range.`, "coordinate-out-of-range", commandIndex);
   }
   return number;
+}
+
+function requireCurvePoints(value, field, commandIndex) {
+  if (!Array.isArray(value) || value.length < 3 || value.length > 128) {
+    throw commandError(
+      `${field} must contain between 3 and 128 points.`,
+      "invalid-curve-points",
+      commandIndex,
+    );
+  }
+  return value.map((point, index) => {
+    if (!isRecord(point) || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+      throw commandError(
+        `${field}[${index}] must contain finite x and y coordinates.`,
+        "invalid-curve-point",
+        commandIndex,
+      );
+    }
+    return {
+      x: finiteCoordinate(point.x, 0, `${field}[${index}].x`, commandIndex),
+      y: finiteCoordinate(point.y, 0, `${field}[${index}].y`, commandIndex),
+    };
+  });
+}
+
+function requireInsertionPoints(value, field, commandIndex) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 64) {
+    throw commandError(
+      `${field} must contain between 1 and 64 points.`,
+      "invalid-curve-points",
+      commandIndex,
+    );
+  }
+  return value.map((point, index) => {
+    if (!isRecord(point) || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+      throw commandError(
+        `${field}[${index}] must contain finite x and y coordinates.`,
+        "invalid-curve-point",
+        commandIndex,
+      );
+    }
+    return {
+      x: finiteCoordinate(point.x, 0, `${field}[${index}].x`, commandIndex),
+      y: finiteCoordinate(point.y, 0, `${field}[${index}].y`, commandIndex),
+    };
+  });
+}
+
+function replaceObjectValue(target, source) {
+  Object.keys(target).forEach((key) => delete target[key]);
+  Object.assign(target, source);
 }
 
 function finiteDimension(value, fallback, field, commandIndex) {

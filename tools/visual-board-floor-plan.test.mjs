@@ -14,6 +14,7 @@ const id = () => `id-${++nextId}`;
 test("floor-plan settings normalize scale, units, and wall thickness", () => {
   assert.deepEqual(normalizeFloorPlanSettings({ units: "m", pixelsPerUnit: 40, wallThickness: 0.2, gridSize: 20 }), {
     enabled: false, units: "m", pixelsPerUnit: 40, wallThickness: 0.2, gridSize: 20, alignmentGuides: true,
+    templateLibrary: { version: 1, items: [], hiddenBuiltIns: [] },
   });
 });
 

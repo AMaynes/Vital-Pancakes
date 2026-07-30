@@ -151,3 +151,55 @@ test("character import remaps every relationship and centers it on the drop poin
 test("character filenames are compact and use the drag-and-drop extension", () => {
   assert.equal(createCharacterFilename("Skull & Barbell"), "skull-barbell.vp-character.json");
 });
+
+test("character import remaps complex curve vertices without losing joints", () => {
+  const curve = {
+    id: "curve",
+    type: "arc",
+    x: 0,
+    y: 0,
+    midX: 50,
+    midY: -30,
+    endX: 100,
+    endY: 0,
+    curvePoints: [
+      { x: 0, y: 0 },
+      { x: 50, y: -30 },
+      { x: 100, y: 0 },
+    ],
+    curveHandles: [
+      {
+        control1: { x: 20, y: -20 },
+        control2: { x: 35, y: -30 },
+      },
+      {
+        control1: { x: 65, y: -30 },
+        control2: { x: 80, y: -20 },
+      },
+    ],
+    curveVertexIds: ["start", "middle", "end"],
+    vertexNetworkId: "network",
+    groupId: "group",
+    color: "#000000",
+    strokeWidth: 2,
+    dashPattern: "solid",
+    locked: false,
+  };
+  const character = createCharacterPackage(
+    [curve],
+    {},
+    { bodies: [], joints: [] },
+    ["curve"],
+    "Curve",
+  );
+  const imported = instantiateCharacter(
+    character,
+    identifierFactory(),
+    { x: 200, y: 200 },
+  );
+
+  assert.equal(imported.objects[0].curveVertexIds.length, 3);
+  assert.equal(new Set(imported.objects[0].curveVertexIds).size, 3);
+  assert.notDeepEqual(imported.objects[0].curveVertexIds, curve.curveVertexIds);
+  assert.equal(imported.objects[0].curvePoints.length, 3);
+});
