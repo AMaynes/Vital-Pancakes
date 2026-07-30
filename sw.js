@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v82";
+const CACHE_NAME = "vital-pancakes-app-v83";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -24,9 +24,9 @@ const RETAINED_CACHE_NAMES = new Set([
 const OFFLINE_ASSET_CATALOG = [
   "./",
   "./index.html",
-  "./style.css?v=21",
-  "./site-navigation.css?v=21",
-  "./site-navigation.js?v=17",
+  "./style.css?v=22",
+  "./site-navigation.css?v=22",
+  "./site-navigation.js?v=18",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
@@ -44,9 +44,9 @@ const OFFLINE_ASSET_CATALOG = [
   "./app/ai-command-registry.mjs",
   "./app/ai-page-host.mjs",
   "./app/ai-tool-catalog.mjs",
-  "./app/home-knowledge.js?v=3",
+  "./app/home-knowledge.js?v=5",
   "./app/home-knowledge-ai-adapter.mjs",
-  "./app/glossary-ui.mjs",
+  "./app/glossary-ui.mjs?v=2",
   "./app/knowledge-db.mjs",
   "./app/knowledge-inference.mjs",
   "./app/knowledge-inference-ui.mjs",

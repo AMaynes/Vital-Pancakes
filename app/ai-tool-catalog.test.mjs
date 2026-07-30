@@ -81,6 +81,17 @@ test("AI routing stays backend-only and inference belongs to Knowledge Home", ()
   assert.match(homeSource, /id="knowledge-inference-dialog"/);
 });
 
+test("glossary is a Knowledge Center function instead of global navigation", () => {
+  const navigationSource = readFileSync(resolve(repositoryRoot, "site-navigation.js"), "utf8");
+  const homeSource = readFileSync(resolve(repositoryRoot, "index.html"), "utf8");
+  const homeControllerSource = readFileSync(resolve(repositoryRoot, "app/home-knowledge.js"), "utf8");
+  assert.doesNotMatch(navigationSource, /install(?:Global|Knowledge)Glossary/);
+  assert.match(homeSource, /id="knowledge-glossary-open"/);
+  assert.match(homeSource, /aria-controls="knowledge-glossary-dialog"/);
+  assert.doesNotMatch(homeSource, /id="homepage-glossary-/);
+  assert.match(homeControllerSource, /installKnowledgeGlossary\s*\(/);
+});
+
 test("durable repository instructions require AI adapter maintenance", () => {
   const instructions = readFileSync(resolve(repositoryRoot, "AGENTS.md"), "utf8");
   assert.match(instructions, /AI command compatibility is mandatory/i);

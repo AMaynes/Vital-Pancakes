@@ -169,24 +169,6 @@
   gap: 0.2rem;
 }
 
-.global-glossary-button {
-  appearance: none;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  letter-spacing: 0;
-  padding: 0.15rem 0;
-}
-
-.global-glossary-button:hover,
-.global-glossary-button:focus-visible {
-  border-bottom-color: currentColor;
-}
-
 .global-glossary-dialog {
   width: min(980px, calc(100vw - 2rem));
   max-height: min(780px, calc(100dvh - 2rem));

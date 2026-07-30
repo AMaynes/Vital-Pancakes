@@ -13,8 +13,8 @@ vital-pancakes/
 ├── STRUCTURE.md — Maps the maintained repository.
 ├── index.html — Serves as the public homepage, Knowledge Center, and Unified Vault interface.
 ├── style.css — Defines the public site and Knowledge Center archival visual system.
-├── site-navigation.css — Styles the shared header, page path, history controls, and global glossary.
-├── site-navigation.js — Builds page paths, browser-history controls, glossary access, and background indexing.
+├── site-navigation.css — Styles the shared header, page path, history controls, and Knowledge Center glossary dialog.
+├── site-navigation.js — Builds page paths, browser-history controls, and homepage background indexing.
 ├── research-literature.html — Unifies research, publications, and reading analysis.
 ├── download-app.html — Presents phone previews and the install guide.
 ├── download-app.css — Styles app previews and archival motion accents.
@@ -30,7 +30,7 @@ vital-pancakes/
 │   ├── ai-tool-catalog.mjs — Registers AI-addressable tools and their adapter modules.
 │   ├── home-knowledge.js — Coordinates homepage search, graph, glossary, local AI suggestions, inference, and encrypted vault workflows.
 │   ├── home-knowledge-ai-adapter.mjs — Exposes bounded search, glossary, relationship, inference-review, and vault-summary commands.
-│   ├── glossary-ui.mjs — Installs the global glossary editor and reference inserter.
+│   ├── glossary-ui.mjs — Installs the Knowledge Center glossary dialog and reference inserter.
 │   ├── knowledge-db.mjs — Stores documents, relationships, glossary entries, inference sessions, and index metadata.
 │   ├── knowledge-inference.mjs — Owns evidence chunking, retrieval, citation enforcement, session migration, and conversion.
 │   ├── knowledge-inference-ui.mjs — Coordinates the button-driven Knowledge Center analysis dialog.

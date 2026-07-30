@@ -24,7 +24,7 @@ Repository-managed lists use small text files containing `<Entry>` blocks. `gene
 
 The mathematics and arts flashcard applications load subject-specific `flashcards.json` files. Quiz scores, missed-answer queues, and drafted submissions remain in the visitor's browser through `localStorage`.
 
-The homepage also hosts the shared local Knowledge Center: universal text search, backlinks, related entries, an interactive relationship graph, the global glossary, and the Unified Vault. The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches only the bounded homepage and Workspace startup shell; tools, PDF dependencies, and public-archive files are cached after they are used.
+The homepage also hosts the shared local Knowledge Center: universal text search, backlinks, related entries, an interactive relationship graph, button-driven glossary and inference functions, and the Unified Vault. The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches only the bounded homepage and Workspace startup shell; tools, PDF dependencies, and public-archive files are cached after they are used.
 
 Every editable content collection shares one predictable interior structure without flattening its subject matter. The collection index can switch between a compact list and a visual grid, remembers that choice per collection, and opens each item as a dedicated page. Entry pages pair a subject animation and concise orientation with the complete type-specific record—for example, stove-readable recipe steps, training prescriptions, study evidence, runnable language notes, or algorithm traces.
 
@@ -80,7 +80,7 @@ The homepage builds one browser-local text index across Workspace entries, Studi
 
 **Analyze knowledge** opens a button-driven local inference panel directly in the Knowledge Center. It retrieves cited evidence from the existing index, runs an explicitly loaded local model, stores reviewable sessions in the Knowledge database, and can convert accepted results into Questions & Ideas or Studies. Existing standalone inference sessions migrate without deleting their legacy storage records.
 
-The shared glossary stores definitions, aliases, examples, links, and tags in IndexedDB. Its editor is available from every page, and **Insert** writes a `[[Term]]` reference into the most recently focused text editor or copies it when no editor is active.
+The shared glossary stores definitions, aliases, examples, links, and tags in IndexedDB. Its editor opens from the Knowledge Center’s **Glossary** button, and **Insert** writes a `[[Term]]` reference into the most recently focused text editor or copies it when no editor is active.
 
 Unified Vault exports local settings, discovered user IndexedDB schemas and records, binary values, lesson data, annotations, boards, plans, and OPFS files into one chunked `.vpvault` archive. PBKDF2-SHA-256 derives a key from the chosen password and every frame uses authenticated AES-GCM encryption. Entry names and metadata are encrypted along with content. Restore verifies the complete archive before changing storage, supports merge or replace behavior, preserves database keys and indexes, and can be cancelled. Regenerable runtime/model caches and temporary session state are excluded. The password is never stored and cannot be recovered.
 

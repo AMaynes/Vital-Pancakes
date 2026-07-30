@@ -1,5 +1,5 @@
 /**
- * Global glossary viewer/editor and reference inserter.
+ * Knowledge Center glossary editor and reference inserter.
  */
 
 import {
@@ -8,34 +8,23 @@ import {
   saveGlossaryEntry,
 } from "./knowledge-db.mjs";
 
-let installed = false;
+let controller = null;
 let entries = [];
 let editingId = null;
 let insertionTarget = null;
 
-export function installGlobalGlossary() {
-  if (installed || !globalThis.document?.body) return;
-  installed = true;
-  const primaryNavigation = document.querySelector(".site-header nav");
-  if (!primaryNavigation) return;
-
-  const openButton = document.createElement("button");
-  openButton.type = "button";
-  openButton.className = "global-glossary-button";
-  openButton.textContent = "Glossary";
-  openButton.setAttribute("aria-haspopup", "dialog");
-  primaryNavigation.append(openButton);
-
+export function installKnowledgeGlossary() {
+  if (controller || !globalThis.document?.body) return controller;
   const dialog = buildDialog();
   document.body.append(dialog);
   document.addEventListener("focusin", (event) => {
     if (isTextEditor(event.target) && !dialog.contains(event.target)) insertionTarget = event.target;
   });
-  openButton.addEventListener("click", async () => {
+  const open = async () => {
     await refreshGlossary(dialog);
     dialog.showModal();
     dialog.querySelector("#global-glossary-search").focus();
-  });
+  };
   dialog.addEventListener("close", () => {
     editingId = null;
     resetForm(dialog);
@@ -43,10 +32,16 @@ export function installGlobalGlossary() {
   globalThis.addEventListener("knowledge:changed", () => {
     if (dialog.open) refreshGlossary(dialog);
   });
+  controller = {
+    open,
+    close: () => dialog.close(),
+  };
+  return controller;
 }
 
 function buildDialog() {
   const dialog = document.createElement("dialog");
+  dialog.id = "knowledge-glossary-dialog";
   dialog.className = "global-glossary-dialog";
   dialog.setAttribute("aria-labelledby", "global-glossary-title");
   dialog.innerHTML = `

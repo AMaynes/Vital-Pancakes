@@ -26,9 +26,9 @@ Keep the homepage concise and use deeper pages for detailed material.
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="style.css?v=21">
-  <link rel="stylesheet" href="site-navigation.css?v=21">
-  <script type="module" src="site-navigation.js?v=17"></script>
+  <link rel="stylesheet" href="style.css?v=22">
+  <link rel="stylesheet" href="site-navigation.css?v=22">
+  <script type="module" src="site-navigation.js?v=18"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -99,6 +99,7 @@ Keep the homepage concise and use deeper pages for detailed material.
         </div>
         <div class="knowledge-index-state">
           <span id="knowledge-index-status" role="status">Opening the local index...</span>
+          <button type="button" id="knowledge-glossary-open" aria-haspopup="dialog" aria-controls="knowledge-glossary-dialog">Glossary</button>
           <button type="button" id="knowledge-inference-open">Analyze knowledge</button>
           <button type="button" id="knowledge-refresh">Refresh index</button>
         </div>
@@ -189,24 +190,6 @@ Keep the homepage concise and use deeper pages for detailed material.
         <p class="knowledge-graph-status" id="knowledge-graph-status" role="status"></p>
       </section>
 
-      <section class="homepage-glossary" aria-labelledby="homepage-glossary-title">
-        <header class="knowledge-pane-heading">
-          <div>
-            <p class="eyebrow">Shared glossary</p>
-            <h3 id="homepage-glossary-title">Definitions available everywhere</h3>
-          </div>
-          <div class="homepage-glossary-actions">
-            <span id="homepage-glossary-count">0 terms</span>
-            <button type="button" id="homepage-glossary-open">Open editor</button>
-          </div>
-        </header>
-        <label class="homepage-glossary-search">
-          <span>Find a term</span>
-          <input id="homepage-glossary-search" type="search" autocomplete="off" placeholder="Term, alias, or definition">
-        </label>
-        <div class="homepage-glossary-list" id="homepage-glossary-list"></div>
-        <p id="homepage-glossary-status" role="status"></p>
-      </section>
     </section>
 
     <section class="section-block">
@@ -376,6 +359,6 @@ Keep the homepage concise and use deeper pages for detailed material.
       </div>
     </form>
   </dialog>
-  <script type="module" src="app/home-knowledge.js?v=3"></script>
+  <script type="module" src="app/home-knowledge.js?v=5"></script>
 </body>
 </html>

@@ -15,6 +15,7 @@ import {
   normalizeKnowledgeLink,
   searchKnowledgeDocuments,
 } from "./knowledge-model.mjs";
+import { installKnowledgeGlossary } from "./glossary-ui.mjs?v=2";
 import { syncKnowledgeIndex } from "./knowledge-sync.mjs?v=2";
 import {
   exportUnifiedVault,
@@ -57,6 +58,7 @@ let verifiedRestore = null;
 let vaultController = null;
 let activeAiRequestId = null;
 let graphView = { x: 0, y: 0, width: 1000, height: 560 };
+const glossaryController = installKnowledgeGlossary();
 const inferenceController = createKnowledgeInferenceController({
   getKnowledge: () => knowledge,
   llm,
@@ -99,8 +101,7 @@ function bindEvents() {
   byId("knowledge-ai-cancel").addEventListener("click", () => {
     if (activeAiRequestId) llm.cancel(activeAiRequestId);
   });
-  byId("homepage-glossary-search").addEventListener("input", renderHomepageGlossary);
-  byId("homepage-glossary-open").addEventListener("click", openGlobalGlossary);
+  byId("knowledge-glossary-open").addEventListener("click", () => glossaryController.open());
   byId("vault-export").addEventListener("click", openVaultExport);
   byId("vault-restore").addEventListener("click", () => byId("vault-file-input").click());
   byId("vault-file-input").addEventListener("change", selectVaultFile);
@@ -149,14 +150,12 @@ function renderKnowledge() {
   renderSearch();
   renderGraph();
   renderRelationshipControls();
-  renderHomepageGlossary();
   inferenceController.updateKnowledge(knowledge);
 }
 
 function renderLoadingState() {
   byId("knowledge-search-results").innerHTML = "<p class=\"knowledge-empty\">Building the local index...</p>";
   byId("knowledge-graph-svg").replaceChildren();
-  byId("homepage-glossary-list").innerHTML = "<p class=\"knowledge-empty\">Opening the shared glossary...</p>";
 }
 
 function renderKindFilter() {
@@ -564,49 +563,6 @@ async function suggestRelationshipsWithAi() {
 function updateAiProgress({ progress, text }) {
   byId("knowledge-ai-status").textContent = `${text} ${Math.round((Number(progress) || 0) * 100)}%`;
   inferenceController.updateModelProgress({ progress, text });
-}
-
-function renderHomepageGlossary() {
-  const list = byId("homepage-glossary-list");
-  const query = byId("homepage-glossary-search").value.trim().toLocaleLowerCase();
-  const entries = knowledge.glossary.filter((entry) => (
-    !query
-    || entry.term.toLocaleLowerCase().includes(query)
-    || entry.aliases.some((alias) => alias.toLocaleLowerCase().includes(query))
-    || entry.definition.toLocaleLowerCase().includes(query)
-  ));
-  byId("homepage-glossary-count").textContent = `${entries.length} term${entries.length === 1 ? "" : "s"}`;
-  list.replaceChildren();
-  if (!entries.length) {
-    list.append(emptyMessage(query ? "No glossary term matches." : "Create the first shared term."));
-    return;
-  }
-  entries.forEach((entry) => {
-    const article = document.createElement("article");
-    const heading = document.createElement("div");
-    const term = document.createElement("strong");
-    term.textContent = entry.term;
-    const copy = actionButton("Copy reference", async () => {
-      const reference = `[[${entry.term}]]`;
-      try {
-        await navigator.clipboard.writeText(reference);
-        byId("homepage-glossary-status").textContent = `${reference} copied.`;
-      } catch {
-        byId("homepage-glossary-status").textContent = reference;
-      }
-    });
-    heading.append(term, copy);
-    const aliases = document.createElement("small");
-    aliases.textContent = entry.aliases.length ? `Aliases: ${entry.aliases.join(", ")}` : "No aliases";
-    const definition = document.createElement("p");
-    definition.textContent = entry.definition || "No definition yet.";
-    article.append(heading, aliases, definition);
-    list.append(article);
-  });
-}
-
-function openGlobalGlossary() {
-  document.querySelector(".global-glossary-button")?.click();
 }
 
 function renderVaultSummary() {

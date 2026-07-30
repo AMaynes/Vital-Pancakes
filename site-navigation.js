@@ -5,7 +5,6 @@
  * keeps browser back/forward controls in one predictable position.
  */
 
-import { installGlobalGlossary } from "./app/glossary-ui.mjs";
 import { scheduleKnowledgeSync } from "./app/knowledge-sync.mjs?v=2";
 import { registerOfflineShell } from "./app/offline-shell.mjs?v=2";
 
@@ -272,7 +271,6 @@ if (workspaceMain) {
   });
 }
 
-installGlobalGlossary();
 if (getPageKey() === "") {
   scheduleKnowledgeSync();
   window.addEventListener("storage", () => scheduleKnowledgeSync());
