@@ -16,7 +16,7 @@
  * the application shell. File Drop content and large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v56";
+const CACHE_NAME = "vital-pancakes-app-v57";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -26,7 +26,7 @@ const APP_SHELL = [
   "./index.html",
   "./style.css?v=20",
   "./site-navigation.css?v=21",
-  "./site-navigation.js?v=15",
+  "./site-navigation.js?v=16",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
@@ -54,7 +54,7 @@ const APP_SHELL = [
   "./app/vault-codec.mjs",
   "./app/vault-storage.mjs",
   "./app/workspace-ai-adapter.mjs",
-  "./app/offline-shell.mjs",
+  "./app/offline-shell.mjs?v=2",
   "./app/content-view.mjs",
   "./app/tag-filter.mjs?v=1",
   "./app/store.js?v=14",

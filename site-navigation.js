@@ -7,7 +7,7 @@
 
 import { installGlobalGlossary } from "./app/glossary-ui.mjs";
 import { scheduleKnowledgeSync } from "./app/knowledge-sync.mjs";
-import { registerOfflineShell } from "./app/offline-shell.mjs";
+import { registerOfflineShell } from "./app/offline-shell.mjs?v=2";
 
 const SITE_ROOT = new URL("./", import.meta.url);
 
