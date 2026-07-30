@@ -306,21 +306,15 @@ export function insertCurveVertexAt(arc, segmentIndex, progress) {
 }
 
 /**
- * Moves one visible curve vertex and translates its adjacent hidden handles by
- * the same delta so the path remains smooth and predictable.
+ * Moves one visible curve vertex and rebuilds restrained automatic handles
+ * from the visible points. This keeps segments direct and avoids hidden-handle
+ * overshoot after a large drag.
  */
 export function setCurveVertexPosition(arc, vertexIndex, point) {
   const editable = createEditableCurveGeometry(arc);
   if (vertexIndex < 0 || vertexIndex >= editable.curvePoints.length) return false;
-  const previous = editable.curvePoints[vertexIndex];
-  const delta = { x: point.x - previous.x, y: point.y - previous.y };
   editable.curvePoints[vertexIndex] = clonePoint(point);
-  if (vertexIndex > 0) {
-    translatePoint(editable.curveHandles[vertexIndex - 1].control2, delta);
-  }
-  if (vertexIndex < editable.curveHandles.length) {
-    translatePoint(editable.curveHandles[vertexIndex].control1, delta);
-  }
+  editable.curveHandles = createAutomaticHandles(editable.curvePoints);
   synchronizeLegacyCoordinates(editable);
   replaceCurveGeometry(arc, editable);
   return true;
@@ -875,11 +869,6 @@ function interpolatePoint(first, second, progress) {
     x: first.x + (second.x - first.x) * progress,
     y: first.y + (second.y - first.y) * progress,
   };
-}
-
-function translatePoint(point, delta) {
-  point.x += delta.x;
-  point.y += delta.y;
 }
 
 function pointFields(point, xKey, yKey) {

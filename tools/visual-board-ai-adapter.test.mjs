@@ -138,6 +138,28 @@ test("layouts translate complete rigid groups as single units", () => {
   );
 });
 
+test("group and ungroup commands use one reversible grouping model", () => {
+  const grouped = execute(createState([
+    rectangle("first", 20, 30),
+    rectangle("second", 180, 30),
+  ]), [{
+    type: "objects.group",
+    targets: { ids: ["first", "second"] },
+  }]);
+  const groupIds = new Set(grouped.state.board.objects.map((object) => object.groupId));
+
+  assert.equal(groupIds.size, 1);
+  assert.ok([...groupIds][0]);
+  assert.ok(grouped.state.board.objects.every((object) => object.rigidGroup));
+
+  const ungrouped = execute(grouped.state, [{
+    type: "objects.ungroup",
+    targets: { ids: ["first"] },
+  }]);
+  assert.ok(ungrouped.state.board.objects.every((object) => !object.groupId));
+  assert.ok(ungrouped.state.board.objects.every((object) => !object.rigidGroup));
+});
+
 test("semantic connectors follow transformed nodes and disappear with deleted endpoints", () => {
   const connection = {
     id: "edge",
@@ -523,6 +545,21 @@ test("AI shared-vertex creation joins mixed line and curve intersections", () =>
   assert.ok(curve.vertexNetworkId);
   assert.ok(lines.every((line) => line.vertexNetworkId === curve.vertexNetworkId));
   assert.equal(result.outputs[0].type, "vertices.create");
+});
+
+test("AI shared-vertex creation converts outlined shapes without a divide step", () => {
+  const result = execute(createState([
+    rectangle("box", 20, 30, { w: 120, h: 80 }),
+  ]), [{
+    type: "vertices.create",
+    targets: { ids: ["box"] },
+  }]);
+  const lines = result.state.board.objects.filter((object) => object.type === "line");
+
+  assert.equal(result.state.board.objects.some((object) => object.id === "box"), false);
+  assert.equal(lines.length, 4);
+  assert.ok(lines.every((line) => line.vertexNetworkId));
+  assert.ok(result.receipt.deletedIds.includes("box"));
 });
 
 test("AI can create, edit, insert, remove, and list custom floor-plan templates", () => {

@@ -65,7 +65,10 @@ import {
   buildWallPathGeometry,
   sampleArchitecturePath,
 } from "./visual-board-architecture-geometry.mjs?v=1";
-import { getObjectBounds } from "./visual-board-geometry.mjs?v=10";
+import {
+  getObjectBounds,
+  getObjectSegments,
+} from "./visual-board-geometry.mjs?v=10";
 import { flipBoardSelection } from "./visual-board-transform.mjs?v=3";
 
 const MAX_OBJECTS_PER_REQUEST = 500;
@@ -203,10 +206,10 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("objects.duplicate", ["create"], "Duplicate target objects with an offset."),
   command("selection.set", ["update"], "Set the current selection using stable references."),
   command("objects.group", ["update"], "Group target objects into one rigid selection unit."),
-  command("objects.ungroup", ["update"], "Release target objects from their rigid groups."),
+  command("objects.ungroup", ["update"], "Ungroup target objects from their rigid groups."),
   command("curves.points.insert", ["update"], "Insert exact movable points at requested positions on one editable curve."),
   command("curves.vertices.reinitialize", ["update"], "Reduce curves to endpoints, meaningful extrema, and shared joints."),
-  command("vertices.create", ["update"], "Create shared editable joints across selected lines and curves, including crossings."),
+  command("vertices.create", ["update"], "Create shared editable joints across selected paths and outlined shapes, including crossings."),
   command("objects.connect", ["create"], "Connect two objects with an arrow or line."),
   command("objects.disconnect", ["delete"], "Remove semantic connections between targets."),
   command("objects.layout", ["update"], "Arrange target objects with a deterministic layout."),
@@ -1089,7 +1092,7 @@ export function getVisualBoardAiCapabilities() {
       "Floor-plan catalog and layer removals require the configured removal password.",
       "Reference images require an existing local board image plus explicit consent; their bytes are never exposed to providers.",
       "Architecture validation reports deterministic geometry issues but does not redesign the caller's plan.",
-      "Shared-vertex creation accepts straight lines and curves; other outlined shapes must be divided first.",
+      "Shared-vertex creation converts supported outlined shapes directly and preserves straight lines and curves.",
       "Curve reinitialization retains endpoints, meaningful extrema, and shared path joints while filtering minor noise.",
     ],
     examples: getVisualBoardAiExamples(),
@@ -2270,23 +2273,47 @@ function createSharedPathVertices(runtime, command, commandIndex) {
   if (targets.some((object) => object.locked)) {
     throw commandError("Unlock paths before creating vertices.", "object-locked", commandIndex);
   }
-  if (targets.some((object) => !["line", "connector", "arc"].includes(object.type))) {
+  if (targets.some((object) => ![
+    "line",
+    "connector",
+    "arc",
+    "rectangle",
+    "ellipse",
+    "shape",
+  ].includes(object.type))) {
     throw commandError(
-      "Shared vertices can be created from line, connector, and arc targets.",
+      "Shared vertices can be created from lines, curves, and outlined shapes.",
       "invalid-vertex-path",
       commandIndex,
     );
   }
   if (targets.some((object) => object.rigidGroup)) {
     throw commandError(
-      "Release rigid groups before creating path vertices.",
+      "Ungroup rigid groups before creating path vertices.",
       "rigid-group-not-supported",
       commandIndex,
     );
   }
 
+  const sourcePaths = targets.flatMap((object) => {
+    if (["line", "connector", "arc"].includes(object.type)) {
+      return [cloneJson(object)];
+    }
+    return getObjectSegments(object).map(([start, end]) => ({
+      id: runtime.createId(),
+      type: "line",
+      x: start.x,
+      y: start.y,
+      endX: end.x,
+      endY: end.y,
+      color: object.color,
+      strokeWidth: object.strokeWidth,
+      dashPattern: object.dashPattern ?? "solid",
+      locked: false,
+    }));
+  });
   const network = createEditableVertexNetwork(
-    targets.map(cloneJson),
+    sourcePaths,
     runtime.createId,
     0.01,
   );
@@ -2305,6 +2332,10 @@ function createSharedPathVertices(runtime, command, commandIndex) {
     if (inserted) return [];
     inserted = true;
     return network.objects;
+  });
+  const networkObjectIds = new Set(network.objects.map((object) => object.id));
+  targets.forEach((object) => {
+    if (!networkObjectIds.has(object.id)) runtime.deletedIds.add(object.id);
   });
   network.objects.forEach((object) => {
     if (initialIds.has(object.id)) runtime.updatedIds.add(object.id);

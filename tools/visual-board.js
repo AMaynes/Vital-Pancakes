@@ -49,10 +49,9 @@ import {
   getCurveVertices,
   insertCurveVertex,
   normalizeCurveGeometry,
-  reinitializeCurveVertices,
   setCurveVertexPosition,
   transformCurveGeometry,
-} from "./visual-board-curves.mjs?v=3";
+} from "./visual-board-curves.mjs?v=4";
 import { traceBlackAndWhiteImage } from "./visual-board-tracing.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
@@ -102,7 +101,6 @@ import {
   getObjectSegments,
   getShapeCenter,
   getShapeCorners,
-  isExplodableObject,
   normalizeShape,
   pointHitsObject,
   resizeShapeFromCorner,
@@ -166,7 +164,7 @@ import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=9";
+} from "./visual-board-ai-adapter.mjs?v=10";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
@@ -233,14 +231,8 @@ const lockDimensionsButton = document.querySelector("#lock-dimensions");
 const groupSelectionButton = document.querySelector("#group-selection");
 const traceImageButton = document.querySelector("#trace-image");
 const mergeVerticesButton = document.querySelector("#merge-vertices");
-const curveVerticesButton = document.querySelector("#curve-vertices");
-const reinitializeCurveVerticesButton = document.querySelector(
-  "#reinitialize-curve-vertices",
-);
 const addCurveVertexButton = document.querySelector("#add-curve-vertex");
 const ungroupSelectionButton = document.querySelector("#ungroup-selection");
-const explodeSelectionButton = document.querySelector("#explode-selection");
-const reassembleSelectionButton = document.querySelector("#reassemble-selection");
 const deleteSelectionButton = document.querySelector("#delete-selection");
 const copySelectionButton = document.querySelector("#copy-selection");
 const pasteSelectionButton = document.querySelector("#paste-selection");
@@ -5316,13 +5308,15 @@ function updateSelectionControls() {
   boardLibrarySaveSelectionButton.disabled = selectedObjects.length === 0;
   floorPlanSaveElementButton.disabled = selectedObjects.length === 0;
   floorPlanSaveTemplateButton.disabled = selectedObjects.length === 0;
-  traceImageButton.hidden = !isImageSelection(selectedObjects);
-  traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
   const singleImageSelected = selectedObjects.length === 1
     && selectedObjects[0].type === "image";
-  editImageButton.hidden = !singleImageSelected;
-  editImageButton.disabled = !singleImageSelected || selectedObjects[0]?.locked;
   const hasLockedSelection = selectedObjects.some((object) => object.locked);
+  traceImageButton.hidden = !isImageSelection(selectedObjects) || hasLockedSelection;
+  traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
+  editImageButton.hidden = !singleImageSelected || hasLockedSelection;
+  editImageButton.disabled = !singleImageSelected || hasLockedSelection;
+  flipHorizontalButton.hidden = hasLockedSelection;
+  flipVerticalButton.hidden = hasLockedSelection;
   flipHorizontalButton.disabled = hasLockedSelection;
   flipVerticalButton.disabled = hasLockedSelection;
   mirrorTextToggle.hidden = !selectedObjects.some((object) => object.type === "textbox");
@@ -5358,19 +5352,26 @@ function updateSelectionControls() {
   lockDimensionsButton.querySelector(".tool-button-label").textContent = dimensionState.allLocked
     ? "Unlock size"
     : "Lock size";
+  lockDimensionsButton.hidden = dimensionState.targets.length === 0;
   deleteSelectionButton.disabled = allLocked;
-  groupSelectionButton.disabled = !canGroupSelection(selectedObjects);
-  mergeVerticesButton.disabled = !canCreateVertexNetwork(selectedObjects);
-  curveVerticesButton.disabled = !canConvertCurveSelection(selectedObjects);
-  reinitializeCurveVerticesButton.disabled = !canReinitializeCurveSelection(
-    selectedObjects,
-  );
-  ungroupSelectionButton.disabled = anyLocked
-    || !selectedObjects.some((object) => Boolean(object.groupId));
-  explodeSelectionButton.disabled = anyLocked
-    || !selectedObjects.some((object) => object.type !== "line" && isExplodableObject(object));
-  reassembleSelectionButton.disabled = !getSelectedCompleteAssemblies().length;
-  exportCharacterButton.disabled = selectedObjects.length === 0;
+  deleteSelectionButton.hidden = allLocked;
+  const canGroup = canGroupSelection(selectedObjects);
+  groupSelectionButton.hidden = !canGroup;
+  groupSelectionButton.disabled = !canGroup;
+  const canUngroup = !anyLocked && selectedObjects.some((object) => (
+    Boolean(object.groupId) || Boolean(object.vertexNetworkId)
+  ));
+  ungroupSelectionButton.hidden = !canUngroup;
+  ungroupSelectionButton.disabled = !canUngroup;
+  const canCreateVertices = canCreateVertexNetwork(selectedObjects);
+  mergeVerticesButton.hidden = !canCreateVertices;
+  mergeVerticesButton.disabled = !canCreateVertices;
+  const canExportCharacter = selectedObjects.length > 1
+    || selectedObjects.some((object) => (
+      Boolean(object.groupId) || Boolean(object.vertexNetworkId)
+    ));
+  exportCharacterButton.hidden = !canExportCharacter;
+  exportCharacterButton.disabled = !canExportCharacter;
 
   const styleObject = selectedObjects.find((object) => (
     object.type !== "image" && object.type !== "textbox"
@@ -5667,16 +5668,6 @@ function createStyledLine(start, end, source) {
   };
 }
 
-function canConvertCurveSelection(objects) {
-  return objects.length > 0
-    && objects.every((object) => !object.locked && CURVE_TYPES.has(object.type));
-}
-
-function canReinitializeCurveSelection(objects) {
-  return objects.some((object) => CURVE_TYPES.has(object.type))
-    && objects.every((object) => !object.locked && !object.rigidGroup);
-}
-
 function toggleCurveVertexInsertion() {
   const canAdd = selectedObjects.length === 1
     && CURVE_TYPES.has(selectedObjects[0].type)
@@ -5721,100 +5712,7 @@ function insertSelectedCurveVertexAt(target) {
   announceStatus(`${getCurveVertices(object).length} editable curve points`);
 }
 
-function convertCurveSelectionToVertices() {
-  if (!canConvertCurveSelection(selectedObjects)) return;
-  const targets = new Set(selectedObjects);
-  const sourceLines = selectedObjects.flatMap((object) => {
-    const points = getCurvePathPoints(object, {
-      tolerance: 1,
-      maximumSegmentLength: 36,
-    });
-    return createLinesFromPaths([points], object, false);
-  });
-  const network = createEditableVertexNetwork(
-    sourceLines,
-    createId,
-    VERTEX_TOUCH_TOLERANCE,
-  );
-  if (!network) return;
-
-  checkpoint();
-  let insertedNetwork = false;
-  board.objects = board.objects.flatMap((object) => {
-    if (!targets.has(object)) return [object];
-    if (insertedNetwork) return [];
-    insertedNetwork = true;
-    return network.objects;
-  });
-  selectedObjects = network.objects;
-  saveBoard();
-  updateSelectionControls();
-  drawBoard();
-  announceStatus(`Curve converted to ${network.vertices.length} editable vertices`);
-}
-
-function reinitializeSelectedCurveVertices() {
-  if (!canReinitializeCurveSelection(selectedObjects)) return;
-  const selectedCurves = selectedObjects.filter((object) => (
-    CURVE_TYPES.has(object.type)
-  ));
-  const sharedVertexIds = getSharedPathVertexIds(board.objects);
-  const changes = selectedCurves.map((object) => ({
-    object,
-    curve: reinitializeCurveVertices(object, {
-      createIdentifier: createId,
-      preserveVertexIds: sharedVertexIds,
-    }),
-  }));
-  const changed = changes.some(({ object, curve }) => (
-    JSON.stringify({
-      points: object.curvePoints,
-      handles: object.curveHandles,
-      vertexIds: object.curveVertexIds,
-    }) !== JSON.stringify({
-      points: curve.curvePoints,
-      handles: curve.curveHandles,
-      vertexIds: curve.curveVertexIds,
-    })
-  ));
-  const vertexCount = changes.reduce(
-    (total, change) => total + getCurveVertices(change.curve).length,
-    0,
-  );
-  if (!changed) {
-    announceStatus(
-      `${vertexCount} key curve ${vertexCount === 1 ? "vertex is" : "vertices are"} already initialized`,
-    );
-    return;
-  }
-
-  checkpoint();
-  changes.forEach(({ object, curve }) => replaceObjectProperties(object, curve));
-  saveBoard();
-  updateSelectionControls();
-  drawBoard();
-  announceStatus(
-    `Curve vertices reinitialized to ${vertexCount} key ${vertexCount === 1 ? "point" : "points"}`,
-  );
-}
-
-function getSharedPathVertexIds(objects) {
-  const counts = new Map();
-  objects.forEach((object) => {
-    const ids = object.type === "arc"
-      ? object.curveVertexIds ?? []
-      : [object.startVertexId, object.endVertexId];
-    ids.forEach((id) => {
-      if (typeof id !== "string" || !id) return;
-      counts.set(id, (counts.get(id) ?? 0) + 1);
-    });
-  });
-  return [...counts.entries()]
-    .filter(([, count]) => count > 1)
-    .map(([id]) => id);
-}
-
-function releaseSelection() {
+function ungroupSelection() {
   const groupIds = new Set(selectedObjects.map((object) => object.groupId).filter(Boolean));
   const rigidGroupIds = new Set(
     selectedObjects.filter((object) => object.rigidGroup).map((object) => object.groupId),
@@ -5843,103 +5741,7 @@ function releaseSelection() {
   saveBoard();
   updateSelectionControls();
   drawBoard();
-  announceStatus("Assembly released");
-}
-
-function divideSelection() {
-  const targets = new Set(selectedObjects.filter((object) => (
-    !object.locked && object.type !== "line" && isExplodableObject(object)
-  )));
-  if (!targets.size) return;
-
-  checkpoint();
-  const dividedLines = [];
-  board.objects = board.objects.flatMap((object) => {
-    if (!targets.has(object)) return [object];
-    const segments = getObjectSegments(object);
-    if (!segments.length) return [object];
-    const assemblyId = createId();
-    const assemblySource = cloneValue(object);
-    const lines = segments.map(([start, end], index) => ({
-      id: createId(),
-      type: "line",
-      x: start.x,
-      y: start.y,
-      endX: end.x,
-      endY: end.y,
-      color: object.color,
-      strokeWidth: object.strokeWidth,
-      dashPattern: object.dashPattern ?? "solid",
-      locked: false,
-      assemblyId,
-      assemblyIndex: index,
-      assemblyCount: segments.length,
-      assemblySource,
-    }));
-    dividedLines.push(...lines);
-    return lines;
-  });
-  selectedObjects = dividedLines;
-  saveBoard();
-  updateSelectionControls();
-  drawBoard();
-  announceStatus(`${targets.size} shape${targets.size === 1 ? "" : "s"} divided into lines`);
-}
-
-function getCompleteAssembly(assemblyId) {
-  const members = board.objects
-    .filter((object) => object.assemblyId === assemblyId)
-    .sort((first, second) => first.assemblyIndex - second.assemblyIndex);
-  if (!members.length || !members[0].assemblySource) return null;
-  const expectedCount = members[0].assemblyCount;
-  const indices = new Set(members.map((object) => object.assemblyIndex));
-  if (members.length !== expectedCount || indices.size !== expectedCount) return null;
-  return members;
-}
-
-function getSelectedCompleteAssemblies() {
-  const assemblyIds = new Set(
-    selectedObjects.map((object) => object.assemblyId).filter(Boolean),
-  );
-  return [...assemblyIds]
-    .map((assemblyId) => ({ assemblyId, members: getCompleteAssembly(assemblyId) }))
-    .filter((assembly) => assembly.members);
-}
-
-function reassembleSelection() {
-  const assemblies = getSelectedCompleteAssemblies();
-  if (!assemblies.length) {
-    announceStatus("Select all remaining parts of a divided shape");
-    return;
-  }
-
-  checkpoint();
-  const assemblyIds = new Set(assemblies.map((assembly) => assembly.assemblyId));
-  const restoredByAssemblyId = new Map();
-  assemblies.forEach(({ assemblyId, members }) => {
-    const source = cloneValue(members[0].assemblySource);
-    const colors = new Set(members.map((object) => object.color));
-    const widths = new Set(members.map((object) => object.strokeWidth));
-    const patterns = new Set(members.map((object) => object.dashPattern));
-    if (colors.size === 1) source.color = members[0].color;
-    if (widths.size === 1) source.strokeWidth = members[0].strokeWidth;
-    if (patterns.size === 1) source.dashPattern = members[0].dashPattern;
-    restoredByAssemblyId.set(assemblyId, normalizeObject(source));
-  });
-
-  const insertedAssemblyIds = new Set();
-  board.objects = board.objects.flatMap((object) => {
-    if (!assemblyIds.has(object.assemblyId)) return [object];
-    if (insertedAssemblyIds.has(object.assemblyId)) return [];
-    insertedAssemblyIds.add(object.assemblyId);
-    const restored = restoredByAssemblyId.get(object.assemblyId);
-    return restored ? [restored] : [];
-  });
-  selectedObjects = [...restoredByAssemblyId.values()].filter(Boolean);
-  saveBoard();
-  updateSelectionControls();
-  drawBoard();
-  announceStatus(`${selectedObjects.length} shape${selectedObjects.length === 1 ? "" : "s"} reassembled`);
+  announceStatus("Selection ungrouped");
 }
 
 function deleteSelection() {
@@ -7240,15 +7042,8 @@ mirrorTextToggle.addEventListener("click", () => {
   updateSelectionControls();
 });
 mergeVerticesButton.addEventListener("click", mergeSelectionVertices);
-curveVerticesButton.addEventListener("click", convertCurveSelectionToVertices);
-reinitializeCurveVerticesButton.addEventListener(
-  "click",
-  reinitializeSelectedCurveVertices,
-);
 addCurveVertexButton.addEventListener("click", toggleCurveVertexInsertion);
-ungroupSelectionButton.addEventListener("click", releaseSelection);
-explodeSelectionButton.addEventListener("click", divideSelection);
-reassembleSelectionButton.addEventListener("click", reassembleSelection);
+ungroupSelectionButton.addEventListener("click", ungroupSelection);
 exportCharacterButton.addEventListener("click", exportSelectedCharacter);
 boardExportButton.addEventListener("click", exportBoardArtwork);
 colorInput.addEventListener("input", applySelectedColor);

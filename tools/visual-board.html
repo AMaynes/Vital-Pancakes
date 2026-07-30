@@ -273,6 +273,9 @@
         <button class="tool-button" id="group-selection" type="button" title="Group selected objects into one movable piece">
           ⛓ <span class="tool-button-label">Group</span>
         </button>
+        <button class="tool-button" id="ungroup-selection" type="button" title="Ungroup the selected piece into its objects">
+          ⛓ <span class="tool-button-label">Ungroup</span>
+        </button>
         <button class="tool-button" id="trace-image" type="button" title="Trace the selected image into a black-and-white vector drawing" hidden disabled>
           ◩ <span class="tool-button-label">Trace image</span>
         </button>
@@ -280,10 +283,10 @@
           ◫ <span class="tool-button-label">Image controls</span>
         </button>
         <button class="tool-button" id="flip-horizontal" type="button" title="Flip the complete selection horizontally">
-          ⇆ <span class="tool-button-label">Flip horizontal</span>
+          ⇆ <span class="tool-button-label">FlipH</span>
         </button>
         <button class="tool-button" id="flip-vertical" type="button" title="Flip the complete selection vertically">
-          ⇅ <span class="tool-button-label">Flip vertical</span>
+          ⇅ <span class="tool-button-label">FlipV</span>
         </button>
         <button class="tool-button" id="mirror-text-toggle" type="button" aria-pressed="false" title="Mirror textbox glyphs when flipping instead of keeping text readable" hidden>
           T↔ <span class="tool-button-label">Mirror text</span>
@@ -291,23 +294,8 @@
         <button class="tool-button" id="merge-vertices" type="button" title="Detect corners and intersections, then create joined editable vertices">
           ◇ <span class="tool-button-label">Create vertices</span>
         </button>
-        <button class="tool-button" id="curve-vertices" type="button" title="Convert selected arcs into joined vertices based on their curvature">
-          ⌒ <span class="tool-button-label">Curve vertices</span>
-        </button>
-        <button class="tool-button" id="reinitialize-curve-vertices" type="button" title="Keep only curve ends, meaningful minima and maxima, and shared joints">
-          ↻⌒ <span class="tool-button-label">Reinitialize vertices</span>
-        </button>
         <button class="tool-button" id="add-curve-vertex" type="button" aria-pressed="false" title="Add a movable point exactly where you click on the selected curve" hidden disabled>
           +⌒ <span class="tool-button-label">Add curve point</span>
-        </button>
-        <button class="tool-button" id="ungroup-selection" type="button" title="Release a grouped piece into its objects">
-          ⛓ <span class="tool-button-label">Release</span>
-        </button>
-        <button class="tool-button" id="explode-selection" type="button" title="Divide selected outlined shapes into individual lines">
-          ⤢ <span class="tool-button-label">Divide</span>
-        </button>
-        <button class="tool-button" id="reassemble-selection" type="button" title="Reassemble divided lines into their original shape">
-          ⤡ <span class="tool-button-label">Reassemble</span>
         </button>
         <button class="tool-button" id="save-to-library" type="button" title="Save selection to the reusable Visual Board library">
           <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
@@ -847,6 +835,6 @@
       </footer>
     </form>
   </dialog>
-  <script type="module" src="visual-board.js?v=43"></script>
+  <script type="module" src="visual-board.js?v=44"></script>
 </body>
 </html>
