@@ -30,7 +30,7 @@ import { getTextWorldFontSize } from "./visual-board-text.mjs?v=2";
 import {
   formatFloorPlanDimension,
   isFloorPlanObjectVisible,
-} from "./visual-board-floor-plan.mjs?v=6";
+} from "./visual-board-floor-plan.mjs?v=7";
 
 const DEFAULT_EXPORT_PADDING = 24;
 const DEFAULT_STROKE_COLOR = "#000000";

@@ -22,7 +22,7 @@ import {
   normalizeFloorPlanSettings,
   normalizeFloorPlanRoomState,
   removeActiveFloorPlanRoom,
-} from "./visual-board-floor-plan.mjs?v=6";
+} from "./visual-board-floor-plan.mjs?v=7";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -1116,7 +1116,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 13,
+    version: 14,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -1276,6 +1276,14 @@ export function getVisualBoardAiExamples() {
           gridSize: 28,
           alignmentGuides: true,
         },
+      },
+    },
+    {
+      name: "Add an authored sectional sofa",
+      command: {
+        type: "floor-plan.insert",
+        kind: "sectional-sofa",
+        placement: { type: "viewport-center" },
       },
     },
     {

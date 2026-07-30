@@ -14,6 +14,14 @@ import {
   normalizeFloorPlanSettings,
   removeActiveFloorPlanRoom,
 } from "./visual-board-floor-plan.mjs";
+import {
+  FLOOR_PLAN_DEFAULT_CHARACTER_IDS,
+  getFloorPlanDefaultCharacter,
+} from "./visual-board-floor-plan-defaults.mjs";
+import {
+  getSelectionBounds,
+  getSelectionUnits,
+} from "./visual-board-groups.mjs";
 
 let nextId = 0;
 const id = () => `id-${++nextId}`;
@@ -27,25 +35,91 @@ test("floor-plan settings normalize scale, units, and wall thickness", () => {
   });
 });
 
-test("door and dimension elements remain ordinary grouped board objects", () => {
+test("authored door and dimension defaults remain ordinary grouped board objects", () => {
   const door = createFloorPlanElement("door", { x: 0, y: 0 }, {}, id);
-  assert.deepEqual(door.map((object) => object.type), ["line", "arc"]);
+  assert.deepEqual(door.map((object) => object.type), ["line", "arc", "line", "line"]);
   assert.ok(door.every((object) => object.groupId === door[0].groupId));
   const dimension = createFloorPlanElement("dimension", { x: 0, y: 0 }, {}, id);
-  assert.equal(dimension[0].type, "dimension");
-  assert.equal(dimension[0].semantic.role, "floor-plan-dimension");
-  assert.ok(dimension[0].startVertexId);
-  assert.ok(dimension[0].endVertexId);
+  assert.equal(dimension.length, 5);
+  assert.ok(dimension.some((object) => object.type === "textbox" && object.text === "5'"));
+  assert.ok(dimension.every((object) => (
+    object.semantic.role.startsWith("floor-plan-dimension")
+  )));
+  assert.ok(dimension.every((object) => object.layerId === "dimensions"));
 });
 
 test("requested floor-plan catalogs expose exact tab groups and names", () => {
   assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["double-door"].name, "Double Door");
+  assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["sectional-sofa"].name, "Sectional Sofa");
+  assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["large-dining-table"].group, "furniture");
+  assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["pool-hot-tub"].group, "furniture");
   assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["washer-dryer-combo"].group, "furniture");
   assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["electrical-route"].group, "maintenance");
   assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["plumbing-valve"].group, "maintenance");
   assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["layer-designator"].group, "tools");
   assert.equal(FLOOR_PLAN_TEMPLATE_DEFINITIONS["living-room"].name, "Livingroom");
   assert.equal(FLOOR_PLAN_TEMPLATE_DEFINITIONS["blank-house-shell"].name, "House Shell");
+});
+
+test("all authored default packages are valid vector characters", () => {
+  assert.equal(FLOOR_PLAN_DEFAULT_CHARACTER_IDS.length, 30);
+  FLOOR_PLAN_DEFAULT_CHARACTER_IDS.forEach((kind) => {
+    const character = getFloorPlanDefaultCharacter(kind);
+    const objectIds = character.objects.map((object) => object.id);
+    assert.equal(character.format, "vital-pancakes-character", kind);
+    assert.equal(character.version, 1, kind);
+    assert.ok(character.objects.length > 0, kind);
+    assert.equal(new Set(objectIds).size, objectIds.length, kind);
+    assert.ok(character.objects.every((object) => object.type !== "image"), kind);
+    assert.deepEqual(character.assets, {}, kind);
+  });
+});
+
+test("authored defaults insert at the requested center as one editable unit", () => {
+  const expectedCounts = {
+    bathtub: 9,
+    bed: 10,
+    cabinet: 2,
+    "coffee-table": 3,
+    dimension: 5,
+    door: 4,
+    "double-door": 8,
+    dryer: 6,
+    fridge: 4,
+    "garage-door": 10,
+    "large-dining-table": 19,
+    microwave: 9,
+    nightstand: 4,
+    "overhead-cabinet": 2,
+    "pool-hot-tub": 4,
+    "sectional-sofa": 25,
+    shower: 17,
+    "bathtub-shower": 9,
+    "sliding-door": 9,
+    "small-dining-table": 11,
+    sofa: 8,
+    "stacked-washer-dryer": 6,
+    "cabinet-overhead": 4,
+    stairs: 10,
+    stove: 13,
+    toilet: 5,
+    "wall-oven": 6,
+    washer: 6,
+    "washer-dryer-combo": 7,
+    window: 4,
+  };
+  Object.entries(expectedCounts).forEach(([kind, count]) => {
+    const objects = createFloorPlanElement(kind, { x: 300, y: 220 }, {}, id);
+    const bounds = getSelectionBounds(objects);
+    assert.equal(objects.length, count, kind);
+    assert.equal(getSelectionUnits(objects).length, 1, kind);
+    assert.ok(Math.abs(bounds.x + bounds.width / 2 - 300) < 0.001, kind);
+    assert.ok(Math.abs(bounds.y + bounds.height / 2 - 220) < 0.001, kind);
+    assert.ok(objects.every((object) => (
+      object.semantic.tags.includes(kind)
+      && object.semantic.generatedBy === "floor-plan-authored-default"
+    )), kind);
+  });
 });
 
 test("layer designators order signed levels, move without wrapping, and control visibility", () => {

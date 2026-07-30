@@ -299,6 +299,24 @@ test("floor-plan commands insert ordinary editable objects with normalized setti
   assert.equal(result.state.board.settings.floorPlan.alignmentGuides, false);
 });
 
+test("AI inserts authored floor-plan defaults as single editable units", () => {
+  const result = execute(createState(), [{
+    type: "floor-plan.insert",
+    kind: "sectional-sofa",
+    placement: { type: "point", x: 100, y: 200 },
+  }]);
+
+  assert.equal(result.state.board.objects.length, 25);
+  assert.equal(
+    new Set(result.state.board.objects.map((object) => object.groupId)).size,
+    1,
+  );
+  assert.ok(result.state.board.objects.every((object) => (
+    object.layerId === "furniture"
+    && object.semantic?.generatedBy === "floor-plan-authored-default"
+  )));
+});
+
 test("preview is side-effect free and apply crosses one commit boundary", async () => {
   const state = createState();
   let commits = 0;
@@ -373,15 +391,19 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 13);
+  assert.equal(capabilities.version, 14);
   assert.equal(capabilities.commands.length, 53);
   const createSchema = capabilities.commands
     .find((command) => command.type === "objects.create").schema;
   const viewportSchema = capabilities.commands
     .find((command) => command.type === "viewport.focus").schema;
+  const floorPlanSchema = capabilities.commands
+    .find((command) => command.type === "floor-plan.insert").schema;
   assert.equal(createSchema.properties.objects.items.properties.strokeWidth.minimum, 0.05);
   assert.equal(viewportSchema.properties.zoom.minimum, 0.02);
   assert.equal(viewportSchema.properties.zoom.maximum, 32);
+  assert.ok(floorPlanSchema.properties.kind.enum.includes("sectional-sofa"));
+  assert.ok(floorPlanSchema.properties.kind.enum.includes("pool-hot-tub"));
   assert.ok(capabilities.architectureCatalog.symbols.length >= 100);
   assert.ok(capabilities.architectureCatalog.materials.length >= 20);
   capabilities.commands.forEach((command) => {

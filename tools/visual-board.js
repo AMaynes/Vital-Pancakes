@@ -152,7 +152,7 @@ import {
   normalizeFloorPlanSettings,
   normalizeFloorPlanRoomState,
   removeActiveFloorPlanRoom,
-} from "./visual-board-floor-plan.mjs?v=6";
+} from "./visual-board-floor-plan.mjs?v=7";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -174,14 +174,14 @@ import {
 import {
   exportVisualBoardToSvg,
   getVisualBoardExportBounds,
-} from "./visual-board-static-export.mjs?v=6";
+} from "./visual-board-static-export.mjs?v=7";
 import { installAiPageHost } from "../app/ai-page-host.mjs";
 import { AI_PERMISSION_LEVELS } from "../app/ai-command-protocol.mjs";
 import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=15";
+} from "./visual-board-ai-adapter.mjs?v=16";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";

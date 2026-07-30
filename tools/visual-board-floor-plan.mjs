@@ -6,6 +6,16 @@
 import {
   normalizeFloorPlanTemplateLibrary,
 } from "./visual-board-floor-plan-templates.mjs";
+import {
+  getFloorPlanDefaultCharacter,
+} from "./visual-board-floor-plan-defaults.mjs?v=1";
+import {
+  instantiateCharacter,
+} from "./visual-board-character.mjs?v=3";
+import {
+  getSelectionUnits,
+  pushObjectGroupLevel,
+} from "./visual-board-groups.mjs?v=5";
 
 export const FLOOR_PLAN_REMOVAL_PASSWORD = "password";
 
@@ -28,6 +38,12 @@ export const FLOOR_PLAN_ELEMENT_DEFINITIONS = Object.freeze({
 
   bed: definition("Bed", "furniture"),
   sofa: definition("Sofa", "furniture"),
+  "sectional-sofa": definition("Sectional Sofa", "furniture"),
+  "coffee-table": definition("Coffee Table", "furniture"),
+  nightstand: definition("Nightstand", "furniture"),
+  "small-dining-table": definition("Small Dining Table", "furniture"),
+  "large-dining-table": definition("Large Dining Table", "furniture"),
+  "pool-hot-tub": definition("Pool / Hot Tub", "furniture"),
   toilet: definition("Toilet", "furniture"),
   shower: definition("Shower", "furniture"),
   bathtub: definition("Bathtub", "furniture"),
@@ -121,9 +137,25 @@ export function createFloorPlanElement(kind, origin, settings, createIdentifier)
   const config = normalizeFloorPlanSettings(settings);
   const id = createIdentifier;
   const scale = config.pixelsPerUnit;
-  const groupId = id();
   const definitionValue = FLOOR_PLAN_ELEMENT_DEFINITIONS[kind];
   const defaultLayer = getDefaultLayer(definitionValue.group, kind);
+  const authoredDefault = getFloorPlanDefaultCharacter(kind);
+  if (authoredDefault) {
+    const objects = instantiateCharacter(authoredDefault, id, origin).objects
+      .map((object) => normalizeAuthoredDefaultObject(
+        object,
+        kind,
+        definitionValue.group,
+        defaultLayer,
+      ));
+    if (getSelectionUnits(objects).length > 1) {
+      const groupId = id();
+      objects.forEach((object) => pushObjectGroupLevel(object, groupId, true));
+    }
+    return objects;
+  }
+
+  const groupId = id();
   const common = (role) => ({
     id: id(),
     color: "#24231f",
@@ -625,8 +657,7 @@ export function isFloorPlanObjectVisible(object, allObjects, settings, options =
   const role = String(object?.semantic?.role ?? "");
   if (!config.dimensionsVisible && (
     object?.type === "dimension"
-    || role === "floor-plan-dimension"
-    || role === "floor-plan-dimension-tick"
+    || role.startsWith("floor-plan-dimension")
   )) return false;
   if (
     [
@@ -680,6 +711,33 @@ function getDefaultLayer(group, kind) {
     || kind === "plumbing"
   ) return "fixtures";
   return "structure";
+}
+
+function normalizeAuthoredDefaultObject(object, kind, group, layerId) {
+  const semantic = object.semantic && typeof object.semantic === "object"
+    ? object.semantic
+    : {};
+  const fallbackRole = kind === "dimension"
+    ? object.type === "textbox"
+      ? "floor-plan-dimension-label"
+      : "floor-plan-dimension-tick"
+    : `floor-plan-${kind}`;
+  const tags = [...new Set([
+    ...(Array.isArray(semantic.tags) ? semantic.tags : []),
+    "floor-plan",
+    group,
+    kind,
+  ])];
+  return {
+    ...object,
+    layerId,
+    semantic: {
+      ...semantic,
+      role: semantic.role || fallbackRole,
+      tags,
+      generatedBy: "floor-plan-authored-default",
+    },
+  };
 }
 
 function normalizeIdentifier(value) {
