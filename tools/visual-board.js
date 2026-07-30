@@ -76,11 +76,13 @@ import {
   getObjectGroupFields,
   getSelectionBounds,
   getSelectionUnits,
+  mapPaddedResizePointer,
+  padSelectionBounds,
   popObjectGroupLevel,
   pushObjectGroupLevel,
   resizeSelectionObjects,
   rotateSelectionObjects,
-} from "./visual-board-groups.mjs?v=4";
+} from "./visual-board-groups.mjs?v=5";
 import {
   createEmptyRig,
   dragRigJoint,
@@ -179,6 +181,7 @@ const MAX_ZOOM = 4;
 const MIN_SHAPE_SIZE = 16;
 const HANDLE_SIZE = 6;
 const ROTATION_HANDLE_OFFSET = 28;
+const GROUP_SELECTION_PADDING = 24;
 const MARQUEE_DRAG_THRESHOLD = 3;
 const MAX_IMAGE_DIMENSION = 1800;
 const MAX_TRACE_DIMENSION = 800;
@@ -2012,14 +2015,7 @@ function drawSelection() {
 }
 
 function drawGroupSelection(objects, showHandles) {
-  const bounds = getSelectionBounds(objects);
-  const frame = {
-    x: bounds.x,
-    y: bounds.y,
-    w: bounds.width,
-    h: bounds.height,
-    rotation: 0,
-  };
+  const { frame } = getGroupSelectionGeometry(objects);
   const corners = getShapeCorners(frame);
   strokeSelectionPolygon(Object.values(corners));
   if (!showHandles || objects.some((object) => object.locked)) return;
@@ -2034,6 +2030,28 @@ function drawGroupSelection(objects, showHandles) {
   context.strokeStyle = "#7b211a";
   context.stroke();
   drawHandle(rotationHandle, true);
+}
+
+function getGroupSelectionGeometry(objects) {
+  const bounds = getSelectionBounds(objects);
+  const displayBounds = padSelectionBounds(
+    bounds,
+    GROUP_SELECTION_PADDING / viewport.zoom,
+  );
+  return {
+    bounds,
+    frame: selectionFrameFromBounds(displayBounds),
+  };
+}
+
+function selectionFrameFromBounds(bounds) {
+  return {
+    x: bounds.x,
+    y: bounds.y,
+    w: bounds.width,
+    h: bounds.height,
+    rotation: 0,
+  };
 }
 
 function drawRigJointHandle(point) {
@@ -2294,14 +2312,7 @@ function findSelectionHandle(point) {
     selectedUnit?.length > 1
     && !selectedUnit.some((object) => object.locked)
   ) {
-    const bounds = getSelectionBounds(selectedUnit);
-    const frame = {
-      x: bounds.x,
-      y: bounds.y,
-      w: bounds.width,
-      h: bounds.height,
-      rotation: 0,
-    };
+    const { bounds, frame } = getGroupSelectionGeometry(selectedUnit);
     const rotationHandle = getRotationHandlePoint(frame);
     if (distanceBetween(point, rotationHandle) <= hitRadius) {
       return { kind: "group-rotate", objects: selectedUnit, bounds };
@@ -2312,11 +2323,14 @@ function findSelectionHandle(point) {
         distanceBetween(point, handle) <= hitRadius
       ));
     if (corner) {
+      const resizeStart = getShapeCorners(selectionFrameFromBounds(bounds))[corner[0]];
       return {
         kind: "group-resize",
         objects: selectedUnit,
         bounds,
         corner: corner[0],
+        handleStart: corner[1],
+        resizeStart,
       };
     }
   }
@@ -2678,11 +2692,16 @@ function handlePointerMove(event) {
     interaction.changed = true;
   } else if (interaction.kind === "group-resize") {
     ensureInteractionCheckpoint();
+    const resizePoint = mapPaddedResizePointer(
+      worldPoint,
+      interaction.handleStart,
+      interaction.resizeStart,
+    );
     const resized = resizeSelectionObjects(
       [...interaction.originals.values()],
       interaction.initialBounds,
       interaction.corner,
-      getSnappedPoint(worldPoint),
+      getSnappedPoint(resizePoint),
       MIN_SHAPE_SIZE,
     );
     replaceInteractionObjects(resized.objects);

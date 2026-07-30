@@ -16,7 +16,7 @@
  * the application shell. File Drop content and large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v75";
+const CACHE_NAME = "vital-pancakes-app-v76";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -79,6 +79,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board.html",
   "./tools/visual-board.js?v=46",
   "./tools/visual-board.js?v=47",
+  "./tools/visual-board.js?v=48",
   "./tools/visual-board-ai.css?v=1",
   "./tools/visual-board-advanced.css?v=6",
   "./tools/visual-board-ai-adapter.mjs?v=11",
@@ -106,6 +107,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-geometry.mjs?v=11",
   "./tools/visual-board-groups.mjs?v=3",
   "./tools/visual-board-groups.mjs?v=4",
+  "./tools/visual-board-groups.mjs?v=5",
   "./tools/visual-board-history.mjs?v=2",
   "./tools/visual-board-interpolation.mjs?v=1",
   "./tools/visual-board-library.mjs?v=1",

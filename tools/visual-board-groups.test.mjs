@@ -5,6 +5,8 @@ import {
   getObjectGroupIds,
   getSelectionBounds,
   getSelectionUnits,
+  mapPaddedResizePointer,
+  padSelectionBounds,
   popObjectGroupLevel,
   pushObjectGroupLevel,
   resizeSelectionObjects,
@@ -61,6 +63,23 @@ test("group resizing preserves joined endpoints and scales around the opposite c
   assert.deepEqual(
     { x: resized.objects[1].endX, y: resized.objects[1].endY },
     { x: 40, y: 0 },
+  );
+});
+
+test("group selection padding moves resize handles away without changing resize geometry", () => {
+  const bounds = { x: 100, y: 80, width: 300, height: 220 };
+  const padded = padSelectionBounds(bounds, 24);
+  const handleStart = { x: padded.x, y: padded.y };
+  const resizeStart = { x: bounds.x, y: bounds.y };
+
+  assert.deepEqual(padded, { x: 76, y: 56, width: 348, height: 268 });
+  assert.deepEqual(
+    mapPaddedResizePointer(handleStart, handleStart, resizeStart),
+    resizeStart,
+  );
+  assert.deepEqual(
+    mapPaddedResizePointer({ x: 56, y: 46 }, handleStart, resizeStart),
+    { x: 80, y: 70 },
   );
 });
 

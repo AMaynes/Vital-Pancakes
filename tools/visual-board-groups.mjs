@@ -126,6 +126,23 @@ export function getSelectionBounds(objects) {
   };
 }
 
+export function padSelectionBounds(bounds, padding = 0) {
+  const amount = Math.max(0, Number(padding) || 0);
+  return {
+    x: bounds.x - amount,
+    y: bounds.y - amount,
+    width: bounds.width + amount * 2,
+    height: bounds.height + amount * 2,
+  };
+}
+
+export function mapPaddedResizePointer(pointer, handleStart, resizeStart) {
+  return {
+    x: resizeStart.x + pointer.x - handleStart.x,
+    y: resizeStart.y + pointer.y - handleStart.y,
+  };
+}
+
 export function resizeSelectionObjects(
   objects,
   initialBounds,
