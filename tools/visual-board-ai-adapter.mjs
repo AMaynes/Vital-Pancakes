@@ -17,7 +17,7 @@ import {
   createFloorPlanElement,
   createFloorPlanTemplate,
   normalizeFloorPlanSettings,
-} from "./visual-board-floor-plan.mjs?v=2";
+} from "./visual-board-floor-plan.mjs?v=3";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -36,8 +36,9 @@ import {
   getCurveVertices,
   insertCurveVertex,
   normalizeCurveGeometry,
+  reinitializeCurveVertices,
   transformCurveGeometry,
-} from "./visual-board-curves.mjs?v=2";
+} from "./visual-board-curves.mjs?v=3";
 import { createEditableVertexNetwork } from "./visual-board-vertices.mjs?v=3";
 import {
   ARCHITECTURE_FILL_PATTERNS,
@@ -199,12 +200,20 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("objects.group", ["update"], "Group target objects into one rigid selection unit."),
   command("objects.ungroup", ["update"], "Release target objects from their rigid groups."),
   command("curves.points.insert", ["update"], "Insert exact movable points at requested positions on one editable curve."),
+  command("curves.vertices.reinitialize", ["update"], "Reduce curves to endpoints, meaningful extrema, and shared joints."),
   command("vertices.create", ["update"], "Create shared editable joints across selected lines and curves, including crossings."),
   command("objects.connect", ["create"], "Connect two objects with an arrow or line."),
   command("objects.disconnect", ["delete"], "Remove semantic connections between targets."),
   command("objects.layout", ["update"], "Arrange target objects with a deterministic layout."),
   command("template.insert", ["create"], "Insert a high-level reusable board template."),
   command("floor-plan.insert", ["create"], "Insert an editable floor-plan element or room template."),
+  command("floor-plan.elements.list", ["read-summary"], "List built-in, customized, saved, and removed floor-plan elements."),
+  command("floor-plan.elements.create", ["create"], "Save explicit editable board objects as a reusable floor-plan element."),
+  command("floor-plan.elements.update", ["update"], "Rename or describe an existing saved or customized floor-plan element."),
+  command("floor-plan.elements.replace", ["update"], "Replace an element's vector contents with explicit board objects."),
+  command("floor-plan.elements.remove", ["delete"], "Delete a saved element or hide a built-in element."),
+  command("floor-plan.elements.restore", ["update"], "Restore a built-in element and discard its replacement."),
+  command("floor-plan.elements.insert", ["create"], "Insert a visible saved, customized, or built-in floor-plan element."),
   command("floor-plan.templates.list", ["read-summary"], "List built-in, customized, saved, and removed floor-plan templates."),
   command("floor-plan.templates.create", ["create"], "Save explicit editable board objects as a reusable floor-plan template."),
   command("floor-plan.templates.update", ["update"], "Rename or describe an existing saved or customized floor-plan template."),
@@ -515,6 +524,7 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
       items: pointSchema(),
     },
   }),
+  "curves.vertices.reinitialize": targetCommandSchema(),
   "vertices.create": targetCommandSchema(),
   "objects.connect": schema(["from", "to"], {
     from: REFERENCE_SCHEMA,
@@ -562,6 +572,34 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
         alignmentGuides: { type: "boolean" },
       },
     },
+  }),
+  "floor-plan.elements.list": schema([], {}),
+  "floor-plan.elements.create": schema(["elementId", "name", "targets"], {
+    elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    name: { type: "string", maxLength: 80 },
+    description: { type: "string", maxLength: 240 },
+    targets: TARGET_SCHEMA,
+  }),
+  "floor-plan.elements.update": schema(["elementId"], {
+    elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    name: { type: "string", maxLength: 80 },
+    description: { type: "string", maxLength: 240 },
+  }),
+  "floor-plan.elements.replace": schema(["elementId", "targets"], {
+    elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    name: { type: "string", maxLength: 80 },
+    description: { type: "string", maxLength: 240 },
+    targets: TARGET_SCHEMA,
+  }),
+  "floor-plan.elements.remove": schema(["elementId"], {
+    elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+  }),
+  "floor-plan.elements.restore": schema(["elementId"], {
+    elementId: { enum: [...FLOOR_PLAN_ELEMENTS] },
+  }),
+  "floor-plan.elements.insert": schema(["elementId"], {
+    elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    placement: PLACEMENT_SCHEMA,
   }),
   "floor-plan.templates.list": schema([], {}),
   "floor-plan.templates.create": schema(["templateId", "name", "targets"], {
@@ -985,7 +1023,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 5,
+    version: 6,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -1010,10 +1048,11 @@ export function getVisualBoardAiCapabilities() {
       "Image bytes, freehand point arrays, and trace paths are omitted from AI context.",
       "Commands cannot import local files or start animation rendering.",
       "Architectural commands render exact caller-supplied geometry and never choose or improve a layout.",
-      "Custom floor-plan templates preserve editable vector objects and relationships but reject image assets.",
+      "Custom floor-plan elements and templates preserve editable vector objects and relationships but reject image assets.",
       "Reference images require an existing local board image plus explicit consent; their bytes are never exposed to providers.",
       "Architecture validation reports deterministic geometry issues but does not redesign the caller's plan.",
       "Shared-vertex creation accepts straight lines and curves; other outlined shapes must be divided first.",
+      "Curve reinitialization retains endpoints, meaningful extrema, and shared path joints while filtering minor noise.",
     ],
     examples: getVisualBoardAiExamples(),
   };
@@ -1034,6 +1073,13 @@ export function getVisualBoardAiExamples() {
       command: {
         type: "vertices.create",
         targets: { ids: ["curve-id", "line-id"] },
+      },
+    },
+    {
+      name: "Reduce curve vertices",
+      command: {
+        type: "curves.vertices.reinitialize",
+        targets: { ids: ["curve-id-from-context"] },
       },
     },
     {
@@ -1087,6 +1133,16 @@ export function getVisualBoardAiExamples() {
           gridSize: 28,
           alignmentGuides: true,
         },
+      },
+    },
+    {
+      name: "Save selection as a floor-plan element",
+      command: {
+        type: "floor-plan.elements.create",
+        elementId: "double-vanity",
+        name: "Double vanity",
+        description: "Editable bathroom vanity with two sinks.",
+        targets: { selection: true },
       },
     },
     {
@@ -1384,6 +1440,11 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
         wallThickness: floorPlanSettings.wallThickness,
         gridSize: floorPlanSettings.gridSize,
         alignmentGuides: floorPlanSettings.alignmentGuides,
+        elementLibrary: {
+          version: floorPlanSettings.elementLibrary.version,
+          savedElementCount: floorPlanSettings.elementLibrary.items.length,
+          hiddenBuiltIns: [...floorPlanSettings.elementLibrary.hiddenBuiltIns],
+        },
         templateLibrary: {
           version: floorPlanSettings.templateLibrary.version,
           savedTemplateCount: floorPlanSettings.templateLibrary.items.length,
@@ -1401,6 +1462,10 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
       detail,
       catalogAvailableInCapabilities: true,
     },
+    floorPlanElements: getFloorPlanTemplateCatalog(
+      floorPlanSettings.elementLibrary,
+      FLOOR_PLAN_ELEMENTS,
+    ),
     floorPlanTemplates: getFloorPlanTemplateCatalog(
       floorPlanSettings.templateLibrary,
       FLOOR_PLAN_TEMPLATES,
@@ -1414,6 +1479,7 @@ function executeCommand(runtime, commandValue, commandIndex) {
   if (![
     "architecture.inspect",
     "architecture.validate",
+    "floor-plan.elements.list",
     "floor-plan.templates.list",
   ].includes(command.type)) {
     runtime.mutated = true;
@@ -1446,6 +1512,9 @@ function executeCommand(runtime, commandValue, commandIndex) {
     case "curves.points.insert":
       insertCurvePoints(runtime, command, commandIndex);
       break;
+    case "curves.vertices.reinitialize":
+      reinitializeCurvePointSets(runtime, command, commandIndex);
+      break;
     case "vertices.create":
       createSharedPathVertices(runtime, command, commandIndex);
       break;
@@ -1464,26 +1533,47 @@ function executeCommand(runtime, commandValue, commandIndex) {
     case "floor-plan.insert":
       insertFloorPlan(runtime, command, commandIndex);
       break;
+    case "floor-plan.elements.list":
+      listSavedFloorPlanCatalog(runtime, "element");
+      break;
+    case "floor-plan.elements.create":
+      createSavedFloorPlanCatalogItem(runtime, command, commandIndex, "element");
+      break;
+    case "floor-plan.elements.update":
+      updateSavedFloorPlanCatalogItem(runtime, command, commandIndex, "element");
+      break;
+    case "floor-plan.elements.replace":
+      replaceSavedFloorPlanCatalogItem(runtime, command, commandIndex, "element");
+      break;
+    case "floor-plan.elements.remove":
+      removeSavedFloorPlanCatalogItem(runtime, command, commandIndex, "element");
+      break;
+    case "floor-plan.elements.restore":
+      restoreSavedFloorPlanCatalogItem(runtime, command, commandIndex, "element");
+      break;
+    case "floor-plan.elements.insert":
+      insertSavedFloorPlanCatalogItem(runtime, command, commandIndex, "element");
+      break;
     case "floor-plan.templates.list":
-      listFloorPlanTemplates(runtime);
+      listSavedFloorPlanCatalog(runtime, "template");
       break;
     case "floor-plan.templates.create":
-      createSavedFloorPlanTemplate(runtime, command, commandIndex);
+      createSavedFloorPlanCatalogItem(runtime, command, commandIndex, "template");
       break;
     case "floor-plan.templates.update":
-      updateSavedFloorPlanTemplate(runtime, command, commandIndex);
+      updateSavedFloorPlanCatalogItem(runtime, command, commandIndex, "template");
       break;
     case "floor-plan.templates.replace":
-      replaceSavedFloorPlanTemplate(runtime, command, commandIndex);
+      replaceSavedFloorPlanCatalogItem(runtime, command, commandIndex, "template");
       break;
     case "floor-plan.templates.remove":
-      removeSavedFloorPlanTemplate(runtime, command, commandIndex);
+      removeSavedFloorPlanCatalogItem(runtime, command, commandIndex, "template");
       break;
     case "floor-plan.templates.restore":
-      restoreSavedFloorPlanTemplate(runtime, command, commandIndex);
+      restoreSavedFloorPlanCatalogItem(runtime, command, commandIndex, "template");
       break;
     case "floor-plan.templates.insert":
-      insertSavedFloorPlanTemplate(runtime, command, commandIndex);
+      insertSavedFloorPlanCatalogItem(runtime, command, commandIndex, "template");
       break;
     case "diagram.create":
       createDiagram(runtime, command, commandIndex);
@@ -2044,6 +2134,66 @@ function insertCurvePoints(runtime, command, commandIndex) {
   });
 }
 
+function reinitializeCurvePointSets(runtime, command, commandIndex) {
+  const targets = resolveTargets(
+    runtime,
+    command.targets ?? command.target,
+    commandIndex,
+  );
+  if (targets.some((object) => object.type !== "arc")) {
+    throw commandError(
+      "Curve vertex reinitialization requires only arc targets.",
+      "invalid-curve-target",
+      commandIndex,
+    );
+  }
+  if (targets.some((object) => object.locked)) {
+    throw commandError(
+      "Unlock curves before reinitializing their vertices.",
+      "object-locked",
+      commandIndex,
+    );
+  }
+
+  const preserveVertexIds = findSharedPathVertexIds(runtime.state.board.objects);
+  const curves = targets.map((target) => {
+    const beforeCount = getCurveVertices(target).length;
+    const curve = reinitializeCurveVertices(target, {
+      createIdentifier: runtime.createId,
+      preserveVertexIds,
+    });
+    replaceObjectValue(target, curve);
+    runtime.updatedIds.add(target.id);
+    return {
+      objectId: target.id,
+      beforeCount,
+      vertexCount: getCurveVertices(target).length,
+    };
+  });
+  runtime.state.selectedIds = targets.map((object) => object.id);
+  runtime.outputs.push({
+    type: "curves.vertices.reinitialize",
+    curves,
+    vertexCount: curves.reduce((total, curve) => total + curve.vertexCount, 0),
+  });
+}
+
+function findSharedPathVertexIds(objects) {
+  const counts = new Map();
+  objects.forEach((object) => {
+    const ids = object.type === "arc"
+      ? object.curveVertexIds ?? []
+      : [object.startVertexId, object.endVertexId];
+    ids.forEach((id) => {
+      if (typeof id !== "string" || !id) return;
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    });
+  });
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([id]) => id);
+}
+
 function createSharedPathVertices(runtime, command, commandIndex) {
   const targets = resolveTargets(
     runtime,
@@ -2255,9 +2405,24 @@ function insertFloorPlan(runtime, command, commandIndex) {
     ...runtime.state.board.settings.floorPlan,
     ...(command.settings ?? {}),
   });
-  const objects = isTemplate
-    ? createFloorPlanTemplate(kind, origin, settings, runtime.createId)
-    : createFloorPlanElement(kind, origin, settings, runtime.createId);
+  const catalogType = isTemplate ? "template" : "element";
+  const catalogConfig = getFloorPlanCommandCatalogConfig(catalogType);
+  const library = settings[catalogConfig.libraryKey];
+  const catalogItem = getFloorPlanTemplateCatalog(library, catalogConfig.builtInIds)
+    .find((item) => item.id === kind && item.visible);
+  if (!catalogItem) {
+    throw commandError(
+      `The floor-plan ${catalogConfig.singular} is removed.`,
+      `${catalogConfig.singular}-not-found`,
+      commandIndex,
+    );
+  }
+  const record = getFloorPlanTemplateRecord(library, kind, catalogConfig.builtInIds);
+  const objects = record
+    ? instantiateCharacter(record.character, runtime.createId, origin).objects
+    : isTemplate
+      ? createFloorPlanTemplate(kind, origin, settings, runtime.createId)
+      : createFloorPlanElement(kind, origin, settings, runtime.createId);
 
   runtime.state.board.objects.push(...objects);
   runtime.state.selectedIds = objects.map((object) => object.id);
@@ -2265,91 +2430,103 @@ function insertFloorPlan(runtime, command, commandIndex) {
   runtime.state.board.settings.floorPlan = settings;
 }
 
-function listFloorPlanTemplates(runtime) {
+function listSavedFloorPlanCatalog(runtime, catalogType) {
+  const config = getFloorPlanCommandCatalogConfig(catalogType);
   runtime.outputs.push({
-    type: "floor-plan.templates.list",
-    templates: getFloorPlanTemplateCatalog(
-      runtime.state.board.settings.floorPlan.templateLibrary,
-      FLOOR_PLAN_TEMPLATES,
+    type: `${config.commandPrefix}.list`,
+    [config.plural]: getFloorPlanTemplateCatalog(
+      runtime.state.board.settings.floorPlan[config.libraryKey],
+      config.builtInIds,
     ),
   });
 }
 
-function createSavedFloorPlanTemplate(runtime, command, commandIndex) {
-  const templateId = String(command.templateId ?? "");
-  if (FLOOR_PLAN_TEMPLATES.includes(templateId)) {
+function createSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalogType) {
+  const config = getFloorPlanCommandCatalogConfig(catalogType);
+  const itemId = String(command[config.idField] ?? "");
+  if (config.builtInIds.includes(itemId)) {
     throw commandError(
-      "Use floor-plan.templates.replace to customize a built-in template.",
-      "built-in-template-id",
+      `Use ${config.commandPrefix}.replace to customize a built-in ${config.singular}.`,
+      `built-in-${config.singular}-id`,
       commandIndex,
     );
   }
-  const character = createFloorPlanTemplateCharacter(
+  const character = createFloorPlanCatalogCharacter(
     runtime,
     command.targets,
     command.name,
     commandIndex,
+    catalogType,
   );
   try {
     const record = createFloorPlanTemplateRecord(character, {
-      id: templateId,
+      id: itemId,
       name: command.name,
       description: command.description,
       createdAt: Date.now(),
     });
     const library = addFloorPlanTemplate(
-      runtime.state.board.settings.floorPlan.templateLibrary,
+      runtime.state.board.settings.floorPlan[config.libraryKey],
       record,
-      FLOOR_PLAN_TEMPLATES,
+      config.builtInIds,
     );
-    setFloorPlanTemplateLibrary(runtime, library);
+    setFloorPlanCatalogLibrary(runtime, library, catalogType);
     runtime.outputs.push({
-      type: "floor-plan.templates.create",
-      template: getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
-        .find((item) => item.id === templateId),
+      type: `${config.commandPrefix}.create`,
+      [config.singular]: getFloorPlanTemplateCatalog(library, config.builtInIds)
+        .find((item) => item.id === itemId),
     });
   } catch (error) {
-    throw commandError(error.message, "invalid-floor-plan-template", commandIndex);
+    throw commandError(
+      error.message,
+      `invalid-floor-plan-${config.singular}`,
+      commandIndex,
+    );
   }
 }
 
-function updateSavedFloorPlanTemplate(runtime, command, commandIndex) {
+function updateSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalogType) {
+  const config = getFloorPlanCommandCatalogConfig(catalogType);
+  const itemId = command[config.idField];
   if (command.name === undefined && command.description === undefined) {
     throw commandError(
-      "Template updates need a name or description.",
-      "empty-template-update",
+      `${formatCommandCatalogName(config.singular)} updates need a name or description.`,
+      `empty-${config.singular}-update`,
       commandIndex,
     );
   }
   try {
     const library = updateFloorPlanTemplate(
-      runtime.state.board.settings.floorPlan.templateLibrary,
-      command.templateId,
+      runtime.state.board.settings.floorPlan[config.libraryKey],
+      itemId,
       { name: command.name, description: command.description },
-      FLOOR_PLAN_TEMPLATES,
+      config.builtInIds,
     );
-    setFloorPlanTemplateLibrary(runtime, library);
+    setFloorPlanCatalogLibrary(runtime, library, catalogType);
     runtime.outputs.push({
-      type: "floor-plan.templates.update",
-      template: getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
-        .find((item) => item.id === command.templateId),
+      type: `${config.commandPrefix}.update`,
+      [config.singular]: getFloorPlanTemplateCatalog(library, config.builtInIds)
+        .find((item) => item.id === itemId),
     });
   } catch (error) {
-    throw commandError(error.message, "template-not-editable", commandIndex);
+    throw commandError(error.message, `${config.singular}-not-editable`, commandIndex);
   }
 }
 
-function replaceSavedFloorPlanTemplate(runtime, command, commandIndex) {
-  const character = createFloorPlanTemplateCharacter(
+function replaceSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalogType) {
+  const config = getFloorPlanCommandCatalogConfig(catalogType);
+  const itemId = command[config.idField];
+  const character = createFloorPlanCatalogCharacter(
     runtime,
     command.targets,
-    command.name || command.templateId,
+    command.name || itemId,
     commandIndex,
+    catalogType,
   );
   try {
     const library = replaceFloorPlanTemplate(
-      runtime.state.board.settings.floorPlan.templateLibrary,
-      command.templateId,
+      runtime.state.board.settings.floorPlan[config.libraryKey],
+      itemId,
       character,
       {
         id: runtime.createId(),
@@ -2357,106 +2534,121 @@ function replaceSavedFloorPlanTemplate(runtime, command, commandIndex) {
         description: command.description,
         updatedAt: Date.now(),
       },
-      FLOOR_PLAN_TEMPLATES,
+      config.builtInIds,
     );
-    setFloorPlanTemplateLibrary(runtime, library);
+    setFloorPlanCatalogLibrary(runtime, library, catalogType);
     runtime.outputs.push({
-      type: "floor-plan.templates.replace",
-      template: getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
-        .find((item) => item.id === command.templateId),
+      type: `${config.commandPrefix}.replace`,
+      [config.singular]: getFloorPlanTemplateCatalog(library, config.builtInIds)
+        .find((item) => item.id === itemId),
     });
   } catch (error) {
-    throw commandError(error.message, "template-not-found", commandIndex);
+    throw commandError(error.message, `${config.singular}-not-found`, commandIndex);
   }
 }
 
-function removeSavedFloorPlanTemplate(runtime, command, commandIndex) {
+function removeSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalogType) {
+  const config = getFloorPlanCommandCatalogConfig(catalogType);
+  const itemId = command[config.idField];
   const catalog = getFloorPlanTemplateCatalog(
-    runtime.state.board.settings.floorPlan.templateLibrary,
-    FLOOR_PLAN_TEMPLATES,
+    runtime.state.board.settings.floorPlan[config.libraryKey],
+    config.builtInIds,
   );
-  if (!catalog.some((item) => item.id === command.templateId)) {
+  if (!catalog.some((item) => item.id === itemId)) {
     throw commandError(
-      "The floor-plan template does not exist.",
-      "template-not-found",
+      `The floor-plan ${config.singular} does not exist.`,
+      `${config.singular}-not-found`,
       commandIndex,
     );
   }
   const library = removeFloorPlanTemplate(
-    runtime.state.board.settings.floorPlan.templateLibrary,
-    command.templateId,
-    FLOOR_PLAN_TEMPLATES,
+    runtime.state.board.settings.floorPlan[config.libraryKey],
+    itemId,
+    config.builtInIds,
   );
-  setFloorPlanTemplateLibrary(runtime, library);
+  setFloorPlanCatalogLibrary(runtime, library, catalogType);
   runtime.outputs.push({
-    type: "floor-plan.templates.remove",
-    templateId: command.templateId,
+    type: `${config.commandPrefix}.remove`,
+    [config.idField]: itemId,
   });
 }
 
-function restoreSavedFloorPlanTemplate(runtime, command, commandIndex) {
+function restoreSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalogType) {
+  const config = getFloorPlanCommandCatalogConfig(catalogType);
+  const itemId = command[config.idField];
   try {
     const library = restoreBuiltInFloorPlanTemplate(
-      runtime.state.board.settings.floorPlan.templateLibrary,
-      command.templateId,
-      FLOOR_PLAN_TEMPLATES,
+      runtime.state.board.settings.floorPlan[config.libraryKey],
+      itemId,
+      config.builtInIds,
     );
-    setFloorPlanTemplateLibrary(runtime, library);
+    setFloorPlanCatalogLibrary(runtime, library, catalogType);
     runtime.outputs.push({
-      type: "floor-plan.templates.restore",
-      template: getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
-        .find((item) => item.id === command.templateId),
+      type: `${config.commandPrefix}.restore`,
+      [config.singular]: getFloorPlanTemplateCatalog(library, config.builtInIds)
+        .find((item) => item.id === itemId),
     });
   } catch (error) {
-    throw commandError(error.message, "invalid-built-in-template", commandIndex);
+    throw commandError(
+      error.message,
+      `invalid-built-in-${config.singular}`,
+      commandIndex,
+    );
   }
 }
 
-function insertSavedFloorPlanTemplate(runtime, command, commandIndex) {
-  const library = runtime.state.board.settings.floorPlan.templateLibrary;
-  const catalogItem = getFloorPlanTemplateCatalog(library, FLOOR_PLAN_TEMPLATES)
-    .find((item) => item.id === command.templateId && item.visible);
+function insertSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalogType) {
+  const config = getFloorPlanCommandCatalogConfig(catalogType);
+  const itemId = command[config.idField];
+  const library = runtime.state.board.settings.floorPlan[config.libraryKey];
+  const catalogItem = getFloorPlanTemplateCatalog(library, config.builtInIds)
+    .find((item) => item.id === itemId && item.visible);
   if (!catalogItem) {
     throw commandError(
-      "The floor-plan template does not exist or is removed.",
-      "template-not-found",
+      `The floor-plan ${config.singular} does not exist or is removed.`,
+      `${config.singular}-not-found`,
       commandIndex,
     );
   }
 
   const placement = resolvePlacement(runtime.state, command.placement);
-  const record = getFloorPlanTemplateRecord(
-    library,
-    command.templateId,
-    FLOOR_PLAN_TEMPLATES,
-  );
+  const record = getFloorPlanTemplateRecord(library, itemId, config.builtInIds);
   const objects = record
     ? instantiateCharacter(record.character, runtime.createId, placement).objects
-    : createFloorPlanTemplate(
-      command.templateId,
-      placement,
-      runtime.state.board.settings.floorPlan,
-      runtime.createId,
-    );
+    : catalogType === "element"
+      ? createFloorPlanElement(
+        itemId,
+        placement,
+        runtime.state.board.settings.floorPlan,
+        runtime.createId,
+      )
+      : createFloorPlanTemplate(
+        itemId,
+        placement,
+        runtime.state.board.settings.floorPlan,
+        runtime.createId,
+      );
   addArchitectureObjects(runtime, objects);
   runtime.outputs.push({
-    type: "floor-plan.templates.insert",
-    templateId: command.templateId,
+    type: `${config.commandPrefix}.insert`,
+    [config.idField]: itemId,
     objectCount: objects.length,
   });
 }
 
-function createFloorPlanTemplateCharacter(
+function createFloorPlanCatalogCharacter(
   runtime,
   targetsValue,
   name,
   commandIndex,
+  catalogType,
 ) {
+  const config = getFloorPlanCommandCatalogConfig(catalogType);
   const targets = resolveTargets(runtime, targetsValue, commandIndex);
   if (targets.some((object) => object.type === "image" || object.assetId)) {
     throw commandError(
-      "Floor-plan templates are vector-only; image-backed selections belong in the Board Library.",
-      "template-image-not-allowed",
+      `Floor-plan ${config.plural} are vector-only; image-backed selections belong in the Board Library.`,
+      `${config.singular}-image-not-allowed`,
       commandIndex,
     );
   }
@@ -2469,15 +2661,45 @@ function createFloorPlanTemplateCharacter(
       name,
     );
   } catch (error) {
-    throw commandError(error.message, "invalid-template-selection", commandIndex);
+    throw commandError(
+      error.message,
+      `invalid-${config.singular}-selection`,
+      commandIndex,
+    );
   }
 }
 
-function setFloorPlanTemplateLibrary(runtime, library) {
+function setFloorPlanCatalogLibrary(runtime, library, catalogType) {
+  const config = getFloorPlanCommandCatalogConfig(catalogType);
   runtime.state.board.settings.floorPlan = normalizeFloorPlanSettings({
     ...runtime.state.board.settings.floorPlan,
-    templateLibrary: library,
+    [config.libraryKey]: library,
   });
+}
+
+function getFloorPlanCommandCatalogConfig(catalogType) {
+  if (catalogType === "element") {
+    return {
+      singular: "element",
+      plural: "elements",
+      libraryKey: "elementLibrary",
+      builtInIds: FLOOR_PLAN_ELEMENTS,
+      idField: "elementId",
+      commandPrefix: "floor-plan.elements",
+    };
+  }
+  return {
+    singular: "template",
+    plural: "templates",
+    libraryKey: "templateLibrary",
+    builtInIds: FLOOR_PLAN_TEMPLATES,
+    idField: "templateId",
+    commandPrefix: "floor-plan.templates",
+  };
+}
+
+function formatCommandCatalogName(value) {
+  return `${String(value).charAt(0).toUpperCase()}${String(value).slice(1)}`;
 }
 
 function createDiagram(runtime, command, commandIndex) {

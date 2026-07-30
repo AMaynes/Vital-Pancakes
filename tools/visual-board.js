@@ -49,9 +49,10 @@ import {
   getCurveVertices,
   insertCurveVertex,
   normalizeCurveGeometry,
+  reinitializeCurveVertices,
   setCurveVertexPosition,
   transformCurveGeometry,
-} from "./visual-board-curves.mjs?v=2";
+} from "./visual-board-curves.mjs?v=3";
 import { traceBlackAndWhiteImage } from "./visual-board-tracing.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
@@ -128,7 +129,7 @@ import {
   createFloorPlanTemplate,
   formatFloorPlanDimension,
   normalizeFloorPlanSettings,
-} from "./visual-board-floor-plan.mjs?v=2";
+} from "./visual-board-floor-plan.mjs?v=3";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -157,11 +158,11 @@ import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=6";
+} from "./visual-board-ai-adapter.mjs?v=7";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
-const BOARD_VERSION = 16;
+const BOARD_VERSION = 17;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -222,6 +223,9 @@ const groupSelectionButton = document.querySelector("#group-selection");
 const traceImageButton = document.querySelector("#trace-image");
 const mergeVerticesButton = document.querySelector("#merge-vertices");
 const curveVerticesButton = document.querySelector("#curve-vertices");
+const reinitializeCurveVerticesButton = document.querySelector(
+  "#reinitialize-curve-vertices",
+);
 const addCurveVertexButton = document.querySelector("#add-curve-vertex");
 const ungroupSelectionButton = document.querySelector("#ungroup-selection");
 const explodeSelectionButton = document.querySelector("#explode-selection");
@@ -304,6 +308,9 @@ const floorPlanScale = document.querySelector("#floor-plan-scale");
 const floorPlanWallThickness = document.querySelector("#floor-plan-wall-thickness");
 const floorPlanGridSize = document.querySelector("#floor-plan-grid-size");
 const floorPlanGuides = document.querySelector("#floor-plan-guides");
+const floorPlanSaveElementButton = document.querySelector("#floor-plan-save-element");
+const floorPlanElementList = document.querySelector("#floor-plan-elements");
+const floorPlanRestorableElements = document.querySelector("#floor-plan-restorable-elements");
 const floorPlanSaveTemplateButton = document.querySelector("#floor-plan-save-template");
 const floorPlanTemplateList = document.querySelector("#floor-plan-templates");
 const floorPlanRestorableTemplates = document.querySelector("#floor-plan-restorable-templates");
@@ -3009,31 +3016,34 @@ function toggleFloorPlanPanel(forceOpen = !floorPlanPanelOpen) {
 }
 
 function renderFloorPlanCatalog() {
-  const elementContainer = document.querySelector("#floor-plan-elements");
-  elementContainer.replaceChildren(...FLOOR_PLAN_ELEMENTS.map((kind) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.floorElement = kind;
-    button.textContent = formatCatalogName(kind);
-    return button;
-  }));
-  const catalog = getFloorPlanTemplateCatalog(
-    board.settings.floorPlan?.templateLibrary,
-    FLOOR_PLAN_TEMPLATES,
-  );
-  floorPlanTemplateList.replaceChildren(
-    ...catalog.filter((item) => item.visible).map(createFloorPlanTemplateCard),
-  );
-  floorPlanRestorableTemplates.replaceChildren(
-    ...catalog.filter((item) => !item.visible).map(createRestorableFloorPlanTemplate),
-  );
-  floorPlanSaveTemplateButton.disabled = selectedObjects.length === 0;
+  renderFloorPlanCatalogSection("element");
+  renderFloorPlanCatalogSection("template");
 }
 
-function createFloorPlanTemplateCard(item) {
+function renderFloorPlanCatalogSection(catalogType) {
+  const config = getFloorPlanCatalogConfig(catalogType);
+  const catalog = getFloorPlanTemplateCatalog(
+    board.settings.floorPlan?.[config.settingKey],
+    config.builtInIds,
+  );
+  config.list.replaceChildren(
+    ...catalog
+      .filter((item) => item.visible)
+      .map((item) => createFloorPlanCatalogCard(item, catalogType)),
+  );
+  config.restorableList.replaceChildren(
+    ...catalog
+      .filter((item) => !item.visible)
+      .map((item) => createRestorableFloorPlanCatalogItem(item, catalogType)),
+  );
+  config.saveButton.disabled = selectedObjects.length === 0;
+}
+
+function createFloorPlanCatalogCard(item, catalogType) {
+  const config = getFloorPlanCatalogConfig(catalogType);
   const card = document.createElement("div");
   card.className = "floor-plan-template-card";
-  card.dataset.floorTemplateId = item.id;
+  card.dataset[config.datasetId] = item.id;
 
   const copy = document.createElement("div");
   copy.className = "floor-plan-template-card-copy";
@@ -3042,41 +3052,71 @@ function createFloorPlanTemplateCard(item) {
   const metadata = document.createElement("span");
   metadata.textContent = item.source === "built-in"
     ? "Built in"
-    : `${item.source === "override" ? "Customized default" : "My template"} · ${item.objectCount} objects`;
+    : `${item.source === "override" ? "Customized default" : `My ${config.singular}`} · ${item.objectCount} objects`;
   copy.append(name, metadata);
 
   const actions = document.createElement("div");
   actions.className = "floor-plan-template-card-actions";
   actions.append(
-    createFloorPlanTemplateAction("insert", item.id, "Insert"),
-    ...(item.editable ? [createFloorPlanTemplateAction("edit", item.id, "Edit")] : []),
-    createFloorPlanTemplateAction("replace", item.id, "Replace"),
-    ...(item.source === "override"
-      ? [createFloorPlanTemplateAction("restore", item.id, "Restore")]
+    createFloorPlanCatalogAction("insert", item.id, "Insert", catalogType),
+    ...(item.editable
+      ? [createFloorPlanCatalogAction("edit", item.id, "Edit", catalogType)]
       : []),
-    createFloorPlanTemplateAction("remove", item.id, "Remove"),
+    createFloorPlanCatalogAction("replace", item.id, "Replace", catalogType),
+    ...(item.source === "override"
+      ? [createFloorPlanCatalogAction("restore", item.id, "Restore", catalogType)]
+      : []),
+    createFloorPlanCatalogAction("remove", item.id, "Remove", catalogType),
   );
   card.append(copy, actions);
   return card;
 }
 
-function createRestorableFloorPlanTemplate(item) {
+function createRestorableFloorPlanCatalogItem(item, catalogType) {
   const row = document.createElement("div");
   row.className = "floor-plan-restorable-item";
   const name = document.createElement("span");
   name.textContent = `${item.name} removed`;
-  row.append(name, createFloorPlanTemplateAction("restore", item.id, "Restore"));
+  row.append(name, createFloorPlanCatalogAction("restore", item.id, "Restore", catalogType));
   return row;
 }
 
-function createFloorPlanTemplateAction(action, templateId, label) {
+function createFloorPlanCatalogAction(action, itemId, label, catalogType) {
+  const config = getFloorPlanCatalogConfig(catalogType);
   const button = document.createElement("button");
   button.type = "button";
-  button.dataset.floorTemplateAction = action;
-  button.dataset.floorTemplateId = templateId;
+  button.dataset[config.datasetAction] = action;
+  button.dataset[config.datasetId] = itemId;
   button.textContent = label;
-  button.title = `${label} ${formatCatalogName(templateId)}`;
+  button.title = `${label} ${formatCatalogName(itemId)}`;
   return button;
+}
+
+function getFloorPlanCatalogConfig(catalogType) {
+  if (catalogType === "element") {
+    return {
+      singular: "element",
+      plural: "elements",
+      settingKey: "elementLibrary",
+      builtInIds: FLOOR_PLAN_ELEMENTS,
+      list: floorPlanElementList,
+      restorableList: floorPlanRestorableElements,
+      saveButton: floorPlanSaveElementButton,
+      datasetAction: "floorElementAction",
+      datasetId: "floorElementId",
+    };
+  }
+  return {
+    singular: "template",
+    plural: "templates",
+    settingKey: "templateLibrary",
+    builtInIds: FLOOR_PLAN_TEMPLATES,
+    list: floorPlanTemplateList,
+    restorableList: floorPlanRestorableTemplates,
+    saveButton: floorPlanSaveTemplateButton,
+    datasetAction: "floorTemplateAction",
+    datasetId: "floorTemplateId",
+  };
 }
 
 function formatCatalogName(value) {
@@ -3110,47 +3150,41 @@ function updateFloorPlanSettings() {
   drawBoard();
 }
 
-function insertFloorPlanObjects(kind, isTemplate) {
-  const origin = getCanvasCenterWorldPoint();
-  const settings = normalizeFloorPlanSettings(board.settings.floorPlan);
-  const created = isTemplate
-    ? createFloorPlanTemplate(kind, origin, settings, createId)
-    : createFloorPlanElement(kind, origin, settings, createId);
-  const objects = created.map((object) => normalizeObject(object)).filter(Boolean);
-  if (!objects.length) return;
-  checkpoint();
-  board.objects.push(...objects);
-  selectedObjects = objects;
-  saveBoard();
-  updateSelectionControls();
-  drawBoard();
-  announceStatus(`${formatCatalogName(kind)} added`);
-}
-
-function insertSavedFloorPlanTemplate(templateId) {
+function insertSavedFloorPlanCatalogItem(catalogType, itemId) {
+  const config = getFloorPlanCatalogConfig(catalogType);
+  const library = board.settings.floorPlan?.[config.settingKey];
   const catalogItem = getFloorPlanTemplateCatalog(
-    board.settings.floorPlan?.templateLibrary,
-    FLOOR_PLAN_TEMPLATES,
-  ).find((item) => item.id === templateId && item.visible);
+    library,
+    config.builtInIds,
+  ).find((item) => item.id === itemId && item.visible);
   if (!catalogItem) return;
 
   const origin = getCanvasCenterWorldPoint();
   const record = getFloorPlanTemplateRecord(
-    board.settings.floorPlan?.templateLibrary,
-    templateId,
-    FLOOR_PLAN_TEMPLATES,
+    library,
+    itemId,
+    config.builtInIds,
   );
   try {
     const created = record
       ? instantiateCharacter(record.character, createId, origin).objects
-      : createFloorPlanTemplate(
-        templateId,
-        origin,
-        normalizeFloorPlanSettings(board.settings.floorPlan),
-        createId,
-      );
+      : catalogType === "element"
+        ? createFloorPlanElement(
+          itemId,
+          origin,
+          normalizeFloorPlanSettings(board.settings.floorPlan),
+          createId,
+        )
+        : createFloorPlanTemplate(
+          itemId,
+          origin,
+          normalizeFloorPlanSettings(board.settings.floorPlan),
+          createId,
+        );
     const objects = created.map((object) => normalizeObject(object)).filter(Boolean);
-    if (!objects.length) throw new CharacterFileError("This template has no usable objects.");
+    if (!objects.length) {
+      throw new CharacterFileError(`This ${config.singular} has no usable objects.`);
+    }
     checkpoint();
     board.objects.push(...objects);
     selectedObjects = objects;
@@ -3159,35 +3193,44 @@ function insertSavedFloorPlanTemplate(templateId) {
     drawBoard();
     announceStatus(`${catalogItem.name} inserted`);
   } catch (error) {
-    console.error(`Unable to insert floor-plan template ${templateId}.`, error);
-    announceStatus("The floor-plan template could not be inserted");
+    console.error(`Unable to insert floor-plan ${config.singular} ${itemId}.`, error);
+    announceStatus(`The floor-plan ${config.singular} could not be inserted`);
   }
 }
 
-function openFloorPlanTemplateDialog(mode, templateId = null, returnFocus = null) {
+function openFloorPlanBuildingBlockDialog(
+  catalogType,
+  mode,
+  itemId = null,
+  returnFocus = null,
+) {
+  const config = getFloorPlanCatalogConfig(catalogType);
   if (mode === "create" && !selectedObjects.length) return;
-  const record = templateId
+  const record = itemId
     ? getFloorPlanTemplateRecord(
-      board.settings.floorPlan?.templateLibrary,
-      templateId,
-      FLOOR_PLAN_TEMPLATES,
+      board.settings.floorPlan?.[config.settingKey],
+      itemId,
+      config.builtInIds,
     )
     : null;
   if (mode === "edit" && !record) return;
 
-  floorPlanTemplateDialogState = { mode, templateId };
+  floorPlanTemplateDialogState = { catalogType, mode, itemId };
   floorPlanTemplateReturnFocus = returnFocus || document.activeElement;
   floorPlanTemplateError.hidden = true;
   floorPlanTemplateError.textContent = "";
   floorPlanTemplateDialogTitle.textContent = mode === "edit"
-    ? "Edit floor-plan template"
-    : "Save floor-plan template";
+    ? `Edit floor-plan ${config.singular}`
+    : `Save floor-plan ${config.singular}`;
   floorPlanTemplateDialogCopy.textContent = mode === "edit"
-    ? "Change how this reusable building block appears in your template list."
-    : "The selected editable objects will become a reusable building block.";
-  floorPlanTemplateConfirm.textContent = mode === "edit" ? "Save changes" : "Save template";
-  floorPlanTemplateName.value = record?.name || `Floor-plan block ${
-    board.settings.floorPlan.templateLibrary.items.filter((item) => !item.replacesBuiltIn).length + 1
+    ? `Change how this reusable building block appears in your ${config.singular} list.`
+    : `The selected editable objects will become a reusable floor-plan ${config.singular}.`;
+  floorPlanTemplateConfirm.textContent = mode === "edit"
+    ? "Save changes"
+    : `Save ${config.singular}`;
+  floorPlanTemplateName.value = record?.name || `Custom ${config.singular} ${
+    board.settings.floorPlan[config.settingKey].items
+      .filter((item) => !item.replacesBuiltIn).length + 1
   }`;
   floorPlanTemplateDescription.value = record?.description || "";
   floorPlanTemplateDialog.showModal();
@@ -3206,13 +3249,14 @@ function restoreFloorPlanTemplateDialogFocus() {
   if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
 }
 
-function createTemplateCharacterFromSelection(name) {
+function createFloorPlanCharacterFromSelection(name, catalogType) {
+  const config = getFloorPlanCatalogConfig(catalogType);
   if (!selectedObjects.length) {
     throw new CharacterFileError("Select editable floor-plan objects first.");
   }
   if (selectedObjects.some((object) => object.type === "image" || object.assetId)) {
     throw new CharacterFileError(
-      "Floor-plan templates are vector-only. Save image-backed selections to the Board Library.",
+      `Floor-plan ${config.plural} are vector-only. Save image-backed selections to the Board Library.`,
     );
   }
   return createCharacterPackage(
@@ -3224,9 +3268,10 @@ function createTemplateCharacterFromSelection(name) {
   );
 }
 
-function saveFloorPlanTemplateDialog(event) {
+function saveFloorPlanBuildingBlockDialog(event) {
   event.preventDefault();
   if (!floorPlanTemplateDialogState) return;
+  const config = getFloorPlanCatalogConfig(floorPlanTemplateDialogState.catalogType);
   const name = floorPlanTemplateName.value.trim();
   if (!name) {
     floorPlanTemplateName.focus();
@@ -3234,119 +3279,139 @@ function saveFloorPlanTemplateDialog(event) {
   }
   const description = floorPlanTemplateDescription.value.trim();
   try {
-    const currentLibrary = board.settings.floorPlan.templateLibrary;
+    const currentLibrary = board.settings.floorPlan[config.settingKey];
     const nextLibrary = floorPlanTemplateDialogState.mode === "edit"
       ? updateFloorPlanTemplate(
         currentLibrary,
-        floorPlanTemplateDialogState.templateId,
+        floorPlanTemplateDialogState.itemId,
         { name, description },
-        FLOOR_PLAN_TEMPLATES,
+        config.builtInIds,
       )
       : addFloorPlanTemplate(
         currentLibrary,
-        createFloorPlanTemplateRecord(createTemplateCharacterFromSelection(name), {
-          id: createId(),
-          name,
-          description,
-          createdAt: Date.now(),
-        }),
-        FLOOR_PLAN_TEMPLATES,
+        createFloorPlanTemplateRecord(
+          createFloorPlanCharacterFromSelection(
+            name,
+            floorPlanTemplateDialogState.catalogType,
+          ),
+          {
+            id: createId(),
+            name,
+            description,
+            createdAt: Date.now(),
+          },
+        ),
+        config.builtInIds,
       );
     checkpoint();
     board.settings.floorPlan = normalizeFloorPlanSettings({
       ...board.settings.floorPlan,
-      templateLibrary: nextLibrary,
+      [config.settingKey]: nextLibrary,
     });
-    if (!saveBoard()) throw new CharacterFileError("The template could not be saved locally.");
+    if (!saveBoard()) {
+      throw new CharacterFileError(`The ${config.singular} could not be saved locally.`);
+    }
     floorPlanTemplateDialog.close("saved");
     renderFloorPlanCatalog();
-    announceStatus(`${name} saved as a floor-plan template`);
+    announceStatus(`${name} saved as a floor-plan ${config.singular}`);
   } catch (error) {
-    console.error("Unable to save floor-plan template.", error);
+    console.error(`Unable to save floor-plan ${config.singular}.`, error);
     floorPlanTemplateError.textContent = error instanceof CharacterFileError
       || error instanceof TypeError
       ? error.message
-      : "The floor-plan template could not be saved.";
+      : `The floor-plan ${config.singular} could not be saved.`;
     floorPlanTemplateError.hidden = false;
   }
 }
 
-function replaceSavedFloorPlanTemplate(templateId) {
+function replaceSavedFloorPlanCatalogItem(catalogType, itemId) {
+  const config = getFloorPlanCatalogConfig(catalogType);
   if (!selectedObjects.length) {
     announceStatus("Select the replacement floor-plan objects first");
     return;
   }
   const item = getFloorPlanTemplateCatalog(
-    board.settings.floorPlan?.templateLibrary,
-    FLOOR_PLAN_TEMPLATES,
-  ).find((candidate) => candidate.id === templateId);
+    board.settings.floorPlan?.[config.settingKey],
+    config.builtInIds,
+  ).find((candidate) => candidate.id === itemId);
   if (!item || !window.confirm(`Replace "${item.name}" with the current selection?`)) return;
   try {
     const nextLibrary = replaceFloorPlanTemplate(
-      board.settings.floorPlan.templateLibrary,
-      templateId,
-      createTemplateCharacterFromSelection(item.name),
+      board.settings.floorPlan[config.settingKey],
+      itemId,
+      createFloorPlanCharacterFromSelection(item.name, catalogType),
       { id: createId(), name: item.name, updatedAt: Date.now() },
-      FLOOR_PLAN_TEMPLATES,
+      config.builtInIds,
     );
     checkpoint();
     board.settings.floorPlan = normalizeFloorPlanSettings({
       ...board.settings.floorPlan,
-      templateLibrary: nextLibrary,
+      [config.settingKey]: nextLibrary,
     });
     saveBoard();
     renderFloorPlanCatalog();
     announceStatus(`${item.name} replaced from the current selection`);
   } catch (error) {
-    console.error(`Unable to replace floor-plan template ${templateId}.`, error);
-    announceStatus(error.message || "The floor-plan template could not be replaced");
+    console.error(`Unable to replace floor-plan ${config.singular} ${itemId}.`, error);
+    announceStatus(error.message || `The floor-plan ${config.singular} could not be replaced`);
   }
 }
 
-function removeSavedFloorPlanTemplate(templateId) {
+function removeSavedFloorPlanCatalogItem(catalogType, itemId) {
+  const config = getFloorPlanCatalogConfig(catalogType);
   const item = getFloorPlanTemplateCatalog(
-    board.settings.floorPlan?.templateLibrary,
-    FLOOR_PLAN_TEMPLATES,
-  ).find((candidate) => candidate.id === templateId);
-  if (!item || !window.confirm(`Remove "${item.name}" from Floor Plan templates?`)) return;
+    board.settings.floorPlan?.[config.settingKey],
+    config.builtInIds,
+  ).find((candidate) => candidate.id === itemId);
+  if (!item || !window.confirm(`Remove "${item.name}" from Floor Plan ${config.plural}?`)) {
+    return;
+  }
   checkpoint();
   const nextLibrary = removeFloorPlanTemplate(
-    board.settings.floorPlan.templateLibrary,
-    templateId,
-    FLOOR_PLAN_TEMPLATES,
+    board.settings.floorPlan[config.settingKey],
+    itemId,
+    config.builtInIds,
   );
   board.settings.floorPlan = normalizeFloorPlanSettings({
     ...board.settings.floorPlan,
-    templateLibrary: nextLibrary,
+    [config.settingKey]: nextLibrary,
   });
   saveBoard();
   renderFloorPlanCatalog();
   announceStatus(`${item.name} removed`);
 }
 
-function restoreSavedFloorPlanTemplate(templateId) {
+function restoreSavedFloorPlanCatalogItem(catalogType, itemId) {
+  const config = getFloorPlanCatalogConfig(catalogType);
   checkpoint();
   const nextLibrary = restoreBuiltInFloorPlanTemplate(
-    board.settings.floorPlan.templateLibrary,
-    templateId,
-    FLOOR_PLAN_TEMPLATES,
+    board.settings.floorPlan[config.settingKey],
+    itemId,
+    config.builtInIds,
   );
   board.settings.floorPlan = normalizeFloorPlanSettings({
     ...board.settings.floorPlan,
-    templateLibrary: nextLibrary,
+    [config.settingKey]: nextLibrary,
   });
   saveBoard();
   renderFloorPlanCatalog();
-  announceStatus(`${formatCatalogName(templateId)} restored to its default`);
+  announceStatus(`${formatCatalogName(itemId)} restored to its default`);
 }
 
-function handleFloorPlanTemplateAction(button) {
-  const { floorTemplateAction: action, floorTemplateId: templateId } = button.dataset;
-  if (action === "insert") insertSavedFloorPlanTemplate(templateId);
-  else if (action === "edit") openFloorPlanTemplateDialog("edit", templateId, button);
-  else if (action === "replace") replaceSavedFloorPlanTemplate(templateId);
-  else if (action === "remove") removeSavedFloorPlanTemplate(templateId);
-  else if (action === "restore") restoreSavedFloorPlanTemplate(templateId);
+function handleFloorPlanCatalogAction(button, catalogType) {
+  const config = getFloorPlanCatalogConfig(catalogType);
+  const action = button.dataset[config.datasetAction];
+  const itemId = button.dataset[config.datasetId];
+  if (action === "insert") insertSavedFloorPlanCatalogItem(catalogType, itemId);
+  else if (action === "edit") {
+    openFloorPlanBuildingBlockDialog(catalogType, "edit", itemId, button);
+  } else if (action === "replace") {
+    replaceSavedFloorPlanCatalogItem(catalogType, itemId);
+  } else if (action === "remove") {
+    removeSavedFloorPlanCatalogItem(catalogType, itemId);
+  } else if (action === "restore") {
+    restoreSavedFloorPlanCatalogItem(catalogType, itemId);
+  }
 }
 
 function flipSelection(axis) {
@@ -4893,6 +4958,7 @@ function updateSelectionControls() {
   pasteSelectionButton.disabled = objectClipboard.length === 0;
   saveToLibraryButton.disabled = selectedObjects.length === 0;
   boardLibrarySaveSelectionButton.disabled = selectedObjects.length === 0;
+  floorPlanSaveElementButton.disabled = selectedObjects.length === 0;
   floorPlanSaveTemplateButton.disabled = selectedObjects.length === 0;
   traceImageButton.hidden = !isImageSelection(selectedObjects);
   traceImageButton.disabled = traceInProgress || !canTraceSelection(selectedObjects);
@@ -4940,6 +5006,9 @@ function updateSelectionControls() {
   groupSelectionButton.disabled = !canGroupSelection(selectedObjects);
   mergeVerticesButton.disabled = !canCreateVertexNetwork(selectedObjects);
   curveVerticesButton.disabled = !canConvertCurveSelection(selectedObjects);
+  reinitializeCurveVerticesButton.disabled = !canReinitializeCurveSelection(
+    selectedObjects,
+  );
   ungroupSelectionButton.disabled = anyLocked
     || !selectedObjects.some((object) => Boolean(object.groupId));
   explodeSelectionButton.disabled = anyLocked
@@ -5246,6 +5315,11 @@ function canConvertCurveSelection(objects) {
     && objects.every((object) => !object.locked && CURVE_TYPES.has(object.type));
 }
 
+function canReinitializeCurveSelection(objects) {
+  return objects.some((object) => CURVE_TYPES.has(object.type))
+    && objects.every((object) => !object.locked && !object.rigidGroup);
+}
+
 function toggleCurveVertexInsertion() {
   const canAdd = selectedObjects.length === 1
     && CURVE_TYPES.has(selectedObjects[0].type)
@@ -5320,6 +5394,67 @@ function convertCurveSelectionToVertices() {
   updateSelectionControls();
   drawBoard();
   announceStatus(`Curve converted to ${network.vertices.length} editable vertices`);
+}
+
+function reinitializeSelectedCurveVertices() {
+  if (!canReinitializeCurveSelection(selectedObjects)) return;
+  const selectedCurves = selectedObjects.filter((object) => (
+    CURVE_TYPES.has(object.type)
+  ));
+  const sharedVertexIds = getSharedPathVertexIds(board.objects);
+  const changes = selectedCurves.map((object) => ({
+    object,
+    curve: reinitializeCurveVertices(object, {
+      createIdentifier: createId,
+      preserveVertexIds: sharedVertexIds,
+    }),
+  }));
+  const changed = changes.some(({ object, curve }) => (
+    JSON.stringify({
+      points: object.curvePoints,
+      handles: object.curveHandles,
+      vertexIds: object.curveVertexIds,
+    }) !== JSON.stringify({
+      points: curve.curvePoints,
+      handles: curve.curveHandles,
+      vertexIds: curve.curveVertexIds,
+    })
+  ));
+  const vertexCount = changes.reduce(
+    (total, change) => total + getCurveVertices(change.curve).length,
+    0,
+  );
+  if (!changed) {
+    announceStatus(
+      `${vertexCount} key curve ${vertexCount === 1 ? "vertex is" : "vertices are"} already initialized`,
+    );
+    return;
+  }
+
+  checkpoint();
+  changes.forEach(({ object, curve }) => replaceObjectProperties(object, curve));
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  announceStatus(
+    `Curve vertices reinitialized to ${vertexCount} key ${vertexCount === 1 ? "point" : "points"}`,
+  );
+}
+
+function getSharedPathVertexIds(objects) {
+  const counts = new Map();
+  objects.forEach((object) => {
+    const ids = object.type === "arc"
+      ? object.curveVertexIds ?? []
+      : [object.startVertexId, object.endVertexId];
+    ids.forEach((id) => {
+      if (typeof id !== "string" || !id) return;
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    });
+  });
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([id]) => id);
 }
 
 function releaseSelection() {
@@ -6507,15 +6642,28 @@ document.querySelector("#close-floor-plan").addEventListener("click", () => {
 });
 floorPlanPanel.addEventListener("click", (event) => {
   const target = event.target instanceof Element ? event.target : null;
-  const elementButton = target?.closest("[data-floor-element]");
-  if (elementButton) insertFloorPlanObjects(elementButton.dataset.floorElement, false);
+  const elementButton = target?.closest("[data-floor-element-action]");
+  if (elementButton) handleFloorPlanCatalogAction(elementButton, "element");
   const templateButton = target?.closest("[data-floor-template-action]");
-  if (templateButton) handleFloorPlanTemplateAction(templateButton);
+  if (templateButton) handleFloorPlanCatalogAction(templateButton, "template");
+});
+floorPlanSaveElementButton.addEventListener("click", () => {
+  openFloorPlanBuildingBlockDialog(
+    "element",
+    "create",
+    null,
+    floorPlanSaveElementButton,
+  );
 });
 floorPlanSaveTemplateButton.addEventListener("click", () => {
-  openFloorPlanTemplateDialog("create", null, floorPlanSaveTemplateButton);
+  openFloorPlanBuildingBlockDialog(
+    "template",
+    "create",
+    null,
+    floorPlanSaveTemplateButton,
+  );
 });
-floorPlanTemplateForm.addEventListener("submit", saveFloorPlanTemplateDialog);
+floorPlanTemplateForm.addEventListener("submit", saveFloorPlanBuildingBlockDialog);
 document.querySelector("#cancel-floor-plan-template").addEventListener(
   "click",
   closeFloorPlanTemplateDialog,
@@ -6627,6 +6775,10 @@ mirrorTextToggle.addEventListener("click", () => {
 });
 mergeVerticesButton.addEventListener("click", mergeSelectionVertices);
 curveVerticesButton.addEventListener("click", convertCurveSelectionToVertices);
+reinitializeCurveVerticesButton.addEventListener(
+  "click",
+  reinitializeSelectedCurveVertices,
+);
 addCurveVertexButton.addEventListener("click", toggleCurveVertexInsertion);
 ungroupSelectionButton.addEventListener("click", releaseSelection);
 explodeSelectionButton.addEventListener("click", divideSelection);

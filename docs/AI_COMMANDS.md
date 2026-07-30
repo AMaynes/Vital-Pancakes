@@ -103,6 +103,8 @@ review the receipt before changing `mode` to `apply`.
 
 `curves.points.insert` adds each requested world-coordinate point at the nearest
 place on one target arc without flattening or replacing the curve.
+`curves.vertices.reinitialize` reduces target curves to their endpoints,
+meaningful horizontal and vertical extrema, and any joints shared with other paths.
 `vertices.create` keeps line and curve targets editable, inserts vertices at
 their crossings, and assigns one shared vertex ID to every incident path.
 
@@ -120,6 +122,10 @@ their crossings, and assigns one shared vertex ID to every incident path.
       "points": [{ "x": 420, "y": 260 }]
     },
     {
+      "type": "curves.vertices.reinitialize",
+      "targets": { "ids": ["curve-id-from-context"] }
+    },
+    {
       "type": "vertices.create",
       "targets": { "ids": ["curve-id-from-context", "line-id-from-context"] }
     }
@@ -127,11 +133,19 @@ their crossings, and assigns one shared vertex ID to every incident path.
 }
 ```
 
-### User-owned floor-plan templates
+### User-owned floor-plan elements and templates
 
-The Floor Plan panel can save selected vector objects as reusable templates.
-Templates can be listed, created, renamed, replaced from explicit targets,
-inserted, removed, and restored through the same adapter:
+The Floor Plan panel can save selected vector objects as reusable individual
+elements or complete room templates. Both catalogs support list, create,
+rename, replace, insert, remove, and restore commands:
+
+- `floor-plan.elements.list`
+- `floor-plan.elements.create`
+- `floor-plan.elements.update`
+- `floor-plan.elements.replace`
+- `floor-plan.elements.insert`
+- `floor-plan.elements.remove`
+- `floor-plan.elements.restore`
 
 - `floor-plan.templates.list`
 - `floor-plan.templates.create`
@@ -141,10 +155,11 @@ inserted, removed, and restored through the same adapter:
 - `floor-plan.templates.remove`
 - `floor-plan.templates.restore`
 
-Built-in starter IDs can be replaced or hidden without modifying their bundled
-definitions; `restore` discards the replacement and makes the default visible
-again. Template contents remain editable and relationship-preserving. Raster
-images are rejected and should use the general Board Library instead.
+Built-in element and template IDs can be replaced or hidden without modifying
+their bundled definitions; `restore` discards the replacement and makes the
+default visible again. Building-block contents remain editable and
+relationship-preserving. Raster images are rejected and should use the general
+Board Library instead.
 
 ```json
 {
@@ -154,6 +169,12 @@ images are rejected and should use the general Board Library instead.
   "mode": "preview",
   "expectedRevision": 42,
   "commands": [
+    {
+      "type": "floor-plan.elements.create",
+      "elementId": "double-vanity",
+      "name": "Double vanity",
+      "targets": { "ids": ["left-sink", "right-sink", "vanity-frame"] }
+    },
     {
       "type": "floor-plan.templates.create",
       "templateId": "courtyard-bedroom",

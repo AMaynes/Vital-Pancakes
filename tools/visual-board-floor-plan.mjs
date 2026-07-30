@@ -26,6 +26,10 @@ export function normalizeFloorPlanSettings(value = {}) {
     wallThickness: clamp(Number(value.wallThickness) || (units === "ft" ? 0.5 : 0.15), 0.02, 10),
     gridSize: clamp(Number(value.gridSize) || 32, 4, 200),
     alignmentGuides: value.alignmentGuides !== false,
+    elementLibrary: normalizeFloorPlanTemplateLibrary(
+      value.elementLibrary,
+      FLOOR_PLAN_ELEMENTS,
+    ),
     templateLibrary: normalizeFloorPlanTemplateLibrary(
       value.templateLibrary,
       FLOOR_PLAN_TEMPLATES,

@@ -16,7 +16,7 @@
  * the application shell. File Drop content and large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v63";
+const CACHE_NAME = "vital-pancakes-app-v66";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -76,21 +76,22 @@ const APP_SHELL = [
   "./tools/ai-webllm-worker.js",
   "./tools/current-tool-ai-adapter.mjs?v=1",
   "./tools/visual-board.html",
-  "./tools/visual-board.js?v=38",
+  "./tools/visual-board.js?v=40",
   "./tools/visual-board-ai.css?v=1",
-  "./tools/visual-board-advanced.css?v=3",
-  "./tools/visual-board-ai-adapter.mjs?v=6",
+  "./tools/visual-board-advanced.css?v=4",
+  "./tools/visual-board-ai-adapter.mjs?v=7",
   "./tools/visual-board-image.mjs?v=1",
   "./tools/visual-board-transform.mjs?v=3",
   "./tools/visual-board-architecture.mjs?v=2",
   "./tools/visual-board-architecture-geometry.mjs?v=1",
   "./tools/visual-board-static-export.mjs?v=3",
-  "./tools/visual-board-floor-plan.mjs?v=2",
+  "./tools/visual-board-floor-plan.mjs?v=3",
   "./tools/visual-board-floor-plan-templates.mjs?v=1",
   "./tools/visual-board-animation.mjs?v=1",
   "./tools/visual-board-character.mjs?v=2",
   "./tools/visual-board-clipboard.mjs?v=3",
   "./tools/visual-board-curves.mjs?v=2",
+  "./tools/visual-board-curves.mjs?v=3",
   "./tools/visual-board-export.mjs?v=2",
   "./tools/visual-board-geometry.mjs?v=10",
   "./tools/visual-board-groups.mjs?v=3",

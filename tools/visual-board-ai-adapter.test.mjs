@@ -304,8 +304,8 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 5);
-  assert.equal(capabilities.commands.length, 39);
+  assert.equal(capabilities.version, 6);
+  assert.equal(capabilities.commands.length, 47);
   assert.ok(capabilities.architectureCatalog.symbols.length >= 100);
   assert.ok(capabilities.architectureCatalog.materials.length >= 20);
   capabilities.commands.forEach((command) => {
@@ -351,6 +351,131 @@ test("AI commands create complex curves and insert exact editable points", () =>
   const context = serializeVisualBoardContext(inserted.state, { detail: "geometry" });
   assert.equal(context.objects[0].curvePointCount, 5);
   assert.equal(context.objects[0].curvePoints.length, 5);
+});
+
+test("AI reinitializes dense curves to endpoints and meaningful extrema", () => {
+  const state = createState([{
+    id: "curve",
+    type: "arc",
+    x: 0,
+    y: 0,
+    midX: 50,
+    midY: -50,
+    endX: 100,
+    endY: 0,
+    color: "#000000",
+    strokeWidth: 3,
+    dashPattern: "solid",
+    locked: false,
+  }]);
+  const inserted = execute(state, [{
+    type: "curves.points.insert",
+    targets: { ids: ["curve"] },
+    points: [
+      { x: 25, y: -35 },
+      { x: 75, y: -35 },
+    ],
+  }]);
+  const result = execute(inserted.state, [{
+    type: "curves.vertices.reinitialize",
+    targets: { ids: ["curve"] },
+  }]);
+
+  assert.equal(inserted.state.board.objects[0].curvePoints.length, 5);
+  assert.equal(result.state.board.objects[0].curvePoints.length, 3);
+  assert.equal(result.outputs[0].type, "curves.vertices.reinitialize");
+  assert.equal(result.outputs[0].curves[0].beforeCount, 5);
+  assert.equal(result.outputs[0].curves[0].vertexCount, 3);
+});
+
+test("AI can create, edit, insert, remove, and list custom floor-plan elements", () => {
+  const state = createState([rectangle("custom-fixture", 40, 60)]);
+  const result = execute(state, [
+    {
+      type: "floor-plan.elements.create",
+      elementId: "reading-chair",
+      name: "Reading chair",
+      description: "Custom chair symbol",
+      targets: { ids: ["custom-fixture"] },
+    },
+    {
+      type: "floor-plan.elements.update",
+      elementId: "reading-chair",
+      name: "Library chair",
+    },
+    {
+      type: "floor-plan.elements.insert",
+      elementId: "reading-chair",
+      placement: { type: "point", x: 400, y: 300 },
+    },
+    {
+      type: "floor-plan.elements.list",
+    },
+  ]);
+
+  const library = result.state.board.settings.floorPlan.elementLibrary;
+  const saved = library.items.find((item) => item.id === "reading-chair");
+  const listOutput = result.outputs.find(
+    (output) => output.type === "floor-plan.elements.list",
+  );
+  assert.equal(saved.name, "Library chair");
+  assert.equal(saved.character.objects.length, 1);
+  assert.equal(result.state.board.objects.length, 2);
+  assert.equal(
+    listOutput.elements.find((item) => item.id === "reading-chair").source,
+    "custom",
+  );
+
+  const removed = execute(result.state, [{
+    type: "floor-plan.elements.remove",
+    elementId: "reading-chair",
+  }]);
+  assert.equal(removed.state.board.settings.floorPlan.elementLibrary.items.length, 0);
+});
+
+test("AI can replace, hide, and restore built-in floor-plan elements", () => {
+  const state = createState([rectangle("replacement-element", 10, 20)]);
+  const customized = execute(state, [{
+    type: "floor-plan.elements.replace",
+    elementId: "bed",
+    name: "My bed",
+    targets: { ids: ["replacement-element"] },
+  }]);
+  const customizedContext = serializeVisualBoardContext(customized.state);
+  const bed = customizedContext.floorPlanElements.find((item) => item.id === "bed");
+
+  assert.equal(bed.source, "override");
+  assert.equal(bed.objectCount, 1);
+  assert.equal(JSON.stringify(customizedContext.settings).includes("\"objects\""), false);
+
+  const insertedOverride = execute(customized.state, [{
+    type: "floor-plan.insert",
+    kind: "bed",
+    placement: { type: "point", x: 300, y: 220 },
+  }]);
+  assert.equal(insertedOverride.state.board.objects.length, 2);
+
+  const hidden = execute(customized.state, [{
+    type: "floor-plan.elements.remove",
+    elementId: "bed",
+  }]);
+  assert.equal(
+    hidden.state.board.settings.floorPlan.elementLibrary.hiddenBuiltIns.includes("bed"),
+    true,
+  );
+  assert.throws(() => execute(hidden.state, [{
+    type: "floor-plan.insert",
+    kind: "bed",
+  }]), (error) => error.code === "element-not-found");
+
+  const restored = execute(hidden.state, [{
+    type: "floor-plan.elements.restore",
+    elementId: "bed",
+  }]);
+  const restoredBed = serializeVisualBoardContext(restored.state)
+    .floorPlanElements.find((item) => item.id === "bed");
+  assert.equal(restoredBed.visible, true);
+  assert.equal(restoredBed.source, "built-in");
 });
 
 test("AI shared-vertex creation joins mixed line and curve intersections", () => {
@@ -495,6 +620,12 @@ test("floor-plan templates reject image-backed targets", () => {
     name: "Image room",
     targets: { ids: ["image-template"] },
   }]), (error) => error.code === "template-image-not-allowed");
+  assert.throws(() => execute(createState([image]), [{
+    type: "floor-plan.elements.create",
+    elementId: "image-fixture",
+    name: "Image fixture",
+    targets: { ids: ["image-template"] },
+  }]), (error) => error.code === "element-image-not-allowed");
 });
 
 test("architectural commands preserve exact caller geometry and compact symbol references", () => {

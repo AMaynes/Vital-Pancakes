@@ -133,6 +133,56 @@ export function createEditableCurveGeometry(arc) {
   });
 }
 
+/**
+ * Rebuilds an editable curve around its meaningful X/Y extrema and endpoints.
+ * Shared network joints are retained even when they are not extrema.
+ */
+export function reinitializeCurveVertices(
+  arc,
+  { createIdentifier, preserveVertexIds = [] } = {},
+) {
+  const editable = createEditableCurveGeometry(arc);
+  if (!readStoredCurveData(arc)) return editable;
+
+  const segments = getCurveBezierSegments(editable);
+  if (!segments.length) return editable;
+  const preservedIds = new Set(
+    [...preserveVertexIds].filter((value) => typeof value === "string" && value),
+  );
+  const candidates = collectCurveKeyLocations(editable, segments, preservedIds);
+  const locations = selectMeaningfulCurveLocations(candidates);
+  const points = locations.map((location) => clonePoint(location.point));
+  if (
+    points.length === editable.curvePoints.length
+    && points.every((point, index) => (
+      distanceBetween(point, editable.curvePoints[index]) <= 1e-7
+    ))
+  ) {
+    return editable;
+  }
+
+  const next = normalizeCurveGeometry({
+    ...editable,
+    curvePoints: points,
+    curveHandles: createReinitializedHandles(segments, locations),
+  });
+  if (editable.vertexNetworkId) {
+    const existingIds = editable.curveVertexIds ?? [];
+    next.curveVertexIds = locations.map((location) => {
+      const existingId = Number.isInteger(location.sourceVertexIndex)
+        ? existingIds[location.sourceVertexIndex]
+        : null;
+      if (existingId && preservedIds.has(existingId)) return existingId;
+      return typeof createIdentifier === "function"
+        ? createIdentifier()
+        : existingId ?? null;
+    });
+  } else {
+    delete next.curveVertexIds;
+  }
+  return normalizeCurveGeometry(next);
+}
+
 export function getCurvePoint(arc, segmentIndex, progress) {
   const segment = getCurveBezierSegments(arc)[segmentIndex];
   if (!segment) return null;
@@ -438,6 +488,226 @@ function createAutomaticHandles(points) {
       },
     };
   });
+}
+
+function collectCurveKeyLocations(curve, segments, preservedIds) {
+  const candidates = [];
+  addCurveKeyLocation(candidates, {
+    segmentIndex: 0,
+    progress: 0,
+    point: segments[0].start,
+    endpoint: true,
+    sourceVertexIndex: 0,
+  });
+
+  segments.forEach((segment, segmentIndex) => {
+    ["x", "y"].forEach((axis) => {
+      getCubicExtremaProgresses(segment, axis).forEach((progress) => {
+        addCurveKeyLocation(candidates, {
+          segmentIndex,
+          progress,
+          point: getCubicPoint(segment, progress),
+          axes: [axis],
+        });
+      });
+    });
+
+    if (segmentIndex >= segments.length - 1) return;
+    const sourceVertexIndex = segmentIndex + 1;
+    const vertexId = curve.curveVertexIds?.[sourceVertexIndex];
+    const axes = getBoundaryExtremaAxes(
+      segment,
+      segments[segmentIndex + 1],
+    );
+    if (axes.length || (vertexId && preservedIds.has(vertexId))) {
+      addCurveKeyLocation(candidates, {
+        segmentIndex,
+        progress: 1,
+        point: segment.end,
+        axes,
+        preserved: Boolean(vertexId && preservedIds.has(vertexId)),
+        sourceVertexIndex,
+      });
+    }
+  });
+
+  const lastSegmentIndex = segments.length - 1;
+  addCurveKeyLocation(candidates, {
+    segmentIndex: lastSegmentIndex,
+    progress: 1,
+    point: segments[lastSegmentIndex].end,
+    endpoint: true,
+    sourceVertexIndex: segments.length,
+  });
+  return candidates.sort(compareCurveLocations);
+}
+
+function selectMeaningfulCurveLocations(candidates) {
+  const retained = new Set();
+  candidates.forEach((candidate, index) => {
+    if (candidate.endpoint || candidate.preserved) retained.add(index);
+  });
+
+  ["x", "y"].forEach((axis) => {
+    const axisCandidates = candidates
+      .map((candidate, index) => ({ candidate, index }))
+      .filter(({ candidate }) => (
+        candidate.endpoint || candidate.axes?.has(axis)
+      ));
+    const values = axisCandidates.map(({ candidate }) => candidate.point[axis]);
+    const range = Math.max(...values) - Math.min(...values);
+    const minimumProminence = Math.max(0.5, range * 0.01);
+    axisCandidates.slice(1, -1).forEach((entry, index) => {
+      const previous = axisCandidates[index].candidate.point[axis];
+      const value = entry.candidate.point[axis];
+      const next = axisCandidates[index + 2].candidate.point[axis];
+      if (
+        Math.min(Math.abs(value - previous), Math.abs(value - next))
+        >= minimumProminence
+      ) {
+        retained.add(entry.index);
+      }
+    });
+  });
+
+  return candidates.filter((_, index) => retained.has(index));
+}
+
+function addCurveKeyLocation(candidates, location) {
+  const pathPosition = location.segmentIndex + location.progress;
+  const existing = candidates.find((candidate) => (
+    Math.abs(candidate.pathPosition - pathPosition) <= 1e-7
+  ));
+  if (existing) {
+    (location.axes ?? []).forEach((axis) => existing.axes.add(axis));
+    existing.endpoint ||= Boolean(location.endpoint);
+    existing.preserved ||= Boolean(location.preserved);
+    if (Number.isInteger(location.sourceVertexIndex)) {
+      existing.sourceVertexIndex = location.sourceVertexIndex;
+    }
+    return;
+  }
+  candidates.push({
+    ...location,
+    axes: new Set(location.axes ?? []),
+    endpoint: Boolean(location.endpoint),
+    preserved: Boolean(location.preserved),
+    pathPosition,
+    point: clonePoint(location.point),
+  });
+}
+
+function compareCurveLocations(first, second) {
+  return first.pathPosition - second.pathPosition;
+}
+
+function getCubicExtremaProgresses(segment, axis) {
+  const start = segment.start[axis];
+  const control1 = segment.control1[axis];
+  const control2 = segment.control2[axis];
+  const end = segment.end[axis];
+  const roots = solveQuadratic(
+    -start + 3 * control1 - 3 * control2 + end,
+    2 * (start - 2 * control1 + control2),
+    control1 - start,
+  );
+  return roots.filter((progress) => {
+    if (progress <= 1e-6 || progress >= 1 - 1e-6) return false;
+    const before = cubicDerivative(segment, progress - 1e-5)[axis];
+    const after = cubicDerivative(segment, progress + 1e-5)[axis];
+    return before * after < 0;
+  });
+}
+
+function getBoundaryExtremaAxes(previous, next) {
+  return ["x", "y"].filter((axis) => {
+    const point = previous.end[axis];
+    const before = getCubicPoint(previous, 1 - 1e-4)[axis];
+    const after = getCubicPoint(next, 1e-4)[axis];
+    return (
+      (point > before && point > after)
+      || (point < before && point < after)
+    );
+  });
+}
+
+function solveQuadratic(a, b, c) {
+  if (Math.abs(a) <= CURVE_EPSILON) {
+    return Math.abs(b) <= CURVE_EPSILON ? [] : [-c / b];
+  }
+  const discriminant = b * b - 4 * a * c;
+  if (discriminant < -CURVE_EPSILON) return [];
+  if (Math.abs(discriminant) <= CURVE_EPSILON) return [-b / (2 * a)];
+  const squareRoot = Math.sqrt(discriminant);
+  return [
+    (-b - squareRoot) / (2 * a),
+    (-b + squareRoot) / (2 * a),
+  ];
+}
+
+function cubicDerivative(segment, progress) {
+  const remaining = 1 - progress;
+  return {
+    x: 3 * remaining * remaining * (segment.control1.x - segment.start.x)
+      + 6 * remaining * progress * (segment.control2.x - segment.control1.x)
+      + 3 * progress * progress * (segment.end.x - segment.control2.x),
+    y: 3 * remaining * remaining * (segment.control1.y - segment.start.y)
+      + 6 * remaining * progress * (segment.control2.y - segment.control1.y)
+      + 3 * progress * progress * (segment.end.y - segment.control2.y),
+  };
+}
+
+function createReinitializedHandles(segments, locations) {
+  return locations.slice(1).map((endLocation, index) => {
+    const startLocation = locations[index];
+    const start = startLocation.point;
+    const end = endLocation.point;
+    const chord = { x: end.x - start.x, y: end.y - start.y };
+    const distance = Math.hypot(chord.x, chord.y);
+    const fallback = normalizeVector(chord, { x: 1, y: 0 });
+    const startTangent = normalizeVector(
+      getCurveLocationTangent(segments, startLocation),
+      fallback,
+    );
+    const endTangent = normalizeVector(
+      getCurveLocationTangent(segments, endLocation),
+      fallback,
+    );
+    const handleLength = distance / 3;
+    return {
+      control1: {
+        x: start.x + startTangent.x * handleLength,
+        y: start.y + startTangent.y * handleLength,
+      },
+      control2: {
+        x: end.x - endTangent.x * handleLength,
+        y: end.y - endTangent.y * handleLength,
+      },
+    };
+  });
+}
+
+function getCurveLocationTangent(segments, location) {
+  const segment = segments[location.segmentIndex];
+  if (!segment) return { x: 0, y: 0 };
+  if (
+    location.progress >= 1 - 1e-7
+    && location.segmentIndex < segments.length - 1
+  ) {
+    const incoming = cubicDerivative(segment, 1);
+    const outgoing = cubicDerivative(segments[location.segmentIndex + 1], 0);
+    return {
+      x: incoming.x + outgoing.x,
+      y: incoming.y + outgoing.y,
+    };
+  }
+  return cubicDerivative(segment, location.progress);
+}
+
+function normalizeVector(vector, fallback) {
+  const length = Math.hypot(vector.x, vector.y);
+  if (length <= CURVE_EPSILON) return clonePoint(fallback);
+  return { x: vector.x / length, y: vector.y / length };
 }
 
 function splitCubicSegment(segment, progress) {

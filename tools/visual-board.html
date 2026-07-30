@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="../workspace.css?v=25">
   <link rel="stylesheet" href="tool.css?v=33">
   <link rel="stylesheet" href="visual-board-ai.css?v=1">
-  <link rel="stylesheet" href="visual-board-advanced.css?v=3">
+  <link rel="stylesheet" href="visual-board-advanced.css?v=4">
   <link rel="stylesheet" href="../site-navigation.css?v=21">
   <script type="module" src="../site-navigation.js?v=16"></script>
 </head>
@@ -275,6 +275,9 @@
         <button class="tool-button" id="curve-vertices" type="button" title="Convert selected arcs into joined vertices based on their curvature">
           ⌒ <span class="tool-button-label">Curve vertices</span>
         </button>
+        <button class="tool-button" id="reinitialize-curve-vertices" type="button" title="Keep only curve ends, meaningful minima and maxima, and shared joints">
+          ↻⌒ <span class="tool-button-label">Reinitialize vertices</span>
+        </button>
         <button class="tool-button" id="add-curve-vertex" type="button" aria-pressed="false" title="Add a movable point exactly where you click on the selected curve" hidden disabled>
           +⌒ <span class="tool-button-label">Add curve point</span>
         </button>
@@ -491,8 +494,21 @@
             </label>
           </section>
           <section aria-labelledby="floor-plan-elements-title">
-            <h3 id="floor-plan-elements-title">Elements</h3>
-            <div class="floor-plan-button-grid" id="floor-plan-elements"></div>
+            <div class="floor-plan-section-heading">
+              <h3 id="floor-plan-elements-title">Floor-plan elements</h3>
+              <button
+                class="button button-primary"
+                id="floor-plan-save-element"
+                type="button"
+                disabled
+              >New from selection</button>
+            </div>
+            <div class="floor-plan-template-list" id="floor-plan-elements"></div>
+            <div
+              class="floor-plan-restorable-list"
+              id="floor-plan-restorable-elements"
+              aria-label="Removed floor-plan elements"
+            ></div>
           </section>
           <section aria-labelledby="floor-plan-templates-title">
             <div class="floor-plan-section-heading">
@@ -678,7 +694,7 @@
     <form id="floor-plan-template-form">
       <header>
         <div>
-          <h2 id="floor-plan-template-dialog-title">Save floor-plan template</h2>
+          <h2 id="floor-plan-template-dialog-title">Save floor-plan building block</h2>
           <p id="floor-plan-template-dialog-copy">
             The selected editable objects will become a reusable building block.
           </p>
@@ -687,12 +703,12 @@
           class="tool-button"
           id="close-floor-plan-template-dialog"
           type="button"
-          aria-label="Close floor-plan template dialog"
+          aria-label="Close floor-plan building-block dialog"
           title="Close"
         >×</button>
       </header>
       <label class="interpolation-count-control" for="floor-plan-template-name">
-        <span>Template name</span>
+        <span>Building-block name</span>
         <input
           id="floor-plan-template-name"
           type="text"
@@ -758,6 +774,6 @@
       </footer>
     </form>
   </dialog>
-  <script type="module" src="visual-board.js?v=38"></script>
+  <script type="module" src="visual-board.js?v=40"></script>
 </body>
 </html>
