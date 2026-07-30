@@ -174,9 +174,9 @@
             class="tool-button"
             id="bucket-fill-tool"
             type="button"
-            aria-label="Paint object fill"
+            aria-label="Fill closed area"
             aria-pressed="false"
-            title="Paint object fill"
+            title="Fill a closed object or connected vector area"
           >▰</button>
           <button
             class="tool-button"
@@ -187,7 +187,7 @@
           >∅</button>
           <label class="toolbar-control width-control" title="Line thickness for the selection or next object">
             <span>Line <output id="stroke-width-value" for="stroke-width">3</output></span>
-            <input class="tool-range" id="stroke-width" type="range" min="1" max="24" value="3" aria-label="Stroke width">
+            <input class="tool-range" id="stroke-width" type="range" min="0.05" max="24" step="0.05" value="3" aria-label="Stroke width">
           </label>
           <label class="toolbar-control pattern-control" title="Line pattern for the selection or next object">
             <span>Pattern</span>
@@ -226,7 +226,7 @@
           <button class="tool-button" id="toggle-grid" type="button" aria-pressed="true" title="Show or hide the grid">
             ▦ <span class="tool-button-label">Grid</span>
           </button>
-          <button class="tool-button" id="toggle-snap" type="button" aria-pressed="false" title="Snap objects and handles to the grid">
+          <button class="tool-button" id="toggle-snap" type="button" aria-pressed="false" title="Snap objects and handles to the grid and alignment guides">
             ⌗ <span class="tool-button-label">Snap</span>
           </button>
         </div>
@@ -877,6 +877,6 @@
       </footer>
     </form>
   </dialog>
-  <script type="module" src="visual-board.js?v=48"></script>
+  <script type="module" src="visual-board.js?v=50"></script>
 </body>
 </html>

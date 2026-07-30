@@ -7,6 +7,10 @@
 
 import { getCurvePathPoints } from "./visual-board-curves.mjs?v=2";
 
+export const VISUAL_BOARD_MIN_ZOOM = 0.02;
+export const VISUAL_BOARD_MAX_ZOOM = 32;
+export const VISUAL_BOARD_MIN_STROKE_WIDTH = 0.05;
+
 export const SHAPE_TYPES = new Set([
   "rectangle",
   "ellipse",
@@ -355,6 +359,37 @@ export function isExplodableObject(object) {
   return LINE_TYPES.has(object.type)
     || CURVE_TYPES.has(object.type)
     || ["rectangle", "ellipse", "shape", "trace", "area", "wall"].includes(object.type);
+}
+
+export function explodeObjectIntoLines(object, createIdentifier) {
+  if (!object
+    || object.type === "line"
+    || !isExplodableObject(object)
+    || typeof createIdentifier !== "function") {
+    return [];
+  }
+  const segments = getObjectSegments(object);
+  if (!segments.length) return [];
+  const assemblyId = createIdentifier();
+  const assemblySource = typeof structuredClone === "function"
+    ? structuredClone(object)
+    : JSON.parse(JSON.stringify(object));
+  return segments.map(([start, end], index) => ({
+    id: createIdentifier(),
+    type: "line",
+    x: start.x,
+    y: start.y,
+    endX: end.x,
+    endY: end.y,
+    color: object.color,
+    strokeWidth: object.strokeWidth,
+    dashPattern: object.dashPattern ?? "solid",
+    locked: false,
+    assemblyId,
+    assemblyIndex: index,
+    assemblyCount: segments.length,
+    assemblySource,
+  }));
 }
 
 export function getObjectBounds(object) {

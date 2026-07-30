@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   distanceBetween,
+  explodeObjectIntoLines,
   getLineSelectionCorners,
   getMarqueeSelectionCandidates,
   getObjectBounds,
@@ -183,6 +184,40 @@ test("curved outlined shapes can be exploded into clean line approximations", ()
   assert.equal(getObjectSegments(ellipse).length, 36);
   assert.equal(isExplodableObject(ellipse), true);
   assert.equal(isExplodableObject({ type: "textbox" }), false);
+});
+
+test("ungrouping a rectangle restores its four styled line parts", () => {
+  let nextId = 0;
+  const rectangle = {
+    id: "square",
+    type: "rectangle",
+    x: 10,
+    y: 20,
+    w: 80,
+    h: 80,
+    rotation: 0,
+    color: "#336699",
+    strokeWidth: 0.5,
+    dashPattern: "dashed",
+    locked: false,
+  };
+  const lines = explodeObjectIntoLines(rectangle, () => `part-${nextId += 1}`);
+
+  assert.equal(lines.length, 4);
+  assert.deepEqual(
+    lines.map((line) => [line.x, line.y, line.endX, line.endY]),
+    [
+      [10, 20, 90, 20],
+      [90, 20, 90, 100],
+      [90, 100, 10, 100],
+      [10, 100, 10, 20],
+    ],
+  );
+  assert.ok(lines.every((line) => line.type === "line"));
+  assert.ok(lines.every((line) => line.color === "#336699"));
+  assert.ok(lines.every((line) => line.strokeWidth === 0.5));
+  assert.ok(lines.every((line) => line.assemblySource.id === "square"));
+  assert.equal(new Set(lines.map((line) => line.assemblyId)).size, 1);
 });
 
 test("lines share connector bounds and hit-testing behavior", () => {

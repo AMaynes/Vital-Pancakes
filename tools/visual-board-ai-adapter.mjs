@@ -74,10 +74,20 @@ import {
   sampleArchitecturePath,
 } from "./visual-board-architecture-geometry.mjs?v=1";
 import {
+  VISUAL_BOARD_MAX_ZOOM,
+  VISUAL_BOARD_MIN_STROKE_WIDTH,
+  VISUAL_BOARD_MIN_ZOOM,
+  explodeObjectIntoLines,
   getObjectBounds,
   getObjectSegments,
-} from "./visual-board-geometry.mjs?v=11";
+  isExplodableObject,
+} from "./visual-board-geometry.mjs?v=13";
 import { flipBoardSelection } from "./visual-board-transform.mjs?v=3";
+import {
+  createBucketFillArea,
+  findBucketFillTarget,
+  findEnclosedVectorRegion,
+} from "./visual-board-fill.mjs?v=2";
 
 const MAX_OBJECTS_PER_REQUEST = 500;
 const MAX_BOARD_OBJECTS = 10_000;
@@ -209,12 +219,13 @@ const ARCHITECTURE_SEMANTIC_SCHEMA = Object.freeze({
 const COMMAND_DEFINITIONS = Object.freeze([
   command("objects.create", ["create"], "Create one or more editable board objects."),
   command("objects.update", ["update"], "Update allowlisted properties on target objects."),
+  command("fills.paint", ["create", "update"], "Fill one closed object or connected vector region at an exact point."),
   command("objects.delete", ["delete"], "Delete explicit unlocked objects."),
   command("objects.transform", ["update"], "Move, resize, rotate, or flip target objects."),
   command("objects.duplicate", ["create"], "Duplicate target objects with an offset."),
   command("selection.set", ["update"], "Set the current selection using stable references."),
   command("objects.group", ["update"], "Nest target selection units inside one new rigid group level."),
-  command("objects.ungroup", ["update"], "Remove exactly one current group level and restore the previous groups."),
+  command("objects.ungroup", ["update"], "Remove one group level, or split an ungrouped compound outline into editable lines."),
   command("curves.points.insert", ["update"], "Insert exact movable points at requested positions on one editable curve."),
   command("curves.vertices.reinitialize", ["update"], "Reduce curves to endpoints, meaningful extrema, and shared joints."),
   command("vertices.create", ["update"], "Create shared editable joints across selected paths, groups, and outlined shapes without changing curve geometry."),
@@ -243,7 +254,7 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("floor-plan.layers.remove", ["delete"], "Remove the active level and its assigned objects."),
   command("diagram.create", ["create"], "Create a complete semantic diagram in one command."),
   command("viewport.focus", ["update"], "Focus the board viewport on targets or a point."),
-  command("board.settings.update", ["update"], "Update grid, snapping, and floor-plan settings."),
+  command("board.settings.update", ["update"], "Update grid, snapping, fill color, and floor-plan settings."),
   command("architecture.areas.create", ["create"], "Create exact filled architectural or landscape polygons."),
   command("architecture.paths.create", ["create"], "Create exact curved material polygons from caller-authored path commands."),
   command("architecture.walls.create", ["create"], "Create exact wall segments without choosing their layout."),
@@ -313,7 +324,7 @@ const ARCHITECTURE_STYLE_SCHEMA = Object.freeze({
     fillOpacity: { type: "number", minimum: 0, maximum: 1 },
     opacity: { type: "number", minimum: 0, maximum: 1 },
     fillPattern: { enum: [...ARCHITECTURE_FILL_PATTERNS] },
-    strokeWidth: { type: "number", minimum: 0.25, maximum: 240 },
+    strokeWidth: { type: "number", minimum: VISUAL_BOARD_MIN_STROKE_WIDTH, maximum: 240 },
     lineWeight: { enum: [...ARCHITECTURE_LINE_WEIGHT_ROLES] },
     dashPattern: { enum: [...DASH_PATTERNS] },
     shadow: {
@@ -344,7 +355,7 @@ const ARCHITECTURE_LINE_WEIGHTS_SCHEMA = Object.freeze({
   properties: Object.fromEntries(
     [...ARCHITECTURE_LINE_WEIGHT_ROLES].map((role) => [
       role,
-      { type: "number", minimum: 0.25, maximum: 240 },
+      { type: "number", minimum: VISUAL_BOARD_MIN_STROKE_WIDTH, maximum: 240 },
     ]),
   ),
   additionalProperties: false,
@@ -456,7 +467,7 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
             },
             rotation: { type: "number", description: "Radians." },
             color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
-            strokeWidth: { type: "number", minimum: 1, maximum: 24 },
+            strokeWidth: { type: "number", minimum: VISUAL_BOARD_MIN_STROKE_WIDTH, maximum: 24 },
             dashPattern: { enum: [...DASH_PATTERNS] },
             fontSize: { type: "number", minimum: 8, maximum: 96 },
             fontFamily: { enum: [...FONT_FAMILIES] },
@@ -488,7 +499,7 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
           opacity: { type: "number", minimum: 0, maximum: 1 },
           fillPattern: { enum: [...ARCHITECTURE_FILL_PATTERNS] },
           materialId: { enum: [...ARCHITECTURE_MATERIAL_IDS] },
-          strokeWidth: { type: "number", minimum: 0.25, maximum: 240 },
+          strokeWidth: { type: "number", minimum: VISUAL_BOARD_MIN_STROKE_WIDTH, maximum: 240 },
           dashPattern: { enum: [...DASH_PATTERNS] },
           layerId: { type: "string" },
           zIndex: { type: "number", minimum: -10_000, maximum: 10_000 },
@@ -520,6 +531,10 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
       },
     },
   ),
+  "fills.paint": schema(["point", "color"], {
+    point: pointSchema(),
+    color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+  }),
   "objects.delete": targetCommandSchema(),
   "objects.transform": schema([], {
     targets: TARGET_SCHEMA,
@@ -563,7 +578,7 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
     label: { type: "string" },
     tags: { type: "array", items: { type: "string" } },
     color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
-    strokeWidth: { type: "number", minimum: 1, maximum: 24 },
+    strokeWidth: { type: "number", minimum: VISUAL_BOARD_MIN_STROKE_WIDTH, maximum: 24 },
     dashPattern: { enum: [...DASH_PATTERNS] },
     arrowStart: { type: "boolean" },
     arrowEnd: { type: "boolean" },
@@ -711,7 +726,11 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
     targets: TARGET_SCHEMA,
     target: TARGET_SCHEMA,
     point: pointSchema(),
-    zoom: { type: "number", minimum: 0.15, maximum: 4 },
+    zoom: {
+      type: "number",
+      minimum: VISUAL_BOARD_MIN_ZOOM,
+      maximum: VISUAL_BOARD_MAX_ZOOM,
+    },
   }),
   "board.settings.update": schema(["settings"], {
     settings: {
@@ -719,6 +738,7 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
       properties: {
         grid: { type: "boolean" },
         snap: { type: "boolean" },
+        fillColor: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
         floorPlan: {
           type: "object",
           properties: {
@@ -1088,7 +1108,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 9,
+    version: 12,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -1108,6 +1128,9 @@ export function getVisualBoardAiCapabilities() {
       maximumBoardObjects: MAX_BOARD_OBJECTS,
       maximumTextLength: MAX_TEXT_LENGTH,
       maximumNestingDepth: MAX_NESTING_DEPTH,
+      minimumZoom: VISUAL_BOARD_MIN_ZOOM,
+      maximumZoom: VISUAL_BOARD_MAX_ZOOM,
+      minimumStrokeWidth: VISUAL_BOARD_MIN_STROKE_WIDTH,
     },
     limitations: [
       "Image bytes, freehand point arrays, and trace paths are omitted from AI context.",
@@ -1127,6 +1150,36 @@ export function getVisualBoardAiCapabilities() {
 
 export function getVisualBoardAiExamples() {
   return [
+    {
+      name: "Add a fine detail line",
+      command: {
+        type: "objects.create",
+        objects: [{
+          objectType: "line",
+          x: 160,
+          y: 180,
+          endX: 320,
+          endY: 240,
+          strokeWidth: VISUAL_BOARD_MIN_STROKE_WIDTH,
+        }],
+      },
+    },
+    {
+      name: "Fill a connected vector region",
+      command: {
+        type: "fills.paint",
+        point: { x: 240, y: 210 },
+        color: "#c5dca8",
+      },
+    },
+    {
+      name: "Zoom closely into a point",
+      command: {
+        type: "viewport.focus",
+        point: { x: 240, y: 210 },
+        zoom: 16,
+      },
+    },
     {
       name: "Add a complex curve point",
       command: {
@@ -1592,6 +1645,9 @@ function executeCommand(runtime, commandValue, commandIndex) {
     case "objects.update":
       updateObjects(runtime, command, commandIndex);
       break;
+    case "fills.paint":
+      paintFillAtPoint(runtime, command, commandIndex);
+      break;
     case "objects.delete":
       deleteObjects(runtime, command, commandIndex);
       break;
@@ -1952,7 +2008,7 @@ function updateObjects(runtime, command, commandIndex) {
         || object.semantic?.role === "floor-plan-wall";
       object.strokeWidth = clampNumber(
         patch.strokeWidth,
-        supportsArchitecturalStroke ? 0.25 : 1,
+        VISUAL_BOARD_MIN_STROKE_WIDTH,
         supportsArchitecturalStroke ? 240 : 24,
         object.strokeWidth,
       );
@@ -2023,6 +2079,50 @@ function updateObjects(runtime, command, commandIndex) {
       object.semantic = normalizeSemantic(patch.semantic, object.semantic?.label);
     }
     runtime.updatedIds.add(object.id);
+  });
+}
+
+function paintFillAtPoint(runtime, command, commandIndex) {
+  const point = {
+    x: finiteCoordinate(command.point?.x, 0, "point.x", commandIndex),
+    y: finiteCoordinate(command.point?.y, 0, "point.y", commandIndex),
+  };
+  const color = normalizeColor(command.color, commandIndex);
+  runtime.state.board.settings.fillColor = color;
+  const target = findBucketFillTarget(runtime.state.board.objects, point);
+  if (target) {
+    if (target.locked) {
+      throw commandError("The fill target is locked.", "target-locked", commandIndex);
+    }
+    target.fillColor = color;
+    target.fillOpacity = 1;
+    runtime.state.selectedIds = [];
+    runtime.outputs.push({
+      type: "fills.paint",
+      mode: "object",
+      objectId: target.id,
+      color,
+    });
+    return;
+  }
+
+  const polygon = findEnclosedVectorRegion(runtime.state.board.objects, point);
+  const area = createBucketFillArea(polygon, color, runtime.createId);
+  if (!area) {
+    throw commandError(
+      "No closed object or connected vector region contains that point.",
+      "no-enclosed-region",
+      commandIndex,
+    );
+  }
+  runtime.state.board.objects.unshift(area);
+  runtime.state.selectedIds = [];
+  runtime.createdIds.push(area.id);
+  runtime.outputs.push({
+    type: "fills.paint",
+    mode: "region",
+    objectId: area.id,
+    color,
   });
 }
 
@@ -2213,16 +2313,44 @@ function ungroupObjects(runtime, command, commandIndex) {
     throw commandError("Unlock target objects before ungrouping them.", "object-locked", commandIndex);
   }
   const groupIds = new Set(targets.map((object) => object.groupId).filter(Boolean));
-  if (!groupIds.size) {
-    throw commandError("The target objects are not grouped.", "not-grouped", commandIndex);
+  const vertexNetworkIds = new Set(
+    targets.map((object) => object.vertexNetworkId).filter(Boolean),
+  );
+  if (!groupIds.size && !vertexNetworkIds.size) {
+    const explodableTargets = new Set(targets.filter((object) => (
+      object.type !== "line" && isExplodableObject(object)
+    )));
+    if (!explodableTargets.size) {
+      throw commandError(
+        "The target objects are not grouped compound outlines.",
+        "not-grouped",
+        commandIndex,
+      );
+    }
+    const lineParts = [];
+    runtime.state.board.objects = runtime.state.board.objects.flatMap((object) => {
+      if (!explodableTargets.has(object)) return [object];
+      const parts = explodeObjectIntoLines(object, runtime.createId);
+      if (!parts.length) return [object];
+      runtime.deletedIds.add(object.id);
+      runtime.createdIds.push(...parts.map((part) => part.id));
+      lineParts.push(...parts);
+      return parts;
+    });
+    runtime.state.selectedIds = lineParts.map((object) => object.id);
+    return;
   }
   const releasedRigidGroupIds = new Set();
   runtime.state.board.objects.forEach((object) => {
-    if (!groupIds.has(object.groupId)) return;
-    const released = popObjectGroupLevel(object);
-    if (released?.rigidGroup) {
-      releasedRigidGroupIds.add(released.id);
-    } else {
+    if (groupIds.has(object.groupId)) {
+      const released = popObjectGroupLevel(object);
+      if (released?.rigidGroup) {
+        releasedRigidGroupIds.add(released.id);
+      }
+    } else if (!vertexNetworkIds.has(object.vertexNetworkId)) {
+      return;
+    }
+    if (vertexNetworkIds.has(object.vertexNetworkId)) {
       delete object.vertexNetworkId;
       delete object.startVertexId;
       delete object.endVertexId;
@@ -3078,7 +3206,12 @@ function createDiagram(runtime, command, commandIndex) {
       h: node.height,
       rotation: 0,
       color: normalizeColor(nodeStyle.color, commandIndex),
-      strokeWidth: clampNumber(nodeStyle.strokeWidth, 1, 24, 3),
+      strokeWidth: clampNumber(
+        nodeStyle.strokeWidth,
+        VISUAL_BOARD_MIN_STROKE_WIDTH,
+        24,
+        3,
+      ),
       dashPattern: DASH_PATTERNS.has(nodeStyle.dashPattern)
         ? nodeStyle.dashPattern
         : "solid",
@@ -3120,7 +3253,12 @@ function createDiagram(runtime, command, commandIndex) {
       endX: target.x + target.w / 2,
       endY: target.y + target.h / 2,
       color: normalizeColor(style.color ?? "#000000", commandIndex),
-      strokeWidth: clampNumber(style.strokeWidth, 1, 24, 3),
+      strokeWidth: clampNumber(
+        style.strokeWidth,
+        VISUAL_BOARD_MIN_STROKE_WIDTH,
+        24,
+        3,
+      ),
       dashPattern: DASH_PATTERNS.has(style.dashPattern) ? style.dashPattern : "solid",
       locked: false,
       semantic: normalizeSemantic({
@@ -3154,7 +3292,12 @@ function focusViewport(runtime, command, commandIndex) {
   }
   const zoom = command.zoom === undefined
     ? runtime.state.viewport.zoom
-    : clampNumber(command.zoom, 0.15, 4, runtime.state.viewport.zoom);
+    : clampNumber(
+      command.zoom,
+      VISUAL_BOARD_MIN_ZOOM,
+      VISUAL_BOARD_MAX_ZOOM,
+      runtime.state.viewport.zoom,
+    );
   runtime.state.viewport.zoom = zoom;
   runtime.state.viewport.x = point.x - runtime.state.viewport.width / zoom / 2;
   runtime.state.viewport.y = point.y - runtime.state.viewport.height / zoom / 2;
@@ -3165,7 +3308,7 @@ function updateBoardSettings(runtime, command, commandIndex) {
     throw commandError("board.settings.update requires settings.", "invalid-settings", commandIndex);
   }
   const unknown = Object.keys(command.settings).find((field) => (
-    !["grid", "snap", "floorPlan"].includes(field)
+    !["grid", "snap", "fillColor", "floorPlan"].includes(field)
   ));
   if (unknown) {
     throw commandError(`Unsupported board setting: ${unknown}.`, "unsupported-setting", commandIndex);
@@ -3175,6 +3318,12 @@ function updateBoardSettings(runtime, command, commandIndex) {
   }
   if (command.settings.snap !== undefined) {
     runtime.state.board.settings.snap = Boolean(command.settings.snap);
+  }
+  if (command.settings.fillColor !== undefined) {
+    runtime.state.board.settings.fillColor = normalizeColor(
+      command.settings.fillColor,
+      commandIndex,
+    );
   }
   if (command.settings.floorPlan !== undefined) {
     if (!isRecord(command.settings.floorPlan)) {
@@ -3985,7 +4134,7 @@ function normalizeArchitecturePaint(
       ? normalizeColor(styleValue.color, commandIndex)
       : materialStyle.color ?? palette.ink,
     strokeWidth: styleValue.strokeWidth !== undefined
-      ? clampNumber(styleValue.strokeWidth, 0.25, 240, 2)
+      ? clampNumber(styleValue.strokeWidth, VISUAL_BOARD_MIN_STROKE_WIDTH, 240, 2)
       : resolveArchitectureLineWeight(
         styleValue.lineWeight ?? "detail",
         architectureSettings,
@@ -5004,6 +5153,11 @@ function normalizeExecutionState(source) {
   state.board.settings = isRecord(state.board.settings)
     ? state.board.settings
     : { grid: true, snap: false };
+  state.board.settings.fillColor = /^#[0-9a-f]{6}$/i.test(
+    state.board.settings.fillColor,
+  )
+    ? state.board.settings.fillColor.toLowerCase()
+    : "#f7f4ec";
   state.board.settings.floorPlan = normalizeFloorPlanSettings(
     state.board.settings.floorPlan,
   );
@@ -5016,7 +5170,12 @@ function normalizeExecutionState(source) {
   state.viewport = {
     x: finiteNumber(state.viewport?.x, 0),
     y: finiteNumber(state.viewport?.y, 0),
-    zoom: clampNumber(state.viewport?.zoom, 0.15, 4, 1),
+    zoom: clampNumber(
+      state.viewport?.zoom,
+      VISUAL_BOARD_MIN_ZOOM,
+      VISUAL_BOARD_MAX_ZOOM,
+      1,
+    ),
     width: Math.max(1, finiteNumber(state.viewport?.width, 1200)),
     height: Math.max(1, finiteNumber(state.viewport?.height, 800)),
   };
@@ -5084,7 +5243,12 @@ function normalizeStyle(value, commandIndex = null) {
   }
   return {
     color: normalizeColor(value.color ?? "#000000", commandIndex),
-    strokeWidth: clampNumber(value.strokeWidth, 1, 24, 3),
+    strokeWidth: clampNumber(
+      value.strokeWidth,
+      VISUAL_BOARD_MIN_STROKE_WIDTH,
+      24,
+      3,
+    ),
     dashPattern: DASH_PATTERNS.has(value.dashPattern) ? value.dashPattern : "solid",
     locked: Boolean(value.locked),
   };

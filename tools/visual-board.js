@@ -97,8 +97,12 @@ import {
   CURVE_TYPES,
   LINE_TYPES,
   SHAPE_TYPES,
+  VISUAL_BOARD_MAX_ZOOM,
+  VISUAL_BOARD_MIN_STROKE_WIDTH,
+  VISUAL_BOARD_MIN_ZOOM,
   clamp,
   distanceBetween,
+  explodeObjectIntoLines,
   getLineSelectionCorners,
   getMarqueeSelectionCandidates,
   getObjectBounds,
@@ -110,7 +114,8 @@ import {
   resizeShapeFromCorner,
   rotatePoint,
   snapValue,
-} from "./visual-board-geometry.mjs?v=11";
+  isExplodableObject,
+} from "./visual-board-geometry.mjs?v=13";
 import {
   cropToAspect,
   fillCropToFrame,
@@ -122,9 +127,15 @@ import {
 } from "./visual-board-image.mjs?v=1";
 import {
   flipBoardSelection,
-  getAlignmentSnap,
-} from "./visual-board-transform.mjs?v=3";
+  getMoveAlignmentSnap,
+} from "./visual-board-transform.mjs?v=4";
 import { eraseObjectNear } from "./visual-board-eraser.mjs?v=1";
+import {
+  canReceiveBucketFill,
+  createBucketFillArea,
+  findBucketFillTarget,
+  findEnclosedVectorRegion,
+} from "./visual-board-fill.mjs?v=2";
 import {
   FLOOR_PLAN_ELEMENTS,
   FLOOR_PLAN_TEMPLATES,
@@ -169,15 +180,13 @@ import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=12";
+} from "./visual-board-ai-adapter.mjs?v=14";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
 const BOARD_VERSION = 20;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
-const MIN_ZOOM = 0.15;
-const MAX_ZOOM = 4;
 const MIN_SHAPE_SIZE = 16;
 const HANDLE_SIZE = 6;
 const ROTATION_HANDLE_OFFSET = 28;
@@ -355,6 +364,7 @@ const imageReplaceInput = document.querySelector("#image-replace-file");
 const imageEditError = document.querySelector("#image-edit-error");
 
 let board = loadBoard();
+fillColorInput.value = board.settings.fillColor;
 let boardLibrary = loadVisualBoardLibrary();
 let viewport = { ...board.view };
 let lastSavedBoardContentSignature = getBoardContentSignature(board);
@@ -439,6 +449,7 @@ function normalizeBoardSettings(value = {}) {
   return {
     grid: value.grid ?? true,
     snap: value.snap ?? false,
+    fillColor: normalizeHexColor(value.fillColor, "#f7f4ec"),
     floorPlan: normalizeFloorPlanSettings(value.floorPlan),
     architecture: normalizeArchitectureSettings(value.architecture),
   };
@@ -511,7 +522,11 @@ function loadBoard() {
     const rawObjects = Array.isArray(savedBoard?.objects) ? savedBoard.objects : [];
     const snapToGrid = savedBoard?.settings?.snap ?? false;
     const savedFloorPlan = normalizeFloorPlanSettings(savedBoard?.settings?.floorPlan);
-    const savedZoom = clamp(finiteNumber(savedBoard?.view?.zoom, 1), MIN_ZOOM, MAX_ZOOM);
+    const savedZoom = clamp(
+      finiteNumber(savedBoard?.view?.zoom, 1),
+      VISUAL_BOARD_MIN_ZOOM,
+      VISUAL_BOARD_MAX_ZOOM,
+    );
     const objects = rawObjects
       .map((object) => normalizeObject(object, {
         snapToGrid,
@@ -552,6 +567,7 @@ function createEmptyBoard() {
     settings: {
       grid: true,
       snap: false,
+      fillColor: "#f7f4ec",
       floorPlan: normalizeFloorPlanSettings(),
       architecture: normalizeArchitectureSettings(),
     },
@@ -591,7 +607,7 @@ function normalizeObject(rawObject, options = {}) {
     || ["area", "wall", "symbol", "dimension"].includes(type);
   const strokeWidth = clamp(
     finiteNumber(rawObject.strokeWidth ?? rawObject.width, 3),
-    supportsArchitecturalStroke ? 0.25 : 1,
+    VISUAL_BOARD_MIN_STROKE_WIDTH,
     supportsArchitecturalStroke ? 240 : 24,
   );
   const common = {
@@ -2408,7 +2424,7 @@ function handlePointerDown(event) {
     return;
   }
   if (activeTool === "bucket" && event.button === 0) {
-    paintFloorPlanObjectAt(worldPoint);
+    paintBucketAt(worldPoint);
     return;
   }
   canvas.setPointerCapture(event.pointerId);
@@ -2830,25 +2846,23 @@ function updateMoveInteraction(screenPoint, worldPoint) {
     deltaX = snapValue(interaction.initialBounds.x + deltaX, gridSize) - interaction.initialBounds.x;
     deltaY = snapValue(interaction.initialBounds.y + deltaY, gridSize) - interaction.initialBounds.y;
   }
-  alignmentGuides = [];
-  if (board.settings.floorPlan?.enabled && board.settings.floorPlan.alignmentGuides !== false) {
-    const movingIds = new Set(interaction.objects.map((object) => object.id));
-    const candidateBounds = {
-      ...interaction.initialBounds,
-      x: interaction.initialBounds.x + deltaX,
-      y: interaction.initialBounds.y + deltaY,
-    };
-    const alignment = getAlignmentSnap(
-      candidateBounds,
-      board.objects
-        .filter((object) => !movingIds.has(object.id))
-        .map(getObjectBounds),
-      8 / viewport.zoom,
-    );
-    deltaX += alignment.deltaX;
-    deltaY += alignment.deltaY;
-    alignmentGuides = alignment.guides;
-  }
+  const movingIds = new Set(interaction.objects.map((object) => object.id));
+  const candidateBounds = {
+    ...interaction.initialBounds,
+    x: interaction.initialBounds.x + deltaX,
+    y: interaction.initialBounds.y + deltaY,
+  };
+  const alignment = getMoveAlignmentSnap(
+    candidateBounds,
+    board.objects
+      .filter((object) => !movingIds.has(object.id))
+      .map(getObjectBounds),
+    8 / viewport.zoom,
+    board.settings,
+  );
+  deltaX += alignment.deltaX;
+  deltaY += alignment.deltaY;
+  alignmentGuides = alignment.guides;
 
   interaction.objects.filter((object) => !object.locked).forEach((object) => {
     moveObject(object, deltaX, deltaY);
@@ -3116,6 +3130,7 @@ function updateHistoryControls() {
 
 function resetPendingStyleChanges() {
   colorChangeActive = false;
+  fillChangeActive = false;
   widthChangeActive = false;
   textColorChangeActive = false;
 }
@@ -3124,7 +3139,7 @@ function setZoom(nextZoom, anchorScreenPoint = null) {
   const bounds = canvas.getBoundingClientRect();
   const anchor = anchorScreenPoint ?? { x: bounds.width / 2, y: bounds.height / 2 };
   const worldAtAnchor = screenToWorld(anchor);
-  viewport.zoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+  viewport.zoom = clamp(nextZoom, VISUAL_BOARD_MIN_ZOOM, VISUAL_BOARD_MAX_ZOOM);
   viewport.x = worldAtAnchor.x - anchor.x / viewport.zoom;
   viewport.y = worldAtAnchor.y - anchor.y / viewport.zoom;
   document.querySelector("#zoom-value").textContent = `${Math.round(viewport.zoom * 100)}%`;
@@ -5436,7 +5451,9 @@ function updateSelectionControls() {
   deleteSelectionButton.disabled = allLocked;
   deleteSelectionButton.hidden = allLocked;
   const canUngroup = !anyLocked && selectedObjects.some((object) => (
-    Boolean(object.groupId) || Boolean(object.vertexNetworkId)
+    Boolean(object.groupId)
+    || Boolean(object.vertexNetworkId)
+    || (object.type !== "line" && isExplodableObject(object))
   ));
   ungroupSelectionButton.hidden = !canUngroup;
   ungroupSelectionButton.disabled = !canUngroup;
@@ -5756,8 +5773,30 @@ function ungroupSelection() {
   const vertexNetworkIds = new Set(
     selectedObjects.map((object) => object.vertexNetworkId).filter(Boolean),
   );
-  if ((!groupIds.size && !vertexNetworkIds.size)
-    || selectedObjects.some((object) => object.locked)) return;
+  if (selectedObjects.some((object) => object.locked)) return;
+  if (!groupIds.size && !vertexNetworkIds.size) {
+    const targets = new Set(selectedObjects.filter((object) => (
+      object.type !== "line" && isExplodableObject(object)
+    )));
+    if (!targets.size) return;
+    checkpoint();
+    const lineParts = [];
+    board.objects = board.objects.flatMap((object) => {
+      if (!targets.has(object)) return [object];
+      const parts = explodeObjectIntoLines(object, createId);
+      if (!parts.length) return [object];
+      lineParts.push(...parts);
+      return parts;
+    });
+    selectedObjects = lineParts;
+    saveBoard();
+    updateSelectionControls();
+    drawBoard();
+    announceStatus(
+      `${targets.size} outline${targets.size === 1 ? "" : "s"} ungrouped into editable lines`,
+    );
+    return;
+  }
   checkpoint();
   const releasedRigidGroupIds = new Set();
   board.objects.forEach((object) => {
@@ -5903,11 +5942,17 @@ function applySelectedColor() {
 }
 
 function canReceiveFill(object) {
-  return SHAPE_TYPES.has(object.type)
-    && !["image", "textbox", "shape"].includes(object.type);
+  return canReceiveBucketFill(object);
 }
 
 function applySelectedFillColor() {
+  const nextColor = normalizeHexColor(fillColorInput.value, "#f7f4ec");
+  if (!fillChangeActive && board.settings.fillColor !== nextColor) {
+    checkpoint();
+    fillChangeActive = true;
+  }
+  board.settings.fillColor = nextColor;
+  if (activeTool === "bucket") return;
   const targets = selectedObjects.filter((object) => (
     !object.locked && canReceiveFill(object)
   ));
@@ -5917,7 +5962,7 @@ function applySelectedFillColor() {
     fillChangeActive = true;
   }
   targets.forEach((object) => {
-    object.fillColor = fillColorInput.value;
+    object.fillColor = nextColor;
     if (!Number.isFinite(object.fillOpacity)) object.fillOpacity = 1;
   });
   drawBoard();
@@ -5944,30 +5989,44 @@ function clearSelectedFill() {
   announceStatus("Fill removed");
 }
 
-function paintFloorPlanObjectAt(point) {
-  const object = findObjectAt(point);
-  if (!object) {
-    announceStatus("Choose a closed shape to fill");
+function paintBucketAt(point) {
+  board.settings.fillColor = normalizeHexColor(fillColorInput.value, "#f7f4ec");
+  const visibleLabelIds = getVisibleFloorPlanLabelIds();
+  const visibleObjects = sortArchitectureObjects(
+    board.objects,
+    board.settings.architecture,
+  ).filter((object) => isFloorPlanObjectVisible(
+    object,
+    board.objects,
+    board.settings.floorPlan,
+    { visibleLabelIds },
+  ));
+  const target = findBucketFillTarget(visibleObjects, point);
+  if (target) {
+    if (target.locked) {
+      announceStatus("Unlock before painting");
+      return;
+    }
+    checkpoint();
+    target.fillColor = board.settings.fillColor;
+    target.fillOpacity = 1;
+    saveBoard();
+    drawBoard();
+    announceStatus("Area filled");
     return;
   }
-  const selectionUnit = getSelectionUnit(object);
-  const targets = selectionUnit.filter((candidate) => (
-    !candidate.locked && canReceiveFill(candidate)
-  ));
-  if (!targets.length) {
-    announceStatus(object.locked ? "Unlock before painting" : "That object has no fill area");
+
+  const polygon = findEnclosedVectorRegion(visibleObjects, point);
+  const area = createBucketFillArea(polygon, board.settings.fillColor, createId);
+  if (!area) {
+    announceStatus("No closed area at that point");
     return;
   }
   checkpoint();
-  targets.forEach((candidate) => {
-    candidate.fillColor = fillColorInput.value;
-    if (!Number.isFinite(candidate.fillOpacity)) candidate.fillOpacity = 1;
-  });
-  selectedObjects = selectionUnit;
+  board.objects.unshift(area);
   saveBoard();
-  updateSelectionControls();
   drawBoard();
-  announceStatus(`${targets.length} fill${targets.length === 1 ? "" : "s"} painted`);
+  announceStatus("Enclosed area filled");
 }
 
 function getEditableSelectedTextboxes() {
@@ -6079,6 +6138,9 @@ function finishWidthChange() {
 }
 
 function updateViewControls() {
+  if (activeTool === "bucket" || !selectedObjects.length) {
+    fillColorInput.value = board.settings.fillColor;
+  }
   gridToggle.classList.toggle("is-active", board.settings.grid);
   snapToggle.classList.toggle("is-active", board.settings.snap);
   gridToggle.setAttribute("aria-pressed", String(board.settings.grid));
@@ -6226,6 +6288,11 @@ function initializeLinePicker() {
 function setActiveTool(nextTool) {
   if (nextTool !== "select") curveVertexInsertionActive = false;
   activeTool = nextTool;
+  if (activeTool === "bucket") {
+    selectedObjects = [];
+    fillColorInput.value = board.settings.fillColor;
+    updateSelectionControls();
+  }
   shapeToolChoices = retainShapeToolChoice(shapeToolChoices, activeTool);
   const shapeFamily = getShapeToolFamily(activeTool);
   if (shapeFamily) updateShapePickerChoice(shapeFamily, activeTool);
@@ -6497,7 +6564,7 @@ function handleKeyDown(event) {
   if (commandKey && ["+", "=", "-", "_", "0"].includes(event.key)) {
     event.preventDefault();
     if (event.key === "0") setZoom(1);
-    else setZoom(viewport.zoom + (["+", "="].includes(event.key) ? 0.1 : -0.1));
+    else setZoom(viewport.zoom * (["+", "="].includes(event.key) ? 1.25 : 0.8));
     return;
   }
   if (event.key === "Delete" || event.key === "Backspace") {
@@ -6752,7 +6819,11 @@ function commitVisualBoardAiState(nextState, details = {}) {
   const candidateViewport = {
     x: finiteNumber(nextState.viewport?.x, viewport.x),
     y: finiteNumber(nextState.viewport?.y, viewport.y),
-    zoom: clamp(finiteNumber(nextState.viewport?.zoom, viewport.zoom), MIN_ZOOM, MAX_ZOOM),
+    zoom: clamp(
+      finiteNumber(nextState.viewport?.zoom, viewport.zoom),
+      VISUAL_BOARD_MIN_ZOOM,
+      VISUAL_BOARD_MAX_ZOOM,
+    ),
   };
   const candidate = {
     ...board,
@@ -6951,8 +7022,8 @@ canvasFrame.addEventListener("gestureend", (event) => {
 
 document.querySelector("#undo-board").addEventListener("click", undo);
 document.querySelector("#redo-board").addEventListener("click", redo);
-document.querySelector("#zoom-in").addEventListener("click", () => setZoom(viewport.zoom + 0.1));
-document.querySelector("#zoom-out").addEventListener("click", () => setZoom(viewport.zoom - 0.1));
+document.querySelector("#zoom-in").addEventListener("click", () => setZoom(viewport.zoom * 1.25));
+document.querySelector("#zoom-out").addEventListener("click", () => setZoom(viewport.zoom * 0.8));
 animationToggleButton.addEventListener("click", () => toggleAnimationPanel());
 document.querySelector("#close-animation").addEventListener("click", () => {
   toggleAnimationPanel(false);

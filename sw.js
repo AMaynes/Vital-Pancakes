@@ -16,7 +16,7 @@
  * the application shell. File Drop content and large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v76";
+const CACHE_NAME = "vital-pancakes-app-v78";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -80,12 +80,17 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board.js?v=46",
   "./tools/visual-board.js?v=47",
   "./tools/visual-board.js?v=48",
+  "./tools/visual-board.js?v=49",
+  "./tools/visual-board.js?v=50",
   "./tools/visual-board-ai.css?v=1",
   "./tools/visual-board-advanced.css?v=6",
   "./tools/visual-board-ai-adapter.mjs?v=11",
   "./tools/visual-board-ai-adapter.mjs?v=12",
+  "./tools/visual-board-ai-adapter.mjs?v=13",
+  "./tools/visual-board-ai-adapter.mjs?v=14",
   "./tools/visual-board-image.mjs?v=1",
   "./tools/visual-board-transform.mjs?v=3",
+  "./tools/visual-board-transform.mjs?v=4",
   "./tools/visual-board-architecture.mjs?v=2",
   "./tools/visual-board-architecture-geometry.mjs?v=1",
   "./tools/visual-board-static-export.mjs?v=6",
@@ -93,6 +98,8 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-floor-plan-templates.mjs?v=3",
   "./tools/visual-board-floor-plan-templates.mjs?v=4",
   "./tools/visual-board-eraser.mjs?v=1",
+  "./tools/visual-board-fill.mjs?v=1",
+  "./tools/visual-board-fill.mjs?v=2",
   "./tools/visual-board-animation.mjs?v=1",
   "./tools/visual-board-character.mjs?v=2",
   "./tools/visual-board-character.mjs?v=3",
@@ -105,6 +112,8 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-export.mjs?v=2",
   "./tools/visual-board-geometry.mjs?v=10",
   "./tools/visual-board-geometry.mjs?v=11",
+  "./tools/visual-board-geometry.mjs?v=12",
+  "./tools/visual-board-geometry.mjs?v=13",
   "./tools/visual-board-groups.mjs?v=3",
   "./tools/visual-board-groups.mjs?v=4",
   "./tools/visual-board-groups.mjs?v=5",

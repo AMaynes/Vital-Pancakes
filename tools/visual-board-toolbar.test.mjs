@@ -17,6 +17,8 @@ test("selection toolbar uses consolidated contextual actions", async () => {
   assert.doesNotMatch(markup, /data-tool="line"/);
   assert.doesNotMatch(markup, /data-tool="connector"/);
   assert.match(markup, /data-floor-plan-tab="maintenance"/);
+  assert.match(markup, /id="bucket-fill-tool"[\s\S]*aria-label="Fill closed area"/);
+  assert.match(markup, /id="stroke-width" type="range" min="0\.05" max="24" step="0\.05"/);
   assert.doesNotMatch(markup, /id="curve-vertices"/);
   assert.doesNotMatch(markup, /id="reinitialize-curve-vertices"/);
   assert.doesNotMatch(markup, /id="explode-selection"/);

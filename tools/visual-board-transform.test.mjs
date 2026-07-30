@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { flipBoardSelection, getAlignmentSnap } from "./visual-board-transform.mjs";
+import {
+  flipBoardSelection,
+  getAlignmentSnap,
+  getMoveAlignmentSnap,
+} from "./visual-board-transform.mjs";
 
 test("group flips preserve IDs, locks, joints, and arrow direction", () => {
   const objects = [
@@ -47,6 +51,23 @@ test("alignment guides snap edges and centers within tolerance", () => {
   assert.equal(snap.deltaX, 1);
   assert.equal(snap.deltaY, 2);
   assert.deepEqual(snap.guides.map((guide) => guide.axis).sort(), ["horizontal", "vertical"]);
+});
+
+test("the global snap toggle suppresses floor-plan alignment snapping", () => {
+  const bounds = { x: 9, y: 48, width: 20, height: 20 };
+  const targets = [{ x: 10, y: 50, width: 100, height: 40 }];
+  const disabled = getMoveAlignmentSnap(bounds, targets, 3, {
+    snap: false,
+    floorPlan: { enabled: true, alignmentGuides: true },
+  });
+  assert.deepEqual(disabled, { deltaX: 0, deltaY: 0, guides: [] });
+
+  const enabled = getMoveAlignmentSnap(bounds, targets, 3, {
+    snap: true,
+    floorPlan: { enabled: true, alignmentGuides: true },
+  });
+  assert.equal(enabled.deltaX, 1);
+  assert.equal(enabled.deltaY, 2);
 });
 
 test("curve flips preserve editable knots and vertex identities", () => {

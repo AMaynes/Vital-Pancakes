@@ -45,6 +45,22 @@ export function getAlignmentSnap(movingBounds, otherBounds, tolerance = 6) {
   };
 }
 
+export function getMoveAlignmentSnap(
+  movingBounds,
+  otherBounds,
+  tolerance,
+  settings,
+) {
+  if (
+    !settings?.snap
+    || !settings.floorPlan?.enabled
+    || settings.floorPlan.alignmentGuides === false
+  ) {
+    return { deltaX: 0, deltaY: 0, guides: [] };
+  }
+  return getAlignmentSnap(movingBounds, otherBounds, tolerance);
+}
+
 function flipObject(object, center, axis, mirrorText) {
   const transformed = clone(object);
   if (object.type === "pen") {

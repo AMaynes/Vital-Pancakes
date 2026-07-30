@@ -21,6 +21,7 @@ function createState(objects = []) {
       settings: {
         grid: true,
         snap: false,
+        fillColor: "#f7f4ec",
         floorPlan: {
           enabled: false,
           units: "ft",
@@ -158,6 +159,22 @@ test("group and ungroup commands use one reversible grouping model", () => {
   }]);
   assert.ok(ungrouped.state.board.objects.every((object) => !object.groupId));
   assert.ok(ungrouped.state.board.objects.every((object) => !object.rigidGroup));
+});
+
+test("ungroup splits an ungrouped square into four selected line parts", () => {
+  const result = execute(createState([
+    rectangle("square", 20, 30, { w: 80, h: 80 }),
+  ]), [{
+    type: "objects.ungroup",
+    targets: { ids: ["square"] },
+  }]);
+
+  assert.equal(result.state.board.objects.length, 4);
+  assert.ok(result.state.board.objects.every((object) => object.type === "line"));
+  assert.deepEqual(result.state.selectedIds, result.state.board.objects.map((object) => object.id));
+  assert.deepEqual(result.receipt.deletedIds, ["square"]);
+  assert.equal(result.receipt.createdIds.length, 4);
+  assert.equal(new Set(result.state.board.objects.map((object) => object.assemblyId)).size, 1);
 });
 
 test("AI grouping nests existing groups and ungroup restores one level", () => {
@@ -356,8 +373,15 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 9);
-  assert.equal(capabilities.commands.length, 51);
+  assert.equal(capabilities.version, 12);
+  assert.equal(capabilities.commands.length, 52);
+  const createSchema = capabilities.commands
+    .find((command) => command.type === "objects.create").schema;
+  const viewportSchema = capabilities.commands
+    .find((command) => command.type === "viewport.focus").schema;
+  assert.equal(createSchema.properties.objects.items.properties.strokeWidth.minimum, 0.05);
+  assert.equal(viewportSchema.properties.zoom.minimum, 0.02);
+  assert.equal(viewportSchema.properties.zoom.maximum, 32);
   assert.ok(capabilities.architectureCatalog.symbols.length >= 100);
   assert.ok(capabilities.architectureCatalog.materials.length >= 20);
   capabilities.commands.forEach((command) => {
@@ -1238,6 +1262,56 @@ test("viewport focus centers using the requested zoom rather than the old zoom",
     width: 1_000,
     height: 800,
   });
+});
+
+test("fine stroke widths survive command normalization", () => {
+  const result = execute(createState(), [{
+    type: "objects.create",
+    objects: [{
+      objectType: "line",
+      x: 10,
+      y: 20,
+      endX: 110,
+      endY: 120,
+      strokeWidth: 0.05,
+    }],
+  }]);
+  assert.equal(result.state.board.objects[0].strokeWidth, 0.05);
+});
+
+test("bucket commands fill connected regions underneath their boundaries", () => {
+  const state = createState([
+    { id: "top", type: "line", x: 0, y: 0, endX: 100, endY: 0, strokeWidth: 2 },
+    { id: "right", type: "line", x: 100, y: 0, endX: 100, endY: 100, strokeWidth: 2 },
+    { id: "bottom", type: "line", x: 100, y: 100, endX: 0, endY: 100, strokeWidth: 2 },
+    { id: "left", type: "line", x: 0, y: 100, endX: 0, endY: 0, strokeWidth: 2 },
+  ]);
+  state.selectedIds = ["top"];
+  const result = execute(state, [{
+    type: "fills.paint",
+    point: { x: 50, y: 50 },
+    color: "#336699",
+  }]);
+
+  assert.equal(result.state.board.objects[0].semantic.role, "bucket-fill-region");
+  assert.equal(result.state.board.objects[0].fillColor, "#336699");
+  assert.deepEqual(result.state.board.objects.slice(1).map((object) => object.id), [
+    "top",
+    "right",
+    "bottom",
+    "left",
+  ]);
+  assert.deepEqual(result.state.selectedIds, []);
+  assert.equal(result.state.board.settings.fillColor, "#336699");
+  assert.equal(result.outputs[0].mode, "region");
+});
+
+test("fill swatch color can be updated as a persistent board setting", () => {
+  const result = execute(createState(), [{
+    type: "board.settings.update",
+    settings: { fillColor: "#5588aa" },
+  }]);
+  assert.equal(result.state.board.settings.fillColor, "#5588aa");
 });
 
 test("geometry context exposes exact architecture frames and styles on request", () => {
