@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="../workspace.css?v=25">
   <link rel="stylesheet" href="tool.css?v=33">
   <link rel="stylesheet" href="visual-board-ai.css?v=1">
-  <link rel="stylesheet" href="visual-board-advanced.css?v=4">
+  <link rel="stylesheet" href="visual-board-advanced.css?v=5">
   <link rel="stylesheet" href="../site-navigation.css?v=21">
   <script type="module" src="../site-navigation.js?v=16"></script>
 </head>
@@ -150,6 +150,25 @@
             <span>Ink</span>
             <input class="tool-color" id="stroke-color" type="color" value="#000000" aria-label="Stroke color">
           </label>
+          <label class="toolbar-control color-control" title="Fill color for the selection or paint bucket">
+            <span>Fill</span>
+            <input class="tool-color" id="fill-color" type="color" value="#f7f4ec" aria-label="Fill color">
+          </label>
+          <button
+            class="tool-button"
+            id="bucket-fill-tool"
+            type="button"
+            aria-label="Paint object fill"
+            aria-pressed="false"
+            title="Paint object fill"
+          >▰</button>
+          <button
+            class="tool-button"
+            id="clear-fill"
+            type="button"
+            aria-label="Remove object fill"
+            title="Remove object fill"
+          >∅</button>
           <label class="toolbar-control width-control" title="Line thickness for the selection or next object">
             <span>Line <output id="stroke-width-value" for="stroke-width">3</output></span>
             <input class="tool-range" id="stroke-width" type="range" min="1" max="24" value="3" aria-label="Stroke width">
@@ -492,10 +511,59 @@
               <input id="floor-plan-guides" type="checkbox">
               <span>Alignment guides</span>
             </label>
+            <label class="floor-plan-check">
+              <input id="floor-plan-dimensions-visible" type="checkbox">
+              <span>Show dimensions</span>
+            </label>
+            <label class="floor-plan-check">
+              <input id="floor-plan-labels-visible" type="checkbox">
+              <span>Always show labels</span>
+            </label>
           </section>
-          <section aria-labelledby="floor-plan-elements-title">
+          <section aria-labelledby="floor-plan-tools-title">
             <div class="floor-plan-section-heading">
-              <h3 id="floor-plan-elements-title">Floor-plan elements</h3>
+              <h3 id="floor-plan-tools-title">Tools</h3>
+            </div>
+            <div class="floor-plan-template-list" id="floor-plan-tools"></div>
+            <div
+              class="floor-plan-restorable-list"
+              id="floor-plan-restorable-tools"
+              aria-label="Removed floor-plan tools"
+            ></div>
+          </section>
+          <div class="floor-plan-tabs" role="tablist" aria-label="Floor-plan catalog">
+            <button
+              type="button"
+              role="tab"
+              id="floor-plan-tab-structures"
+              data-floor-plan-tab="structures"
+              aria-controls="floor-plan-elements-section"
+              aria-selected="true"
+            >Structures</button>
+            <button
+              type="button"
+              role="tab"
+              id="floor-plan-tab-furniture"
+              data-floor-plan-tab="furniture"
+              aria-controls="floor-plan-elements-section"
+              aria-selected="false"
+            >Furniture</button>
+            <button
+              type="button"
+              role="tab"
+              id="floor-plan-tab-rooms"
+              data-floor-plan-tab="rooms"
+              aria-controls="floor-plan-templates-section"
+              aria-selected="false"
+            >Rooms</button>
+          </div>
+          <section
+            id="floor-plan-elements-section"
+            role="tabpanel"
+            aria-labelledby="floor-plan-tab-structures"
+          >
+            <div class="floor-plan-section-heading">
+              <h3 id="floor-plan-elements-title">Structures</h3>
               <button
                 class="button button-primary"
                 id="floor-plan-save-element"
@@ -510,9 +578,14 @@
               aria-label="Removed floor-plan elements"
             ></div>
           </section>
-          <section aria-labelledby="floor-plan-templates-title">
+          <section
+            id="floor-plan-templates-section"
+            role="tabpanel"
+            aria-labelledby="floor-plan-tab-rooms"
+            hidden
+          >
             <div class="floor-plan-section-heading">
-              <h3 id="floor-plan-templates-title">Floor-plan templates</h3>
+              <h3 id="floor-plan-templates-title">Rooms</h3>
               <button
                 class="button button-primary"
                 id="floor-plan-save-template"
@@ -774,6 +847,6 @@
       </footer>
     </form>
   </dialog>
-  <script type="module" src="visual-board.js?v=40"></script>
+  <script type="module" src="visual-board.js?v=43"></script>
 </body>
 </html>

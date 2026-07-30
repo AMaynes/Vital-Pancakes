@@ -125,11 +125,19 @@ import {
 import {
   FLOOR_PLAN_ELEMENTS,
   FLOOR_PLAN_TEMPLATES,
+  addFloorPlanRoom,
   createFloorPlanElement,
   createFloorPlanTemplate,
+  cycleFloorPlanRoom,
   formatFloorPlanDimension,
+  getFloorPlanElementDefinition,
+  getFloorPlanTemplateDefinition,
+  hasFloorPlanRemovalPassword,
+  isFloorPlanObjectVisible,
   normalizeFloorPlanSettings,
-} from "./visual-board-floor-plan.mjs?v=3";
+  normalizeFloorPlanRoomState,
+  removeActiveFloorPlanRoom,
+} from "./visual-board-floor-plan.mjs?v=5";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -139,7 +147,7 @@ import {
   replaceFloorPlanTemplate,
   restoreBuiltInFloorPlanTemplate,
   updateFloorPlanTemplate,
-} from "./visual-board-floor-plan-templates.mjs?v=1";
+} from "./visual-board-floor-plan-templates.mjs?v=2";
 import {
   ARCHITECTURE_FILL_PATTERNS,
   fitArchitectureSymbolFrame,
@@ -151,18 +159,18 @@ import {
 import {
   exportVisualBoardToSvg,
   getVisualBoardExportBounds,
-} from "./visual-board-static-export.mjs?v=3";
+} from "./visual-board-static-export.mjs?v=5";
 import { installAiPageHost } from "../app/ai-page-host.mjs";
 import { AI_PERMISSION_LEVELS } from "../app/ai-command-protocol.mjs";
 import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=7";
+} from "./visual-board-ai-adapter.mjs?v=9";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
-const BOARD_VERSION = 17;
+const BOARD_VERSION = 18;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -205,6 +213,9 @@ const canvas = document.querySelector("#visual-board");
 const context = canvas.getContext("2d");
 const canvasFrame = canvas.parentElement;
 const colorInput = document.querySelector("#stroke-color");
+const fillColorInput = document.querySelector("#fill-color");
+const bucketFillTool = document.querySelector("#bucket-fill-tool");
+const clearFillButton = document.querySelector("#clear-fill");
 const widthInput = document.querySelector("#stroke-width");
 const widthValue = document.querySelector("#stroke-width-value");
 const patternInput = document.querySelector("#stroke-pattern");
@@ -308,6 +319,14 @@ const floorPlanScale = document.querySelector("#floor-plan-scale");
 const floorPlanWallThickness = document.querySelector("#floor-plan-wall-thickness");
 const floorPlanGridSize = document.querySelector("#floor-plan-grid-size");
 const floorPlanGuides = document.querySelector("#floor-plan-guides");
+const floorPlanDimensionsVisible = document.querySelector("#floor-plan-dimensions-visible");
+const floorPlanLabelsVisible = document.querySelector("#floor-plan-labels-visible");
+const floorPlanTabs = [...document.querySelectorAll("[data-floor-plan-tab]")];
+const floorPlanToolsList = document.querySelector("#floor-plan-tools");
+const floorPlanRestorableTools = document.querySelector("#floor-plan-restorable-tools");
+const floorPlanElementsSection = document.querySelector("#floor-plan-elements-section");
+const floorPlanTemplatesSection = document.querySelector("#floor-plan-templates-section");
+const floorPlanElementsTitle = document.querySelector("#floor-plan-elements-title");
 const floorPlanSaveElementButton = document.querySelector("#floor-plan-save-element");
 const floorPlanElementList = document.querySelector("#floor-plan-elements");
 const floorPlanRestorableElements = document.querySelector("#floor-plan-restorable-elements");
@@ -351,6 +370,7 @@ let viewSaveTimer = null;
 let spaceHeld = false;
 let widthChangeActive = false;
 let colorChangeActive = false;
+let fillChangeActive = false;
 let textColorChangeActive = false;
 let traceInProgress = false;
 let objectClipboard = [];
@@ -368,6 +388,7 @@ let interpolationAbortController = null;
 let interpolationInProgress = false;
 let interpolationReturnFocus = null;
 let floorPlanPanelOpen = Boolean(board.settings.floorPlan?.enabled);
+let activeFloorPlanTab = "structures";
 let floorPlanTemplateDialogState = null;
 let floorPlanTemplateReturnFocus = null;
 let imageEditSession = null;
@@ -563,6 +584,7 @@ function normalizeObject(rawObject, options = {}) {
 
   const type = rawObject.type === "note" ? "textbox" : rawObject.type;
   const normalizedShadow = normalizeObjectShadow(rawObject.shadow);
+  const isLayerDesignator = rawObject.semantic?.role === "floor-plan-layer-designator";
   const supportsArchitecturalStroke = rawObject.semantic?.role === "floor-plan-wall"
     || rawObject.semantic?.role?.startsWith("architecture-")
     || ["area", "wall", "symbol", "dimension"].includes(type);
@@ -611,6 +633,7 @@ function normalizeObject(rawObject, options = {}) {
       || (rawObject.groupId && !rawObject.vertexNetworkId)
       ? { rigidGroup: true }
       : {}),
+    ...(isLayerDesignator ? normalizeFloorPlanRoomState(rawObject) : {}),
   };
 
   if (type === "pen") {
@@ -1005,6 +1028,7 @@ function drawBoard(includeInteractionUi = true) {
 
 function getVisibleBoardObjects() {
   const pixelRatio = window.devicePixelRatio || 1;
+  const visibleLabelIds = getVisibleFloorPlanLabelIds();
   const margin = 180 / viewport.zoom;
   const viewportBounds = {
     x: viewport.x - margin,
@@ -1016,12 +1040,38 @@ function getVisibleBoardObjects() {
     board.objects,
     board.settings.architecture,
   ).filter((object) => {
+    if (!isFloorPlanObjectVisible(
+      object,
+      board.objects,
+      board.settings.floorPlan,
+      { visibleLabelIds },
+    )) return false;
     const bounds = getObjectBounds(object);
     return bounds.x <= viewportBounds.x + viewportBounds.width
       && bounds.x + bounds.width >= viewportBounds.x
       && bounds.y <= viewportBounds.y + viewportBounds.height
       && bounds.y + bounds.height >= viewportBounds.y;
   });
+}
+
+function getVisibleFloorPlanLabelIds() {
+  const visibleIds = new Set(
+    selectedObjects
+      .filter((object) => object.semantic?.role === "floor-plan-labeler")
+      .map((object) => object.id),
+  );
+  if (!hoverPoint) return visibleIds;
+  board.objects.forEach((object) => {
+    if (object.semantic?.role !== "floor-plan-labeler") return;
+    const bounds = getObjectBounds(object);
+    if (
+      hoverPoint.x >= bounds.x
+      && hoverPoint.x <= bounds.x + bounds.width
+      && hoverPoint.y >= bounds.y
+      && hoverPoint.y <= bounds.y + bounds.height
+    ) visibleIds.add(object.id);
+  });
+  return visibleIds;
 }
 
 function drawGrid(pixelRatio) {
@@ -1119,10 +1169,97 @@ function drawObject(object) {
       }
     });
   }
-  if (object.semantic?.role === "floor-plan-dimension") {
+  if (
+    object.semantic?.role === "floor-plan-dimension"
+    && object.type !== "dimension"
+  ) {
     drawFloorPlanDimensionLabel(object);
   }
+  if (object.semantic?.role === "floor-plan-layer-designator") {
+    drawLayerDesignatorControls(object);
+  }
   context.restore();
+}
+
+function getLayerDesignatorControls(object) {
+  const bounds = getObjectBounds(object);
+  const height = 24 / viewport.zoom;
+  const gap = 3 / viewport.zoom;
+  const actionWidth = 24 / viewport.zoom;
+  const switchWidth = 88 / viewport.zoom;
+  const right = bounds.x + bounds.width;
+  const y = bounds.y - height - gap;
+  return [
+    {
+      action: "cycle",
+      x: right - switchWidth - actionWidth * 2,
+      y,
+      width: switchWidth,
+      height,
+    },
+    {
+      action: "add",
+      x: right - actionWidth * 2,
+      y,
+      width: actionWidth,
+      height,
+    },
+    {
+      action: "remove",
+      x: right - actionWidth,
+      y,
+      width: actionWidth,
+      height,
+    },
+  ];
+}
+
+function drawLayerDesignatorControls(object) {
+  const state = normalizeFloorPlanRoomState(object);
+  const activeRoom = state.floorPlanRooms.find((room) => (
+    room.id === state.activeFloorPlanRoomId
+  ));
+  const labels = {
+    cycle: `${activeRoom?.name ?? "Floor"} ↻`,
+    add: "+",
+    remove: "−",
+  };
+  context.save();
+  context.setLineDash([]);
+  context.lineWidth = 1 / viewport.zoom;
+  context.font = `700 ${10 / viewport.zoom}px Arial, Helvetica, sans-serif`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  getLayerDesignatorControls(object).forEach((control) => {
+    context.fillStyle = "#ffffff";
+    context.strokeStyle = "#7a7469";
+    context.fillRect(control.x, control.y, control.width, control.height);
+    context.strokeRect(control.x, control.y, control.width, control.height);
+    context.fillStyle = control.action === "remove" ? "#8a2e24" : "#24231f";
+    context.fillText(
+      labels[control.action],
+      control.x + control.width / 2,
+      control.y + control.height / 2,
+      control.width - 6 / viewport.zoom,
+    );
+  });
+  context.restore();
+}
+
+function findLayerDesignatorControlAt(point) {
+  return board.objects
+    .filter((object) => object.semantic?.role === "floor-plan-layer-designator")
+    .reverse()
+    .flatMap((object) => getLayerDesignatorControls(object).map((control) => ({
+      object,
+      ...control,
+    })))
+    .find((control) => (
+      point.x >= control.x
+      && point.x <= control.x + control.width
+      && point.y >= control.y
+      && point.y <= control.y + control.height
+    )) ?? null;
 }
 
 function applyObjectShadow(object) {
@@ -1990,8 +2127,15 @@ function getRectangleFromPoints(first, second) {
 
 function findObjectAt(point) {
   const padding = 8 / viewport.zoom;
+  const visibleLabelIds = getVisibleFloorPlanLabelIds();
   return sortArchitectureObjects(board.objects, board.settings.architecture)
     .reverse()
+    .filter((object) => isFloorPlanObjectVisible(
+      object,
+      board.objects,
+      board.settings.floorPlan,
+      { visibleLabelIds },
+    ))
     .find((object) => pointHitsObject(object, point, padding)) ?? null;
 }
 
@@ -2195,12 +2339,23 @@ function handlePointerDown(event) {
   const screenPoint = getCanvasPoint(event);
   const worldPoint = screenToWorld(screenPoint);
   hoverPoint = worldPoint;
+  const layerControl = activeTool === "select"
+    ? findLayerDesignatorControlAt(worldPoint)
+    : null;
+  if (layerControl && event.button === 0) {
+    handleLayerDesignatorAction(layerControl.object, layerControl.action);
+    return;
+  }
   if (
     curveVertexInsertionActive
     && activeTool === "select"
     && event.button === 0
   ) {
     insertSelectedCurveVertexAt(worldPoint);
+    return;
+  }
+  if (activeTool === "bucket" && event.button === 0) {
+    paintFloorPlanObjectAt(worldPoint);
     return;
   }
   canvas.setPointerCapture(event.pointerId);
@@ -2441,7 +2596,10 @@ function handlePointerMove(event) {
 
   if (!interaction || interaction.pointerId !== event.pointerId) {
     updateCanvasCursor(worldPoint);
-    if (activeTool === "eraser") drawBoard();
+    if (
+      activeTool === "eraser"
+      || board.objects.some((object) => object.semantic?.role === "floor-plan-labeler")
+    ) drawBoard();
     return;
   }
 
@@ -2778,6 +2936,10 @@ function commitWorkingObject() {
   if (!isValid) return;
 
   checkpoint();
+  assignFloorPlanRoomToObjects([object], {
+    x: bounds.x + bounds.width / 2,
+    y: bounds.y + bounds.height / 2,
+  });
   board.objects.push(object);
   selectedObjects = [object];
   saveBoard();
@@ -2993,6 +3155,102 @@ function toggleBoardLibraryPanel(forceOpen = !boardLibraryPanelOpen) {
   focusTarget.focus({ preventScroll: true });
 }
 
+function assignFloorPlanRoomToObjects(objects, point) {
+  const designator = [...board.objects].reverse().find((object) => {
+    if (object.semantic?.role !== "floor-plan-layer-designator") return false;
+    const bounds = getObjectBounds(object);
+    return point.x >= bounds.x
+      && point.x <= bounds.x + bounds.width
+      && point.y >= bounds.y
+      && point.y <= bounds.y + bounds.height;
+  });
+  if (!designator) return;
+  const state = normalizeFloorPlanRoomState(designator);
+  objects.forEach((object) => {
+    if (object.semantic?.role === "floor-plan-layer-designator") return;
+    object.semantic = {
+      ...(object.semantic ?? {}),
+      referenceId: designator.id,
+      roomId: state.activeFloorPlanRoomId,
+    };
+  });
+}
+
+function requestFloorPlanRemovalPassword(itemName) {
+  const entered = window.prompt(`Enter the removal password for "${itemName}".`);
+  if (entered === null) return false;
+  if (!hasFloorPlanRemovalPassword(entered)) {
+    announceStatus("Incorrect removal password");
+    return false;
+  }
+  return true;
+}
+
+function handleLayerDesignatorAction(object, action) {
+  if (object.locked) {
+    announceStatus("Unlock the layer designator first");
+    return;
+  }
+  if (action === "cycle") {
+    checkpoint();
+    Object.assign(object, cycleFloorPlanRoom(object, 1));
+    saveBoard();
+    drawBoard();
+    return;
+  }
+  if (action === "add") {
+    const state = normalizeFloorPlanRoomState(object);
+    const name = window.prompt(
+      "Room or floor name",
+      `Floor ${state.floorPlanRooms.length + 1}`,
+    );
+    if (name === null) return;
+    try {
+      const next = addFloorPlanRoom(object, name, createId);
+      const { room, ...layerState } = next;
+      checkpoint();
+      Object.assign(object, layerState);
+      selectedObjects = [object];
+      saveBoard();
+      updateSelectionControls();
+      drawBoard();
+      announceStatus(`${room.name} added`);
+    } catch (error) {
+      announceStatus(error.message || "The room or floor could not be added");
+    }
+    return;
+  }
+  if (action !== "remove") return;
+  const state = normalizeFloorPlanRoomState(object);
+  const activeRoom = state.floorPlanRooms.find((room) => (
+    room.id === state.activeFloorPlanRoomId
+  ));
+  if (!requestFloorPlanRemovalPassword(activeRoom?.name ?? "current floor")) return;
+  try {
+    const next = removeActiveFloorPlanRoom(object);
+    const { removedRoomId, ...layerState } = next;
+    checkpoint();
+    Object.assign(object, layerState);
+    const deletedIds = new Set(
+      board.objects
+        .filter((candidate) => (
+          candidate.semantic?.referenceId === object.id
+          && candidate.semantic?.roomId === removedRoomId
+        ))
+        .map((candidate) => candidate.id),
+    );
+    board.objects = board.objects.filter((candidate) => !deletedIds.has(candidate.id));
+    board.rig = normalizeRig(board.rig, board.objects);
+    selectedObjects = [object];
+    saveBoard();
+    updateSelectionControls();
+    drawBoard();
+    announceStatus(`${activeRoom?.name ?? "Floor"} removed`);
+  } catch (error) {
+    announceStatus(error.message || "The room or floor could not be removed");
+  }
+}
+
 function toggleFloorPlanPanel(forceOpen = !floorPlanPanelOpen) {
   floorPlanPanelOpen = Boolean(forceOpen);
   if (floorPlanPanelOpen && animationPanelOpen) toggleAnimationPanel(false);
@@ -3016,27 +3274,90 @@ function toggleFloorPlanPanel(forceOpen = !floorPlanPanelOpen) {
 }
 
 function renderFloorPlanCatalog() {
-  renderFloorPlanCatalogSection("element");
-  renderFloorPlanCatalogSection("template");
+  floorPlanTabs.forEach((button) => {
+    const selected = button.dataset.floorPlanTab === activeFloorPlanTab;
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+  });
+  const roomsActive = activeFloorPlanTab === "rooms";
+  floorPlanElementsSection.hidden = roomsActive;
+  floorPlanTemplatesSection.hidden = !roomsActive;
+  floorPlanElementsSection.setAttribute(
+    "aria-labelledby",
+    `floor-plan-tab-${activeFloorPlanTab}`,
+  );
+  floorPlanElementsTitle.textContent = activeFloorPlanTab === "furniture"
+    ? "Furniture"
+    : "Structures";
+
+  renderFloorPlanCatalogSection(
+    "element",
+    "tools",
+    floorPlanToolsList,
+    floorPlanRestorableTools,
+  );
+  if (!roomsActive) {
+    renderFloorPlanCatalogSection(
+      "element",
+      activeFloorPlanTab,
+      floorPlanElementList,
+      floorPlanRestorableElements,
+    );
+  }
+  renderFloorPlanCatalogSection(
+    "template",
+    "rooms",
+    floorPlanTemplateList,
+    floorPlanRestorableTemplates,
+  );
+  floorPlanSaveElementButton.disabled = selectedObjects.length === 0;
+  floorPlanSaveTemplateButton.disabled = selectedObjects.length === 0;
+  clearFillButton.disabled = !selectedObjects.some((object) => (
+    !object.locked && canReceiveFill(object) && object.fillColor
+  ));
 }
 
-function renderFloorPlanCatalogSection(catalogType) {
+function setActiveFloorPlanTab(tab, focus = false) {
+  if (!["structures", "furniture", "rooms"].includes(tab)) return;
+  activeFloorPlanTab = tab;
+  renderFloorPlanCatalog();
+  if (focus) {
+    floorPlanTabs.find((button) => button.dataset.floorPlanTab === tab)
+      ?.focus({ preventScroll: true });
+  }
+}
+
+function renderFloorPlanCatalogSection(catalogType, group, list, restorableList) {
   const config = getFloorPlanCatalogConfig(catalogType);
   const catalog = getFloorPlanTemplateCatalog(
     board.settings.floorPlan?.[config.settingKey],
     config.builtInIds,
-  );
-  config.list.replaceChildren(
+  ).map((item) => getFloorPlanDisplayCatalogItem(item, catalogType));
+  list.replaceChildren(
     ...catalog
-      .filter((item) => item.visible)
+      .filter((item) => item.visible && item.group === group)
       .map((item) => createFloorPlanCatalogCard(item, catalogType)),
   );
-  config.restorableList.replaceChildren(
+  restorableList.replaceChildren(
     ...catalog
-      .filter((item) => !item.visible)
+      .filter((item) => !item.visible && item.group === group)
       .map((item) => createRestorableFloorPlanCatalogItem(item, catalogType)),
   );
-  config.saveButton.disabled = selectedObjects.length === 0;
+}
+
+function getFloorPlanDisplayCatalogItem(item, catalogType) {
+  const definitionValue = catalogType === "element"
+    ? getFloorPlanElementDefinition(item.id)
+    : getFloorPlanTemplateDefinition(item.id);
+  return {
+    ...item,
+    name: item.source === "built-in" && definitionValue
+      ? definitionValue.name
+      : item.name,
+    group: item.category
+      || definitionValue?.group
+      || (catalogType === "template" ? "rooms" : "structures"),
+  };
 }
 
 function createFloorPlanCatalogCard(item, catalogType) {
@@ -3133,6 +3454,8 @@ function syncFloorPlanControls() {
   floorPlanWallThickness.value = String(settings.wallThickness);
   floorPlanGridSize.value = String(settings.gridSize);
   floorPlanGuides.checked = settings.alignmentGuides;
+  floorPlanDimensionsVisible.checked = settings.dimensionsVisible;
+  floorPlanLabelsVisible.checked = settings.labelsAlwaysVisible;
 }
 
 function updateFloorPlanSettings() {
@@ -3144,8 +3467,17 @@ function updateFloorPlanSettings() {
     wallThickness: floorPlanWallThickness.value,
     gridSize: floorPlanGridSize.value,
     alignmentGuides: floorPlanGuides.checked,
+    dimensionsVisible: floorPlanDimensionsVisible.checked,
+    labelsAlwaysVisible: floorPlanLabelsVisible.checked,
   });
   syncFloorPlanControls();
+  if (!board.settings.floorPlan.dimensionsVisible) {
+    selectedObjects = selectedObjects.filter((object) => (
+      object.type !== "dimension"
+      && object.semantic?.role !== "floor-plan-dimension"
+    ));
+    updateSelectionControls();
+  }
   saveBoard();
   drawBoard();
 }
@@ -3156,7 +3488,9 @@ function insertSavedFloorPlanCatalogItem(catalogType, itemId) {
   const catalogItem = getFloorPlanTemplateCatalog(
     library,
     config.builtInIds,
-  ).find((item) => item.id === itemId && item.visible);
+  )
+    .map((item) => getFloorPlanDisplayCatalogItem(item, catalogType))
+    .find((item) => item.id === itemId && item.visible);
   if (!catalogItem) return;
 
   const origin = getCanvasCenterWorldPoint();
@@ -3185,6 +3519,7 @@ function insertSavedFloorPlanCatalogItem(catalogType, itemId) {
     if (!objects.length) {
       throw new CharacterFileError(`This ${config.singular} has no usable objects.`);
     }
+    assignFloorPlanRoomToObjects(objects, origin);
     checkpoint();
     board.objects.push(...objects);
     selectedObjects = objects;
@@ -3215,7 +3550,14 @@ function openFloorPlanBuildingBlockDialog(
     : null;
   if (mode === "edit" && !record) return;
 
-  floorPlanTemplateDialogState = { catalogType, mode, itemId };
+  floorPlanTemplateDialogState = {
+    catalogType,
+    mode,
+    itemId,
+    category: catalogType === "template"
+      ? "rooms"
+      : record?.category || activeFloorPlanTab,
+  };
   floorPlanTemplateReturnFocus = returnFocus || document.activeElement;
   floorPlanTemplateError.hidden = true;
   floorPlanTemplateError.textContent = "";
@@ -3284,7 +3626,11 @@ function saveFloorPlanBuildingBlockDialog(event) {
       ? updateFloorPlanTemplate(
         currentLibrary,
         floorPlanTemplateDialogState.itemId,
-        { name, description },
+        {
+          name,
+          description,
+          category: floorPlanTemplateDialogState.category,
+        },
         config.builtInIds,
       )
       : addFloorPlanTemplate(
@@ -3298,6 +3644,7 @@ function saveFloorPlanBuildingBlockDialog(event) {
             id: createId(),
             name,
             description,
+            category: floorPlanTemplateDialogState.category,
             createdAt: Date.now(),
           },
         ),
@@ -3333,14 +3680,21 @@ function replaceSavedFloorPlanCatalogItem(catalogType, itemId) {
   const item = getFloorPlanTemplateCatalog(
     board.settings.floorPlan?.[config.settingKey],
     config.builtInIds,
-  ).find((candidate) => candidate.id === itemId);
+  )
+    .map((candidate) => getFloorPlanDisplayCatalogItem(candidate, catalogType))
+    .find((candidate) => candidate.id === itemId);
   if (!item || !window.confirm(`Replace "${item.name}" with the current selection?`)) return;
   try {
     const nextLibrary = replaceFloorPlanTemplate(
       board.settings.floorPlan[config.settingKey],
       itemId,
       createFloorPlanCharacterFromSelection(item.name, catalogType),
-      { id: createId(), name: item.name, updatedAt: Date.now() },
+      {
+        id: createId(),
+        name: item.name,
+        category: item.group,
+        updatedAt: Date.now(),
+      },
       config.builtInIds,
     );
     checkpoint();
@@ -3362,8 +3716,10 @@ function removeSavedFloorPlanCatalogItem(catalogType, itemId) {
   const item = getFloorPlanTemplateCatalog(
     board.settings.floorPlan?.[config.settingKey],
     config.builtInIds,
-  ).find((candidate) => candidate.id === itemId);
-  if (!item || !window.confirm(`Remove "${item.name}" from Floor Plan ${config.plural}?`)) {
+  )
+    .map((candidate) => getFloorPlanDisplayCatalogItem(candidate, catalogType))
+    .find((candidate) => candidate.id === itemId);
+  if (!item || !requestFloorPlanRemovalPassword(item.name)) {
     return;
   }
   checkpoint();
@@ -5021,6 +5377,7 @@ function updateSelectionControls() {
   )) ?? selectedObjects.find((object) => object.type !== "image");
   if (styleObject) {
     colorInput.value = styleObject.color;
+    if (styleObject.fillColor) fillColorInput.value = styleObject.fillColor;
     widthInput.value = styleObject.strokeWidth;
     widthValue.textContent = styleObject.strokeWidth;
     patternInput.value = styleObject.dashPattern ?? "solid";
@@ -5702,6 +6059,74 @@ function applySelectedColor() {
   drawBoard();
 }
 
+function canReceiveFill(object) {
+  return SHAPE_TYPES.has(object.type)
+    && !["image", "textbox", "shape"].includes(object.type);
+}
+
+function applySelectedFillColor() {
+  const targets = selectedObjects.filter((object) => (
+    !object.locked && canReceiveFill(object)
+  ));
+  if (!targets.length) return;
+  if (!fillChangeActive) {
+    checkpoint();
+    fillChangeActive = true;
+  }
+  targets.forEach((object) => {
+    object.fillColor = fillColorInput.value;
+    if (!Number.isFinite(object.fillOpacity)) object.fillOpacity = 1;
+  });
+  drawBoard();
+}
+
+function finishFillChange() {
+  if (!fillChangeActive) return;
+  fillChangeActive = false;
+  saveBoard();
+}
+
+function clearSelectedFill() {
+  const targets = selectedObjects.filter((object) => (
+    !object.locked && canReceiveFill(object) && object.fillColor
+  ));
+  if (!targets.length) return;
+  checkpoint();
+  targets.forEach((object) => {
+    delete object.fillColor;
+    object.fillOpacity = 1;
+  });
+  saveBoard();
+  drawBoard();
+  announceStatus("Fill removed");
+}
+
+function paintFloorPlanObjectAt(point) {
+  const object = findObjectAt(point);
+  if (!object) {
+    announceStatus("Choose a closed shape to fill");
+    return;
+  }
+  const selectionUnit = getSelectionUnit(object);
+  const targets = selectionUnit.filter((candidate) => (
+    !candidate.locked && canReceiveFill(candidate)
+  ));
+  if (!targets.length) {
+    announceStatus(object.locked ? "Unlock before painting" : "That object has no fill area");
+    return;
+  }
+  checkpoint();
+  targets.forEach((candidate) => {
+    candidate.fillColor = fillColorInput.value;
+    if (!Number.isFinite(candidate.fillOpacity)) candidate.fillOpacity = 1;
+  });
+  selectedObjects = selectionUnit;
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  announceStatus(`${targets.length} fill${targets.length === 1 ? "" : "s"} painted`);
+}
+
 function getEditableSelectedTextboxes() {
   return selectedObjects.filter((object) => object.type === "textbox" && !object.locked);
 }
@@ -5925,6 +6350,8 @@ function setActiveTool(nextTool) {
   drawingTools.querySelectorAll("[data-tool]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.tool === activeTool);
   });
+  bucketFillTool.classList.toggle("is-active", activeTool === "bucket");
+  bucketFillTool.setAttribute("aria-pressed", String(activeTool === "bucket"));
   shape2dControl.classList.toggle("is-active", shapeFamily === "2d");
   shape3dControl.classList.toggle("is-active", shapeFamily === "3d");
   closeTextEditor();
@@ -6092,6 +6519,20 @@ function captureActiveTextColorSelection() {
 
 function handleDoubleClick(event) {
   const object = findObjectAt(screenToWorld(getCanvasPoint(event)));
+  if (object?.type === "dimension" && !object.locked) {
+    const label = window.prompt(
+      "Dimension label (leave blank for automatic measurement)",
+      object.label ?? "",
+    );
+    if (label === null || label === object.label) return;
+    checkpoint();
+    object.label = label.slice(0, 240);
+    selectedObjects = [object];
+    saveBoard();
+    updateSelectionControls();
+    drawBoard();
+    return;
+  }
   if (object?.type !== "textbox" || object.locked) return;
   selectedObjects = [object];
   updateSelectionControls();
@@ -6403,7 +6844,7 @@ function getVisualBoardAiBusyReason() {
   if (traceInProgress) return "the current image trace";
   if (interpolationInProgress) return "the current frame interpolation";
   if (animationExportInProgress) return "the current animation export";
-  if (colorChangeActive || widthChangeActive || textColorChangeActive) {
+  if (colorChangeActive || fillChangeActive || widthChangeActive || textColorChangeActive) {
     return "the active style adjustment";
   }
   return null;
@@ -6580,7 +7021,10 @@ canvas.addEventListener("pointercancel", handlePointerCancel);
 canvas.addEventListener("pointerleave", () => {
   if (interaction) return;
   hoverPoint = null;
-  if (activeTool === "eraser") drawBoard();
+  if (
+    activeTool === "eraser"
+    || board.objects.some((object) => object.semantic?.role === "floor-plan-labeler")
+  ) drawBoard();
 });
 canvas.addEventListener("dblclick", handleDoubleClick);
 canvas.addEventListener("wheel", handleWheel, { passive: false });
@@ -6642,10 +7086,31 @@ document.querySelector("#close-floor-plan").addEventListener("click", () => {
 });
 floorPlanPanel.addEventListener("click", (event) => {
   const target = event.target instanceof Element ? event.target : null;
+  const tabButton = target?.closest("[data-floor-plan-tab]");
+  if (tabButton) {
+    setActiveFloorPlanTab(tabButton.dataset.floorPlanTab);
+    return;
+  }
   const elementButton = target?.closest("[data-floor-element-action]");
-  if (elementButton) handleFloorPlanCatalogAction(elementButton, "element");
+  if (elementButton) {
+    handleFloorPlanCatalogAction(elementButton, "element");
+    return;
+  }
   const templateButton = target?.closest("[data-floor-template-action]");
   if (templateButton) handleFloorPlanCatalogAction(templateButton, "template");
+});
+floorPlanPanel.addEventListener("keydown", (event) => {
+  const tab = event.target instanceof Element
+    ? event.target.closest("[data-floor-plan-tab]")
+    : null;
+  if (!tab || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  event.preventDefault();
+  const index = floorPlanTabs.indexOf(tab);
+  const direction = event.key === "ArrowRight" ? 1 : -1;
+  const next = floorPlanTabs[
+    (index + direction + floorPlanTabs.length) % floorPlanTabs.length
+  ];
+  setActiveFloorPlanTab(next.dataset.floorPlanTab, true);
 });
 floorPlanSaveElementButton.addEventListener("click", () => {
   openFloorPlanBuildingBlockDialog(
@@ -6673,7 +7138,8 @@ document.querySelector("#close-floor-plan-template-dialog").addEventListener(
   closeFloorPlanTemplateDialog,
 );
 floorPlanTemplateDialog.addEventListener("close", restoreFloorPlanTemplateDialogFocus);
-[floorPlanUnits, floorPlanScale, floorPlanWallThickness, floorPlanGridSize, floorPlanGuides]
+[floorPlanUnits, floorPlanScale, floorPlanWallThickness, floorPlanGridSize,
+  floorPlanGuides, floorPlanDimensionsVisible, floorPlanLabelsVisible]
   .forEach((control) => control.addEventListener("change", updateFloorPlanSettings));
 boardLibrarySearch.addEventListener("input", renderBoardLibrary);
 boardLibraryList.addEventListener("click", handleBoardLibraryAction);
@@ -6788,6 +7254,13 @@ boardExportButton.addEventListener("click", exportBoardArtwork);
 colorInput.addEventListener("input", applySelectedColor);
 colorInput.addEventListener("change", finishColorChange);
 colorInput.addEventListener("blur", finishColorChange);
+fillColorInput.addEventListener("input", applySelectedFillColor);
+fillColorInput.addEventListener("change", finishFillChange);
+fillColorInput.addEventListener("blur", finishFillChange);
+bucketFillTool.addEventListener("click", () => {
+  setActiveTool(activeTool === "bucket" ? "select" : "bucket");
+});
+clearFillButton.addEventListener("click", clearSelectedFill);
 widthInput.addEventListener("input", applySelectedStrokeWidth);
 widthInput.addEventListener("change", finishWidthChange);
 widthInput.addEventListener("blur", finishWidthChange);

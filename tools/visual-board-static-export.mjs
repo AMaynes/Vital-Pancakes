@@ -27,7 +27,10 @@ import { normalizeImageCrop } from "./visual-board-image.mjs?v=1";
 import { getTextColorSegments } from "./visual-board-rich-text.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import { getTextWorldFontSize } from "./visual-board-text.mjs?v=2";
-import { formatFloorPlanDimension } from "./visual-board-floor-plan.mjs?v=1";
+import {
+  formatFloorPlanDimension,
+  isFloorPlanObjectVisible,
+} from "./visual-board-floor-plan.mjs?v=5";
 
 const DEFAULT_EXPORT_PADDING = 24;
 const DEFAULT_STROKE_COLOR = "#000000";
@@ -129,6 +132,11 @@ function getExportObjects(board, includeHiddenLayers) {
     }
     : architecture;
   return sortArchitectureObjects(board.objects, layerSettings)
+    .filter((object) => isFloorPlanObjectVisible(
+      object,
+      board.objects,
+      board.settings?.floorPlan,
+    ))
     .filter((object) => object.hiddenInExport !== true);
 }
 

@@ -132,6 +132,38 @@
   gap: 7px;
 }
 
+.floor-plan-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line-strong);
+}
+
+.floor-plan-tabs button {
+  min-width: 0;
+  min-height: 34px;
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  background: var(--card);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.floor-plan-tabs button:last-child {
+  border-right: 0;
+}
+
+.floor-plan-tabs button[aria-selected="true"] {
+  background: #24231f;
+  color: #fff;
+}
+
+.floor-plan-scroll section[hidden] {
+  display: none;
+}
+
 .floor-plan-template-list button,
 .image-edit-controls button,
 .image-replace-button {

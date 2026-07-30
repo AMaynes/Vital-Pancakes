@@ -66,6 +66,7 @@ export function createFloorPlanTemplateRecord(character, options = {}) {
     id,
     name: normalizeName(options.name ?? normalizedCharacter.name),
     description: normalizeDescription(options.description),
+    category: normalizeCategory(options.category),
     createdAt,
     updatedAt: normalizeTimestamp(options.updatedAt, createdAt),
     replacesBuiltIn: normalizeIdentifier(options.replacesBuiltIn) || null,
@@ -109,6 +110,9 @@ export function updateFloorPlanTemplate(
     description: changes?.description === undefined
       ? current.description
       : normalizeDescription(changes.description),
+    category: changes?.category === undefined
+      ? current.category
+      : normalizeCategory(changes.category),
     updatedAt: normalizeTimestamp(updatedAt, Date.now()),
   };
   const items = [...normalizedLibrary.items];
@@ -138,6 +142,7 @@ export function replaceFloorPlanTemplate(
       id: existing?.id || normalizeIdentifier(options.id),
       name: options.name ?? existing?.name ?? formatBuiltInName(id),
       description: options.description ?? existing?.description ?? "",
+      category: options.category ?? existing?.category,
       createdAt: existing?.createdAt ?? updatedAt,
       updatedAt,
       replacesBuiltIn: id,
@@ -161,6 +166,9 @@ export function replaceFloorPlanTemplate(
     description: options.description === undefined
       ? current.description
       : normalizeDescription(options.description),
+    category: options.category === undefined
+      ? current.category
+      : normalizeCategory(options.category),
     updatedAt,
     character: normalizedCharacter,
   };
@@ -205,6 +213,7 @@ export function getFloorPlanTemplateCatalog(library, builtInIds = []) {
       id,
       name: replacement?.name ?? formatBuiltInName(id),
       description: replacement?.description ?? "",
+      category: replacement?.category ?? null,
       source: replacement ? "override" : "built-in",
       visible: !hidden.has(id),
       editable: Boolean(replacement),
@@ -218,6 +227,7 @@ export function getFloorPlanTemplateCatalog(library, builtInIds = []) {
       id: item.id,
       name: item.name,
       description: item.description,
+      category: item.category,
       source: "custom",
       visible: true,
       editable: true,
@@ -305,6 +315,12 @@ function normalizeName(value) {
 
 function normalizeDescription(value) {
   return typeof value === "string" ? value.trim().slice(0, 240) : "";
+}
+
+function normalizeCategory(value) {
+  return ["structures", "furniture", "rooms", "tools"].includes(value)
+    ? value
+    : null;
 }
 
 function normalizeTimestamp(value, fallback) {

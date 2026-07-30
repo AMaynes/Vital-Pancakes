@@ -436,3 +436,56 @@ test("complex curve export preserves every cubic segment", () => {
 
   assert.match(svg, /M 0 0 C 10 -10 25 -20 40 -20 C 50 -20 60 30 70 30 C 80 30 90 10 100 0/);
 });
+
+test("floor-plan visibility settings omit hidden dimensions and hover labels", () => {
+  const document = board([
+    {
+      ...baseStyle,
+      id: "hidden-dimension",
+      type: "dimension",
+      x: 0,
+      y: 0,
+      endX: 100,
+      endY: 0,
+      offset: 12,
+      fontSize: 12,
+      layerId: "dimensions",
+      semantic: { role: "floor-plan-dimension" },
+    },
+    {
+      ...baseStyle,
+      id: "hover-label",
+      type: "textbox",
+      x: 0,
+      y: 20,
+      w: 100,
+      h: 30,
+      rotation: 0,
+      text: "Hover",
+      colorRanges: [],
+      fontSize: 12,
+      fontFamily: "sans",
+      layerId: "labels",
+      semantic: { role: "floor-plan-labeler" },
+    },
+    {
+      ...baseStyle,
+      id: "visible-room",
+      type: "rectangle",
+      x: 0,
+      y: 60,
+      w: 100,
+      h: 40,
+      rotation: 0,
+      fillColor: "#ffffff",
+      layerId: "structure",
+    },
+  ]);
+  document.settings.floorPlan.dimensionsVisible = false;
+  document.settings.floorPlan.labelsAlwaysVisible = false;
+
+  const svg = exportVisualBoardToSvg(document);
+  assert.doesNotMatch(svg, /hidden-dimension/);
+  assert.doesNotMatch(svg, /hover-label/);
+  assert.match(svg, /visible-room/);
+});

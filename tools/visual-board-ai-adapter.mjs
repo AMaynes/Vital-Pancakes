@@ -14,10 +14,15 @@ import {
 import {
   FLOOR_PLAN_ELEMENTS,
   FLOOR_PLAN_TEMPLATES,
+  addFloorPlanRoom,
   createFloorPlanElement,
   createFloorPlanTemplate,
+  cycleFloorPlanRoom,
+  hasFloorPlanRemovalPassword,
   normalizeFloorPlanSettings,
-} from "./visual-board-floor-plan.mjs?v=3";
+  normalizeFloorPlanRoomState,
+  removeActiveFloorPlanRoom,
+} from "./visual-board-floor-plan.mjs?v=5";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -27,7 +32,7 @@ import {
   replaceFloorPlanTemplate,
   restoreBuiltInFloorPlanTemplate,
   updateFloorPlanTemplate,
-} from "./visual-board-floor-plan-templates.mjs?v=1";
+} from "./visual-board-floor-plan-templates.mjs?v=2";
 import {
   createCharacterPackage,
   instantiateCharacter,
@@ -221,6 +226,9 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("floor-plan.templates.remove", ["delete"], "Delete a saved template or hide a built-in template."),
   command("floor-plan.templates.restore", ["update"], "Restore a built-in template and discard its replacement."),
   command("floor-plan.templates.insert", ["create"], "Insert a visible saved, customized, or built-in floor-plan template."),
+  command("floor-plan.layers.cycle", ["update"], "Switch a layer designator to its next or previous room or floor."),
+  command("floor-plan.layers.add", ["create"], "Add and activate a room or floor in a layer designator."),
+  command("floor-plan.layers.remove", ["delete"], "Remove the active room or floor and its assigned objects."),
   command("diagram.create", ["create"], "Create a complete semantic diagram in one command."),
   command("viewport.focus", ["update"], "Focus the board viewport on targets or a point."),
   command("board.settings.update", ["update"], "Update grid, snapping, and floor-plan settings."),
@@ -455,7 +463,12 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
         type: "object",
         properties: {
           color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
-          fillColor: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+          fillColor: {
+            oneOf: [
+              { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+              { type: "null" },
+            ],
+          },
           accentColor: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
           fillOpacity: { type: "number", minimum: 0, maximum: 1 },
           opacity: { type: "number", minimum: 0, maximum: 1 },
@@ -570,6 +583,8 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
         wallThickness: { type: "number", minimum: 0.02, maximum: 10 },
         gridSize: { type: "number", minimum: 4, maximum: 200 },
         alignmentGuides: { type: "boolean" },
+        dimensionsVisible: { type: "boolean" },
+        labelsAlwaysVisible: { type: "boolean" },
       },
     },
   }),
@@ -578,21 +593,25 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
     elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     name: { type: "string", maxLength: 80 },
     description: { type: "string", maxLength: 240 },
+    category: { enum: ["structures", "furniture", "tools"] },
     targets: TARGET_SCHEMA,
   }),
   "floor-plan.elements.update": schema(["elementId"], {
     elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     name: { type: "string", maxLength: 80 },
     description: { type: "string", maxLength: 240 },
+    category: { enum: ["structures", "furniture", "tools"] },
   }),
   "floor-plan.elements.replace": schema(["elementId", "targets"], {
     elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     name: { type: "string", maxLength: 80 },
     description: { type: "string", maxLength: 240 },
+    category: { enum: ["structures", "furniture", "tools"] },
     targets: TARGET_SCHEMA,
   }),
-  "floor-plan.elements.remove": schema(["elementId"], {
+  "floor-plan.elements.remove": schema(["elementId", "password"], {
     elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    password: { type: "string", maxLength: 120 },
   }),
   "floor-plan.elements.restore": schema(["elementId"], {
     elementId: { enum: [...FLOOR_PLAN_ELEMENTS] },
@@ -606,21 +625,25 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
     templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     name: { type: "string", maxLength: 80 },
     description: { type: "string", maxLength: 240 },
+    category: { enum: ["rooms"] },
     targets: TARGET_SCHEMA,
   }),
   "floor-plan.templates.update": schema(["templateId"], {
     templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     name: { type: "string", maxLength: 80 },
     description: { type: "string", maxLength: 240 },
+    category: { enum: ["rooms"] },
   }),
   "floor-plan.templates.replace": schema(["templateId", "targets"], {
     templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     name: { type: "string", maxLength: 80 },
     description: { type: "string", maxLength: 240 },
+    category: { enum: ["rooms"] },
     targets: TARGET_SCHEMA,
   }),
-  "floor-plan.templates.remove": schema(["templateId"], {
+  "floor-plan.templates.remove": schema(["templateId", "password"], {
     templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
+    password: { type: "string", maxLength: 120 },
   }),
   "floor-plan.templates.restore": schema(["templateId"], {
     templateId: { enum: [...FLOOR_PLAN_TEMPLATES] },
@@ -628,6 +651,18 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
   "floor-plan.templates.insert": schema(["templateId"], {
     templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     placement: PLACEMENT_SCHEMA,
+  }),
+  "floor-plan.layers.cycle": schema(["designatorId"], {
+    designatorId: { type: "string", minLength: 1, maxLength: 128 },
+    direction: { enum: ["next", "previous"] },
+  }),
+  "floor-plan.layers.add": schema(["designatorId", "name"], {
+    designatorId: { type: "string", minLength: 1, maxLength: 128 },
+    name: { type: "string", minLength: 1, maxLength: 80 },
+  }),
+  "floor-plan.layers.remove": schema(["designatorId", "password"], {
+    designatorId: { type: "string", minLength: 1, maxLength: 128 },
+    password: { type: "string", maxLength: 120 },
   }),
   "diagram.create": schema(["diagramType"], {
     diagramType: { enum: [...DIAGRAM_TYPES] },
@@ -665,6 +700,8 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
             wallThickness: { type: "number", minimum: 0.02, maximum: 10 },
             gridSize: { type: "number", minimum: 4, maximum: 200 },
             alignmentGuides: { type: "boolean" },
+            dimensionsVisible: { type: "boolean" },
+            labelsAlwaysVisible: { type: "boolean" },
           },
         },
       },
@@ -1023,7 +1060,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 6,
+    version: 7,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -1049,6 +1086,7 @@ export function getVisualBoardAiCapabilities() {
       "Commands cannot import local files or start animation rendering.",
       "Architectural commands render exact caller-supplied geometry and never choose or improve a layout.",
       "Custom floor-plan elements and templates preserve editable vector objects and relationships but reject image assets.",
+      "Floor-plan catalog and layer removals require the configured removal password.",
       "Reference images require an existing local board image plus explicit consent; their bytes are never exposed to providers.",
       "Architecture validation reports deterministic geometry issues but does not redesign the caller's plan.",
       "Shared-vertex creation accepts straight lines and curves; other outlined shapes must be divided first.",
@@ -1142,6 +1180,7 @@ export function getVisualBoardAiExamples() {
         elementId: "double-vanity",
         name: "Double vanity",
         description: "Editable bathroom vanity with two sinks.",
+        category: "furniture",
         targets: { selection: true },
       },
     },
@@ -1152,7 +1191,16 @@ export function getVisualBoardAiExamples() {
         templateId: "courtyard-bedroom",
         name: "Courtyard bedroom",
         description: "Bedroom block with ensuite and garden doors.",
+        category: "rooms",
         targets: { selection: true },
+      },
+    },
+    {
+      name: "Add a designator floor",
+      command: {
+        type: "floor-plan.layers.add",
+        designatorId: "layer-designator-id-from-context",
+        name: "Floor 2",
       },
     },
     {
@@ -1365,7 +1413,7 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
     };
     if (object.type === "textbox") summary.text = String(object.text ?? "").slice(0, 1_000);
     if (object.type === "shape") summary.shapeKind = object.shapeKind;
-    if (["connector", "line", "arc"].includes(object.type)) {
+    if (["connector", "line", "arc", "dimension"].includes(object.type)) {
       summary.end = {
         x: roundNumber(object.endX),
         y: roundNumber(object.endY),
@@ -1379,6 +1427,13 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
           y: roundNumber(point.y),
         }));
       }
+    }
+    if (object.semantic?.role === "floor-plan-layer-designator") {
+      const layerState = normalizeFloorPlanRoomState(object);
+      summary.floorPlanLayer = {
+        rooms: layerState.floorPlanRooms,
+        activeRoomId: layerState.activeFloorPlanRoomId,
+      };
     }
     if (detail === "geometry") {
       if (["rectangle", "ellipse", "shape", "textbox", "image", "area", "wall", "symbol"].includes(object.type)) {
@@ -1440,6 +1495,8 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
         wallThickness: floorPlanSettings.wallThickness,
         gridSize: floorPlanSettings.gridSize,
         alignmentGuides: floorPlanSettings.alignmentGuides,
+        dimensionsVisible: floorPlanSettings.dimensionsVisible,
+        labelsAlwaysVisible: floorPlanSettings.labelsAlwaysVisible,
         elementLibrary: {
           version: floorPlanSettings.elementLibrary.version,
           savedElementCount: floorPlanSettings.elementLibrary.items.length,
@@ -1574,6 +1631,15 @@ function executeCommand(runtime, commandValue, commandIndex) {
       break;
     case "floor-plan.templates.insert":
       insertSavedFloorPlanCatalogItem(runtime, command, commandIndex, "template");
+      break;
+    case "floor-plan.layers.cycle":
+      cycleFloorPlanLayer(runtime, command, commandIndex);
+      break;
+    case "floor-plan.layers.add":
+      addFloorPlanLayer(runtime, command, commandIndex);
+      break;
+    case "floor-plan.layers.remove":
+      removeFloorPlanLayer(runtime, command, commandIndex);
       break;
     case "diagram.create":
       createDiagram(runtime, command, commandIndex);
@@ -1803,7 +1869,8 @@ function updateObjects(runtime, command, commandIndex) {
       });
     }
     if (patch.fillColor !== undefined) {
-      object.fillColor = normalizeColor(patch.fillColor, commandIndex);
+      if (patch.fillColor === null) delete object.fillColor;
+      else object.fillColor = normalizeColor(patch.fillColor, commandIndex);
     }
     if (patch.accentColor !== undefined) {
       object.accentColor = normalizeColor(patch.accentColor, commandIndex);
@@ -2463,6 +2530,7 @@ function createSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalog
       id: itemId,
       name: command.name,
       description: command.description,
+      category: command.category ?? (catalogType === "template" ? "rooms" : "structures"),
       createdAt: Date.now(),
     });
     const library = addFloorPlanTemplate(
@@ -2488,7 +2556,11 @@ function createSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalog
 function updateSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalogType) {
   const config = getFloorPlanCommandCatalogConfig(catalogType);
   const itemId = command[config.idField];
-  if (command.name === undefined && command.description === undefined) {
+  if (
+    command.name === undefined
+    && command.description === undefined
+    && command.category === undefined
+  ) {
     throw commandError(
       `${formatCommandCatalogName(config.singular)} updates need a name or description.`,
       `empty-${config.singular}-update`,
@@ -2499,7 +2571,11 @@ function updateSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalog
     const library = updateFloorPlanTemplate(
       runtime.state.board.settings.floorPlan[config.libraryKey],
       itemId,
-      { name: command.name, description: command.description },
+      {
+        name: command.name,
+        description: command.description,
+        category: command.category,
+      },
       config.builtInIds,
     );
     setFloorPlanCatalogLibrary(runtime, library, catalogType);
@@ -2532,6 +2608,7 @@ function replaceSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalo
         id: runtime.createId(),
         name: command.name,
         description: command.description,
+        category: command.category,
         updatedAt: Date.now(),
       },
       config.builtInIds,
@@ -2550,6 +2627,13 @@ function replaceSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalo
 function removeSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalogType) {
   const config = getFloorPlanCommandCatalogConfig(catalogType);
   const itemId = command[config.idField];
+  if (!hasFloorPlanRemovalPassword(command.password)) {
+    throw commandError(
+      "The floor-plan removal password is incorrect.",
+      "invalid-removal-password",
+      commandIndex,
+    );
+  }
   const catalog = getFloorPlanTemplateCatalog(
     runtime.state.board.settings.floorPlan[config.libraryKey],
     config.builtInIds,
@@ -2634,6 +2718,111 @@ function insertSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalog
     [config.idField]: itemId,
     objectCount: objects.length,
   });
+}
+
+function getFloorPlanLayerDesignator(runtime, designatorId, commandIndex) {
+  const object = runtime.state.board.objects.find((candidate) => (
+    candidate.id === designatorId
+    && candidate.semantic?.role === "floor-plan-layer-designator"
+  ));
+  if (!object) {
+    throw commandError(
+      "The layer designator does not exist.",
+      "layer-designator-not-found",
+      commandIndex,
+    );
+  }
+  if (object.locked) {
+    throw commandError(
+      "The layer designator is locked.",
+      "object-locked",
+      commandIndex,
+    );
+  }
+  return object;
+}
+
+function cycleFloorPlanLayer(runtime, command, commandIndex) {
+  const object = getFloorPlanLayerDesignator(
+    runtime,
+    command.designatorId,
+    commandIndex,
+  );
+  const state = cycleFloorPlanRoom(
+    object,
+    command.direction === "previous" ? -1 : 1,
+  );
+  Object.assign(object, state);
+  runtime.updatedIds.add(object.id);
+  runtime.state.selectedIds = [object.id];
+  runtime.outputs.push({
+    type: "floor-plan.layers.cycle",
+    designatorId: object.id,
+    activeRoomId: state.activeFloorPlanRoomId,
+  });
+}
+
+function addFloorPlanLayer(runtime, command, commandIndex) {
+  const object = getFloorPlanLayerDesignator(
+    runtime,
+    command.designatorId,
+    commandIndex,
+  );
+  try {
+    const next = addFloorPlanRoom(object, command.name, runtime.createId);
+    const { room, ...state } = next;
+    Object.assign(object, state);
+    runtime.updatedIds.add(object.id);
+    runtime.state.selectedIds = [object.id];
+    runtime.outputs.push({
+      type: "floor-plan.layers.add",
+      designatorId: object.id,
+      room,
+    });
+  } catch (error) {
+    throw commandError(error.message, "invalid-floor-plan-layer", commandIndex);
+  }
+}
+
+function removeFloorPlanLayer(runtime, command, commandIndex) {
+  if (!hasFloorPlanRemovalPassword(command.password)) {
+    throw commandError(
+      "The floor-plan removal password is incorrect.",
+      "invalid-removal-password",
+      commandIndex,
+    );
+  }
+  const object = getFloorPlanLayerDesignator(
+    runtime,
+    command.designatorId,
+    commandIndex,
+  );
+  try {
+    const next = removeActiveFloorPlanRoom(object);
+    const { removedRoomId, ...state } = next;
+    Object.assign(object, state);
+    const deletedIds = new Set(
+      runtime.state.board.objects
+        .filter((candidate) => (
+          candidate.semantic?.referenceId === object.id
+          && candidate.semantic?.roomId === removedRoomId
+        ))
+        .map((candidate) => candidate.id),
+    );
+    runtime.state.board.objects = runtime.state.board.objects
+      .filter((candidate) => !deletedIds.has(candidate.id));
+    deletedIds.forEach((id) => runtime.deletedIds.add(id));
+    runtime.updatedIds.add(object.id);
+    runtime.state.selectedIds = [object.id];
+    runtime.outputs.push({
+      type: "floor-plan.layers.remove",
+      designatorId: object.id,
+      removedRoomId,
+      deletedObjectCount: deletedIds.size,
+    });
+  } catch (error) {
+    throw commandError(error.message, "invalid-floor-plan-layer", commandIndex);
+  }
 }
 
 function createFloorPlanCatalogCharacter(

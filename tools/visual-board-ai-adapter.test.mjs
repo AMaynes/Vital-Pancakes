@@ -304,8 +304,8 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 6);
-  assert.equal(capabilities.commands.length, 47);
+  assert.equal(capabilities.version, 7);
+  assert.equal(capabilities.commands.length, 50);
   assert.ok(capabilities.architectureCatalog.symbols.length >= 100);
   assert.ok(capabilities.architectureCatalog.materials.length >= 20);
   capabilities.commands.forEach((command) => {
@@ -396,6 +396,7 @@ test("AI can create, edit, insert, remove, and list custom floor-plan elements",
       elementId: "reading-chair",
       name: "Reading chair",
       description: "Custom chair symbol",
+      category: "furniture",
       targets: { ids: ["custom-fixture"] },
     },
     {
@@ -419,6 +420,7 @@ test("AI can create, edit, insert, remove, and list custom floor-plan elements",
     (output) => output.type === "floor-plan.elements.list",
   );
   assert.equal(saved.name, "Library chair");
+  assert.equal(saved.category, "furniture");
   assert.equal(saved.character.objects.length, 1);
   assert.equal(result.state.board.objects.length, 2);
   assert.equal(
@@ -429,6 +431,7 @@ test("AI can create, edit, insert, remove, and list custom floor-plan elements",
   const removed = execute(result.state, [{
     type: "floor-plan.elements.remove",
     elementId: "reading-chair",
+    password: "password",
   }]);
   assert.equal(removed.state.board.settings.floorPlan.elementLibrary.items.length, 0);
 });
@@ -458,6 +461,7 @@ test("AI can replace, hide, and restore built-in floor-plan elements", () => {
   const hidden = execute(customized.state, [{
     type: "floor-plan.elements.remove",
     elementId: "bed",
+    password: "password",
   }]);
   assert.equal(
     hidden.state.board.settings.floorPlan.elementLibrary.hiddenBuiltIns.includes("bed"),
@@ -529,6 +533,7 @@ test("AI can create, edit, insert, remove, and list custom floor-plan templates"
       templateId: "garden-suite",
       name: "Garden suite",
       description: "Bedroom and patio block",
+      category: "rooms",
       targets: { ids: ["room-block"] },
     },
     {
@@ -559,6 +564,7 @@ test("AI can create, edit, insert, remove, and list custom floor-plan templates"
   const removed = execute(result.state, [{
     type: "floor-plan.templates.remove",
     templateId: "garden-suite",
+    password: "password",
   }]);
   assert.equal(removed.state.board.settings.floorPlan.templateLibrary.items.length, 0);
 });
@@ -583,6 +589,7 @@ test("AI can replace, hide, and restore built-in floor-plan templates", () => {
   const hidden = execute(customized.state, [{
     type: "floor-plan.templates.remove",
     templateId: "bedroom",
+    password: "password",
   }]);
   assert.equal(
     hidden.state.board.settings.floorPlan.templateLibrary.hiddenBuiltIns.includes("bedroom"),
@@ -597,6 +604,78 @@ test("AI can replace, hide, and restore built-in floor-plan templates", () => {
     .floorPlanTemplates.find((item) => item.id === "bedroom");
   assert.equal(restoredBedroom.visible, true);
   assert.equal(restoredBedroom.source, "built-in");
+});
+
+test("AI layer-designator commands add, cycle, and password-protect removal", () => {
+  const inserted = execute(createState(), [{
+    type: "floor-plan.insert",
+    kind: "layer-designator",
+    placement: { type: "point", x: 100, y: 100 },
+  }]);
+  const designator = inserted.state.board.objects[0];
+  const added = execute(inserted.state, [{
+    type: "floor-plan.layers.add",
+    designatorId: designator.id,
+    name: "Floor 2",
+  }]);
+  const floorTwoId = added.state.board.objects[0].activeFloorPlanRoomId;
+  added.state.board.objects.push(rectangle("floor-two-bed", 120, 140, {
+    semantic: {
+      referenceId: designator.id,
+      roomId: floorTwoId,
+    },
+  }));
+
+  const cycled = execute(added.state, [{
+    type: "floor-plan.layers.cycle",
+    designatorId: designator.id,
+    direction: "previous",
+  }]);
+  assert.notEqual(cycled.state.board.objects[0].activeFloorPlanRoomId, floorTwoId);
+
+  assert.throws(() => execute(cycled.state, [{
+    type: "floor-plan.layers.remove",
+    designatorId: designator.id,
+    password: "wrong",
+  }]), (error) => error.code === "invalid-removal-password");
+
+  const returned = execute(cycled.state, [{
+    type: "floor-plan.layers.cycle",
+    designatorId: designator.id,
+    direction: "next",
+  }]);
+  const removed = execute(returned.state, [{
+    type: "floor-plan.layers.remove",
+    designatorId: designator.id,
+    password: "password",
+  }]);
+  assert.equal(removed.state.board.objects.length, 1);
+  assert.equal(removed.outputs[0].deletedObjectCount, 1);
+});
+
+test("AI fill updates can paint and clear closed object fills", () => {
+  const state = createState([rectangle("paintable", 0, 0)]);
+  const painted = execute(state, [{
+    type: "objects.update",
+    targets: { ids: ["paintable"] },
+    patch: { fillColor: "#336699" },
+  }]);
+  assert.equal(painted.state.board.objects[0].fillColor, "#336699");
+
+  const cleared = execute(painted.state, [{
+    type: "objects.update",
+    targets: { ids: ["paintable"] },
+    patch: { fillColor: null },
+  }]);
+  assert.equal("fillColor" in cleared.state.board.objects[0], false);
+});
+
+test("floor-plan catalog removals reject an incorrect password", () => {
+  assert.throws(() => execute(createState(), [{
+    type: "floor-plan.elements.remove",
+    elementId: "bed",
+    password: "wrong",
+  }]), (error) => error.code === "invalid-removal-password");
 });
 
 test("floor-plan templates reject image-backed targets", () => {
