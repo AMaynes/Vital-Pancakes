@@ -2,6 +2,8 @@
  * Pure duplication helpers for Visual Board copy and paste.
  */
 
+import { normalizeGroupHistory } from "./visual-board-groups.mjs?v=4";
+
 export function duplicateBoardObjects(sourceObjects, createIdentifier, offset = { x: 32, y: 32 }) {
   if (!Array.isArray(sourceObjects) || typeof createIdentifier !== "function") return [];
 
@@ -22,6 +24,23 @@ export function duplicateBoardObjects(sourceObjects, createIdentifier, offset = 
         duplicate.groupId,
         createIdentifier,
       );
+    }
+    const groupHistory = normalizeGroupHistory(duplicate.groupHistory);
+    if (groupHistory.length) {
+      duplicate.groupHistory = groupHistory.map((level) => (
+        level
+          ? {
+            ...level,
+            id: getMappedIdentifier(
+              groupIdentifiers,
+              level.id,
+              createIdentifier,
+            ),
+          }
+          : null
+      ));
+    } else {
+      delete duplicate.groupHistory;
     }
 
     if (duplicate.assemblyId) {

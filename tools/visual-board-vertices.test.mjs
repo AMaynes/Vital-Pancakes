@@ -6,6 +6,10 @@ import {
   getVertexNetworkVertices,
   setVertexNetworkPosition,
 } from "./visual-board-vertices.mjs";
+import {
+  getCurvePoint,
+  getQuadraticCurvePoint,
+} from "./visual-board-curves.mjs";
 
 function identifierFactory() {
   let index = 0;
@@ -45,6 +49,73 @@ test("touching line endpoints merge while separate endpoints remain editable", (
   assert.equal(network.objects[0].groupId, network.objects[1].groupId);
   assert.equal(network.objects[0].vertexNetworkId, network.objects[1].vertexNetworkId);
   assert.equal("assemblyId" in network.objects[0], false);
+});
+
+test("creating vertices preserves the exact original arc", () => {
+  const source = {
+    id: "curve",
+    type: "arc",
+    x: 0,
+    y: 40,
+    midX: 45,
+    midY: -20,
+    endX: 120,
+    endY: 60,
+  };
+  const expected = Array.from({ length: 17 }, (_, index) => (
+    getQuadraticCurvePoint(source, index / 16)
+  ));
+  const network = createEditableVertexNetwork(
+    [source],
+    identifierFactory(),
+    0.01,
+  );
+  const curve = network.objects[0];
+  const actual = Array.from({ length: 17 }, (_, index) => {
+    const progress = index / 16;
+    const segmentIndex = progress < 0.5 ? 0 : 1;
+    const localProgress = segmentIndex === 0
+      ? progress * 2
+      : (progress - 0.5) * 2;
+    return getCurvePoint(curve, segmentIndex, localProgress);
+  });
+
+  actual.forEach((point, index) => {
+    assert.ok(Math.abs(point.x - expected[index].x) < 1e-8);
+    assert.ok(Math.abs(point.y - expected[index].y) < 1e-8);
+  });
+});
+
+test("grouped paths retain their previous group beneath the vertex network", () => {
+  const network = createEditableVertexNetwork([
+    {
+      id: "first",
+      type: "line",
+      x: 0,
+      y: 0,
+      endX: 20,
+      endY: 20,
+      groupId: "small-group",
+      rigidGroup: true,
+    },
+    {
+      id: "second",
+      type: "line",
+      x: 20,
+      y: 20,
+      endX: 40,
+      endY: 0,
+      groupId: "small-group",
+      rigidGroup: true,
+    },
+  ], identifierFactory(), 0.01);
+
+  assert.ok(network.objects.every((object) => object.groupId === network.groupId));
+  assert.ok(network.objects.every((object) => !object.rigidGroup));
+  assert.ok(network.objects.every((object) => (
+    object.groupHistory.at(-1)?.id === "small-group"
+    && object.groupHistory.at(-1)?.rigidGroup
+  )));
 });
 
 test("moving a shared vertex reshapes every incident line only", () => {
@@ -131,17 +202,21 @@ test("a line endpoint touching another line creates a T-junction", () => {
 });
 
 test("a line crossing a curve creates shared joints without flattening the curve", () => {
+  const sourceCurve = {
+    id: "curve",
+    type: "arc",
+    x: 0,
+    y: 50,
+    midX: 50,
+    midY: 0,
+    endX: 100,
+    endY: 50,
+  };
+  const originalPoints = Array.from({ length: 33 }, (_, index) => (
+    getQuadraticCurvePoint(sourceCurve, index / 32)
+  ));
   const network = createEditableVertexNetwork([
-    {
-      id: "curve",
-      type: "arc",
-      x: 0,
-      y: 50,
-      midX: 50,
-      midY: 0,
-      endX: 100,
-      endY: 50,
-    },
+    sourceCurve,
     {
       id: "line",
       type: "line",
@@ -162,6 +237,24 @@ test("a line crossing a curve creates shared joints without flattening the curve
     line.endVertexId,
   ]).filter((id) => curve.curveVertexIds.includes(id)));
   assert.equal(sharedIds.size, 2);
+  originalPoints.forEach((point, index) => {
+    const progress = index / 32;
+    const segmentIndex = Math.min(
+      curve.curvePoints.length - 2,
+      curve.curvePoints.findIndex((candidate, candidateIndex) => (
+        candidateIndex > 0 && candidate.x / 100 >= progress
+      )) - 1,
+    );
+    const startProgress = curve.curvePoints[segmentIndex].x / 100;
+    const endProgress = curve.curvePoints[segmentIndex + 1].x / 100;
+    const actual = getCurvePoint(
+      curve,
+      segmentIndex,
+      (progress - startProgress) / (endProgress - startProgress),
+    );
+    assert.ok(Math.abs(actual.x - point.x) < 1e-8);
+    assert.ok(Math.abs(actual.y - point.y) < 1e-8);
+  });
 });
 
 test("two curves can share an inserted crossing vertex", () => {

@@ -6,7 +6,8 @@
 import {
   CHARACTER_FORMAT,
   CHARACTER_VERSION,
-} from "./visual-board-character.mjs";
+} from "./visual-board-character.mjs?v=3";
+import { getObjectGroupIds } from "./visual-board-groups.mjs?v=4";
 
 export const VISUAL_BOARD_LIBRARY_VERSION = 1;
 export const MAX_VISUAL_BOARD_LIBRARY_ITEMS = 100;
@@ -97,7 +98,7 @@ export function getVisualBoardLibraryItemSummary(item) {
   const joints = item?.character?.rig?.joints ?? [];
   return {
     objectCount: objects.length,
-    groupCount: new Set(objects.map((object) => object.groupId).filter(Boolean)).size,
+    groupCount: new Set(objects.flatMap(getObjectGroupIds)).size,
     jointCount: joints.length,
     lockCount: objects.filter((object) => object.locked).length
       + bodies.filter((body) => body.dimensionsLocked).length,

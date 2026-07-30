@@ -10,7 +10,7 @@
 import {
   CHARACTER_FORMAT,
   CHARACTER_VERSION,
-} from "./visual-board-character.mjs";
+} from "./visual-board-character.mjs?v=3";
 
 export const FLOOR_PLAN_TEMPLATE_LIBRARY_VERSION = 1;
 export const MAX_CUSTOM_FLOOR_PLAN_TEMPLATES = 100;

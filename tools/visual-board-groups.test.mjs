@@ -2,8 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  getObjectGroupIds,
   getSelectionBounds,
   getSelectionUnits,
+  popObjectGroupLevel,
+  pushObjectGroupLevel,
   resizeSelectionObjects,
   rotateSelectionObjects,
 } from "./visual-board-groups.mjs";
@@ -20,6 +23,26 @@ test("grouped objects count as one logical selection unit", () => {
     units.map((unit) => unit.map((object) => object.id)),
     [["group-a-1", "group-a-2"], ["group-b-1"], ["loose"]],
   );
+});
+
+test("nested groups ungroup one level and restore their smaller groups", () => {
+  const first = { id: "first", groupId: "arm", rigidGroup: true };
+  const second = { id: "second", groupId: "hand", rigidGroup: true };
+
+  pushObjectGroupLevel(first, "body", true);
+  pushObjectGroupLevel(second, "body", true);
+
+  assert.deepEqual(getObjectGroupIds(first), ["arm", "body"]);
+  assert.equal(getSelectionUnits([first, second]).length, 1);
+
+  popObjectGroupLevel(first);
+  popObjectGroupLevel(second);
+
+  assert.equal(first.groupId, "arm");
+  assert.equal(second.groupId, "hand");
+  assert.equal(first.rigidGroup, true);
+  assert.equal(second.rigidGroup, true);
+  assert.equal(getSelectionUnits([first, second]).length, 2);
 });
 
 test("group resizing preserves joined endpoints and scales around the opposite corner", () => {

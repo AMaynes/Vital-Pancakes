@@ -7,7 +7,11 @@ import {
   getObjectBounds,
   getObjectSegments,
 } from "./visual-board-geometry.mjs";
-import { transformSelectionObjects } from "./visual-board-groups.mjs";
+import {
+  getObjectGroupIds,
+  objectBelongsToGroup,
+  transformSelectionObjects,
+} from "./visual-board-groups.mjs?v=4";
 
 export function createEmptyRig() {
   return { bodies: [], joints: [] };
@@ -17,9 +21,7 @@ export function normalizeRig(rawRig, objects = null) {
   const sourceBodies = Array.isArray(rawRig?.bodies) ? rawRig.bodies : [];
   const sourceJoints = Array.isArray(rawRig?.joints) ? rawRig.joints : [];
   const currentGroups = Array.isArray(objects)
-    ? new Map(objects
-      .filter((object) => typeof object?.groupId === "string" && object.groupId)
-      .map((object) => [object.groupId, true]))
+    ? new Set(objects.flatMap(getObjectGroupIds))
     : null;
   const bodies = sourceBodies
     .filter((body) => (
@@ -31,7 +33,7 @@ export function normalizeRig(rawRig, objects = null) {
       id: body.id,
       objectIds: Array.isArray(objects)
         ? objects
-          .filter((object) => object.groupId === body.id)
+          .filter((object) => objectBelongsToGroup(object, body.id))
           .map((object) => object.id)
         : uniqueStrings(body.objectIds),
       jointIds: [],
@@ -257,7 +259,7 @@ export function dragRigJoint(sourceObjects, sourceRig, jointId, target) {
   const replacements = new Map();
 
   attachedBodies.forEach((body) => {
-    const bodyObjects = objects.filter((object) => object.groupId === body.id);
+    const bodyObjects = objects.filter((object) => objectBelongsToGroup(object, body.id));
     if (!bodyObjects.length) return;
     const otherJoints = body.jointIds
       .filter((candidateId) => candidateId !== jointId)

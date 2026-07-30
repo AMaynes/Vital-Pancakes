@@ -12,9 +12,14 @@ import {
   getCurveVertices,
   insertCurveVertexAt,
   setCurveVertexPosition,
-} from "./visual-board-curves.mjs?v=2";
+  setCurveVertexPositionPreservingHandles,
+} from "./visual-board-curves.mjs?v=5";
+import {
+  popObjectGroupLevel,
+  pushObjectGroupLevel,
+} from "./visual-board-groups.mjs?v=4";
 
-const CURVE_SAMPLE_STEPS = 32;
+const CURVE_SAMPLE_STEPS = 128;
 const SPLIT_EPSILON = 1e-7;
 
 export function createEditableVertexNetwork(
@@ -45,10 +50,13 @@ export function createEditableVertexNetwork(
   });
 
   const vertices = [...clusters.values()].map((clusterMembers) => {
+    const curveMember = clusterMembers.find((member) => member.object.type === "arc");
     const vertex = {
       id: createIdentifier(),
-      x: average(clusterMembers.map((member) => member.point.x)),
-      y: average(clusterMembers.map((member) => member.point.y)),
+      x: curveMember?.point.x
+        ?? average(clusterMembers.map((member) => member.point.x)),
+      y: curveMember?.point.y
+        ?? average(clusterMembers.map((member) => member.point.y)),
     };
     clusterMembers.forEach((member) => {
       member.vertex = vertex;
@@ -57,17 +65,23 @@ export function createEditableVertexNetwork(
   });
 
   prepared.forEach((object) => {
+    if (object.vertexNetworkId && object.groupId && !object.rigidGroup) {
+      popObjectGroupLevel(object);
+    }
     clearAssemblyData(object);
-    object.groupId = groupId;
+    pushObjectGroupLevel(object, groupId, false);
     object.vertexNetworkId = networkId;
-    delete object.rigidGroup;
 
     const objectMembers = members.filter((member) => member.object === object);
     if (object.type === "arc") {
       object.curveVertexIds = Array(object.curvePoints.length).fill(null);
       objectMembers.forEach((member) => {
         object.curveVertexIds[member.vertexIndex] = member.vertex.id;
-        setCurveVertexPosition(object, member.vertexIndex, member.vertex);
+        setCurveVertexPositionPreservingHandles(
+          object,
+          member.vertexIndex,
+          member.vertex,
+        );
       });
       return;
     }
@@ -91,6 +105,9 @@ export function createEditableVertexNetwork(
 }
 
 function preparePathsAtJoints(objects, createIdentifier, mergeDistance) {
+  objects = objects.map((object) => (
+    object.type === "arc" ? createEditableCurveGeometry(object) : object
+  ));
   const sampledSegments = objects.flatMap((object, objectIndex) => (
     sampleObjectSegments(object, objectIndex)
   ));
@@ -283,9 +300,6 @@ function insertCurveJointRequests(object, requests) {
         const localProgress = clamp(request.progress / upperProgress, 0.001, 0.999);
         const result = insertCurveVertexAt(curve, segmentIndex, localProgress);
         curve = result.curve;
-        if (result.inserted) {
-          setCurveVertexPosition(curve, result.vertexIndex, request.point);
-        }
         upperProgress = request.progress;
       });
   });
@@ -526,6 +540,7 @@ function clearAssemblyData(object) {
   delete object.assemblySource;
   delete object.startVertexId;
   delete object.endVertexId;
+  delete object.vertexNetworkId;
   if (object.type !== "arc") delete object.curveVertexIds;
 }
 

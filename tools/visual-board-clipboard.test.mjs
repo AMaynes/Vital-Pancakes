@@ -51,6 +51,38 @@ test("copying multiple objects preserves their layout and remaps their group", (
   assert.deepEqual([source[0].x, source[0].y], [10, 20]);
 });
 
+test("copying nested groups remaps every level together", () => {
+  const copies = duplicateBoardObjects([
+    {
+      id: "first",
+      type: "line",
+      x: 0,
+      y: 0,
+      endX: 10,
+      endY: 0,
+      groupHistory: [{ id: "inner", rigidGroup: true }],
+      groupId: "outer",
+      rigidGroup: true,
+    },
+    {
+      id: "second",
+      type: "line",
+      x: 10,
+      y: 0,
+      endX: 20,
+      endY: 0,
+      groupHistory: [{ id: "inner", rigidGroup: true }],
+      groupId: "outer",
+      rigidGroup: true,
+    },
+  ], identifierFactory());
+
+  assert.equal(copies[0].groupId, copies[1].groupId);
+  assert.equal(copies[0].groupHistory[0].id, copies[1].groupHistory[0].id);
+  assert.notEqual(copies[0].groupId, "outer");
+  assert.notEqual(copies[0].groupHistory[0].id, "inner");
+});
+
 test("copying divided lines preserves a movable, reassemblable source", () => {
   const assemblySource = {
     id: "shape-1",

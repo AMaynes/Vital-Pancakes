@@ -2,11 +2,16 @@
  * Portable Visual Board character packages with embedded local image assets.
  */
 
-import { getSelectionBounds, transformSelectionObjects } from "./visual-board-groups.mjs?v=3";
+import {
+  getObjectGroupIds,
+  getSelectionBounds,
+  normalizeGroupHistory,
+  transformSelectionObjects,
+} from "./visual-board-groups.mjs?v=4";
 import {
   getConnectedRigBodyIds,
   normalizeRig,
-} from "./visual-board-rigging.mjs";
+} from "./visual-board-rigging.mjs?v=2";
 
 export const CHARACTER_FORMAT = "vital-pancakes-character";
 export const CHARACTER_VERSION = 1;
@@ -23,10 +28,11 @@ export function createCharacterPackage(objects, assets, rig, selectedObjectIds, 
   const selectedObjects = objects.filter((object) => selectedIds.has(object.id));
   if (!selectedObjects.length) throw new CharacterFileError("Select a character before saving.");
 
-  const selectedBodyIds = selectedObjects.map((object) => object.groupId).filter(Boolean);
+  const selectedBodyIds = selectedObjects.flatMap(getObjectGroupIds);
   const connectedBodyIds = getConnectedRigBodyIds(rig, selectedBodyIds);
   const includedObjects = objects.filter((object) => (
-    selectedIds.has(object.id) || (object.groupId && connectedBodyIds.has(object.groupId))
+    selectedIds.has(object.id)
+    || getObjectGroupIds(object).some((groupId) => connectedBodyIds.has(groupId))
   ));
   const includedObjectIds = new Set(includedObjects.map((object) => object.id));
   const includedBodies = (rig?.bodies ?? []).filter((body) => connectedBodyIds.has(body.id));
@@ -67,7 +73,7 @@ export function instantiateCharacter(rawCharacter, createIdentifier, placementPo
 
   const objectIds = createIdentifierMap(rawCharacter.objects.map((object) => object.id), createIdentifier);
   const groupIds = createIdentifierMap(
-    rawCharacter.objects.map((object) => object.groupId).filter(Boolean),
+    rawCharacter.objects.flatMap(getObjectGroupIds),
     createIdentifier,
   );
   const networkIds = createIdentifierMap(
@@ -99,6 +105,14 @@ export function instantiateCharacter(rawCharacter, createIdentifier, placementPo
   let objects = cloneValue(rawCharacter.objects).map((object) => {
     object.id = objectIds.get(object.id);
     if (object.groupId) object.groupId = groupIds.get(object.groupId);
+    const groupHistory = normalizeGroupHistory(object.groupHistory);
+    if (groupHistory.length) {
+      object.groupHistory = groupHistory.map((level) => (
+        level ? { ...level, id: groupIds.get(level.id) } : null
+      ));
+    } else {
+      delete object.groupHistory;
+    }
     if (object.vertexNetworkId) object.vertexNetworkId = networkIds.get(object.vertexNetworkId);
     if (object.startVertexId) object.startVertexId = vertexIds.get(object.startVertexId);
     if (object.endVertexId) object.endVertexId = vertexIds.get(object.endVertexId);

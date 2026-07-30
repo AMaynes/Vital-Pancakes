@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   createSharedGroupJoints,
   dragRigJoint,
+  normalizeRig,
   resolveConstrainedPoint,
 } from "./visual-board-rigging.mjs";
 
@@ -58,6 +59,27 @@ test("two selected groups create one external joint without rewriting their memb
   assert.deepEqual([firstGroup, secondGroup], originalGroups);
   assert.equal(firstGroup[0].startVertexId, "internal-a");
   assert.equal(secondGroup[0].endVertexId, "internal-d");
+});
+
+test("rig normalization retains bodies stored beneath an outer group", () => {
+  const rig = normalizeRig({
+    bodies: [{
+      id: "inner",
+      objectIds: ["part"],
+      jointIds: [],
+      dimensionsLocked: true,
+    }],
+    joints: [],
+  }, [{
+    id: "part",
+    groupHistory: [{ id: "inner", rigidGroup: true }],
+    groupId: "outer",
+    rigidGroup: true,
+  }]);
+
+  assert.equal(rig.bodies.length, 1);
+  assert.deepEqual(rig.bodies[0].objectIds, ["part"]);
+  assert.equal(rig.bodies[0].dimensionsLocked, true);
 });
 
 test("creating group joints again keeps the original joint and frame count", () => {

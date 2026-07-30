@@ -4,13 +4,13 @@
  */
 
 import { createId } from "../app/store.js";
-import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=3";
+import { duplicateBoardObjects } from "./visual-board-clipboard.mjs?v=4";
 import {
   CharacterFileError,
   createCharacterFilename,
   createCharacterPackage,
   instantiateCharacter,
-} from "./visual-board-character.mjs?v=2";
+} from "./visual-board-character.mjs?v=3";
 import {
   addVisualBoardLibraryItem,
   createEmptyVisualBoardLibrary,
@@ -19,7 +19,7 @@ import {
   getVisualBoardLibraryItemSummary,
   normalizeVisualBoardLibrary,
   removeVisualBoardLibraryItem,
-} from "./visual-board-library.mjs?v=1";
+} from "./visual-board-library.mjs?v=2";
 import {
   getShapeToolFamily,
   retainShapeToolChoice,
@@ -42,7 +42,7 @@ import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
   setVertexNetworkPosition,
-} from "./visual-board-vertices.mjs?v=3";
+} from "./visual-board-vertices.mjs?v=4";
 import {
   getCurveBezierSegments,
   getCurvePathPoints,
@@ -51,7 +51,7 @@ import {
   normalizeCurveGeometry,
   setCurveVertexPosition,
   transformCurveGeometry,
-} from "./visual-board-curves.mjs?v=4";
+} from "./visual-board-curves.mjs?v=5";
 import { traceBlackAndWhiteImage } from "./visual-board-tracing.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
@@ -73,14 +73,16 @@ import {
   recordAnimationVideo,
 } from "./visual-board-export.mjs?v=2";
 import {
+  getObjectGroupFields,
   getSelectionBounds,
   getSelectionUnits,
+  popObjectGroupLevel,
+  pushObjectGroupLevel,
   resizeSelectionObjects,
   rotateSelectionObjects,
-} from "./visual-board-groups.mjs?v=3";
+} from "./visual-board-groups.mjs?v=4";
 import {
   createEmptyRig,
-  createSharedGroupJoints,
   dragRigJoint,
   getConnectedRigBodyIds,
   getRigJointsForBodyIds,
@@ -88,7 +90,7 @@ import {
   removeRigBodies,
   resolveConstrainedPoint,
   setRigBodyDimensionLock,
-} from "./visual-board-rigging.mjs?v=1";
+} from "./visual-board-rigging.mjs?v=2";
 import {
   CURVE_TYPES,
   LINE_TYPES,
@@ -146,7 +148,7 @@ import {
   replaceFloorPlanTemplate,
   restoreBuiltInFloorPlanTemplate,
   updateFloorPlanTemplate,
-} from "./visual-board-floor-plan-templates.mjs?v=3";
+} from "./visual-board-floor-plan-templates.mjs?v=4";
 import {
   ARCHITECTURE_FILL_PATTERNS,
   fitArchitectureSymbolFrame,
@@ -165,11 +167,11 @@ import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=11";
+} from "./visual-board-ai-adapter.mjs?v=12";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
-const BOARD_VERSION = 19;
+const BOARD_VERSION = 20;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -622,13 +624,11 @@ function normalizeObject(rawObject, options = {}) {
     ...(normalizeObjectSemantic(rawObject.semantic)
       ? { semantic: normalizeObjectSemantic(rawObject.semantic) }
       : {}),
-    ...(typeof rawObject.groupId === "string" && rawObject.groupId
-      ? { groupId: rawObject.groupId }
-      : {}),
-    ...(rawObject.rigidGroup === true
-      || (rawObject.groupId && !rawObject.vertexNetworkId)
-      ? { rigidGroup: true }
-      : {}),
+    ...getObjectGroupFields({
+      ...rawObject,
+      rigidGroup: rawObject.rigidGroup === true
+        || Boolean(rawObject.groupId && !rawObject.vertexNetworkId),
+    }),
     ...(isLayerDesignator ? normalizeFloorPlanRoomState(rawObject) : {}),
   };
 
@@ -5421,7 +5421,7 @@ function updateSelectionControls() {
   ));
   ungroupSelectionButton.hidden = !canUngroup;
   ungroupSelectionButton.disabled = !canUngroup;
-  const canGroup = !canUngroup && canGroupSelection(selectedObjects);
+  const canGroup = canGroupSelection(selectedObjects);
   groupSelectionButton.hidden = !canGroup;
   groupSelectionButton.disabled = !canGroup;
   const canCreateVertices = canCreateVertexNetwork(selectedObjects);
@@ -5457,32 +5457,23 @@ function updateTextStyleControls() {
 }
 
 function canGroupSelection(objects) {
-  if (objects.length < 2 || objects.some((object) => object.locked)) return false;
-  const existingGroupId = objects[0].groupId;
-  const isAlreadyRigidGroup = Boolean(existingGroupId)
-    && objects.every((object) => (
-      object.groupId === existingGroupId && object.rigidGroup
-    ));
-  return !isAlreadyRigidGroup;
+  return getSelectionUnits(objects).length >= 2
+    && objects.every((object) => !object.locked);
 }
 
 function groupSelection() {
   if (!canGroupSelection(selectedObjects)) return;
   checkpoint();
-  const previousGroupIds = new Set(
-    selectedObjects.map((object) => object.groupId).filter(Boolean),
-  );
+  const unitCount = getSelectionUnits(selectedObjects).length;
   const groupId = createId();
   selectedObjects.forEach((object) => {
-    object.groupId = groupId;
-    object.rigidGroup = true;
+    pushObjectGroupLevel(object, groupId, true);
   });
-  board.rig = removeRigBodies(board.rig, previousGroupIds);
   saveBoard();
   updateSelectionControls();
   drawBoard();
   groupSelectionButton.blur();
-  announceStatus(`${selectedObjects.length} objects grouped`);
+  announceStatus(`${unitCount} units grouped at a new level`);
 }
 
 function canTraceSelection(objects) {
@@ -5600,20 +5591,7 @@ function loadImageSource(source) {
   });
 }
 
-function canCreateGroupJoints(objects) {
-  const units = getSelectionUnits(objects);
-  return units.length >= 2
-    && objects.every((object) => !object.locked)
-    && units.every((unit) => (
-      unit.length > 0
-      && typeof unit[0].groupId === "string"
-      && unit.every((object) => object.groupId === unit[0].groupId)
-      && unit.some((object) => object.rigidGroup)
-    ));
-}
-
 function canCreateLineVertexNetwork(objects) {
-  if (objects.some((object) => object.rigidGroup)) return false;
   return objects.length > 0
     && objects.every((object) => (
       !object.locked
@@ -5626,32 +5604,11 @@ function canCreateLineVertexNetwork(objects) {
 }
 
 function canCreateVertexNetwork(objects) {
-  return canCreateGroupJoints(objects) || canCreateLineVertexNetwork(objects);
+  return canCreateLineVertexNetwork(objects);
 }
 
 function mergeSelectionVertices() {
   if (!canCreateVertexNetwork(selectedObjects)) return;
-  if (canCreateGroupJoints(selectedObjects)) {
-    const result = createSharedGroupJoints(
-      getSelectionUnits(selectedObjects),
-      board.rig,
-      createId,
-      24 / viewport.zoom,
-    );
-    if (!result.addedJoints.length) {
-      announceStatus("These groups do not share a joint yet");
-      return;
-    }
-    checkpoint();
-    board.rig = result.rig;
-    saveBoard();
-    updateSelectionControls();
-    drawBoard();
-    announceStatus(
-      `${result.addedJoints.length} shared joint${result.addedJoints.length === 1 ? "" : "s"} created`,
-    );
-    return;
-  }
 
   const targets = new Set(selectedObjects);
   const sourcePaths = selectedObjects.flatMap(createVertexCandidateLines);
@@ -5699,6 +5656,7 @@ function createVertexCandidateLines(object) {
     strokeWidth: object.strokeWidth,
     dashPattern: object.dashPattern ?? "solid",
     locked: false,
+    ...getObjectGroupFields(object),
   }));
 }
 
@@ -5726,6 +5684,7 @@ function createStyledLine(start, end, source) {
     strokeWidth: source.strokeWidth,
     dashPattern: source.dashPattern ?? "solid",
     locked: false,
+    ...getObjectGroupFields(source),
   };
 }
 
@@ -5775,22 +5734,24 @@ function insertSelectedCurveVertexAt(target) {
 
 function ungroupSelection() {
   const groupIds = new Set(selectedObjects.map((object) => object.groupId).filter(Boolean));
-  const rigidGroupIds = new Set(
-    selectedObjects.filter((object) => object.rigidGroup).map((object) => object.groupId),
-  );
   const vertexNetworkIds = new Set(
     selectedObjects.map((object) => object.vertexNetworkId).filter(Boolean),
   );
   if ((!groupIds.size && !vertexNetworkIds.size)
     || selectedObjects.some((object) => object.locked)) return;
   checkpoint();
+  const releasedRigidGroupIds = new Set();
   board.objects.forEach((object) => {
-    const releasedRigidGroup = rigidGroupIds.has(object.groupId);
     if (groupIds.has(object.groupId)) {
-      delete object.groupId;
-      delete object.rigidGroup;
+      const released = popObjectGroupLevel(object);
+      if (released?.rigidGroup) {
+        releasedRigidGroupIds.add(released.id);
+        return;
+      }
+    } else if (!vertexNetworkIds.has(object.vertexNetworkId)) {
+      return;
     }
-    if (!releasedRigidGroup && vertexNetworkIds.has(object.vertexNetworkId)) {
+    if (vertexNetworkIds.has(object.vertexNetworkId)) {
       delete object.vertexNetworkId;
       delete object.startVertexId;
       delete object.endVertexId;
@@ -5798,11 +5759,11 @@ function ungroupSelection() {
       delete object.dimensionsLocked;
     }
   });
-  board.rig = removeRigBodies(board.rig, groupIds);
+  board.rig = removeRigBodies(board.rig, releasedRigidGroupIds);
   saveBoard();
   updateSelectionControls();
   drawBoard();
-  announceStatus("Selection ungrouped");
+  announceStatus("One group level removed");
 }
 
 function deleteSelection() {

@@ -152,6 +152,55 @@ test("character filenames are compact and use the drag-and-drop extension", () =
   assert.equal(createCharacterFilename("Skull & Barbell"), "skull-barbell.vp-character.json");
 });
 
+test("character import remaps nested group levels without flattening them", () => {
+  const imported = instantiateCharacter({
+    format: CHARACTER_FORMAT,
+    version: 1,
+    name: "Nested arm",
+    assets: {},
+    objects: [
+      {
+        id: "first",
+        type: "line",
+        x: 0,
+        y: 0,
+        endX: 10,
+        endY: 0,
+        groupHistory: [{ id: "inner", rigidGroup: true }],
+        groupId: "outer",
+        rigidGroup: true,
+      },
+      {
+        id: "second",
+        type: "line",
+        x: 10,
+        y: 0,
+        endX: 20,
+        endY: 0,
+        groupHistory: [{ id: "inner", rigidGroup: true }],
+        groupId: "outer",
+        rigidGroup: true,
+      },
+    ],
+    rig: {
+      bodies: [
+        { id: "inner", objectIds: ["first", "second"], jointIds: [] },
+        { id: "outer", objectIds: ["first", "second"], jointIds: [] },
+      ],
+      joints: [],
+    },
+  }, identifierFactory(), { x: 100, y: 100 });
+
+  assert.equal(imported.objects[0].groupId, imported.objects[1].groupId);
+  assert.equal(
+    imported.objects[0].groupHistory[0].id,
+    imported.objects[1].groupHistory[0].id,
+  );
+  assert.notEqual(imported.objects[0].groupId, "outer");
+  assert.notEqual(imported.objects[0].groupHistory[0].id, "inner");
+  assert.equal(imported.rig.bodies.length, 2);
+});
+
 test("character import remaps complex curve vertices without losing joints", () => {
   const curve = {
     id: "curve",

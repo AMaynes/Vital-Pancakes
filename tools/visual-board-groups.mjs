@@ -6,7 +6,92 @@ import {
   getShapeCenter,
   rotatePoint,
 } from "./visual-board-geometry.mjs";
-import { transformCurveGeometry } from "./visual-board-curves.mjs?v=2";
+import { transformCurveGeometry } from "./visual-board-curves.mjs?v=5";
+
+export function normalizeGroupHistory(value) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((level) => {
+    if (level === null) return [null];
+    const id = typeof level?.id === "string"
+      ? level.id
+      : typeof level?.groupId === "string"
+        ? level.groupId
+        : "";
+    if (!id) return [];
+    return [{
+      id,
+      rigidGroup: level.rigidGroup !== false,
+    }];
+  });
+}
+
+export function getObjectGroupFields(object) {
+  const groupHistory = normalizeGroupHistory(object?.groupHistory);
+  const groupId = typeof object?.groupId === "string" && object.groupId
+    ? object.groupId
+    : null;
+  return {
+    ...(groupId && groupHistory.length ? { groupHistory } : {}),
+    ...(groupId
+      ? {
+        groupId,
+        ...(object.rigidGroup ? { rigidGroup: true } : {}),
+      }
+      : {}),
+  };
+}
+
+export function pushObjectGroupLevel(object, groupId, rigidGroup = true) {
+  if (!object || typeof object !== "object" || !groupId) return false;
+  const history = normalizeGroupHistory(object.groupHistory);
+  history.push(object.groupId
+    ? {
+      id: object.groupId,
+      rigidGroup: Boolean(object.rigidGroup),
+    }
+    : null);
+  object.groupHistory = history;
+  object.groupId = groupId;
+  if (rigidGroup) object.rigidGroup = true;
+  else delete object.rigidGroup;
+  return true;
+}
+
+export function popObjectGroupLevel(object) {
+  if (!object?.groupId) return null;
+  const removed = {
+    id: object.groupId,
+    rigidGroup: Boolean(object.rigidGroup),
+  };
+  const history = normalizeGroupHistory(object.groupHistory);
+  const previous = history.length ? history.pop() : null;
+  if (history.length) object.groupHistory = history;
+  else delete object.groupHistory;
+  if (previous?.id) {
+    object.groupId = previous.id;
+    if (previous.rigidGroup) object.rigidGroup = true;
+    else delete object.rigidGroup;
+  } else {
+    delete object.groupId;
+    delete object.rigidGroup;
+  }
+  return removed;
+}
+
+export function getObjectGroupIds(object) {
+  return [
+    ...normalizeGroupHistory(object?.groupHistory)
+      .map((level) => level?.id)
+      .filter(Boolean),
+    ...(typeof object?.groupId === "string" && object.groupId
+      ? [object.groupId]
+      : []),
+  ];
+}
+
+export function objectBelongsToGroup(object, groupId) {
+  return Boolean(groupId && getObjectGroupIds(object).includes(groupId));
+}
 
 export function getSelectionUnits(objects) {
   const units = [];

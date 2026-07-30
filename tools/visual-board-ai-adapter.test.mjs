@@ -160,6 +160,36 @@ test("group and ungroup commands use one reversible grouping model", () => {
   assert.ok(ungrouped.state.board.objects.every((object) => !object.rigidGroup));
 });
 
+test("AI grouping nests existing groups and ungroup restores one level", () => {
+  const state = createState([
+    rectangle("arm-a", 0, 0, { groupId: "arm" }),
+    rectangle("arm-b", 30, 0, { groupId: "arm" }),
+    rectangle("hand-a", 70, 0, { groupId: "hand" }),
+    rectangle("hand-b", 100, 0, { groupId: "hand" }),
+  ]);
+  const nested = execute(state, [{
+    type: "objects.group",
+    targets: { ids: ["arm-a", "hand-a"] },
+  }]);
+  const outerGroupId = nested.state.board.objects[0].groupId;
+
+  assert.ok(outerGroupId);
+  assert.ok(nested.state.board.objects.every((object) => object.groupId === outerGroupId));
+  assert.deepEqual(
+    nested.state.board.objects.map((object) => object.groupHistory.at(-1)?.id),
+    ["arm", "arm", "hand", "hand"],
+  );
+
+  const restored = execute(nested.state, [{
+    type: "objects.ungroup",
+    targets: { ids: ["arm-a"] },
+  }]);
+  assert.deepEqual(
+    restored.state.board.objects.map((object) => object.groupId),
+    ["arm", "arm", "hand", "hand"],
+  );
+});
+
 test("semantic connectors follow transformed nodes and disappear with deleted endpoints", () => {
   const connection = {
     id: "edge",
@@ -326,7 +356,7 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 8);
+  assert.equal(capabilities.version, 9);
   assert.equal(capabilities.commands.length, 51);
   assert.ok(capabilities.architectureCatalog.symbols.length >= 100);
   assert.ok(capabilities.architectureCatalog.materials.length >= 20);
@@ -560,6 +590,49 @@ test("AI shared-vertex creation converts outlined shapes without a divide step",
   assert.equal(lines.length, 4);
   assert.ok(lines.every((line) => line.vertexNetworkId));
   assert.ok(result.receipt.deletedIds.includes("box"));
+});
+
+test("AI shared-vertex creation expands groups and preserves them beneath the network", () => {
+  const result = execute(createState([
+    {
+      id: "first",
+      type: "line",
+      x: 0,
+      y: 0,
+      endX: 50,
+      endY: 50,
+      color: "#000000",
+      strokeWidth: 3,
+      dashPattern: "solid",
+      locked: false,
+      groupId: "limb",
+      rigidGroup: true,
+    },
+    {
+      id: "second",
+      type: "line",
+      x: 0,
+      y: 50,
+      endX: 50,
+      endY: 0,
+      color: "#000000",
+      strokeWidth: 3,
+      dashPattern: "solid",
+      locked: false,
+      groupId: "limb",
+      rigidGroup: true,
+    },
+  ]), [{
+    type: "vertices.create",
+    targets: { ids: ["first"] },
+  }]);
+
+  assert.equal(result.state.board.objects.length, 4);
+  assert.ok(result.state.board.objects.every((object) => (
+    object.vertexNetworkId
+    && object.groupHistory.at(-1)?.id === "limb"
+    && object.groupHistory.at(-1)?.rigidGroup
+  )));
 });
 
 test("AI can create, edit, insert, remove, and list custom floor-plan templates", () => {

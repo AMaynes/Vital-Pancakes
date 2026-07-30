@@ -320,6 +320,35 @@ export function setCurveVertexPosition(arc, vertexIndex, point) {
   return true;
 }
 
+/**
+ * Snaps an existing knot while retaining its incoming and outgoing handles.
+ * Vertex-network creation uses this for tiny intersection corrections so the
+ * rest of the curve does not get rebuilt.
+ */
+export function setCurveVertexPositionPreservingHandles(arc, vertexIndex, point) {
+  const editable = createEditableCurveGeometry(arc);
+  if (vertexIndex < 0 || vertexIndex >= editable.curvePoints.length) return false;
+  const current = editable.curvePoints[vertexIndex];
+  const delta = {
+    x: point.x - current.x,
+    y: point.y - current.y,
+  };
+  if (Math.hypot(delta.x, delta.y) <= CURVE_EPSILON) return true;
+
+  editable.curvePoints[vertexIndex] = clonePoint(point);
+  if (vertexIndex > 0) {
+    editable.curveHandles[vertexIndex - 1].control2.x += delta.x;
+    editable.curveHandles[vertexIndex - 1].control2.y += delta.y;
+  }
+  if (vertexIndex < editable.curveHandles.length) {
+    editable.curveHandles[vertexIndex].control1.x += delta.x;
+    editable.curveHandles[vertexIndex].control1.y += delta.y;
+  }
+  synchronizeLegacyCoordinates(editable);
+  replaceCurveGeometry(arc, editable);
+  return true;
+}
+
 export function transformCurveGeometry(arc, transformPoint) {
   if (typeof transformPoint !== "function") return normalizeCurveGeometry(arc);
   const data = readStoredCurveData(arc);

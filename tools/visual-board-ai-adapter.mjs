@@ -32,19 +32,27 @@ import {
   replaceFloorPlanTemplate,
   restoreBuiltInFloorPlanTemplate,
   updateFloorPlanTemplate,
-} from "./visual-board-floor-plan-templates.mjs?v=3";
+} from "./visual-board-floor-plan-templates.mjs?v=4";
 import {
   createCharacterPackage,
   instantiateCharacter,
-} from "./visual-board-character.mjs?v=2";
+} from "./visual-board-character.mjs?v=3";
 import {
   getCurveVertices,
   insertCurveVertex,
   normalizeCurveGeometry,
   reinitializeCurveVertices,
   transformCurveGeometry,
-} from "./visual-board-curves.mjs?v=3";
-import { createEditableVertexNetwork } from "./visual-board-vertices.mjs?v=3";
+} from "./visual-board-curves.mjs?v=5";
+import {
+  getObjectGroupFields,
+  getObjectGroupIds,
+  getSelectionUnits,
+  normalizeGroupHistory,
+  popObjectGroupLevel,
+  pushObjectGroupLevel,
+} from "./visual-board-groups.mjs?v=4";
+import { createEditableVertexNetwork } from "./visual-board-vertices.mjs?v=4";
 import {
   ARCHITECTURE_FILL_PATTERNS,
   getArchitectureCatalog,
@@ -205,11 +213,11 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("objects.transform", ["update"], "Move, resize, rotate, or flip target objects."),
   command("objects.duplicate", ["create"], "Duplicate target objects with an offset."),
   command("selection.set", ["update"], "Set the current selection using stable references."),
-  command("objects.group", ["update"], "Group target objects into one rigid selection unit."),
-  command("objects.ungroup", ["update"], "Ungroup target objects from their rigid groups."),
+  command("objects.group", ["update"], "Nest target selection units inside one new rigid group level."),
+  command("objects.ungroup", ["update"], "Remove exactly one current group level and restore the previous groups."),
   command("curves.points.insert", ["update"], "Insert exact movable points at requested positions on one editable curve."),
   command("curves.vertices.reinitialize", ["update"], "Reduce curves to endpoints, meaningful extrema, and shared joints."),
-  command("vertices.create", ["update"], "Create shared editable joints across selected paths and outlined shapes, including crossings."),
+  command("vertices.create", ["update"], "Create shared editable joints across selected paths, groups, and outlined shapes without changing curve geometry."),
   command("objects.connect", ["create"], "Connect two objects with an arrow or line."),
   command("objects.disconnect", ["delete"], "Remove semantic connections between targets."),
   command("objects.layout", ["update"], "Arrange target objects with a deterministic layout."),
@@ -1080,7 +1088,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 8,
+    version: 9,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -1109,7 +1117,8 @@ export function getVisualBoardAiCapabilities() {
       "Floor-plan catalog and layer removals require the configured removal password.",
       "Reference images require an existing local board image plus explicit consent; their bytes are never exposed to providers.",
       "Architecture validation reports deterministic geometry issues but does not redesign the caller's plan.",
-      "Shared-vertex creation converts supported outlined shapes directly and preserves straight lines and curves.",
+      "Shared-vertex creation expands selected groups, converts supported outlines, merges crossings, and preserves exact curve geometry.",
+      "Groups are hierarchical; grouping adds one level and ungrouping removes only the current level.",
       "Curve reinitialization retains endpoints, meaningful extrema, and shared path joints while filtering minor noise.",
     ],
     examples: getVisualBoardAiExamples(),
@@ -1131,6 +1140,13 @@ export function getVisualBoardAiExamples() {
       command: {
         type: "vertices.create",
         targets: { ids: ["curve-id", "line-id"] },
+      },
+    },
+    {
+      name: "Nest two existing groups",
+      command: {
+        type: "objects.group",
+        targets: { ids: ["member-from-first-group", "member-from-second-group"] },
       },
     },
     {
@@ -1414,6 +1430,8 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
       selected: selectedIds.has(object.id),
       locked: Boolean(object.locked),
       groupId: object.groupId ?? null,
+      groupDepth: normalizeGroupHistory(object.groupHistory).length
+        + (object.groupId ? 1 : 0),
       vertexNetworkId: object.vertexNetworkId ?? null,
       layerId: object.layerId ?? "structure",
       zIndex: roundNumber(object.zIndex ?? 0),
@@ -2117,6 +2135,14 @@ function duplicateObjects(runtime, command, commandIndex) {
       if (!groupMap.has(source.groupId)) groupMap.set(source.groupId, runtime.createId());
       duplicate.groupId = groupMap.get(source.groupId);
     }
+    const groupHistory = normalizeGroupHistory(source.groupHistory);
+    if (groupHistory.length) {
+      duplicate.groupHistory = groupHistory.map((level) => {
+        if (!level) return null;
+        if (!groupMap.has(level.id)) groupMap.set(level.id, runtime.createId());
+        return { ...level, id: groupMap.get(level.id) };
+      });
+    }
     if (source.vertexNetworkId) {
       if (!networkMap.has(source.vertexNetworkId)) {
         networkMap.set(source.vertexNetworkId, runtime.createId());
@@ -2160,24 +2186,29 @@ function setSelection(runtime, command, commandIndex) {
 }
 
 function groupObjects(runtime, command, commandIndex) {
-  const targets = resolveTargets(runtime, command.targets ?? command.target, commandIndex);
-  if (targets.length < 2) {
-    throw commandError("Select at least two objects to create a group.", "insufficient-targets", commandIndex);
+  const targets = expandRigidGroupTargets(
+    runtime.state.board.objects,
+    resolveTargets(runtime, command.targets ?? command.target, commandIndex),
+  );
+  if (getSelectionUnits(targets).length < 2) {
+    throw commandError("Select at least two objects or groups to create a group level.", "insufficient-targets", commandIndex);
   }
   if (targets.some((object) => object.locked)) {
     throw commandError("Unlock target objects before grouping them.", "object-locked", commandIndex);
   }
   const groupId = runtime.createId();
   targets.forEach((object) => {
-    object.groupId = groupId;
-    object.rigidGroup = true;
+    pushObjectGroupLevel(object, groupId, true);
     runtime.updatedIds.add(object.id);
   });
   runtime.state.selectedIds = targets.map((object) => object.id);
 }
 
 function ungroupObjects(runtime, command, commandIndex) {
-  const targets = resolveTargets(runtime, command.targets ?? command.target, commandIndex);
+  const targets = expandRigidGroupTargets(
+    runtime.state.board.objects,
+    resolveTargets(runtime, command.targets ?? command.target, commandIndex),
+  );
   if (targets.some((object) => object.locked)) {
     throw commandError("Unlock target objects before ungrouping them.", "object-locked", commandIndex);
   }
@@ -2185,16 +2216,38 @@ function ungroupObjects(runtime, command, commandIndex) {
   if (!groupIds.size) {
     throw commandError("The target objects are not grouped.", "not-grouped", commandIndex);
   }
+  const releasedRigidGroupIds = new Set();
   runtime.state.board.objects.forEach((object) => {
     if (!groupIds.has(object.groupId)) return;
-    delete object.groupId;
-    delete object.rigidGroup;
-    delete object.vertexNetworkId;
-    delete object.startVertexId;
-    delete object.endVertexId;
-    delete object.curveVertexIds;
-    delete object.dimensionsLocked;
+    const released = popObjectGroupLevel(object);
+    if (released?.rigidGroup) {
+      releasedRigidGroupIds.add(released.id);
+    } else {
+      delete object.vertexNetworkId;
+      delete object.startVertexId;
+      delete object.endVertexId;
+      delete object.curveVertexIds;
+      delete object.dimensionsLocked;
+    }
     runtime.updatedIds.add(object.id);
+  });
+  removeRigGroupIds(runtime.state.board.rig, releasedRigidGroupIds);
+  runtime.state.selectedIds = targets.map((object) => object.id);
+}
+
+function removeRigGroupIds(rig, groupIds) {
+  if (!groupIds.size || !isRecord(rig)) return;
+  rig.bodies = (Array.isArray(rig.bodies) ? rig.bodies : [])
+    .filter((body) => !groupIds.has(body.id));
+  rig.joints = (Array.isArray(rig.joints) ? rig.joints : [])
+    .map((joint) => ({
+      ...joint,
+      bodyIds: (joint.bodyIds ?? []).filter((bodyId) => !groupIds.has(bodyId)),
+    }))
+    .filter((joint) => joint.bodyIds.length >= 2);
+  const jointIds = new Set(rig.joints.map((joint) => joint.id));
+  rig.bodies.forEach((body) => {
+    body.jointIds = (body.jointIds ?? []).filter((jointId) => jointIds.has(jointId));
   });
 }
 
@@ -2309,10 +2362,13 @@ function findSharedPathVertexIds(objects) {
 }
 
 function createSharedPathVertices(runtime, command, commandIndex) {
-  const targets = resolveTargets(
-    runtime,
-    command.targets ?? command.target,
-    commandIndex,
+  const targets = expandRigidGroupTargets(
+    runtime.state.board.objects,
+    resolveTargets(
+      runtime,
+      command.targets ?? command.target,
+      commandIndex,
+    ),
   );
   if (targets.some((object) => object.locked)) {
     throw commandError("Unlock paths before creating vertices.", "object-locked", commandIndex);
@@ -2331,14 +2387,6 @@ function createSharedPathVertices(runtime, command, commandIndex) {
       commandIndex,
     );
   }
-  if (targets.some((object) => object.rigidGroup)) {
-    throw commandError(
-      "Ungroup rigid groups before creating path vertices.",
-      "rigid-group-not-supported",
-      commandIndex,
-    );
-  }
-
   const sourcePaths = targets.flatMap((object) => {
     if (["line", "connector", "arc"].includes(object.type)) {
       return [cloneJson(object)];
@@ -2354,6 +2402,7 @@ function createSharedPathVertices(runtime, command, commandIndex) {
       strokeWidth: object.strokeWidth,
       dashPattern: object.dashPattern ?? "solid",
       locked: false,
+      ...getObjectGroupFields(object),
     }));
   });
   const network = createEditableVertexNetwork(
@@ -4943,6 +4992,13 @@ function normalizeExecutionState(source) {
   if (!isRecord(state?.board) || !Array.isArray(state.board.objects)) {
     throw new TypeError("Visual Board AI requires a complete board state.");
   }
+  state.board.objects.forEach((object) => {
+    const groupFields = getObjectGroupFields(object);
+    delete object.groupHistory;
+    delete object.groupId;
+    delete object.rigidGroup;
+    Object.assign(object, groupFields);
+  });
   state.board.assets = isRecord(state.board.assets) ? state.board.assets : {};
   state.board.rig = isRecord(state.board.rig) ? state.board.rig : { bodies: [], joints: [] };
   state.board.settings = isRecord(state.board.settings)
@@ -5218,7 +5274,7 @@ function getCombinedBounds(objects) {
 function filterRigForObjects(rigValue, objects) {
   const rig = isRecord(rigValue) ? cloneJson(rigValue) : { bodies: [], joints: [] };
   const objectIds = new Set(objects.map((object) => object.id));
-  const groupIds = new Set(objects.map((object) => object.groupId).filter(Boolean));
+  const groupIds = new Set(objects.flatMap(getObjectGroupIds));
   const bodies = (Array.isArray(rig.bodies) ? rig.bodies : [])
     .filter((body) => groupIds.has(body.id))
     .map((body) => ({
