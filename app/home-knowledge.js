@@ -1,8 +1,10 @@
 import {
   deleteGlossaryEntry,
+  deleteKnowledgeInferenceSession,
   deleteKnowledgeLink,
   getKnowledgeState,
   saveGlossaryEntry,
+  saveKnowledgeInferenceSession,
   saveKnowledgeLink,
   setKnowledgeLinkStatus,
 } from "./knowledge-db.mjs";
@@ -22,6 +24,7 @@ import {
 } from "./vault-storage.mjs";
 import { VAULT_EXTENSION } from "./vault-archive.mjs";
 import { createHomeKnowledgeAiConfiguration } from "./home-knowledge-ai-adapter.mjs";
+import { createKnowledgeInferenceController } from "./knowledge-inference-ui.mjs";
 import { installCurrentToolAiHost } from "../tools/current-tool-ai-adapter.mjs";
 import {
   LOCAL_MODEL_OPTIONS,
@@ -37,6 +40,7 @@ let knowledge = {
   documents: [],
   links: [],
   glossary: [],
+  inferenceSessions: [],
   lastIndexedAt: null,
   indexWarnings: [],
 };
@@ -53,6 +57,12 @@ let verifiedRestore = null;
 let vaultController = null;
 let activeAiRequestId = null;
 let graphView = { x: 0, y: 0, width: 1000, height: 560 };
+const inferenceController = createKnowledgeInferenceController({
+  getKnowledge: () => knowledge,
+  llm,
+  modelOptions: LOCAL_MODEL_OPTIONS,
+  parseModelJson,
+});
 
 initialize();
 
@@ -99,7 +109,10 @@ function bindEvents() {
   byId("vault-dialog").addEventListener("close", resetVaultDialog);
   bindGraphPanAndZoom();
   globalThis.addEventListener("knowledge:changed", () => refreshKnowledge({ sync: false }));
-  globalThis.addEventListener("pagehide", () => llm.destroy());
+  globalThis.addEventListener("pagehide", () => {
+    inferenceController.destroy();
+    llm.destroy();
+  });
 }
 
 async function refreshKnowledge({ sync }) {
@@ -137,6 +150,7 @@ function renderKnowledge() {
   renderGraph();
   renderRelationshipControls();
   renderHomepageGlossary();
+  inferenceController.updateKnowledge(knowledge);
 }
 
 function renderLoadingState() {
@@ -549,6 +563,7 @@ async function suggestRelationshipsWithAi() {
 
 function updateAiProgress({ progress, text }) {
   byId("knowledge-ai-status").textContent = `${text} ${Math.round((Number(progress) || 0) * 100)}%`;
+  inferenceController.updateModelProgress({ progress, text });
 }
 
 function renderHomepageGlossary() {
@@ -735,6 +750,7 @@ function createAiSnapshot() {
     })),
     glossary: knowledge.glossary,
     links: knowledge.links,
+    inferenceSessions: inferenceController.getSessions(),
   };
 }
 
@@ -742,6 +758,7 @@ async function commitAiSnapshot(next) {
   const previous = createAiSnapshot();
   const nextGlossaryIds = new Set(next.glossary.map((entry) => entry.id));
   const nextLinkIds = new Set(next.links.map((link) => link.id));
+  const nextInferenceSessionIds = new Set(next.inferenceSessions.map((session) => session.id));
   for (const entry of previous.glossary) {
     if (!nextGlossaryIds.has(entry.id)) await deleteGlossaryEntry(entry.id);
   }
@@ -755,6 +772,17 @@ async function commitAiSnapshot(next) {
   for (const link of next.links) {
     const old = previous.links.find((candidate) => candidate.id === link.id);
     if (JSON.stringify(old) !== JSON.stringify(link)) await saveKnowledgeLink(link);
+  }
+  for (const session of previous.inferenceSessions) {
+    if (!nextInferenceSessionIds.has(session.id)) {
+      await deleteKnowledgeInferenceSession(session.id);
+    }
+  }
+  for (const session of next.inferenceSessions) {
+    const old = previous.inferenceSessions.find((candidate) => candidate.id === session.id);
+    if (JSON.stringify(old) !== JSON.stringify(session)) {
+      await saveKnowledgeInferenceSession(session);
+    }
   }
   await refreshKnowledge({ sync: false });
 }
@@ -809,7 +837,7 @@ function parseModelJson(value) {
   const source = String(value ?? "").replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/i, "");
   const start = source.indexOf("{");
   const end = source.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new TypeError("The local model did not return relationship JSON.");
+  if (start < 0 || end <= start) throw new TypeError("The local model did not return valid JSON.");
   return JSON.parse(source.slice(start, end + 1));
 }
 

@@ -8,11 +8,9 @@
 export const CURRENT_AI_TOOLS = Object.freeze([
   current("knowledge-home", "Knowledge Home", "index.html", "app/home-knowledge-ai-adapter.mjs"),
   current("workspace", "Workspace Libraries", "workspace.html", "app/workspace-ai-adapter.mjs"),
-  current("ai-command-center", "AI Command Center", "tools/ai-command-center.html", "tools/ai-command-center-adapter.mjs"),
   current("visual-board", "Visual Board", "tools/visual-board.html", "tools/visual-board-ai-adapter.mjs"),
   current("overhead", "Overhead", "tools/overhead.html", "tools/current-tool-ai-adapter.mjs"),
   current("graphing", "Graphing Tool", "tools/graphing.html", "tools/current-tool-ai-adapter.mjs"),
-  current("inference", "Inference Tool", "tools/inference.html", "tools/current-tool-ai-adapter.mjs"),
   current("markdown-latex", "Markdown & LaTeX Studio", "tools/markdown-studio.html", "tools/current-tool-ai-adapter.mjs"),
   current("tool-designer", "Tool Designer & Planner", "tools/tool-designer.html", "tools/current-tool-ai-adapter.mjs"),
   current("color-aesthetic", "Color Aesthetic Generator", "tools/color-aesthetic.html", "tools/current-tool-ai-adapter.mjs"),

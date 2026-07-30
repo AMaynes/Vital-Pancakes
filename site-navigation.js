@@ -64,10 +64,6 @@ const PAGE_TRAILS = {
     segment("workspace", "workspace.html#area=tools"),
     segment("software-architect"),
   ],
-  "tools/ai-command-center.html": [
-    segment("workspace", "workspace.html#area=tools"),
-    segment("ai-command-center"),
-  ],
   "tools/budget-finance.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("budget-finance"),
@@ -87,10 +83,6 @@ const PAGE_TRAILS = {
   "tools/graphing.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("graphing-tool"),
-  ],
-  "tools/inference.html": [
-    segment("workspace", "workspace.html#area=tools"),
-    segment("inference-tool"),
   ],
   "tools/markdown-studio.html": [
     segment("workspace", "workspace.html#area=tools"),

@@ -8,13 +8,17 @@ import {
   normalizeKnowledgeDocument,
   normalizeKnowledgeLink,
 } from "./knowledge-model.mjs";
+import { validateKnowledgeInferenceSession } from "./knowledge-inference.mjs";
 
 const DATABASE_NAME = "vital-pancakes-knowledge";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const DOCUMENT_STORE = "documents";
 const LINK_STORE = "links";
 const GLOSSARY_STORE = "glossary";
+const INFERENCE_STORE = "inferenceSessions";
 const META_STORE = "meta";
+const LEGACY_TOOL_DATABASE = "vital-pancakes-local-tools";
+const LEGACY_INFERENCE_NAMESPACE = "inference-sessions";
 
 export function openKnowledgeDatabase() {
   if (!globalThis.indexedDB) return Promise.reject(new Error("IndexedDB is unavailable in this browser."));
@@ -42,6 +46,11 @@ export function openKnowledgeDatabase() {
         glossary.createIndex("term", "term", { unique: false });
         glossary.createIndex("updatedAt", "updatedAt", { unique: false });
       }
+      if (!database.objectStoreNames.contains(INFERENCE_STORE)) {
+        const sessions = database.createObjectStore(INFERENCE_STORE, { keyPath: "id" });
+        sessions.createIndex("createdAt", "createdAt", { unique: false });
+        sessions.createIndex("updatedAt", "updatedAt", { unique: false });
+      }
       if (!database.objectStoreNames.contains(META_STORE)) {
         database.createObjectStore(META_STORE, { keyPath: "key" });
       }
@@ -51,16 +60,19 @@ export function openKnowledgeDatabase() {
 }
 
 export async function getKnowledgeState() {
-  const [documents, links, glossary, meta] = await Promise.all([
+  await migrateLegacyInferenceSessions();
+  const [documents, links, glossary, inferenceSessions, meta] = await Promise.all([
     listStore(DOCUMENT_STORE),
     listStore(LINK_STORE),
     listStore(GLOSSARY_STORE),
+    listKnowledgeInferenceSessions(),
     getStoreValue(META_STORE, "index"),
   ]);
   return {
     documents,
     links,
     glossary,
+    inferenceSessions,
     lastIndexedAt: meta?.value?.lastIndexedAt ?? null,
     indexWarnings: meta?.value?.warnings ?? [],
   };
@@ -124,6 +136,27 @@ export function listGlossaryEntries() {
   return listStore(GLOSSARY_STORE).then((entries) => entries.sort((left, right) => (
     left.term.localeCompare(right.term)
   )));
+}
+
+export function listKnowledgeInferenceSessions() {
+  return listStore(INFERENCE_STORE).then((sessions) => sessions
+    .map(validateKnowledgeInferenceSession)
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)));
+}
+
+export async function saveKnowledgeInferenceSession(value) {
+  const session = validateKnowledgeInferenceSession({
+    ...value,
+    updatedAt: new Date().toISOString(),
+  });
+  await putStoreValue(INFERENCE_STORE, session);
+  dispatchKnowledgeChanged();
+  return session;
+}
+
+export async function deleteKnowledgeInferenceSession(id) {
+  await deleteStoreValue(INFERENCE_STORE, String(id));
+  dispatchKnowledgeChanged();
 }
 
 export async function saveGlossaryEntry(value) {
@@ -234,6 +267,82 @@ async function deleteStoreValue(storeName, key) {
   } finally {
     database.close();
   }
+}
+
+async function migrateLegacyInferenceSessions() {
+  const migration = await getStoreValue(META_STORE, "inference-sessions-v2");
+  if (migration?.value?.complete) return;
+  let legacy;
+  try {
+    legacy = await readLegacyInferenceSessions();
+  } catch {
+    // A damaged or temporarily locked legacy database must not block Knowledge.
+    return;
+  }
+  const sessions = [];
+  legacy.forEach((value) => {
+    try {
+      sessions.push(validateKnowledgeInferenceSession(value));
+    } catch {
+      // Invalid legacy sessions stay untouched in their original namespace.
+    }
+  });
+  const database = await openKnowledgeDatabase();
+  try {
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction([INFERENCE_STORE, META_STORE], "readwrite");
+      const store = transaction.objectStore(INFERENCE_STORE);
+      sessions.forEach((session) => store.put(session));
+      transaction.objectStore(META_STORE).put({
+        key: "inference-sessions-v2",
+        value: {
+          complete: true,
+          migratedAt: new Date().toISOString(),
+          sessionCount: sessions.length,
+        },
+      });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error ?? new Error("Inference migration was cancelled."));
+    });
+  } finally {
+    database.close();
+  }
+}
+
+async function readLegacyInferenceSessions() {
+  if (typeof indexedDB.databases !== "function") return [];
+  const databases = await indexedDB.databases();
+  if (!databases.some((database) => database.name === LEGACY_TOOL_DATABASE)) return [];
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(LEGACY_TOOL_DATABASE);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains("records")) {
+        database.close();
+        resolve([]);
+        return;
+      }
+      const transaction = database.transaction("records", "readonly");
+      const store = transaction.objectStore("records");
+      const recordsRequest = store.indexNames.contains("namespace")
+        ? store.index("namespace").getAll(LEGACY_INFERENCE_NAMESPACE)
+        : store.getAll();
+      recordsRequest.onsuccess = () => {
+        const records = recordsRequest.result.filter((record) => (
+          record.namespace === LEGACY_INFERENCE_NAMESPACE
+        ));
+        resolve(records.map((record) => record.value));
+      };
+      recordsRequest.onerror = () => reject(recordsRequest.error);
+      transaction.oncomplete = () => database.close();
+      transaction.onabort = () => {
+        database.close();
+        reject(transaction.error ?? new Error("Legacy inference migration was cancelled."));
+      };
+    };
+  });
 }
 
 function normalizeTerm(value) {

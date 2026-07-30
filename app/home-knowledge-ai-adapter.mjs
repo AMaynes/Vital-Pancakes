@@ -24,6 +24,7 @@ export function createHomeKnowledgeAiConfiguration(controller) {
       "Encrypted vault contents, passwords, private Overhead sections, and raw file bytes are never returned.",
       "Vault export and restore remain explicit user actions.",
       "AI-suggested relationships remain pending until accepted.",
+      "Running local knowledge inference remains an explicit button action; commands may only review saved results.",
     ],
     getSnapshot: controller.getSnapshot,
     getContext: (_options, snapshot) => ({
@@ -31,6 +32,7 @@ export function createHomeKnowledgeAiConfiguration(controller) {
       glossaryTerms: snapshot.glossary.length,
       acceptedRelationships: snapshot.links.filter((link) => link.status === "accepted").length,
       pendingSuggestions: snapshot.links.filter((link) => link.status === "pending").length,
+      inferenceSessions: snapshot.inferenceSessions.length,
       vault: controller.getVaultSummary(),
     }),
     commitSnapshot: controller.commitSnapshot,
@@ -106,6 +108,112 @@ export function createHomeKnowledgeAiConfiguration(controller) {
                   },
                 })),
             },
+          };
+        },
+      },
+      {
+        type: "inferences.list",
+        description: "List saved Knowledge Center inference results without returning stored evidence excerpts.",
+        permissions: ["read-content"],
+        schema: {
+          type: "object",
+          properties: {
+            status: { type: "string", enum: ["pending", "accepted", "rejected"] },
+          },
+          additionalProperties: false,
+        },
+        example: { type: "inferences.list", status: "pending" },
+        execute(snapshot, command, { commandIndex }) {
+          rejectUnknownCommandFields(command, ["status"], commandIndex);
+          return {
+            value: snapshot.inferenceSessions.flatMap((session) => (
+              session.inferences
+                .filter((inference) => !command.status || inference.status === command.status)
+                .map((inference) => ({
+                  sessionId: session.id,
+                  sessionName: session.name,
+                  id: inference.id,
+                  kind: inference.kind,
+                  title: inference.title,
+                  statement: inference.statement,
+                  confidence: inference.confidence,
+                  confidenceRationale: inference.confidenceRationale,
+                  citations: inference.citations,
+                  tags: inference.tags,
+                  status: inference.status,
+                }))
+            )),
+          };
+        },
+      },
+      {
+        type: "inferences.update",
+        description: "Edit, tag, accept, or reject one saved inference without changing source records.",
+        permissions: ["update"],
+        mutates: true,
+        schema: {
+          type: "object",
+          required: ["sessionId", "inferenceId", "changes"],
+          properties: {
+            sessionId: { type: "string", maxLength: 200 },
+            inferenceId: { type: "string", maxLength: 200 },
+            changes: { type: "object" },
+          },
+          additionalProperties: false,
+        },
+        example: {
+          type: "inferences.update",
+          sessionId: "inference-session-id",
+          inferenceId: "inference-id",
+          changes: { status: "accepted", tags: ["follow-up"] },
+        },
+        execute(snapshot, command, { commandIndex }) {
+          rejectUnknownCommandFields(command, ["sessionId", "inferenceId", "changes"], commandIndex);
+          const sessionId = requireCommandString(command.sessionId, "sessionId", commandIndex, { maximumLength: 200 });
+          const inferenceId = requireCommandString(command.inferenceId, "inferenceId", commandIndex, { maximumLength: 200 });
+          const changes = requireCommandRecord(command.changes, "changes", commandIndex);
+          const allowed = new Set(["title", "statement", "tags", "status"]);
+          const unknown = Object.keys(changes).find((key) => !allowed.has(key));
+          if (unknown) throw new Error(`Unsupported inference field: ${unknown}.`);
+          if (changes.status && !["pending", "accepted", "rejected"].includes(changes.status)) {
+            throw new Error("Inference status must be pending, accepted, or rejected.");
+          }
+          const session = snapshot.inferenceSessions.find((candidate) => candidate.id === sessionId);
+          const inference = session?.inferences.find((candidate) => candidate.id === inferenceId);
+          if (!session || !inference) throw new Error("Inference not found.");
+          const updated = {
+            ...inference,
+            ...(changes.title !== undefined
+              ? { title: String(changes.title).trim().slice(0, 500) }
+              : {}),
+            ...(changes.statement !== undefined
+              ? { statement: String(changes.statement).trim().slice(0, 12_000) }
+              : {}),
+            ...(Array.isArray(changes.tags)
+              ? {
+                tags: [...new Set(changes.tags.map((tag) => String(tag).trim()).filter(Boolean))]
+                  .slice(0, 50),
+              }
+              : {}),
+            ...(changes.status ? { status: changes.status } : {}),
+          };
+          return {
+            state: {
+              ...snapshot,
+              inferenceSessions: snapshot.inferenceSessions.map((candidate) => (
+                candidate.id === sessionId
+                  ? {
+                    ...candidate,
+                    updatedAt: new Date().toISOString(),
+                    inferences: candidate.inferences.map((item) => (
+                      item.id === inferenceId ? updated : item
+                    )),
+                  }
+                  : candidate
+              )),
+            },
+            updatedIds: [inferenceId],
+            value: updated,
           };
         },
       },

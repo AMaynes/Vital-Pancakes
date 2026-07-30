@@ -28,10 +28,14 @@ vital-pancakes/
 │   ├── ai-command-registry.mjs — Routes previewed and applied commands through registered tool adapters.
 │   ├── ai-page-host.mjs — Exposes the shared versioned AI page API and message bridge.
 │   ├── ai-tool-catalog.mjs — Registers AI-addressable tools and their adapter modules.
-│   ├── home-knowledge.js — Coordinates homepage search, graph, glossary, local AI suggestions, and encrypted vault workflows.
-│   ├── home-knowledge-ai-adapter.mjs — Exposes bounded search, glossary, relationship, and vault-summary commands.
+│   ├── home-knowledge.js — Coordinates homepage search, graph, glossary, local AI suggestions, inference, and encrypted vault workflows.
+│   ├── home-knowledge-ai-adapter.mjs — Exposes bounded search, glossary, relationship, inference-review, and vault-summary commands.
 │   ├── glossary-ui.mjs — Installs the global glossary editor and reference inserter.
-│   ├── knowledge-db.mjs — Stores documents, relationships, glossary entries, and index metadata.
+│   ├── knowledge-db.mjs — Stores documents, relationships, glossary entries, inference sessions, and index metadata.
+│   ├── knowledge-inference.mjs — Owns evidence chunking, retrieval, citation enforcement, session migration, and conversion.
+│   ├── knowledge-inference-ui.mjs — Coordinates the button-driven Knowledge Center analysis dialog.
+│   ├── knowledge-inference-worker.js — Prepares the existing local Knowledge index off the main thread.
+│   ├── knowledge-inference.test.mjs — Verifies provenance, retrieval, citation rejection, migration, and conversion.
 │   ├── knowledge-model.mjs — Owns search ranking, references, backlinks, related entries, suggestions, and graph projection.
 │   ├── knowledge-sync.mjs — Indexes Workspace, tools, lessons, annotations, text files, and PDF records locally while reducing Visual Board data to searchable labels instead of geometry.
 │   ├── vault-archive.mjs — Frames chunked PBKDF2/AES-GCM encrypted archives with authenticated ordering.
@@ -59,7 +63,6 @@ vital-pancakes/
 │   ├── tool.css — Shares full-screen and windowed tool layouts and controls.
 │   ├── current-tool-ai-adapter.mjs — Provides validated page-local command contracts for maintained tools.
 │   ├── visual-board-ai-adapter.mjs — Validates exact Board, diagram, floor-plan, and architectural AI commands.
-│   ├── ai-command-center.* — Hosts local command drafting, preview, permissions, and explicit apply workflows.
 │   ├── workspace-suite.css — Shares the dense archival shell used by the newer local-first tools.
 │   ├── local-toolkit.mjs — Provides shared IndexedDB repositories, backups, downloads, imports, IDs, and undo.
 │   ├── suite-ui.mjs — Provides accessible tabs, dialogs, toasts, and compact DOM helpers.
@@ -73,10 +76,6 @@ vital-pancakes/
 │   ├── graphing-renderer.mjs — Builds accessible SVG specifications for every supported chart.
 │   ├── graphing-worker.js — Parses and transforms larger datasets off the main thread.
 │   ├── graphing-*.test.mjs — Verifies parsing, transformations, statistics, chart validation, rendering, and migration.
-│   ├── inference.html / inference.js — Hosts selected-backup indexing and cited local-model analyses.
-│   ├── inference-model.mjs — Owns backup exclusion, provenance, chunking, retrieval, citations, and conversion.
-│   ├── inference-index-worker.js — Builds checkpointable local search indexes with cancellation.
-│   ├── inference-model.test.mjs — Verifies exclusions, provenance, retrieval, citation enforcement, and conversion.
 │   ├── markdown-studio.html / markdown-studio.js — Hosts local Markdown, math, and LaTeX-source editing.
 │   ├── markdown-studio-model.mjs — Owns safe rendering, outlines, versions, diffs, statistics, and backup validation.
 │   ├── markdown-studio-model.test.mjs — Verifies sanitization, parsing boundaries, outlines, diffs, and backups.
@@ -373,9 +372,9 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 ### Local-First Workspace Suite
 
-`workspace-suite.css`, `suite-ui.mjs`, and `local-toolkit.mjs` share the responsive archival shell, accessible controls, IndexedDB records/blobs, versioned backups, conflict-safe imports, downloads, and bounded undo used by Overhead, Graphing Tool, Inference Tool, Markdown & LaTeX Studio, Tool Designer & Planner, Color Aesthetic Generator, Bracket Generator, and Randomized Picker. Domain rules stay in adjacent pure model modules with deterministic Node tests; parsing, image clustering, graph transformation, backup indexing, and local-model inference move to workers where warranted.
+`workspace-suite.css`, `suite-ui.mjs`, and `local-toolkit.mjs` share the responsive archival shell, accessible controls, IndexedDB records/blobs, versioned backups, conflict-safe imports, downloads, and bounded undo used by Overhead, Graphing Tool, Markdown & LaTeX Studio, Tool Designer & Planner, Color Aesthetic Generator, Bracket Generator, and Randomized Picker. Domain rules stay in adjacent pure model modules with deterministic Node tests; parsing, image clustering, graph transformation, and local-model inference move to workers where warranted.
 
-`local-webllm-client.mjs` and `local-webllm-worker.js` provide explicit WebGPU compatibility checks, lazy model loading, streamed output, cancellation, and memory cleanup for Inference and Tool Designer. Imported text is wrapped as untrusted data, model output remains reviewable, large weights are never application-shell assets, and no tool adds an account, backend, analytics, or required cloud storage. Overhead private records stay outside service-worker caches; it uses password-derived authenticated Web Crypto envelopes and never stores plaintext passwords or decrypted records.
+`local-webllm-client.mjs` and `local-webllm-worker.js` provide explicit WebGPU compatibility checks, lazy model loading, streamed output, cancellation, and memory cleanup for Knowledge Center analysis and Tool Designer. Indexed text is wrapped as untrusted data, model output remains reviewable, large weights are never application-shell assets, and no feature adds an account, backend, analytics, or required cloud storage. Overhead private records stay outside service-worker caches; it uses password-derived authenticated Web Crypto envelopes and never stores plaintext passwords or decrypted records.
 
 ### PDF Signer
 

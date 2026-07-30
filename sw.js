@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v81";
+const CACHE_NAME = "vital-pancakes-app-v82";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -24,7 +24,7 @@ const RETAINED_CACHE_NAMES = new Set([
 const OFFLINE_ASSET_CATALOG = [
   "./",
   "./index.html",
-  "./style.css?v=20",
+  "./style.css?v=21",
   "./site-navigation.css?v=21",
   "./site-navigation.js?v=17",
   "./research-literature.html",
@@ -44,10 +44,13 @@ const OFFLINE_ASSET_CATALOG = [
   "./app/ai-command-registry.mjs",
   "./app/ai-page-host.mjs",
   "./app/ai-tool-catalog.mjs",
-  "./app/home-knowledge.js?v=2",
+  "./app/home-knowledge.js?v=3",
   "./app/home-knowledge-ai-adapter.mjs",
   "./app/glossary-ui.mjs",
   "./app/knowledge-db.mjs",
+  "./app/knowledge-inference.mjs",
+  "./app/knowledge-inference-ui.mjs",
+  "./app/knowledge-inference-worker.js?v=1",
   "./app/knowledge-model.mjs?v=2",
   "./app/knowledge-sync.mjs?v=2",
   "./app/vault-archive.mjs",
@@ -69,12 +72,6 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/suite-ui.mjs",
   "./tools/local-webllm-client.mjs",
   "./tools/local-webllm-worker.js?v=1",
-  "./tools/ai-command-center.html",
-  "./tools/ai-command-center.css?v=1",
-  "./tools/ai-command-center.js?v=1",
-  "./tools/ai-command-center-adapter.mjs",
-  "./tools/ai-command-draft.mjs",
-  "./tools/ai-webllm-worker.js",
   "./tools/current-tool-ai-adapter.mjs?v=1",
   "./tools/visual-board.html",
   "./tools/visual-board.js?v=46",
@@ -190,10 +187,6 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/graphing-model.mjs",
   "./tools/graphing-renderer.mjs",
   "./tools/graphing-worker.js?v=1",
-  "./tools/inference.html",
-  "./tools/inference.js?v=2",
-  "./tools/inference-model.mjs",
-  "./tools/inference-index-worker.js?v=1",
   "./tools/markdown-studio.html",
   "./tools/markdown-studio.js?v=2",
   "./tools/markdown-studio-model.mjs",
@@ -297,6 +290,9 @@ const STARTUP_PATHS = new Set([
   "./app/home-knowledge-ai-adapter.mjs",
   "./app/glossary-ui.mjs",
   "./app/knowledge-db.mjs",
+  "./app/knowledge-inference.mjs",
+  "./app/knowledge-inference-ui.mjs",
+  "./app/knowledge-inference-worker.js",
   "./app/knowledge-model.mjs",
   "./app/knowledge-sync.mjs",
   "./app/vault-archive.mjs",

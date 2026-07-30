@@ -22,7 +22,27 @@ const documents = [
 ];
 
 function harness() {
-  let snapshot = { documents, glossary: [], links: [] };
+  let snapshot = {
+    documents,
+    glossary: [],
+    links: [],
+    inferenceSessions: [{
+      id: "session-a",
+      name: "Memory links",
+      updatedAt: "2026-07-30T00:00:00.000Z",
+      inferences: [{
+        id: "inference-a",
+        kind: "hypothesis",
+        title: "Spacing connection",
+        statement: "Spacing may improve retrievability.",
+        confidence: 0.7,
+        confidenceRationale: "Two records align.",
+        citations: ["entry-a:chunk:1"],
+        tags: [],
+        status: "pending",
+      }],
+    }],
+  };
   const adapter = createCurrentToolAiAdapter(createHomeKnowledgeAiConfiguration({
     getSnapshot: () => snapshot,
     getDocuments: () => documents,
@@ -83,4 +103,24 @@ test("glossary mutation supports preview without persistence", async () => {
   }]));
   assert.equal(result.result.stateChanged, true);
   assert.equal(state.getSnapshot().glossary.length, 0);
+});
+
+test("saved inferences are reviewable but cannot be generated through commands", async () => {
+  const state = harness();
+  const capabilities = state.adapter.getCapabilities();
+  assert.ok(capabilities.commands.some((command) => command.type === "inferences.list"));
+  assert.ok(capabilities.commands.some((command) => command.type === "inferences.update"));
+  assert.equal(capabilities.commands.some((command) => /run|generate/.test(command.type)), false);
+
+  const result = await state.adapter.apply(envelope("apply", [{
+    type: "inferences.update",
+    sessionId: "session-a",
+    inferenceId: "inference-a",
+    changes: { status: "accepted", tags: ["reviewed"] },
+  }]));
+  assert.equal(result.result.commands[0].value.status, "accepted");
+  assert.deepEqual(
+    state.getSnapshot().inferenceSessions[0].inferences[0].tags,
+    ["reviewed"],
+  );
 });

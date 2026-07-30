@@ -58,11 +58,6 @@ const TOOL_HOSTS = [
     ["dataset.describe", "chart.configure", "transformations.replace"],
   ],
   [
-    "inference.js",
-    "inference",
-    ["index.describe", "inferences.list", "inferences.update"],
-  ],
-  [
     "markdown-studio.js",
     "markdown-latex",
     ["documents.list", "documents.create", "documents.update"],

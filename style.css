@@ -876,6 +876,8 @@ main > section:has(> .tab-nav) > .tab-content {
 .knowledge-center h2,
 .knowledge-center h3,
 .knowledge-center h4,
+.knowledge-inference-dialog h2,
+.knowledge-inference-dialog h3,
 .vault-dialog h2 {
   margin: 0;
   font-family: var(--font-display);
@@ -1493,9 +1495,253 @@ main > section:has(> .tab-nav) > .tab-content {
   color: #fff;
 }
 
+.knowledge-inference-dialog {
+  width: min(70rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0;
+}
+
+.knowledge-inference-dialog::backdrop {
+  background: rgb(23 22 19 / 58%);
+}
+
+.knowledge-inference-shell {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+}
+
+.knowledge-inference-shell > header,
+.knowledge-inference-model,
+.knowledge-inference-form-actions,
+.knowledge-inference-result > div:first-child,
+.knowledge-inference-result-actions,
+#knowledge-inference-sessions li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.knowledge-inference-shell > header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-strong);
+  padding-bottom: 0.8rem;
+}
+
+.knowledge-inference-shell > header p {
+  max-width: 55rem;
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.knowledge-inference-dialog button,
+.knowledge-inference-dialog select,
+.knowledge-inference-dialog input,
+.knowledge-inference-dialog textarea {
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.knowledge-inference-dialog button {
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 0.55rem 0.7rem;
+}
+
+.knowledge-inference-dialog button:hover {
+  background: var(--surface-soft);
+}
+
+.knowledge-inference-dialog button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.knowledge-inference-dialog label {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.knowledge-inference-dialog select,
+.knowledge-inference-dialog input,
+.knowledge-inference-dialog textarea {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.knowledge-inference-model {
+  justify-content: flex-start;
+}
+
+.knowledge-inference-model label {
+  min-width: min(100%, 24rem);
+}
+
+#knowledge-inference-form {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(0, 2fr) minmax(8rem, 0.45fr);
+  gap: 0.8rem;
+  align-items: end;
+}
+
+.knowledge-inference-question textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.knowledge-inference-form-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
+#knowledge-inference-run {
+  background: var(--ink);
+  color: #fff;
+}
+
+.knowledge-inference-progress {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.knowledge-inference-progress progress {
+  width: 100%;
+}
+
+#knowledge-inference-status,
+.knowledge-inference-progress pre {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+}
+
+#knowledge-inference-status.is-error {
+  color: var(--teal);
+}
+
+.knowledge-inference-progress pre {
+  max-height: 10rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.knowledge-inference-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(16rem, 0.8fr);
+  gap: 1rem;
+}
+
+.knowledge-inference-layout section,
+.knowledge-inference-shell > section {
+  min-width: 0;
+  border-top: 1px solid var(--border-strong);
+  padding-top: 0.8rem;
+}
+
+#knowledge-inference-evidence,
+#knowledge-inference-sessions,
+.knowledge-inference-citations {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+#knowledge-inference-evidence li,
+#knowledge-inference-sessions li {
+  border: 1px solid var(--border);
+  padding: 0.65rem;
+}
+
+#knowledge-inference-evidence p {
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+#knowledge-inference-sessions li > button:first-child {
+  flex: 1;
+  border: 0;
+  text-align: left;
+}
+
+#knowledge-inference-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.65rem;
+}
+
+.knowledge-inference-result {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-left: 5px solid var(--blue);
+  padding: 0.8rem;
+}
+
+.knowledge-inference-result[data-kind="hypothesis"] {
+  border-left-color: var(--gold);
+}
+
+.knowledge-inference-result[data-kind="contradiction"] {
+  border-left-color: var(--teal);
+}
+
+.knowledge-inference-result > div:first-child span {
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.knowledge-inference-result textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.knowledge-inference-result p,
+.knowledge-inference-result small {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+}
+
+.knowledge-inference-citations {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 0;
+}
+
+.knowledge-inference-citations li {
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.4rem;
+  font-size: 0.7rem;
+}
+
+.knowledge-inference-result-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 840px) {
   .knowledge-center-heading,
-  .vault-band {
+  .vault-band,
+  .knowledge-inference-shell > header {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -1542,6 +1788,12 @@ main > section:has(> .tab-nav) > .tab-content {
   .knowledge-ai-relations {
     border-top: 1px solid var(--border);
     padding-left: 0;
+  }
+
+  #knowledge-inference-form,
+  .knowledge-inference-layout,
+  #knowledge-inference-results {
+    grid-template-columns: 1fr;
   }
 }
 

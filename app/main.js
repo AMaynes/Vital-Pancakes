@@ -739,13 +739,6 @@ function renderToolsDashboard() {
   const toolsGrid = createElement("div", "tool-grid");
   [
     {
-      title: "AI Command Center",
-      copy: "Ask a local WebGPU model to draft validated commands, preview them, and apply them to an AI-capable tool.",
-      href: "tools/ai-command-center.html",
-      icon: "AI",
-      accent: "violet",
-    },
-    {
       title: "Visual Board",
       copy: "A freeform canvas with rigging, animation, image controls, reusable objects, and floor-plan templates.",
       href: "tools/visual-board.html",
@@ -765,13 +758,6 @@ function renderToolsDashboard() {
       href: "tools/graphing.html",
       icon: "⌁",
       accent: "blue",
-    },
-    {
-      title: "Inference Tool",
-      copy: "Index selected local backups and use a local model to find cited connections, conflicts, and open questions.",
-      href: "tools/inference.html",
-      icon: "∴",
-      accent: "violet",
     },
     {
       title: "Markdown & LaTeX Studio",

@@ -26,7 +26,7 @@ Keep the homepage concise and use deeper pages for detailed material.
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
   <link rel="stylesheet" href="site-navigation.css?v=21">
   <script type="module" src="site-navigation.js?v=17"></script>
 </head>
@@ -99,6 +99,7 @@ Keep the homepage concise and use deeper pages for detailed material.
         </div>
         <div class="knowledge-index-state">
           <span id="knowledge-index-status" role="status">Opening the local index...</span>
+          <button type="button" id="knowledge-inference-open">Analyze knowledge</button>
           <button type="button" id="knowledge-refresh">Refresh index</button>
         </div>
       </header>
@@ -276,6 +277,73 @@ Keep the homepage concise and use deeper pages for detailed material.
     <a href="https://github.com/AMaynes/Vital-Pancakes">View the project on GitHub</a>
   </footer>
 
+  <dialog class="knowledge-inference-dialog" id="knowledge-inference-dialog" aria-labelledby="knowledge-inference-title">
+    <div class="knowledge-inference-shell">
+      <header>
+        <div>
+          <p class="eyebrow">Knowledge Center</p>
+          <h2 id="knowledge-inference-title">Analyze indexed knowledge</h2>
+          <p>Retrieve evidence from the existing local Knowledge database and generate cited observations, hypotheses, contradictions, or connections. Nothing is uploaded.</p>
+        </div>
+        <button type="button" id="knowledge-inference-close" aria-label="Close knowledge analysis">Close</button>
+      </header>
+      <div class="knowledge-inference-model">
+        <label>
+          <span>Local model</span>
+          <select id="knowledge-inference-model"></select>
+        </label>
+        <button type="button" id="knowledge-inference-load">Load local model</button>
+      </div>
+      <form id="knowledge-inference-form">
+        <label>
+          <span>Analysis</span>
+          <select name="mode">
+            <option value="relationships">Relationships between subjects</option>
+            <option value="themes">Recurring themes</option>
+            <option value="evidence">Supporting and conflicting evidence</option>
+            <option value="duplicates">Duplicate or overlapping notes</option>
+            <option value="missing-links">Missing links and unanswered questions</option>
+            <option value="timeline">Timeline or causal hypotheses</option>
+            <option value="study-ideas">Potential study ideas</option>
+            <option value="why-connected">Why might these be connected?</option>
+            <option value="question">Ask the knowledge base</option>
+          </select>
+        </label>
+        <label class="knowledge-inference-question">
+          <span>Subjects or question</span>
+          <textarea name="question" maxlength="4000" required placeholder="What relationship should be investigated?"></textarea>
+        </label>
+        <label>
+          <span>Evidence excerpts</span>
+          <input name="limit" type="number" min="3" max="20" value="8">
+        </label>
+        <div class="knowledge-inference-form-actions">
+          <button type="button" id="knowledge-inference-cancel" hidden>Cancel</button>
+          <button type="submit" id="knowledge-inference-run">Analyze locally</button>
+        </div>
+      </form>
+      <div class="knowledge-inference-progress">
+        <progress id="knowledge-inference-progress" max="1" value="0"></progress>
+        <p id="knowledge-inference-status" role="status">Open the panel to prepare the existing local index.</p>
+        <pre id="knowledge-inference-stream" aria-label="Local model response"></pre>
+      </div>
+      <div class="knowledge-inference-layout">
+        <section aria-labelledby="knowledge-inference-evidence-title">
+          <h3 id="knowledge-inference-evidence-title">Retrieved evidence</h3>
+          <ul id="knowledge-inference-evidence"></ul>
+        </section>
+        <section aria-labelledby="knowledge-inference-sessions-title">
+          <h3 id="knowledge-inference-sessions-title">Saved sessions</h3>
+          <ul id="knowledge-inference-sessions"></ul>
+        </section>
+      </div>
+      <section aria-labelledby="knowledge-inference-results-title">
+        <h3 id="knowledge-inference-results-title">Review inferences</h3>
+        <div id="knowledge-inference-results"></div>
+      </section>
+    </div>
+  </dialog>
+
   <dialog class="vault-dialog" id="vault-dialog" aria-labelledby="vault-dialog-title">
     <form id="vault-dialog-form">
       <header>
@@ -308,6 +376,6 @@ Keep the homepage concise and use deeper pages for detailed material.
       </div>
     </form>
   </dialog>
-  <script type="module" src="app/home-knowledge.js?v=2"></script>
+  <script type="module" src="app/home-knowledge.js?v=3"></script>
 </body>
 </html>

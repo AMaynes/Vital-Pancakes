@@ -361,18 +361,13 @@ earlier in the same batch through stable client keys:
 }
 ```
 
-## WebLLM Command Center
+## Backend command routing
 
-Open **Workspace → AI Command Center** to:
-
-1. Select an AI-capable tool and inspect its live capabilities and bounded context.
-2. Optionally load a local WebGPU model and ask it to draft command JSON.
-3. Preview the normalized envelope, inspect the live tool and receipt, then
-   explicitly apply it. Delete-capable envelopes receive an additional confirmation.
-
-WebLLM only drafts. The selected tool's normal adapter performs validation and
-mutation, so manual JSON, WebLLM, and connected clients follow the same rules.
-Prompt content stays in the browser; including tool content is an explicit option.
+The AI command protocol is infrastructure, not a user-facing Workspace tool.
+Connected clients discover each page's bounded capabilities and route previewed
+or applied semantic commands through that page's normal adapter. Providers never
+mutate tool state directly, and delete-capable actions still require the adapter's
+declared permission and confirmation policy.
 
 ## Local MCP bridge
 

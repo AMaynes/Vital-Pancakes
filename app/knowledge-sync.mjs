@@ -174,8 +174,8 @@ async function readLocalToolDocuments(options) {
     const namespace = String(wrapper?.namespace ?? "");
     const value = wrapper?.value;
     if (!namespace || value === undefined) return;
-    // Retain legacy records for backup compatibility without linking to a removed tool.
-    if (namespace === "file-drop") return;
+    // Retain legacy records for backup compatibility without linking to removed tools.
+    if (["file-drop", "inference", "inference-sessions"].includes(namespace)) return;
     if (namespace === "overhead") {
       const safeValue = value && typeof value === "object"
         ? { ...value, privateSections: [] }
@@ -364,7 +364,6 @@ function kindForNamespace(namespace) {
   if (/markdown/i.test(namespace)) return "document";
   if (/tool-designer/i.test(namespace)) return "project";
   if (/graphing/i.test(namespace)) return "project";
-  if (/inference/i.test(namespace)) return "inference";
   return "entry";
 }
 
@@ -372,7 +371,6 @@ function routeForNamespace(namespace) {
   if (/markdown/i.test(namespace)) return "tools/markdown-studio.html";
   if (/tool-designer/i.test(namespace)) return "tools/tool-designer.html";
   if (/graphing/i.test(namespace)) return "tools/graphing.html";
-  if (/inference/i.test(namespace)) return "tools/inference.html";
   if (/overhead/i.test(namespace)) return "tools/overhead.html";
   return "workspace.html";
 }

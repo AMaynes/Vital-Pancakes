@@ -35,7 +35,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Everyday Life** — Separate Cooking, Gym, and Cleaning areas for practical knowledge used at home.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Subject-specific working libraries for questions and ideas, structured studies, programming-language refreshers, algorithm labs, and project case studies, plus the existing notecard and educational collections.
-- **Workspace** — A browser-local tool shelf spanning planning, graphing, knowledge inference, writing, visual design, tournaments, random selection, lessons, captions, finance, conversion, and the Visual Board.
+- **Workspace** — A browser-local tool shelf spanning planning, graphing, writing, visual design, tournaments, random selection, lessons, captions, finance, conversion, and the Visual Board.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the forest-and-circuit *Vital Pancakes* skull.
@@ -78,6 +78,8 @@ Existing `localStorage` namespaces retain their earlier `pinakes-vitae-*` and `a
 
 The homepage builds one browser-local text index across Workspace entries, Studies, generated lessons, literature annotations, algorithms, recipes, projects, and tool records. Searches return bounded snippets and source links. `[[Term]]` references and existing record IDs create automatic relationships; every entry can show backlinks and related records. The graph adds accepted manual links and review-before-accept local WebLLM suggestions without uploading records.
 
+**Analyze knowledge** opens a button-driven local inference panel directly in the Knowledge Center. It retrieves cited evidence from the existing index, runs an explicitly loaded local model, stores reviewable sessions in the Knowledge database, and can convert accepted results into Questions & Ideas or Studies. Existing standalone inference sessions migrate without deleting their legacy storage records.
+
 The shared glossary stores definitions, aliases, examples, links, and tags in IndexedDB. Its editor is available from every page, and **Insert** writes a `[[Term]]` reference into the most recently focused text editor or copies it when no editor is active.
 
 Unified Vault exports local settings, discovered user IndexedDB schemas and records, binary values, lesson data, annotations, boards, plans, and OPFS files into one chunked `.vpvault` archive. PBKDF2-SHA-256 derives a key from the chosen password and every frame uses authenticated AES-GCM encryption. Entry names and metadata are encrypted along with content. Restore verifies the complete archive before changing storage, supports merge or replace behavior, preserves database keys and indexes, and can be cancelled. Regenerable runtime/model caches and temporary session state are excluded. The password is never stored and cannot be recovered.
@@ -102,7 +104,6 @@ The Board is deliberately only the drawing instrument: it validates, previews, s
 
 - **Overhead** combines a brain dump, limited forefront priorities, recurring todo lists, Web Crypto-encrypted private sections, scheduled trackers, reminders, maintenance templates, and inventory warnings. Structured data and histories use IndexedDB; private content auto-locks and cannot be recovered without its password.
 - **Graphing Tool** imports CSV, TSV, JSON, pasted tables, or manual data and renders line, bar, stacked, scatter, bubble, area, histogram, box, pie, donut, heatmap, and multi-series charts from a resettable transformation pipeline. Projects, clean data, SVG, PNG, and combined packages can be exported.
-- **Inference Tool** validates selected Vital Pancakes backup collections, excludes sensitive and binary material by default, creates a provenance-preserving local index, retrieves bounded evidence, and asks an explicitly loaded local WebLLM model for cited observations, inferences, hypotheses, and contradictions. Original records are never changed.
 - **Markdown & LaTeX Studio** provides multiple local documents, source/split/preview layouts, safe Markdown rendering, math preview, outlines, search/replace, autosave recovery, versions, backup/restore, source and sanitized HTML export, and review-before-apply local model actions. KaTeX is identified as math rendering rather than full LaTeX compilation.
 - **Tool Designer & Planner** turns an unstructured idea into locked requirements, goals, workflows, data and module plans, risk review, tests, acceptance criteria, implementation prompts, Markdown handoffs, and versioned project packages with local revision history.
 - **Color Aesthetic Generator** creates reproducible perceptual palettes from colors, harmonies, moods, seeds, or local image samples, then checks semantic-role contrast and color-vision simulations and exports code, data, and swatch sheets.
@@ -228,7 +229,7 @@ Production is hosted from the `main` branch with GitHub Pages. Publishing requir
 ## Dependencies
 
 - A current browser with ES modules, Canvas 2D, service workers, localStorage, IndexedDB, and dialog support
-- WebGPU for Master Lesson Builder model inference; WebLLM 0.2.83 lazy-loads from its documented CDN only after an explicit model-load action
+- WebGPU for Knowledge Center, Master Lesson Builder, and optional tool-local model inference; WebLLM 0.2.83 lazy-loads from its documented CDN only after an explicit model-load action
 - Desktop `getDisplayMedia`, Web Audio, AudioWorklet, and Web Workers for Caption Relay capture; Document Picture-in-Picture is optional
 - Transformers.js 3.8.1, Whisper Tiny/Small English, and OPUS-MT English → Vietnamese lazy-load from pinned CDN/model revisions; the runtime and all three models are Apache-2.0
 - Chrome 138 or newer can provide the preferred built-in local Translator API; other supported desktop browsers use the local OPUS-MT fallback

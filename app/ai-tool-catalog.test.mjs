@@ -71,6 +71,16 @@ test("tool identifiers are unique and planned contracts are never advertised as 
   });
 });
 
+test("AI routing stays backend-only and inference belongs to Knowledge Home", () => {
+  const mainSource = readFileSync(resolve(repositoryRoot, "app/main.js"), "utf8");
+  const homeSource = readFileSync(resolve(repositoryRoot, "index.html"), "utf8");
+  assert.equal(AI_TOOL_CATALOG.some((tool) => tool.id === "ai-command-center"), false);
+  assert.equal(AI_TOOL_CATALOG.some((tool) => tool.id === "inference"), false);
+  assert.doesNotMatch(mainSource, /AI Command Center|Inference Tool/);
+  assert.match(homeSource, /id="knowledge-inference-open"/);
+  assert.match(homeSource, /id="knowledge-inference-dialog"/);
+});
+
 test("durable repository instructions require AI adapter maintenance", () => {
   const instructions = readFileSync(resolve(repositoryRoot, "AGENTS.md"), "utf8");
   assert.match(instructions, /AI command compatibility is mandatory/i);
