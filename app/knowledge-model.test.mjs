@@ -101,9 +101,10 @@ test("glossary aliases resolve references and sensitive fields never enter index
 });
 
 test("relationship suggestions are reviewable and deterministic", () => {
-  const suggestions = suggestLexicalRelationships(documents);
+  const options = { timestamp: "2026-07-30T00:00:00.000Z" };
+  const suggestions = suggestLexicalRelationships(documents, [], options);
   assert.equal(suggestions.length > 0, true);
   assert.equal(suggestions[0].origin, "ai");
   assert.equal(suggestions[0].status, "pending");
-  assert.deepEqual(suggestLexicalRelationships(documents), suggestions);
+  assert.deepEqual(suggestLexicalRelationships(documents, [], options), suggestions);
 });

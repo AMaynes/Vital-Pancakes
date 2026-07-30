@@ -311,6 +311,7 @@ export function extractRecordReferences(value) {
 }
 
 export function suggestLexicalRelationships(documents, links = [], options = {}) {
+  const timestamp = normalizeDate(options.timestamp);
   const existing = new Set(links.map((link) => {
     const normalized = normalizeKnowledgeLink(link);
     return `${normalized.sourceId}\u0000${normalized.targetId}`;
@@ -328,6 +329,8 @@ export function suggestLexicalRelationships(documents, links = [], options = {})
         relation: "related concept",
         origin: "ai",
         status: "pending",
+        createdAt: timestamp,
+        updatedAt: timestamp,
         rationale: related.sharedTerms.length
           ? `Shared terms: ${related.sharedTerms.join(", ")}`
           : "Potentially related content.",

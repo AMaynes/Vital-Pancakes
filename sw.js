@@ -16,7 +16,7 @@
  * the application shell. File Drop content and large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v57";
+const CACHE_NAME = "vital-pancakes-app-v58";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
