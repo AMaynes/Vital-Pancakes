@@ -527,6 +527,88 @@ export function setVertexNetworkPosition(objects, vertexId, point) {
   return updatedEndpoints;
 }
 
+export function mergeVertexNetworkVertices(objects, sourceVertexId, targetVertexId) {
+  if (!Array.isArray(objects)
+    || !sourceVertexId
+    || !targetVertexId
+    || sourceVertexId === targetVertexId
+    || verticesShareObject(objects, sourceVertexId, targetVertexId)) {
+    return null;
+  }
+  const vertices = getVertexNetworkVertices(objects);
+  const source = vertices.find((vertex) => vertex.id === sourceVertexId);
+  const target = vertices.find((vertex) => vertex.id === targetVertexId);
+  if (!source || !target) return null;
+
+  setVertexNetworkPosition(objects, targetVertexId, target);
+  setVertexNetworkPosition(objects, sourceVertexId, target);
+  const affectedObjectIds = [];
+  objects.forEach((object) => {
+    let affected = false;
+    if (object.type === "arc") {
+      object.curveVertexIds = (object.curveVertexIds ?? []).map((vertexId) => {
+        if (vertexId !== sourceVertexId) return vertexId;
+        affected = true;
+        return targetVertexId;
+      });
+    } else {
+      if (object.startVertexId === sourceVertexId) {
+        object.startVertexId = targetVertexId;
+        affected = true;
+      }
+      if (object.endVertexId === sourceVertexId) {
+        object.endVertexId = targetVertexId;
+        affected = true;
+      }
+    }
+    if (affected) affectedObjectIds.push(object.id);
+  });
+  return {
+    sourceVertexId,
+    targetVertexId,
+    x: target.x,
+    y: target.y,
+    affectedObjectIds,
+  };
+}
+
+export function mergeVertexNetworkVertexAtNearest(
+  objects,
+  sourceVertexId,
+  maximumDistance,
+) {
+  const vertices = getVertexNetworkVertices(objects);
+  const source = vertices.find((vertex) => vertex.id === sourceVertexId);
+  if (!source) return null;
+  const distanceLimit = Math.max(0, Number(maximumDistance) || 0);
+  const target = vertices
+    .filter((vertex) => (
+      vertex.id !== sourceVertexId
+      && !verticesShareObject(objects, sourceVertexId, vertex.id)
+    ))
+    .map((vertex) => ({
+      vertex,
+      distance: distanceBetween(source, vertex),
+    }))
+    .filter((candidate) => candidate.distance <= distanceLimit)
+    .sort((first, second) => (
+      first.distance - second.distance
+      || first.vertex.id.localeCompare(second.vertex.id)
+    ))[0]?.vertex;
+  return target
+    ? mergeVertexNetworkVertices(objects, sourceVertexId, target.id)
+    : null;
+}
+
+function verticesShareObject(objects, firstVertexId, secondVertexId) {
+  return objects.some((object) => {
+    const vertexIds = object.type === "arc"
+      ? object.curveVertexIds ?? []
+      : [object.startVertexId, object.endVertexId];
+    return vertexIds.includes(firstVertexId) && vertexIds.includes(secondVertexId);
+  });
+}
+
 function addVertexPoint(vertices, vertexId, x, y) {
   if (typeof vertexId !== "string" || !vertexId) return;
   if (!vertices.has(vertexId)) vertices.set(vertexId, []);

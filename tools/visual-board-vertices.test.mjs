@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
+  mergeVertexNetworkVertexAtNearest,
+  mergeVertexNetworkVertices,
   setVertexNetworkPosition,
 } from "./visual-board-vertices.mjs";
 import {
@@ -116,6 +118,71 @@ test("grouped paths retain their previous group beneath the vertex network", () 
     object.groupHistory.at(-1)?.id === "small-group"
     && object.groupHistory.at(-1)?.rigidGroup
   )));
+  assert.equal(network.objects[0].endVertexId, network.objects[1].startVertexId);
+});
+
+test("dropping grouped network vertices together merges their identities", () => {
+  const network = createEditableVertexNetwork([
+    {
+      id: "first",
+      type: "line",
+      x: 0,
+      y: 0,
+      endX: 40,
+      endY: 0,
+      groupId: "small-group",
+      rigidGroup: true,
+    },
+    {
+      id: "second",
+      type: "line",
+      x: 100,
+      y: 0,
+      endX: 140,
+      endY: 0,
+      groupId: "small-group",
+      rigidGroup: true,
+    },
+  ], identifierFactory(), 0.01);
+  const sourceVertexId = network.objects[0].endVertexId;
+  const targetVertexId = network.objects[1].startVertexId;
+
+  setVertexNetworkPosition(
+    network.objects,
+    sourceVertexId,
+    { x: 100.004, y: 0.003 },
+  );
+  const merged = mergeVertexNetworkVertexAtNearest(
+    network.objects,
+    sourceVertexId,
+    0.01,
+  );
+
+  assert.equal(merged.targetVertexId, targetVertexId);
+  assert.equal(network.objects[0].endVertexId, targetVertexId);
+  assert.deepEqual(
+    [network.objects[0].endX, network.objects[0].endY],
+    [100, 0],
+  );
+  assert.equal(getVertexNetworkVertices(network.objects).length, 3);
+  assert.ok(network.objects.every((object) => (
+    object.groupHistory.at(-1)?.id === "small-group"
+  )));
+});
+
+test("vertex merging refuses to collapse both ends of one path", () => {
+  const network = createEditableVertexNetwork([
+    { id: "line", type: "line", x: 0, y: 0, endX: 10, endY: 0 },
+  ], identifierFactory(), 0.01);
+
+  assert.equal(
+    mergeVertexNetworkVertices(
+      network.objects,
+      network.objects[0].startVertexId,
+      network.objects[0].endVertexId,
+    ),
+    null,
+  );
 });
 
 test("moving a shared vertex reshapes every incident line only", () => {

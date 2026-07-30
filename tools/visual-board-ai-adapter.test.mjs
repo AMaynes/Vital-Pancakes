@@ -373,8 +373,8 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 12);
-  assert.equal(capabilities.commands.length, 52);
+  assert.equal(capabilities.version, 13);
+  assert.equal(capabilities.commands.length, 53);
   const createSchema = capabilities.commands
     .find((command) => command.type === "objects.create").schema;
   const viewportSchema = capabilities.commands
@@ -657,6 +657,63 @@ test("AI shared-vertex creation expands groups and preserves them beneath the ne
     && object.groupHistory.at(-1)?.id === "limb"
     && object.groupHistory.at(-1)?.rigidGroup
   )));
+});
+
+test("AI merges two existing grouped network vertices by stable ID", () => {
+  const state = createState([
+    {
+      id: "first",
+      type: "line",
+      x: 0,
+      y: 0,
+      endX: 50,
+      endY: 0,
+      color: "#000000",
+      strokeWidth: 3,
+      dashPattern: "solid",
+      locked: false,
+      groupId: "network-group",
+      vertexNetworkId: "network",
+      startVertexId: "left",
+      endVertexId: "source",
+    },
+    {
+      id: "second",
+      type: "line",
+      x: 100,
+      y: 0,
+      endX: 150,
+      endY: 0,
+      color: "#000000",
+      strokeWidth: 3,
+      dashPattern: "solid",
+      locked: false,
+      groupId: "network-group",
+      vertexNetworkId: "network",
+      startVertexId: "target",
+      endVertexId: "right",
+    },
+  ]);
+  const result = execute(state, [{
+    type: "vertices.merge",
+    sourceVertexId: "source",
+    targetVertexId: "target",
+  }]);
+
+  assert.equal(result.state.board.objects[0].endVertexId, "target");
+  assert.deepEqual(
+    [result.state.board.objects[0].endX, result.state.board.objects[0].endY],
+    [100, 0],
+  );
+  assert.equal(result.outputs[0].type, "vertices.merge");
+  assert.deepEqual(
+    serializeVisualBoardContext(result.state, { detail: "geometry" })
+      .objects.map((object) => object.vertexIds),
+    [
+      { start: "left", end: "target" },
+      { start: "target", end: "right" },
+    ],
+  );
 });
 
 test("AI can create, edit, insert, remove, and list custom floor-plan templates", () => {

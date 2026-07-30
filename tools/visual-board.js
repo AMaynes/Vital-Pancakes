@@ -41,8 +41,9 @@ import {
 import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
+  mergeVertexNetworkVertexAtNearest,
   setVertexNetworkPosition,
-} from "./visual-board-vertices.mjs?v=4";
+} from "./visual-board-vertices.mjs?v=5";
 import {
   getCurveBezierSegments,
   getCurvePathPoints,
@@ -180,7 +181,7 @@ import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=14";
+} from "./visual-board-ai-adapter.mjs?v=15";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
@@ -197,6 +198,7 @@ const MAX_TRACE_DIMENSION = 800;
 const MAX_STATIC_EXPORT_DIMENSION = 4096;
 const MAX_PDF_PAGE_DIMENSION = 1440;
 const VERTEX_TOUCH_TOLERANCE = 0.01;
+const VERTEX_DROP_MERGE_RADIUS = 10;
 const ANIMATION_PANEL_WIDTH_KEY = "visual-board-animation-panel-width";
 const ANIMATION_PREVIEW_HEIGHT_KEY = "visual-board-animation-preview-height";
 const MIN_ANIMATION_PANEL_WIDTH = 300;
@@ -2971,8 +2973,24 @@ function finishPointerInteraction(event, cancelled) {
     "curve-vertex",
     "network-vertex",
     "rig-joint",
-  ]
-    .includes(finishedInteraction.kind)) {
+  ].includes(finishedInteraction.kind)) {
+    if (
+      finishedInteraction.kind === "network-vertex"
+      && finishedInteraction.changed
+      && !cancelled
+    ) {
+      const mergeDistance = finishedInteraction.objects.some((object) => (
+        object.dimensionsLocked
+      ))
+        ? VERTEX_TOUCH_TOLERANCE
+        : VERTEX_DROP_MERGE_RADIUS / viewport.zoom;
+      const merged = mergeVertexNetworkVertexAtNearest(
+        finishedInteraction.objects,
+        finishedInteraction.vertexId,
+        mergeDistance,
+      );
+      if (merged) announceStatus("Overlapping vertices merged");
+    }
     if (finishedInteraction.changed) saveBoard();
   } else if (
     finishedInteraction.kind === "marquee"

@@ -16,7 +16,7 @@
  * the application shell. File Drop content and large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v78";
+const CACHE_NAME = "vital-pancakes-app-v79";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -82,12 +82,14 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board.js?v=48",
   "./tools/visual-board.js?v=49",
   "./tools/visual-board.js?v=50",
+  "./tools/visual-board.js?v=51",
   "./tools/visual-board-ai.css?v=1",
   "./tools/visual-board-advanced.css?v=6",
   "./tools/visual-board-ai-adapter.mjs?v=11",
   "./tools/visual-board-ai-adapter.mjs?v=12",
   "./tools/visual-board-ai-adapter.mjs?v=13",
   "./tools/visual-board-ai-adapter.mjs?v=14",
+  "./tools/visual-board-ai-adapter.mjs?v=15",
   "./tools/visual-board-image.mjs?v=1",
   "./tools/visual-board-transform.mjs?v=3",
   "./tools/visual-board-transform.mjs?v=4",
@@ -131,6 +133,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-tracing.mjs?v=1",
   "./tools/visual-board-vertices.mjs?v=3",
   "./tools/visual-board-vertices.mjs?v=4",
+  "./tools/visual-board-vertices.mjs?v=5",
   "./tools/pdf-signer.html",
   "./tools/pdf-signer.js?v=3",
   "./tools/pdf-signer-placements.mjs",

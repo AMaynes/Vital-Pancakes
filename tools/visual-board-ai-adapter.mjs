@@ -52,7 +52,10 @@ import {
   popObjectGroupLevel,
   pushObjectGroupLevel,
 } from "./visual-board-groups.mjs?v=4";
-import { createEditableVertexNetwork } from "./visual-board-vertices.mjs?v=4";
+import {
+  createEditableVertexNetwork,
+  mergeVertexNetworkVertices,
+} from "./visual-board-vertices.mjs?v=5";
 import {
   ARCHITECTURE_FILL_PATTERNS,
   getArchitectureCatalog,
@@ -229,6 +232,7 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("curves.points.insert", ["update"], "Insert exact movable points at requested positions on one editable curve."),
   command("curves.vertices.reinitialize", ["update"], "Reduce curves to endpoints, meaningful extrema, and shared joints."),
   command("vertices.create", ["update"], "Create shared editable joints across selected paths, groups, and outlined shapes without changing curve geometry."),
+  command("vertices.merge", ["update"], "Merge two existing editable vertex IDs into one shared joint."),
   command("objects.connect", ["create"], "Connect two objects with an arrow or line."),
   command("objects.disconnect", ["delete"], "Remove semantic connections between targets."),
   command("objects.layout", ["update"], "Arrange target objects with a deterministic layout."),
@@ -570,6 +574,10 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
   }),
   "curves.vertices.reinitialize": targetCommandSchema(),
   "vertices.create": targetCommandSchema(),
+  "vertices.merge": schema(["sourceVertexId", "targetVertexId"], {
+    sourceVertexId: { type: "string", minLength: 1, maxLength: 128 },
+    targetVertexId: { type: "string", minLength: 1, maxLength: 128 },
+  }),
   "objects.connect": schema(["from", "to"], {
     from: REFERENCE_SCHEMA,
     to: REFERENCE_SCHEMA,
@@ -1108,7 +1116,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 12,
+    version: 13,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -1140,7 +1148,7 @@ export function getVisualBoardAiCapabilities() {
       "Floor-plan catalog and layer removals require the configured removal password.",
       "Reference images require an existing local board image plus explicit consent; their bytes are never exposed to providers.",
       "Architecture validation reports deterministic geometry issues but does not redesign the caller's plan.",
-      "Shared-vertex creation expands selected groups, converts supported outlines, merges crossings, and preserves exact curve geometry.",
+      "Shared-vertex creation expands selected groups, converts supported outlines, merges crossings, and preserves exact curve geometry; existing joint IDs can be merged explicitly.",
       "Groups are hierarchical; grouping adds one level and ungrouping removes only the current level.",
       "Curve reinitialization retains endpoints, meaningful extrema, and shared path joints while filtering minor noise.",
     ],
@@ -1170,6 +1178,14 @@ export function getVisualBoardAiExamples() {
         type: "fills.paint",
         point: { x: 240, y: 210 },
         color: "#c5dca8",
+      },
+    },
+    {
+      name: "Merge two editable joints",
+      command: {
+        type: "vertices.merge",
+        sourceVertexId: "vertex-a",
+        targetVertexId: "vertex-b",
       },
     },
     {
@@ -1533,6 +1549,14 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
       };
     }
     if (detail === "geometry") {
+      if (object.vertexNetworkId) {
+        summary.vertexIds = object.type === "arc"
+          ? [...(object.curveVertexIds ?? [])]
+          : {
+            start: object.startVertexId ?? null,
+            end: object.endVertexId ?? null,
+          };
+      }
       if (["rectangle", "ellipse", "shape", "textbox", "image", "area", "wall", "symbol"].includes(object.type)) {
         summary.frame = {
           x: roundNumber(object.x),
@@ -1674,6 +1698,9 @@ function executeCommand(runtime, commandValue, commandIndex) {
       break;
     case "vertices.create":
       createSharedPathVertices(runtime, command, commandIndex);
+      break;
+    case "vertices.merge":
+      mergeSharedPathVertices(runtime, command, commandIndex);
       break;
     case "objects.connect":
       connectObjects(runtime, command, commandIndex);
@@ -2569,6 +2596,70 @@ function createSharedPathVertices(runtime, command, commandIndex) {
     objectIds: [...runtime.state.selectedIds],
     vertexCount: network.vertices.length,
   });
+}
+
+function mergeSharedPathVertices(runtime, command, commandIndex) {
+  const sourceVertexId = String(command.sourceVertexId ?? "").trim();
+  const targetVertexId = String(command.targetVertexId ?? "").trim();
+  const sourceObjects = runtime.state.board.objects.filter((object) => (
+    objectUsesVertexId(object, sourceVertexId)
+  ));
+  const targetObjects = runtime.state.board.objects.filter((object) => (
+    objectUsesVertexId(object, targetVertexId)
+  ));
+  if (!sourceObjects.length || !targetObjects.length) {
+    throw commandError(
+      "Both vertex IDs must exist on the board.",
+      "vertex-not-found",
+      commandIndex,
+    );
+  }
+  const networkId = sourceObjects[0].vertexNetworkId;
+  if (!networkId
+    || sourceObjects.some((object) => object.vertexNetworkId !== networkId)
+    || targetObjects.some((object) => object.vertexNetworkId !== networkId)) {
+    throw commandError(
+      "Both vertices must belong to the same editable network.",
+      "vertex-network-mismatch",
+      commandIndex,
+    );
+  }
+  const networkObjects = runtime.state.board.objects.filter((object) => (
+    object.vertexNetworkId === networkId
+  ));
+  if (networkObjects.some((object) => object.locked)) {
+    throw commandError(
+      "Unlock the vertex network before merging joints.",
+      "object-locked",
+      commandIndex,
+    );
+  }
+  const merged = mergeVertexNetworkVertices(
+    networkObjects,
+    sourceVertexId,
+    targetVertexId,
+  );
+  if (!merged) {
+    throw commandError(
+      "Those vertices cannot be merged without collapsing one path.",
+      "vertices-not-mergeable",
+      commandIndex,
+    );
+  }
+  networkObjects.forEach((object) => runtime.updatedIds.add(object.id));
+  runtime.state.selectedIds = networkObjects.map((object) => object.id);
+  runtime.outputs.push({
+    type: "vertices.merge",
+    networkId,
+    ...merged,
+  });
+}
+
+function objectUsesVertexId(object, vertexId) {
+  if (!vertexId) return false;
+  return object.type === "arc"
+    ? (object.curveVertexIds ?? []).includes(vertexId)
+    : object.startVertexId === vertexId || object.endVertexId === vertexId;
 }
 
 function connectObjects(runtime, command, commandIndex) {
