@@ -13,10 +13,10 @@
  * Navigations use network-first behavior with an offline fallback. The small
  * startup shell is pre-cached; other same-origin assets are cached after use.
  * User-created localStorage, IndexedDB, OPFS, and model-cache data stays outside
- * the application shell. File Drop content and large model weights are never pre-cached.
+ * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v79";
+const CACHE_NAME = "vital-pancakes-app-v81";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -180,10 +180,6 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/overhead.html",
   "./tools/overhead.js?v=2",
   "./tools/overhead-model.mjs",
-  "./tools/file-drop.html",
-  "./tools/file-drop.js?v=2",
-  "./tools/file-drop-model.mjs",
-  "./tools/file-drop-hash-worker.js?v=1",
   "./tools/graphing.html",
   "./tools/graphing.js?v=2",
   "./tools/graphing-model.mjs",

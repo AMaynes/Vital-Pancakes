@@ -4,7 +4,6 @@
 
 import {
   listGlossaryEntries,
-  listKnowledgeDocuments,
   replaceKnowledgeIndex,
 } from "./knowledge-db.mjs";
 import {
@@ -17,7 +16,6 @@ import {
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const LOCAL_TOOLS_DATABASE = "vital-pancakes-local-tools";
 const MASTER_LESSON_DATABASE = "vital-pancakes-master-lessons";
-const MAXIMUM_FILE_TEXT_BYTES = 30 * 1024 * 1024;
 let activeSync = null;
 let scheduledSync = null;
 
@@ -45,11 +43,10 @@ export function syncKnowledgeIndex(options = {}) {
 async function performSync(options) {
   const warnings = [];
   const documents = [];
-  const existing = new Map((await listKnowledgeDocuments()).map((document) => [document.id, document]));
   documents.push(...readWorkspaceDocuments(options.localStorageRef));
   documents.push(...readOtherLocalStorageDocuments(options.localStorageRef));
   try {
-    documents.push(...await readLocalToolDocuments(existing, warnings, options));
+    documents.push(...await readLocalToolDocuments(options));
   } catch (error) {
     warnings.push(`Local tools: ${error.message}`);
   }
@@ -167,21 +164,18 @@ function collectVisualBoardText(objects) {
   ]).filter((entry) => typeof entry === "string" && entry.trim());
 }
 
-async function readLocalToolDocuments(existing, warnings, options) {
+async function readLocalToolDocuments(options) {
   const indexedDBRef = options.indexedDBRef ?? globalThis.indexedDB;
   if (!await databaseExists(indexedDBRef, LOCAL_TOOLS_DATABASE)) return [];
   const records = await readDatabaseStore(indexedDBRef, LOCAL_TOOLS_DATABASE, "records");
   const documents = [];
-  let fileDropState = null;
 
   records.forEach((wrapper) => {
     const namespace = String(wrapper?.namespace ?? "");
     const value = wrapper?.value;
     if (!namespace || value === undefined) return;
-    if (namespace === "file-drop" && wrapper.key?.endsWith(":state")) {
-      fileDropState = value;
-      return;
-    }
+    // Retain legacy records for backup compatibility without linking to a removed tool.
+    if (namespace === "file-drop") return;
     if (namespace === "overhead") {
       const safeValue = value && typeof value === "object"
         ? { ...value, privateSections: [] }
@@ -202,48 +196,6 @@ async function readLocalToolDocuments(existing, warnings, options) {
     }));
   });
 
-  if (Array.isArray(fileDropState?.files)) {
-    for (const file of fileDropState.files) {
-      if (file.trashedAt || file.status !== "ready") continue;
-      const id = `file-drop:${file.id}`;
-      let extractedText = "";
-      const current = existing.get(id);
-      if (
-        current
-        && current.updatedAt === normalizeDate(file.modifiedAt ?? file.addedAt)
-        && current.text
-      ) {
-        extractedText = current.text;
-      } else if (file.size <= MAXIMUM_FILE_TEXT_BYTES) {
-        try {
-          const wrapper = await readDatabaseValue(
-            indexedDBRef,
-            LOCAL_TOOLS_DATABASE,
-            "blobs",
-            `file-drop:${file.id}`,
-          );
-          extractedText = await extractStoredFileText(wrapper?.value, file);
-        } catch (error) {
-          warnings.push(`${file.name}: ${error.message}`);
-        }
-      }
-      documents.push(normalizeKnowledgeDocument({
-        id,
-        title: file.name,
-        text: [
-          file.description,
-          Array.isArray(file.tags) ? file.tags.join(" ") : "",
-          extractedText,
-        ].filter(Boolean).join("\n\n"),
-        kind: "file",
-        source: "file-drop",
-        recordId: file.id,
-        tags: file.tags,
-        url: "tools/file-drop.html",
-        updatedAt: file.modifiedAt ?? file.addedAt,
-      }));
-    }
-  }
   return documents;
 }
 
@@ -337,39 +289,6 @@ function createDocument({ id, title, value, kind, source, recordId, tags, url, u
   });
 }
 
-async function extractStoredFileText(blob, metadata) {
-  if (!(blob instanceof Blob)) return "";
-  const type = String(metadata.type ?? blob.type).toLocaleLowerCase();
-  const extension = String(metadata.name ?? "").split(".").pop().toLocaleLowerCase();
-  if (
-    type.startsWith("text/")
-    || ["txt", "md", "markdown", "json", "csv", "tsv", "log"].includes(extension)
-  ) return (await blob.text()).slice(0, 2_000_000);
-  if (type === "application/pdf" || extension === "pdf") {
-    return extractPdfText(blob);
-  }
-  return "";
-}
-
-async function extractPdfText(blob) {
-  if (!globalThis.pdfjsLib) {
-    await import("../vendor/pdf.min.js");
-  }
-  const pdfjs = globalThis.pdfjsLib;
-  if (!pdfjs?.getDocument) throw new Error("PDF text extraction is unavailable.");
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL("../vendor/pdf.worker.min.js", import.meta.url).href;
-  const document = await pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise;
-  const parts = [];
-  const pageCount = Math.min(document.numPages, 250);
-  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
-    const page = await document.getPage(pageNumber);
-    const content = await page.getTextContent();
-    parts.push(content.items.map((item) => item.str ?? "").join(" "));
-    if (parts.join("\n").length >= 2_000_000) break;
-  }
-  return parts.join("\n").slice(0, 2_000_000);
-}
-
 async function databaseExists(indexedDBRef, name) {
   if (!indexedDBRef?.open) return false;
   if (typeof indexedDBRef.databases !== "function") return true;
@@ -380,13 +299,6 @@ function readDatabaseStore(indexedDBRef, databaseName, storeName) {
   return withDatabase(indexedDBRef, databaseName, (database) => {
     if (!database.objectStoreNames.contains(storeName)) return [];
     return requestResult(database.transaction(storeName, "readonly").objectStore(storeName).getAll());
-  });
-}
-
-function readDatabaseValue(indexedDBRef, databaseName, storeName, key) {
-  return withDatabase(indexedDBRef, databaseName, (database) => {
-    if (!database.objectStoreNames.contains(storeName)) return null;
-    return requestResult(database.transaction(storeName, "readonly").objectStore(storeName).get(key));
   });
 }
 
@@ -463,11 +375,6 @@ function routeForNamespace(namespace) {
   if (/inference/i.test(namespace)) return "tools/inference.html";
   if (/overhead/i.test(namespace)) return "tools/overhead.html";
   return "workspace.html";
-}
-
-function normalizeDate(value) {
-  const date = new Date(value || Date.now());
-  return Number.isNaN(date.valueOf()) ? new Date().toISOString() : date.toISOString();
 }
 
 function hashText(value) {

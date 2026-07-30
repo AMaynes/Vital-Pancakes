@@ -84,10 +84,6 @@ const PAGE_TRAILS = {
     segment("workspace", "workspace.html#area=tools"),
     segment("file-converter"),
   ],
-  "tools/file-drop.html": [
-    segment("workspace", "workspace.html#area=tools"),
-    segment("file-drop"),
-  ],
   "tools/graphing.html": [
     segment("workspace", "workspace.html#area=tools"),
     segment("graphing-tool"),

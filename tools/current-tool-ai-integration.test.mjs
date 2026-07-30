@@ -53,11 +53,6 @@ const TOOL_HOSTS = [
     ["overhead.summary", "brain-dump.add", "tasks.upsert"],
   ],
   [
-    "file-drop.js",
-    "file-drop",
-    ["vault.summary", "files.list", "files.update-metadata"],
-  ],
-  [
     "graphing.js",
     "graphing",
     ["dataset.describe", "chart.configure", "transformations.replace"],

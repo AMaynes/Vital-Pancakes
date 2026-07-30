@@ -760,13 +760,6 @@ function renderToolsDashboard() {
       accent: "coral",
     },
     {
-      title: "File Drop",
-      copy: "Keep a private browser-local shelf of files, folders, collections, previews, recoverable trash, and backups.",
-      href: "tools/file-drop.html",
-      icon: "↓",
-      accent: "sage",
-    },
-    {
       title: "Graphing Tool",
       copy: "Import or enter data, build statistical charts, inspect summaries, and export reproducible graph projects.",
       href: "tools/graphing.html",

@@ -68,10 +68,6 @@ vital-pancakes/
 │   ├── overhead.html / overhead.js — Hosts and coordinates the personal command center.
 │   ├── overhead-model.mjs — Owns recurrence, tracker, inventory, validation, migration, and Web Crypto envelopes.
 │   ├── overhead-model.test.mjs — Verifies due states, recurrence, trackers, inventory, encryption, and migration.
-│   ├── file-drop.html / file-drop.js — Hosts and coordinates the browser-local file vault.
-│   ├── file-drop-model.mjs — Owns safe filenames, folders, duplicate detection, preview policy, trash, and manifests.
-│   ├── file-drop-hash-worker.js — Fingerprints imported files with progress and cancellation.
-│   ├── file-drop-model.test.mjs — Verifies folders, duplicates, manifests, filenames, trash, and preview safety.
 │   ├── graphing.html / graphing.js — Hosts data entry, chart configuration, summaries, and exports.
 │   ├── graphing-model.mjs — Parses, types, filters, aggregates, bins, validates, and migrates graph projects.
 │   ├── graphing-renderer.mjs — Builds accessible SVG specifications for every supported chart.
@@ -376,9 +372,9 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 ### Local-First Workspace Suite
 
-`workspace-suite.css`, `suite-ui.mjs`, and `local-toolkit.mjs` share the responsive archival shell, accessible controls, IndexedDB records/blobs, versioned backups, conflict-safe imports, downloads, and bounded undo used by Overhead, File Drop, Graphing Tool, Inference Tool, Markdown & LaTeX Studio, Tool Designer & Planner, Color Aesthetic Generator, Bracket Generator, and Randomized Picker. Domain rules stay in adjacent pure model modules with deterministic Node tests; parsing, hashing, image clustering, graph transformation, backup indexing, and local-model inference move to workers where warranted.
+`workspace-suite.css`, `suite-ui.mjs`, and `local-toolkit.mjs` share the responsive archival shell, accessible controls, IndexedDB records/blobs, versioned backups, conflict-safe imports, downloads, and bounded undo used by Overhead, Graphing Tool, Inference Tool, Markdown & LaTeX Studio, Tool Designer & Planner, Color Aesthetic Generator, Bracket Generator, and Randomized Picker. Domain rules stay in adjacent pure model modules with deterministic Node tests; parsing, image clustering, graph transformation, backup indexing, and local-model inference move to workers where warranted.
 
-`local-webllm-client.mjs` and `local-webllm-worker.js` provide explicit WebGPU compatibility checks, lazy model loading, streamed output, cancellation, and memory cleanup for Inference and Tool Designer. Imported text is wrapped as untrusted data, model output remains reviewable, large weights are never application-shell assets, and no tool adds an account, backend, analytics, or required cloud storage. File Drop bytes and Overhead private records stay outside service-worker caches; the latter uses password-derived authenticated Web Crypto envelopes and never stores plaintext passwords or decrypted records.
+`local-webllm-client.mjs` and `local-webllm-worker.js` provide explicit WebGPU compatibility checks, lazy model loading, streamed output, cancellation, and memory cleanup for Inference and Tool Designer. Imported text is wrapped as untrusted data, model output remains reviewable, large weights are never application-shell assets, and no tool adds an account, backend, analytics, or required cloud storage. Overhead private records stay outside service-worker caches; it uses password-derived authenticated Web Crypto envelopes and never stores plaintext passwords or decrypted records.
 
 ### PDF Signer
 
