@@ -11,7 +11,7 @@ import {
 function createState(objects = []) {
   return {
     board: {
-      version: 12,
+      version: 13,
       revision: 7,
       objects,
       assets: {
@@ -304,7 +304,8 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.commands.length, 16);
+  assert.equal(capabilities.version, 2);
+  assert.equal(capabilities.commands.length, 25);
   capabilities.commands.forEach((command) => {
     assert.equal(command.schema.type, "object", command.type);
     assert.equal(command.schema.additionalProperties, false, command.type);
@@ -316,4 +317,266 @@ test("every advertised command has a field schema and unknown fields fail", () =
     objects: [{ objectType: "rectangle" }],
     typoPlacement: "center",
   }]), (error) => error.code === "unknown-command-field");
+});
+
+test("architectural commands preserve exact caller geometry and compact symbol references", () => {
+  const result = execute(createState(), [
+    {
+      type: "architecture.areas.create",
+      areas: [{
+        clientKey: "lawn",
+        vertices: [
+          { x: 10, y: 20 },
+          { x: 310, y: 30 },
+          { x: 280, y: 220 },
+          { x: 20, y: 200 },
+        ],
+        materialId: "lawn",
+        layerId: "site",
+        zIndex: -20,
+      }],
+    },
+    {
+      type: "architecture.walls.create",
+      walls: [{
+        clientKey: "north-wall",
+        start: { x: 50, y: 60 },
+        end: { x: 250, y: 60 },
+        thickness: 12,
+        layerId: "structure",
+        style: { fillColor: "#332c27", strokeWidth: 1 },
+      }],
+    },
+    {
+      type: "architecture.symbols.place",
+      symbols: [{
+        clientKey: "primary-bed",
+        symbolId: "bed-queen",
+        x: 80,
+        y: 90,
+        w: 70,
+        h: 98,
+        rotation: 0.25,
+        layerId: "furniture",
+      }],
+    },
+  ]);
+
+  const area = result.state.board.objects.find((object) => object.type === "area");
+  const wall = result.state.board.objects.find((object) => object.type === "wall");
+  const symbol = result.state.board.objects.find((object) => object.type === "symbol");
+  assert.equal(area.materialId, "lawn");
+  assert.equal(area.layerId, "site");
+  assert.equal(wall.w, 200);
+  assert.equal(wall.h, 12);
+  assert.equal(wall.rotation, 0);
+  assert.equal(symbol.symbolId, "bed-queen");
+  assert.deepEqual([symbol.x, symbol.y, symbol.w, symbol.h, symbol.rotation], [
+    80, 90, 70, 98, 0.25,
+  ]);
+  assert.equal(symbol.semantic.clientRef, "primary-bed");
+  assert.equal(result.receipt.clientKeyMap["primary-bed"], symbol.id);
+});
+
+test("architecture labels remain world-scaled and clipped to exact boxes", () => {
+  const result = execute(createState(), [{
+    type: "architecture.labels.create",
+    labels: [{
+      text: "PRIMARY SUITE\n18 × 16",
+      x: 40,
+      y: 50,
+      w: 120,
+      h: 56,
+      fontSize: 14,
+      textAlign: "center",
+      verticalAlign: "middle",
+      padding: 4,
+      layerId: "labels",
+    }],
+  }]);
+  const label = result.state.board.objects[0];
+
+  assert.equal(label.scaleMode, "world");
+  assert.deepEqual([label.x, label.y, label.w, label.h], [40, 50, 120, 56]);
+  assert.equal(label.textAlign, "center");
+  assert.equal(label.verticalAlign, "middle");
+});
+
+test("generic updates can refine architectural paint, layers, and label typography", () => {
+  const state = createState([{
+    id: "room-label",
+    type: "textbox",
+    x: 20,
+    y: 30,
+    w: 160,
+    h: 60,
+    rotation: 0,
+    text: "ROOM",
+    colorRanges: [],
+    fontSize: 14,
+    fontFamily: "sans",
+    scaleMode: "world",
+    color: "#000000",
+    strokeWidth: 1,
+    dashPattern: "solid",
+    locked: false,
+  }]);
+  const result = execute(state, [{
+    type: "objects.update",
+    targets: { ids: ["room-label"] },
+    patch: {
+      materialId: "hardwood",
+      fillOpacity: 0.7,
+      opacity: 0.9,
+      layerId: "labels",
+      zIndex: 12,
+      shadow: { opacity: 0.15, blur: 4, offsetX: 2, offsetY: 3 },
+      textAlign: "center",
+      verticalAlign: "middle",
+      lineHeight: 1.1,
+      padding: 8,
+    },
+  }]);
+  const object = result.state.board.objects[0];
+
+  assert.equal(object.materialId, "hardwood");
+  assert.equal(object.fillPattern, "wood");
+  assert.equal(object.fillOpacity, 0.7);
+  assert.equal(object.opacity, 0.9);
+  assert.equal(object.layerId, "labels");
+  assert.equal(object.zIndex, 12);
+  assert.deepEqual(object.shadow, {
+    color: "#000000",
+    opacity: 0.15,
+    blur: 4,
+    offsetX: 2,
+    offsetY: 3,
+  });
+  assert.equal(object.textAlign, "center");
+  assert.equal(object.verticalAlign, "middle");
+  assert.equal(object.lineHeight, 1.1);
+  assert.equal(object.padding, 8);
+});
+
+test("semantic targets support exact diagram, role, and tag selectors", () => {
+  const state = createState([
+    rectangle("site", 0, 0, {
+      semantic: {
+        diagramId: "estate-v2",
+        role: "site-area",
+        tags: ["estate", "site"],
+      },
+    }),
+    rectangle("room", 200, 0, {
+      semantic: {
+        diagramId: "estate-v2",
+        role: "room",
+        tags: ["estate", "floor-plan"],
+      },
+    }),
+  ]);
+  const result = execute(state, [{
+    type: "objects.update",
+    targets: { diagramId: "estate-v2", tag: "estate" },
+    patch: { opacity: 0.85 },
+  }]);
+
+  assert.deepEqual(result.state.board.objects.map((object) => object.opacity), [0.85, 0.85]);
+  assert.throws(() => execute(state, [{
+    type: "objects.delete",
+    targets: { typoSelector: "estate-v2" },
+  }]), (error) => error.code === "unknown-command-field");
+});
+
+test("query-only architecture inspection does not cross a commit boundary", async () => {
+  const state = createState([rectangle("room-a", 0, 0), rectangle("room-b", 50, 30)]);
+  let commits = 0;
+  const adapter = createVisualBoardAiAdapter({
+    getState: () => state,
+    createId: idFactory(),
+    commit: async () => {
+      commits += 1;
+      return 8;
+    },
+  });
+  const envelope = {
+    requestId: "inspect-only",
+    commands: [{
+      type: "architecture.inspect",
+      targets: { ids: ["room-a", "room-b"] },
+      includeIntersections: true,
+    }],
+  };
+
+  const preview = await adapter.preview(envelope);
+  const applied = await adapter.apply(envelope);
+  assert.equal(commits, 0);
+  assert.equal(preview.result.outputs[0].intersections.length, 1);
+  assert.equal(applied.undoGroupId, null);
+});
+
+test("architecture validation rejects unknown nested fields atomically", () => {
+  const state = createState();
+  assert.throws(() => execute(state, [{
+    type: "architecture.walls.create",
+    walls: [{
+      start: { x: 0, y: 0 },
+      end: { x: 100, y: 0, typo: true },
+      thickness: 8,
+    }],
+  }]), (error) => error.code === "unknown-command-field");
+  assert.equal(state.board.objects.length, 0);
+});
+
+test("viewport focus centers using the requested zoom rather than the old zoom", () => {
+  const state = createState();
+  state.viewport = { x: 0, y: 0, zoom: 1, width: 1_000, height: 800 };
+  const result = execute(state, [{
+    type: "viewport.focus",
+    point: { x: 2_000, y: 1_000 },
+    zoom: 0.5,
+  }]);
+
+  assert.deepEqual(result.state.viewport, {
+    x: 1_000,
+    y: 200,
+    zoom: 0.5,
+    width: 1_000,
+    height: 800,
+  });
+});
+
+test("geometry context exposes exact architecture frames and styles on request", () => {
+  const state = createState([{
+    id: "symbol-1",
+    type: "symbol",
+    symbolId: "sofa",
+    x: 10,
+    y: 20,
+    w: 140,
+    h: 60,
+    rotation: 0.2,
+    color: "#332211",
+    fillColor: "#d8c7ba",
+    fillOpacity: 0.8,
+    fillPattern: "solid",
+    opacity: 1,
+    strokeWidth: 2,
+    dashPattern: "solid",
+    layerId: "furniture",
+    zIndex: 5,
+    locked: false,
+  }]);
+  const context = serializeVisualBoardContext(state, { detail: "geometry" });
+
+  assert.equal(context.objects[0].symbolId, "sofa");
+  assert.deepEqual(context.objects[0].frame, {
+    x: 10,
+    y: 20,
+    w: 140,
+    h: 60,
+    rotation: 0.2,
+  });
+  assert.equal(context.objects[0].style.fillColor, "#d8c7ba");
+  assert.equal(context.objects[0].layerId, "furniture");
 });

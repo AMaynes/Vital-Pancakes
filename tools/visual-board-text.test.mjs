@@ -6,19 +6,27 @@ import {
   getTextWorldFontSize,
 } from "./visual-board-text.mjs";
 
-test("textbox font sizes keep their declared screen size while zoomed out", () => {
+test("document text remains in world units at every zoom", () => {
   assert.equal(getTextWorldFontSize(12, 1), 12);
-  assert.equal(getTextWorldFontSize(12, 0.25), 48);
-  assert.equal(getTextWorldFontSize(12, 0.25) * 0.25, 12);
+  assert.equal(getTextWorldFontSize(12, 0.25), 12);
+  assert.equal(getTextWorldFontSize(12, 0.25) * 0.25, 3);
   assert.equal(getTextWorldFontSize(12, 2) * 2, 24);
 });
 
-test("click-created textboxes retain usable screen dimensions at overview zoom", () => {
+test("click-created textboxes have zoom-invariant world dimensions", () => {
   assert.deepEqual(getDefaultTextboxSize(18, 1), {
     width: 210,
     height: 72,
   });
   assert.deepEqual(getDefaultTextboxSize(18, 0.25), {
+    width: 210,
+    height: 72,
+  });
+});
+
+test("explicit screen annotations retain the legacy readable-overlay behavior", () => {
+  assert.equal(getTextWorldFontSize(12, 0.25, "screen"), 48);
+  assert.deepEqual(getDefaultTextboxSize(18, 0.25, "screen"), {
     width: 840,
     height: 288,
   });

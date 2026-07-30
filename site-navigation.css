@@ -169,6 +169,236 @@
   gap: 0.2rem;
 }
 
+.global-glossary-button {
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0;
+  padding: 0.15rem 0;
+}
+
+.global-glossary-button:hover,
+.global-glossary-button:focus-visible {
+  border-bottom-color: currentColor;
+}
+
+.global-glossary-dialog {
+  width: min(980px, calc(100vw - 2rem));
+  max-height: min(780px, calc(100dvh - 2rem));
+  border: 1px solid #625d53;
+  border-radius: 6px;
+  background: #f8f5ed;
+  color: #1b1a17;
+  padding: 0;
+}
+
+.global-glossary-dialog::backdrop {
+  background: rgb(27 26 23 / 56%);
+}
+
+.global-glossary-shell {
+  display: grid;
+  max-height: calc(100dvh - 2rem);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.global-glossary-heading,
+.global-glossary-form-actions,
+.global-glossary-entry-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.global-glossary-heading {
+  border-bottom: 1px solid #c9c2b4;
+  padding: 1rem 1.15rem;
+}
+
+.global-glossary-heading p,
+.global-glossary-heading h2,
+.global-glossary-form h3,
+.global-glossary-entry p,
+.global-glossary-status {
+  margin: 0;
+}
+
+.global-glossary-heading p {
+  color: #81251f;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.global-glossary-heading h2 {
+  font-size: 1.45rem;
+}
+
+.global-glossary-close {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid #aaa193;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.45rem;
+}
+
+.global-glossary-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid #c9c2b4;
+  padding: 0.75rem 1.15rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.global-glossary-search input,
+.global-glossary-form input,
+.global-glossary-form textarea {
+  width: 100%;
+  border: 1px solid #aaa193;
+  border-radius: 0;
+  background: #fff;
+  color: #1b1a17;
+  font: inherit;
+  letter-spacing: 0;
+  padding: 0.65rem;
+}
+
+.global-glossary-layout {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+}
+
+.global-glossary-layout > section {
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid #c9c2b4;
+  padding: 1rem 1.15rem;
+}
+
+.global-glossary-list {
+  display: grid;
+}
+
+.global-glossary-entry {
+  border-bottom: 1px solid #d8d1c4;
+  padding: 0.85rem 0;
+}
+
+.global-glossary-entry:first-child {
+  padding-top: 0;
+}
+
+.global-glossary-entry > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.global-glossary-entry span {
+  color: #746e65;
+  font-size: 0.78rem;
+}
+
+.global-glossary-entry p {
+  margin: 0.45rem 0 0.7rem;
+  line-height: 1.5;
+}
+
+.global-glossary-entry-actions {
+  justify-content: flex-start;
+}
+
+.global-glossary-entry-actions button,
+.global-glossary-form-actions button {
+  border: 1px solid #8d8578;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.45rem 0.65rem;
+}
+
+.global-glossary-entry-actions .is-danger {
+  color: #81251f;
+}
+
+.global-glossary-form {
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 1.15rem;
+}
+
+.global-glossary-form label {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.global-glossary-form textarea {
+  resize: vertical;
+}
+
+.global-glossary-form-actions {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.global-glossary-form-actions .global-glossary-save {
+  border-color: #1b1a17;
+  background: #1b1a17;
+  color: #fff;
+}
+
+.global-glossary-status {
+  min-height: 2.5rem;
+  border-top: 1px solid #c9c2b4;
+  color: #575148;
+  padding: 0.7rem 1.15rem;
+}
+
+.global-glossary-status.is-error {
+  color: #81251f;
+}
+
+@media (max-width: 760px) {
+  .global-glossary-layout {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .global-glossary-layout > section {
+    max-height: 42dvh;
+    border-right: 0;
+    border-bottom: 1px solid #c9c2b4;
+  }
+
+  .global-glossary-form {
+    overflow: visible;
+  }
+
+  .global-glossary-entry > div:first-child {
+    display: grid;
+    gap: 0.2rem;
+  }
+}
+
 .site-header nav a {
   padding: 0.3rem 0.42rem;
   color: var(--ink-soft, #5a554c);

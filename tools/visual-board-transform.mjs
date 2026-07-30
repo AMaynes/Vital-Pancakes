@@ -4,7 +4,7 @@ import {
   SHAPE_TYPES,
   getObjectBounds,
   getShapeCenter,
-} from "./visual-board-geometry.mjs";
+} from "./visual-board-geometry.mjs?v=9";
 
 /**
  * Mirrors complete selections while retaining IDs, groups, locks, vertex
@@ -66,12 +66,23 @@ function flipObject(object, center, axis, mirrorText) {
     const objectCenter = reflectPoint(getShapeCenter(object), center, axis);
     transformed.x = objectCenter.x - object.w / 2;
     transformed.y = objectCenter.y - object.h / 2;
+    if (object.type === "area") {
+      transformed.vertices = object.vertices.map((point) => (
+        axis === "horizontal"
+          ? { x: 1 - point.x, y: point.y }
+          : { x: point.x, y: 1 - point.y }
+      ));
+    }
     if (object.type === "textbox" && !mirrorText) {
       transformed.rotation = object.rotation ?? 0;
       return transformed;
     }
     transformed.rotation = -(object.rotation ?? 0);
-    if (object.type === "image" || (object.type === "textbox" && mirrorText)) {
+    if (
+      object.type === "image"
+      || object.type === "symbol"
+      || (object.type === "textbox" && mirrorText)
+    ) {
       if (axis === "horizontal") transformed.flipX = !Boolean(object.flipX);
       else transformed.flipY = !Boolean(object.flipY);
     }

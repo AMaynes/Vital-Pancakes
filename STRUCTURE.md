@@ -11,10 +11,10 @@ vital-pancakes/
 ├── README.md — Explains the public site, workspace, tools, and deployment.
 ├── TODO.md — Tracks pressing and eventual work.
 ├── STRUCTURE.md — Maps the maintained repository.
-├── index.html — Serves as the public homepage and project entry point.
-├── style.css — Defines the public site's archival visual system.
-├── site-navigation.css — Styles the shared header, page path, and history controls.
-├── site-navigation.js — Builds the file-like page path and browser-history controls.
+├── index.html — Serves as the public homepage, Knowledge Center, and Unified Vault interface.
+├── style.css — Defines the public site and Knowledge Center archival visual system.
+├── site-navigation.css — Styles the shared header, page path, history controls, and global glossary.
+├── site-navigation.js — Builds page paths, browser-history controls, glossary access, and background indexing.
 ├── research-literature.html — Unifies research, publications, and reading analysis.
 ├── download-app.html — Presents phone previews and the install guide.
 ├── download-app.css — Styles app previews and archival motion accents.
@@ -28,6 +28,15 @@ vital-pancakes/
 │   ├── ai-command-registry.mjs — Routes previewed and applied commands through registered tool adapters.
 │   ├── ai-page-host.mjs — Exposes the shared versioned AI page API and message bridge.
 │   ├── ai-tool-catalog.mjs — Registers AI-addressable tools and their adapter modules.
+│   ├── home-knowledge.js — Coordinates homepage search, graph, glossary, local AI suggestions, and encrypted vault workflows.
+│   ├── home-knowledge-ai-adapter.mjs — Exposes bounded search, glossary, relationship, and vault-summary commands.
+│   ├── glossary-ui.mjs — Installs the global glossary editor and reference inserter.
+│   ├── knowledge-db.mjs — Stores documents, relationships, glossary entries, and index metadata.
+│   ├── knowledge-model.mjs — Owns search ranking, references, backlinks, related entries, suggestions, and graph projection.
+│   ├── knowledge-sync.mjs — Indexes Workspace, tools, lessons, annotations, text files, and PDF records locally.
+│   ├── vault-archive.mjs — Frames chunked PBKDF2/AES-GCM encrypted archives with authenticated ordering.
+│   ├── vault-codec.mjs — Preserves structured-clone values through binary attachments.
+│   ├── vault-storage.mjs — Discovers, captures, validates, and restores localStorage, IndexedDB, and OPFS data.
 │   ├── workspace-ai-adapter.mjs — Provides bounded semantic commands for Workspace libraries and entries.
 │   ├── offline-shell.mjs — Registers cache-bypassed update checks and refreshes stale controlled Workspace views once.
 │   ├── content-view.mjs — Normalizes retained List/Grid preferences and creates collection deep links.
@@ -49,7 +58,7 @@ vital-pancakes/
 ├── tools/
 │   ├── tool.css — Shares full-screen and windowed tool layouts and controls.
 │   ├── current-tool-ai-adapter.mjs — Provides validated page-local command contracts for maintained tools.
-│   ├── visual-board-ai-adapter.mjs — Provides geometry-aware commands for Board objects, rigs, and floor plans.
+│   ├── visual-board-ai-adapter.mjs — Validates exact Board, diagram, floor-plan, and architectural AI commands.
 │   ├── ai-command-center.* — Hosts local command drafting, preview, permissions, and explicit apply workflows.
 │   ├── workspace-suite.css — Shares the dense archival shell used by the newer local-first tools.
 │   ├── local-toolkit.mjs — Provides shared IndexedDB repositories, backups, downloads, imports, IDs, and undo.
@@ -102,8 +111,12 @@ vital-pancakes/
 │   ├── scientific-calculator-engine.mjs — Safely validates and evaluates scalar math.js expressions.
 │   ├── scientific-calculator-engine.test.mjs — Verifies precedence, precision, functions, angle modes, and rejected syntax.
 │   ├── visual-board.html — Hosts diagramming and painting.
-│   ├── visual-board.js — Coordinates the infinite canvas, tools, persistence, and export.
+│   ├── visual-board.js — Coordinates the infinite canvas, architectural renderer, tools, persistence, and export.
 │   ├── visual-board-advanced.css — Styles image controls and the Floor Plan panel.
+│   ├── visual-board-architecture.mjs — Defines deterministic materials, layers, vector symbols, ordering, and geometry reports.
+│   ├── visual-board-architecture.test.mjs — Verifies the architecture catalog, ordering, materials, and non-mutating inspection.
+│   ├── visual-board-static-export.mjs — Serializes visible Board artwork to standalone SVG for SVG, PNG, and PDF output.
+│   ├── visual-board-static-export.test.mjs — Verifies deterministic vector export, layers, patterns, symbols, text, and images.
 │   ├── visual-board-image.mjs — Owns non-destructive source-coordinate crop geometry.
 │   ├── visual-board-transform.mjs — Flips selections and calculates alignment guides without breaking relationships.
 │   ├── visual-board-floor-plan.mjs — Creates ordinary editable floor-plan symbols and starter rooms.
@@ -130,8 +143,8 @@ vital-pancakes/
 │   ├── visual-board-shape-tools.test.mjs — Verifies shape families and retained-option behavior.
 │   ├── visual-board-strokes.mjs — Defines stable, width-aware Canvas dash and dot patterns.
 │   ├── visual-board-strokes.test.mjs — Verifies finite dotted ink and established dash spacing.
-│   ├── visual-board-text.mjs — Keeps declared font sizes readable at overview zoom.
-│   ├── visual-board-text.test.mjs — Verifies zoom-aware text rendering and click-created dimensions.
+│   ├── visual-board-text.mjs — Defines world-scaled text and explicit screen-scaled annotation sizing.
+│   ├── visual-board-text.test.mjs — Verifies zoom-stable world text and opt-in screen annotations.
 │   ├── visual-board-vertices.mjs — Builds and reshapes grouped line networks with shared editable vertices.
 │   ├── visual-board-vertices.test.mjs — Verifies vertex merging, preservation, and connected-line reshaping.
 │   ├── pdf-signer.html — Hosts local PDF viewing and signing.
@@ -143,9 +156,11 @@ vital-pancakes/
 │   ├── literature-analyzer.js — Owns source loading, persistence, comments, and exports.
 │   ├── literature-analyzer-model.mjs — Provides highlight geometry, stored-data validation, and bounded history.
 │   ├── literature-analyzer-model.test.mjs — Verifies highlighting, PDF coordinates, and undo/redo history.
-│   ├── master-lesson-builder.html — Hosts local textbook upload, outline, lesson editor, preview, and chat.
-│   ├── master-lesson-builder.css — Styles the responsive three-pane lesson workspace.
-│   ├── master-lesson-builder.js — Coordinates extraction, persistence, generation, editing, export, and Studies saves.
+│   ├── master-lesson-builder.html — Hosts local textbook upload, lesson creation, and Adaptive Review Studio.
+│   ├── master-lesson-builder.css — Styles the responsive lesson and review workspace.
+│   ├── master-lesson-builder.js — Coordinates extraction, generation, editing, review, export, and Studies saves.
+│   ├── master-lesson-review.mjs — Owns deterministic card generation, quiz choices, FSRS scheduling, statistics, and undo.
+│   ├── master-lesson-review-ui.mjs — Coordinates due queues, ratings, card editing, settings, and review persistence.
 │   ├── master-lesson-worker.js — Lazy-loads WebLLM and runs model inference away from the interface.
 │   ├── master-lesson-extraction.mjs — Extracts numbered PDF, TXT, and Markdown pages.
 │   ├── master-lesson-text.mjs — Normalizes page text and repeated page furniture.
@@ -339,7 +354,13 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 `visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps group, divided-shape, and vertex-network identifiers without mutating the originals. `visual-board-character.mjs` packages selected connected artwork, embedded images, groups, internal vertices, external joints, and both lock types into a remapped `.vp-character.json` file that can be dropped back onto the board. `visual-board-library.mjs` stores those complete packages as named, searchable local assets so inserting a library item remaps every identifier without flattening its structure. `visual-board-rigging.mjs` creates only the contact joint shared by selected rigid groups and solves the closest exact position allowed by locked distances. `visual-board-geometry.mjs` isolates reusable geometry, while `visual-board-vertices.mjs` retains the internal editable-line network used after a group is released.
 
-`visual-board-image.mjs` stores crop rectangles in source-image coordinates and supplies fit, fill, reset, replacement, and draw geometry without iterative recompression. `visual-board-transform.mjs` mirrors complete selections and only their fully selected rig joints while preserving IDs, locks, vertices, arrows, crop state, and readable text. `visual-board-floor-plan.mjs` creates walls, doors, swing arcs, windows, dimensions, room symbols, and starter rooms through the existing object and group schema. The Board UI adds numeric and handle image controls, alignment guides, configurable floor-plan scale/units/grid/wall thickness, and library-compatible templates; version 12 migrates prior boards without flattening them.
+`visual-board-image.mjs` stores crop rectangles in source-image coordinates and supplies fit, fill, reset, replacement, and draw geometry without iterative recompression. `visual-board-transform.mjs` mirrors complete selections and only their fully selected rig joints while preserving IDs, locks, vertices, arrows, architectural areas and symbols, crop state, and readable text. `visual-board-floor-plan.mjs` creates walls, doors, swing arcs, windows, dimensions, room symbols, and starter rooms through the existing object and group schema. The Board UI adds numeric and handle image controls, alignment guides, configurable floor-plan scale/units/grid/wall thickness, and library-compatible templates; version 13 migrates prior boards without flattening them.
+
+`visual-board-architecture.mjs` owns the compact architectural object vocabulary: filled polygonal areas, wall bodies, dimensions, 15 deterministic materials, 10 Canvas fill patterns, 9 ordered visibility layers, and 37 reusable vector symbols for openings, furniture, fixtures, landscaping, and site features. It also provides stable layer/z-index sorting and bounded, non-mutating bounds and overlap reports. Architectural text uses board-coordinate font sizes, alignment, padding, and clipping, so camera zoom no longer changes its layout.
+
+`visual-board-static-export.mjs` serializes the same stored objects, materials, symbols, layers, transforms, and embedded raster assets into a standalone SVG without DOM access or layout inference. The Board downloads that vector result directly or rasterizes it locally for high-resolution PNG and PDF output.
+
+`visual-board-ai-adapter.mjs` exposes exact architecture commands for areas, walls, openings, symbols, labels, dimensions, material assignment, layer replacement, and read-only inspection. Commands validate nested fields, operate on cloned state, support same-batch client keys, preview without saving, and commit an approved mixed batch as one undoable change. The adapter and renderer never plan, infer, furnish, reroute, or improve a design; the calling model supplies every coordinate, dimension, style, material, symbol, layer, and z-index.
 
 ### Local-First Workspace Suite
 
@@ -359,7 +380,7 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 ### Master Lesson Builder
 
-`master-lesson-builder.html`, `.css`, and `.js` provide the book library, drag-and-drop extraction, WebGPU status, explicit model loading, editable outline, lesson editor and preview, source-grounded chat, progress controls, exports, and Studies integration. Text-based PDFs use bundled PDF.js; TXT and Markdown use native file reading. Scanned PDFs are detected from insufficient extractable text and require external OCR.
+`master-lesson-builder.html`, `.css`, and `.js` provide the book library, drag-and-drop extraction, WebGPU status, explicit model loading, editable outline, lesson editor and preview, source-grounded chat, progress controls, exports, Studies integration, and Adaptive Review Studio. Review cards are generated from approved lesson flashcards and concepts, remain editable, preserve manual edits during lesson regeneration, and use the pinned MIT-licensed `ts-fsrs` 5.4.1 browser module for local Again/Hard/Good/Easy scheduling. Text-based PDFs use bundled PDF.js; TXT and Markdown use native file reading. Scanned PDFs are detected from insufficient extractable text and require external OCR.
 
 The deterministic pipeline is split across extraction, normalization, outline, chunking, BM25 retrieval, prompt, validation, queue, IndexedDB, and Study-conversion modules. Source pages stay attached through chunking, and model citations survive validation only when the cited page belongs to the cited supplied chunk. WebLLM 0.2.83 is lazy-loaded inside `master-lesson-worker.js`; small and medium model artifacts use WebLLM's IndexedDB cache and are intentionally absent from the application-shell precache. Reloaded running jobs recover paused and reuse completed chunk summaries.
 

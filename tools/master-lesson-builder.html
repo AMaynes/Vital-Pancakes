@@ -10,10 +10,10 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=25">
   <link rel="stylesheet" href="tool.css?v=33">
-  <link rel="stylesheet" href="master-lesson-builder.css?v=2">
-  <link rel="stylesheet" href="../site-navigation.css?v=20">
+  <link rel="stylesheet" href="master-lesson-builder.css?v=4">
+  <link rel="stylesheet" href="../site-navigation.css?v=21">
   <script src="../vendor/pdf.min.js"></script>
-  <script type="module" src="../site-navigation.js?v=11"></script>
+  <script type="module" src="../site-navigation.js?v=15"></script>
 </head>
 <body class="tool-body lesson-builder-body">
   <a class="skip-link" href="#tool-main">Skip to lesson builder</a>
@@ -120,6 +120,7 @@
             <button type="button" role="tab" aria-selected="true" data-lesson-tab="outline">Outline</button>
             <button type="button" role="tab" aria-selected="false" data-lesson-tab="lesson">Lesson editor</button>
             <button type="button" role="tab" aria-selected="false" data-lesson-tab="preview">Preview</button>
+            <button type="button" role="tab" aria-selected="false" data-lesson-tab="review">Adaptive review</button>
           </div>
 
           <section class="lesson-tab-panel" id="outline-panel" data-lesson-panel="outline">
@@ -169,6 +170,71 @@
               <p class="lesson-empty-copy">Select or generate a lesson to preview it.</p>
             </div>
           </section>
+
+          <section class="lesson-tab-panel lesson-review-studio" id="lesson-review-panel" data-lesson-panel="review" hidden>
+            <header class="lesson-section-toolbar">
+              <div>
+                <span>FSRS · LOCAL SCHEDULING</span>
+                <h2>Adaptive Review Studio</h2>
+                <p>Turn generated flashcards and concepts into scheduled recall and quiz sessions.</p>
+              </div>
+              <div>
+                <button class="button button-quiet" id="review-sync-selected" type="button">Sync selected lesson</button>
+                <button class="button button-primary" id="review-sync-book" type="button">Sync whole book</button>
+              </div>
+            </header>
+
+            <div class="lesson-review-stats" id="review-stats"></div>
+
+            <div class="lesson-review-layout">
+              <aside class="lesson-review-queue-panel">
+                <div class="lesson-review-mode" role="group" aria-label="Review mode">
+                  <button type="button" id="review-mode-flashcards" aria-pressed="true">Flashcards</button>
+                  <button type="button" id="review-mode-quiz" aria-pressed="false">Quiz</button>
+                </div>
+                <header>
+                  <strong>Due queue</strong>
+                  <button class="button button-small" id="review-undo" type="button">Undo last</button>
+                </header>
+                <div id="review-queue"></div>
+              </aside>
+
+              <section class="lesson-review-card-stage" id="review-card-stage" aria-live="polite">
+                <p class="lesson-empty-copy">Generate review cards from a lesson to begin.</p>
+              </section>
+            </div>
+
+            <section class="lesson-review-library">
+              <header class="lesson-review-library-heading">
+                <div>
+                  <span>REVIEW LIBRARY</span>
+                  <h3>Cards and schedule</h3>
+                </div>
+                <form id="review-settings-form">
+                  <label>Retention
+                    <input id="review-retention" type="number" min="0.70" max="0.99" step="0.01">
+                  </label>
+                  <label>New / day
+                    <input id="review-new-limit" type="number" min="1" max="500" step="1">
+                  </label>
+                  <label class="lesson-review-checkbox">
+                    <input id="review-short-term" type="checkbox">
+                    Learning steps
+                  </label>
+                  <button class="button button-small" type="submit">Save settings</button>
+                </form>
+              </header>
+              <div id="review-all-cards"></div>
+            </section>
+
+            <section class="lesson-review-history">
+              <header>
+                <span>HISTORY</span>
+                <h3>Recent reviews</h3>
+              </header>
+              <div id="review-history"></div>
+            </section>
+          </section>
         </div>
       </section>
 
@@ -193,6 +259,25 @@
     </main>
   </div>
 
+  <dialog class="app-dialog lesson-review-editor-dialog" id="review-editor-dialog">
+    <form id="review-editor-form">
+      <header class="dialog-heading">
+        <div>
+          <p class="eyebrow">REVIEW CARD</p>
+          <h2>Edit card</h2>
+        </div>
+        <button class="icon-button dialog-close" type="button" id="review-editor-close" aria-label="Close">&times;</button>
+      </header>
+      <input id="review-editor-id" type="hidden">
+      <label>Front<textarea id="review-editor-front" rows="4" maxlength="20000" required></textarea></label>
+      <label>Back<textarea id="review-editor-back" rows="7" maxlength="100000" required></textarea></label>
+      <div class="lesson-review-editor-actions">
+        <button class="button button-quiet" type="button" id="review-editor-cancel">Cancel</button>
+        <button class="button button-primary" type="submit">Save card</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="app-dialog app-dialog-wide lesson-source-dialog" id="source-dialog">
     <form method="dialog">
       <header class="dialog-heading">
@@ -207,6 +292,6 @@
   </dialog>
 
   <div class="toast-region" id="lesson-toast-region" aria-live="polite"></div>
-  <script type="module" src="master-lesson-builder.js?v=6"></script>
+  <script type="module" src="master-lesson-builder.js?v=7"></script>
 </body>
 </html>

@@ -60,6 +60,40 @@ When a user-facing tool or feature changes:
   sensitive operations.
 - Update adapter tests and run the maintained Node suites before merging.
 
+## Knowledge Home commands
+
+The homepage installs the `knowledge-home` adapter. It exposes bounded
+`knowledge.search` and `knowledge.related` reads, glossary list/upsert/delete,
+and relationship list/propose/add/review commands. AI-proposed relationships
+remain pending until a user or approved command explicitly accepts them.
+`vault.summary` returns storage counts only; archive passwords, private records,
+file names, and file bytes are never exposed through the command contract.
+
+```json
+{
+  "protocolVersion": 1,
+  "requestId": "knowledge-search-1",
+  "tool": "knowledge-home",
+  "mode": "preview",
+  "expectedRevision": 4,
+  "commands": [
+    {
+      "type": "knowledge.search",
+      "query": "synaptic plasticity",
+      "limit": 10
+    }
+  ]
+}
+```
+
+## Adaptive Review commands
+
+The `master-lesson-builder` adapter exposes review summaries and card lists,
+lesson-to-card synchronization, card create/update/delete, FSRS ratings, and
+review-setting updates. Mutations participate in the same preview-first,
+revision-checked atomic commit as lesson changes. Review content is limited to
+the active local book.
+
 ## Visual Board examples
 
 Replace `expectedRevision` with the current Visual Board revision. Preview and
@@ -121,6 +155,91 @@ review the receipt before changing `mode` to `apply`.
       ],
       "placement": { "type": "viewport-center" },
       "stylePreset": "archival"
+    }
+  ]
+}
+```
+
+### Exact architectural geometry
+
+Visual Board publishes its current layer, material, fill-pattern, and vector-symbol
+catalog through `getCapabilities()`. Architectural commands are deterministic:
+
+- `architecture.areas.create`, `architecture.walls.create`,
+  `architecture.openings.create`, `architecture.symbols.place`,
+  `architecture.labels.create`, and `architecture.dimensions.create` add exact
+  caller-supplied geometry.
+- `architecture.materials.apply` and `architecture.layers.set` change explicit
+  targets or replace the explicit layer stack.
+- `architecture.inspect` returns bounded object geometry and box-overlap results
+  without changing the board.
+
+The renderer does not choose a plan, infer rooms, place furniture, reroute walls,
+or improve a design. The calling model is the architect; Visual Board only
+validates, previews, renders, measures, and atomically applies its instructions.
+Labels use board-coordinate font sizes, so camera zoom does not resize or reflow
+them.
+
+This preview creates one compact room fragment and inspects objects created
+earlier in the same batch through stable client keys:
+
+```json
+{
+  "protocolVersion": 1,
+  "requestId": "example-architecture-1",
+  "tool": "visual-board",
+  "mode": "preview",
+  "expectedRevision": 42,
+  "commands": [
+    {
+      "type": "architecture.areas.create",
+      "areas": [
+        {
+          "clientKey": "room-floor",
+          "vertices": [
+            {"x": 100, "y": 100}, {"x": 460, "y": 100},
+            {"x": 460, "y": 360}, {"x": 100, "y": 360}
+          ],
+          "materialId": "hardwood",
+          "layerId": "materials"
+        }
+      ]
+    },
+    {
+      "type": "architecture.walls.create",
+      "walls": [
+        {
+          "clientKey": "north-wall",
+          "start": { "x": 100, "y": 100 },
+          "end": { "x": 460, "y": 100 },
+          "thickness": 12,
+          "layerId": "structure",
+          "style": { "fillColor": "#f4efe5", "color": "#2b2722" }
+        }
+      ]
+    },
+    {
+      "type": "architecture.symbols.place",
+      "symbols": [
+        {
+          "clientKey": "bed",
+          "symbolId": "bed-queen",
+          "x": 260,
+          "y": 145,
+          "w": 120,
+          "h": 168,
+          "rotation": 0,
+          "layerId": "furniture",
+          "zIndex": 10
+        }
+      ]
+    },
+    {
+      "type": "architecture.inspect",
+      "targets": {
+        "clientKeys": ["room-floor", "north-wall", "bed"]
+      },
+      "includeIntersections": true
     }
   ]
 }

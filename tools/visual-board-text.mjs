@@ -1,16 +1,21 @@
 /**
- * Keeps a declared font size readable while the board is zoomed out. Above
- * 100%, text scales with the rest of the board normally.
+ * Resolves a declared font size into world units.
+ *
+ * Document text defaults to world scaling so zoom never changes wrapping or
+ * object layout. Screen scaling remains available only for explicit overlay
+ * annotations.
  */
-export function getTextWorldFontSize(fontSize, zoom = 1) {
+export function getTextWorldFontSize(fontSize, zoom = 1, scaleMode = "world") {
   const numericSize = Number(fontSize);
   const normalizedSize = Number.isFinite(numericSize) ? Math.max(1, numericSize) : 18;
-  return normalizedSize / getOverviewZoom(zoom);
+  return scaleMode === "screen"
+    ? normalizedSize / getOverviewZoom(zoom)
+    : normalizedSize;
 }
 
-export function getDefaultTextboxSize(fontSize, zoom = 1) {
-  const overviewZoom = getOverviewZoom(zoom);
-  const worldFontSize = getTextWorldFontSize(fontSize, zoom);
+export function getDefaultTextboxSize(fontSize, zoom = 1, scaleMode = "world") {
+  const overviewZoom = scaleMode === "screen" ? getOverviewZoom(zoom) : 1;
+  const worldFontSize = getTextWorldFontSize(fontSize, zoom, scaleMode);
   return {
     width: Math.ceil(Math.max(210 / overviewZoom, worldFontSize * 11)),
     height: Math.ceil(Math.max(72 / overviewZoom, worldFontSize * 1.5 + 12)),

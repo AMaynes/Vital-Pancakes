@@ -34,11 +34,14 @@ function createServiceWorker({ controlled = false } = {}) {
 test("registration bypasses HTTP caches and requests an immediate update check", async () => {
   const serviceWorker = createServiceWorker();
 
-  const registration = await registerOfflineShell({ serviceWorker });
+  const registration = await registerOfflineShell({
+    serviceWorker,
+    scriptUrl: "/Vital-Pancakes/sw.js",
+  });
 
   assert.ok(registration);
   assert.deepEqual(serviceWorker.calls, [{
-    scriptUrl: "./sw.js",
+    scriptUrl: "/Vital-Pancakes/sw.js",
     options: { updateViaCache: "none" },
   }]);
   assert.equal(serviceWorker.updateCount, 1);

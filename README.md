@@ -24,7 +24,7 @@ Repository-managed lists use small text files containing `<Entry>` blocks. `gene
 
 The mathematics and arts flashcard applications load subject-specific `flashcards.json` files. Quiz scores, missed-answer queues, and drafted submissions remain in the visitor's browser through `localStorage`.
 
-The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches the workspace, tools, PDF dependencies, and public archive for offline use.
+The homepage also hosts the shared local Knowledge Center: universal text search, backlinks, related entries, an interactive relationship graph, the global glossary, and the Unified Vault. The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches the workspace, tools, PDF dependencies, and public archive for offline use.
 
 Every editable content collection shares one predictable interior structure without flattening its subject matter. The collection index can switch between a compact list and a visual grid, remembers that choice per collection, and opens each item as a dedicated page. Entry pages pair a subject animation and concise orientation with the complete type-specific record—for example, stove-readable recipe steps, training prescriptions, study evidence, runnable language notes, or algorithm traces.
 
@@ -74,6 +74,14 @@ User-created entries, boards, caption projects, tool projects, literature curati
 
 Existing `localStorage` namespaces retain their earlier `pinakes-vitae-*` and `artificially-neuroscience-*` identifiers. They are implementation-level compatibility keys, not public branding, and must remain unchanged unless a migration preserves previously saved user data.
 
+## Knowledge Center and Unified Vault
+
+The homepage builds one browser-local text index across Workspace entries, Studies, generated lessons, literature annotations, algorithms, recipes, projects, tool records, File Drop metadata, supported text files, and extractable PDF text. Searches return bounded snippets and source links. `[[Term]]` references and existing record IDs create automatic relationships; every entry can show backlinks and related records. The graph adds accepted manual links and review-before-accept local WebLLM suggestions without uploading records.
+
+The shared glossary stores definitions, aliases, examples, links, and tags in IndexedDB. Its editor is available from every page, and **Insert** writes a `[[Term]]` reference into the most recently focused text editor or copies it when no editor is active.
+
+Unified Vault exports local settings, discovered user IndexedDB schemas and records, binary values, File Drop bytes, lesson data, annotations, boards, plans, and OPFS files into one chunked `.vpvault` archive. PBKDF2-SHA-256 derives a key from the chosen password and every frame uses authenticated AES-GCM encryption. Entry names and metadata are encrypted along with content. Restore verifies the complete archive before changing storage, supports merge or replace behavior, preserves database keys and indexes, and can be cancelled. Regenerable runtime/model caches and temporary session state are excluded. The password is never stored and cannot be recovered.
+
 ## Workspace Tools
 
 ### Visual Board
@@ -85,6 +93,10 @@ Every supported line or shape can use solid, dashed, dotted, dash–dot, or long
 Image and Visual Board character files can be dropped directly onto the board without an upload control. Images are compressed and stored locally as movable, resizable, rotatable board objects. Nothing is uploaded.
 
 Selected images now support non-destructive source-coordinate crops, aspect presets, fit/fill/original-size actions, numeric and handle rotation, replacement, and horizontal or vertical flips. Complete selections and rigged groups flip around their collective center while retaining groups, vertices, joints, locks, arrow direction, and crop state; text remains readable unless glyph mirroring is explicitly enabled. Floor Plan mode adds scale-aware walls, doors, windows, stairs, labels, dimensions, common room symbols, snapping, alignment guides, starter rooms, and a blank house shell. Every floor-plan item remains an ordinary editable Board object that can be copied, animated, exported, or saved to the Board library.
+
+AI-directed architectural work uses exact, provider-independent commands for material-filled areas, wall segments, openings, vector symbols, world-scaled labels, dimensions, layer ordering, material changes, and bounded geometry inspection. The published catalog includes 9 default layers, 15 materials, 10 fill patterns, and 37 scalable architecture, furniture, fixture, landscape, and site symbols. Text keeps its declared size in board coordinates instead of reflowing as the camera zoom changes. Visible artwork can be saved as editable SVG, high-resolution PNG, or a local PDF.
+
+The Board is deliberately only the drawing instrument: it validates, previews, stores, renders, measures, and atomically applies caller-supplied geometry. It does not infer rooms, select furnishings, repair layouts, or make design decisions for the model. Manual JSON, WebLLM, and connected AI clients all use the same adapter contract described in [AI Commands](docs/AI_COMMANDS.md).
 
 ### Local-First Planning and Creation Suite
 
@@ -115,6 +127,8 @@ Websites remain governed by their own embedding policies. Because browsers preve
 Processes text-based PDF, TXT, and Markdown books entirely in the browser. It extracts numbered pages with bundled PDF.js, removes repeated page furniture, proposes an editable chapter and lesson outline, creates bounded overlapping chunks, and stores books, source text, summaries, lessons, and resumable progress in IndexedDB. Scanned PDFs with little extractable text are rejected with an OCR explanation instead of being treated as processed books.
 
 An explicitly loaded small or medium WebLLM model runs in a dedicated Web Worker through WebGPU. Model files are downloaded from the WebLLM distribution on first use, cached by WebLLM in browser storage, and excluded from the normal service-worker precache. Deterministic BM25 retrieval limits chat to relevant source chunks; generated page citations are discarded unless they match a real retrieved chunk and page. Approved lessons remain editable, export as Markdown or JSON, and save into Studies as backward-compatible lesson entries without changing existing inquiry dossiers.
+
+Adaptive Review Studio converts each lesson's generated flashcards and key concepts into a persistent review deck. It provides due queues, flashcard and deterministic quiz modes, editable and suspendable cards, review history, undo, retention and daily-new-card settings, and Again/Hard/Good/Easy interval previews. Scheduling uses the pinned MIT-licensed `ts-fsrs` 5.4.1 browser module locally. Regenerating a lesson refreshes source-derived text while preserving existing FSRS memory state and manual card edits; whole-book JSON exports include cards, settings, and review logs.
 
 Books and generated content never leave the browser. The first model load requires a network connection, a WebGPU-capable browser, sufficient storage, and approximately 0.9 GB of GPU memory for the small model or 2.3 GB for the medium model. Local model output remains probabilistic and should be checked against its cited source pages.
 

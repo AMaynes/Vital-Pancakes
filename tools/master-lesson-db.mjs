@@ -4,8 +4,18 @@
  */
 
 const DB_NAME = "vital-pancakes-master-lessons";
-const DB_VERSION = 1;
-const STORES = ["books", "pages", "chunks", "summaries", "lessons", "jobs"];
+const DB_VERSION = 2;
+const STORES = [
+  "books",
+  "pages",
+  "chunks",
+  "summaries",
+  "lessons",
+  "jobs",
+  "reviewCards",
+  "reviewLogs",
+  "reviewSettings",
+];
 
 export function openLessonDatabase() {
   return new Promise((resolve, reject) => {

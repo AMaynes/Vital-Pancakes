@@ -37,7 +37,7 @@ import {
 import {
   getDefaultTextboxSize,
   getTextWorldFontSize,
-} from "./visual-board-text.mjs?v=1";
+} from "./visual-board-text.mjs?v=2";
 import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
@@ -102,7 +102,7 @@ import {
   resizeShapeFromCorner,
   rotatePoint,
   snapValue,
-} from "./visual-board-geometry.mjs?v=8";
+} from "./visual-board-geometry.mjs?v=9";
 import {
   cropToAspect,
   fillCropToFrame,
@@ -115,7 +115,7 @@ import {
 import {
   flipBoardSelection,
   getAlignmentSnap,
-} from "./visual-board-transform.mjs?v=1";
+} from "./visual-board-transform.mjs?v=2";
 import {
   FLOOR_PLAN_ELEMENTS,
   FLOOR_PLAN_TEMPLATES,
@@ -124,17 +124,28 @@ import {
   formatFloorPlanDimension,
   normalizeFloorPlanSettings,
 } from "./visual-board-floor-plan.mjs?v=1";
+import {
+  ARCHITECTURE_FILL_PATTERNS,
+  getArchitectureMaterial,
+  getArchitectureSymbol,
+  normalizeArchitectureSettings,
+  sortArchitectureObjects,
+} from "./visual-board-architecture.mjs?v=1";
+import {
+  exportVisualBoardToSvg,
+  getVisualBoardExportBounds,
+} from "./visual-board-static-export.mjs?v=1";
 import { installAiPageHost } from "../app/ai-page-host.mjs";
 import { AI_PERMISSION_LEVELS } from "../app/ai-command-protocol.mjs";
 import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=2";
+} from "./visual-board-ai-adapter.mjs?v=3";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
-const BOARD_VERSION = 12;
+const BOARD_VERSION = 13;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -145,12 +156,15 @@ const ROTATION_HANDLE_OFFSET = 28;
 const MARQUEE_DRAG_THRESHOLD = 3;
 const MAX_IMAGE_DIMENSION = 1800;
 const MAX_TRACE_DIMENSION = 800;
+const MAX_STATIC_EXPORT_DIMENSION = 4096;
+const MAX_PDF_PAGE_DIMENSION = 1440;
 const VERTEX_TOUCH_TOLERANCE = 0.01;
 const ANIMATION_PANEL_WIDTH_KEY = "visual-board-animation-panel-width";
 const ANIMATION_PREVIEW_HEIGHT_KEY = "visual-board-animation-preview-height";
 const MIN_ANIMATION_PANEL_WIDTH = 300;
 const MIN_ANIMATION_PREVIEW_HEIGHT = 120;
 const DASH_PATTERNS = new Set(["solid", "dashed", "dotted", "dash-dot", "long-dash"]);
+const ARCHITECTURE_PATTERNS = new Set(ARCHITECTURE_FILL_PATTERNS);
 const TEXT_FONT_FAMILIES = Object.freeze({
   serif: 'Georgia, "Times New Roman", serif',
   sans: "Arial, Helvetica, sans-serif",
@@ -200,6 +214,8 @@ const copySelectionButton = document.querySelector("#copy-selection");
 const pasteSelectionButton = document.querySelector("#paste-selection");
 const saveToLibraryButton = document.querySelector("#save-to-library");
 const exportCharacterButton = document.querySelector("#export-character");
+const boardExportFormat = document.querySelector("#board-export-format");
+const boardExportButton = document.querySelector("#export-board-artwork");
 const gridToggle = document.querySelector("#toggle-grid");
 const snapToggle = document.querySelector("#toggle-snap");
 const saveStatus = document.querySelector("#save-status");
@@ -326,6 +342,7 @@ let shapeToolChoices = {
 };
 
 const imageCache = new Map();
+const architecturePatternCache = new Map();
 
 function cloneValue(value) {
   return typeof structuredClone === "function"
@@ -337,11 +354,33 @@ function finiteNumber(value, fallback) {
   return Number.isFinite(Number(value)) ? Number(value) : fallback;
 }
 
+function normalizeHexColor(value, fallback = null) {
+  return /^#[0-9a-f]{6}$/i.test(String(value ?? ""))
+    ? String(value).toLowerCase()
+    : fallback;
+}
+
+function normalizeLayerId(value) {
+  const identifier = String(value ?? "").trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9._-]{0,79}$/.test(identifier) ? identifier : "structure";
+}
+
+function normalizeObjectShadow(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const color = normalizeHexColor(value.color, "#000000");
+  const opacity = clamp(finiteNumber(value.opacity, 0.18), 0, 1);
+  const blur = clamp(finiteNumber(value.blur, 0), 0, 100);
+  const offsetX = clamp(finiteNumber(value.offsetX, 0), -500, 500);
+  const offsetY = clamp(finiteNumber(value.offsetY, 0), -500, 500);
+  return blur || offsetX || offsetY ? { color, opacity, blur, offsetX, offsetY } : null;
+}
+
 function normalizeBoardSettings(value = {}) {
   return {
     grid: value.grid ?? true,
     snap: value.snap ?? false,
     floorPlan: normalizeFloorPlanSettings(value.floorPlan),
+    architecture: normalizeArchitectureSettings(value.architecture),
   };
 }
 
@@ -443,6 +482,7 @@ function createEmptyBoard() {
       grid: true,
       snap: false,
       floorPlan: normalizeFloorPlanSettings(),
+      architecture: normalizeArchitectureSettings(),
     },
     view: { x: 0, y: 0, zoom: 1 },
   };
@@ -473,18 +513,42 @@ function normalizeObject(rawObject, options = {}) {
   if (!rawObject || typeof rawObject !== "object") return null;
 
   const type = rawObject.type === "note" ? "textbox" : rawObject.type;
-  const isFloorPlanWall = rawObject.semantic?.role === "floor-plan-wall";
+  const normalizedShadow = normalizeObjectShadow(rawObject.shadow);
+  const supportsArchitecturalStroke = rawObject.semantic?.role === "floor-plan-wall"
+    || rawObject.semantic?.role?.startsWith("architecture-")
+    || ["area", "wall", "symbol", "dimension"].includes(type);
   const strokeWidth = clamp(
     finiteNumber(rawObject.strokeWidth ?? rawObject.width, 3),
-    1,
-    isFloorPlanWall ? 240 : 24,
+    supportsArchitecturalStroke ? 0.25 : 1,
+    supportsArchitecturalStroke ? 240 : 24,
   );
   const common = {
     id: rawObject.id || createId(),
     type,
-    color: typeof rawObject.color === "string" ? rawObject.color : "#000000",
+    color: normalizeHexColor(rawObject.color, "#000000"),
     strokeWidth,
     dashPattern: DASH_PATTERNS.has(rawObject.dashPattern) ? rawObject.dashPattern : "solid",
+    ...(normalizeHexColor(rawObject.fillColor)
+      ? { fillColor: normalizeHexColor(rawObject.fillColor) }
+      : {}),
+    ...(normalizeHexColor(rawObject.accentColor)
+      ? { accentColor: normalizeHexColor(rawObject.accentColor) }
+      : {}),
+    fillOpacity: clamp(finiteNumber(rawObject.fillOpacity, 1), 0, 1),
+    opacity: clamp(finiteNumber(rawObject.opacity, 1), 0, 1),
+    fillPattern: ARCHITECTURE_PATTERNS.has(rawObject.fillPattern)
+      ? rawObject.fillPattern
+      : "solid",
+    ...(typeof rawObject.materialId === "string" && getArchitectureMaterial(rawObject.materialId)
+      ? { materialId: rawObject.materialId }
+      : {}),
+    layerId: normalizeLayerId(rawObject.layerId),
+    zIndex: clamp(finiteNumber(rawObject.zIndex, 0), -10_000, 10_000),
+    ...(normalizedShadow
+      ? { shadow: normalizedShadow }
+      : {}),
+    ...(rawObject.flipX ? { flipX: true } : {}),
+    ...(rawObject.flipY ? { flipY: true } : {}),
     locked: Boolean(rawObject.locked),
     dimensionsLocked: Boolean(rawObject.dimensionsLocked),
     ...(normalizeObjectSemantic(rawObject.semantic)
@@ -557,6 +621,13 @@ function normalizeObject(rawObject, options = {}) {
       y: finiteNumber(rawObject.y, 0),
       endX: finiteNumber(rawObject.endX, finiteNumber(rawObject.x, 0)),
       endY: finiteNumber(rawObject.endY, finiteNumber(rawObject.y, 0)),
+      ...(type === "dimension"
+        ? {
+          label: String(rawObject.label ?? "").slice(0, 240),
+          offset: clamp(finiteNumber(rawObject.offset, 24), -10_000, 10_000),
+          fontSize: clamp(finiteNumber(rawObject.fontSize, 12), 6, 96),
+        }
+        : {}),
       ...(hasVertexNetwork
         ? {
           vertexNetworkId: rawObject.vertexNetworkId,
@@ -575,6 +646,49 @@ function normalizeObject(rawObject, options = {}) {
         }
         : {}),
     };
+  }
+
+  if (type === "area") {
+    const vertices = (Array.isArray(rawObject.vertices) ? rawObject.vertices : [])
+      .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y))
+      .map((point) => ({ x: point.x, y: point.y }))
+      .slice(0, 256);
+    if (vertices.length < 3) return null;
+    return normalizeShape({
+      ...common,
+      x: finiteNumber(rawObject.x, 0),
+      y: finiteNumber(rawObject.y, 0),
+      w: Math.max(1, finiteNumber(rawObject.w, 100)),
+      h: Math.max(1, finiteNumber(rawObject.h, 100)),
+      rotation: finiteNumber(rawObject.rotation, 0),
+      vertices,
+    });
+  }
+
+  if (type === "wall") {
+    return normalizeShape({
+      ...common,
+      x: finiteNumber(rawObject.x, 0),
+      y: finiteNumber(rawObject.y, 0),
+      w: Math.max(1, finiteNumber(rawObject.w, 100)),
+      h: Math.max(1, finiteNumber(rawObject.h, strokeWidth)),
+      rotation: finiteNumber(rawObject.rotation, 0),
+      fillColor: normalizeHexColor(rawObject.fillColor, rawObject.color ?? "#24231f"),
+    });
+  }
+
+  if (type === "symbol") {
+    const symbolId = String(rawObject.symbolId ?? "");
+    if (!getArchitectureSymbol(symbolId)) return null;
+    return normalizeShape({
+      ...common,
+      x: finiteNumber(rawObject.x, 0),
+      y: finiteNumber(rawObject.y, 0),
+      w: Math.max(1, finiteNumber(rawObject.w, 100)),
+      h: Math.max(1, finiteNumber(rawObject.h, 100)),
+      rotation: finiteNumber(rawObject.rotation, 0),
+      symbolId,
+    });
   }
 
   if (type === "rectangle" || type === "ellipse" || type === "shape") {
@@ -604,8 +718,9 @@ function normalizeObject(rawObject, options = {}) {
     const fontFamily = Object.hasOwn(TEXT_FONT_FAMILIES, rawObject.fontFamily)
       ? rawObject.fontFamily
       : "serif";
-    const fontSize = clamp(finiteNumber(rawObject.fontSize, 18), 8, 96);
-    const defaultSize = getDefaultTextboxSize(fontSize, options.textZoom);
+    const fontSize = clamp(finiteNumber(rawObject.fontSize, 18), 6, 96);
+    const scaleMode = rawObject.scaleMode === "screen" ? "screen" : "world";
+    const defaultSize = getDefaultTextboxSize(fontSize, options.textZoom, scaleMode);
     const text = typeof rawObject.text === "string" ? rawObject.text : "";
     return normalizeShape({
       ...common,
@@ -618,6 +733,15 @@ function normalizeObject(rawObject, options = {}) {
       colorRanges: sanitizeTextColorRanges(rawObject.colorRanges, text.length),
       fontSize,
       fontFamily,
+      scaleMode,
+      textAlign: ["left", "center", "right"].includes(rawObject.textAlign)
+        ? rawObject.textAlign
+        : "left",
+      verticalAlign: ["top", "middle", "bottom"].includes(rawObject.verticalAlign)
+        ? rawObject.verticalAlign
+        : "top",
+      lineHeight: clamp(finiteNumber(rawObject.lineHeight, 1.25), 0.8, 3),
+      padding: clamp(finiteNumber(rawObject.padding, 6), 0, 120),
     });
   }
 
@@ -782,7 +906,7 @@ function drawBoard(includeInteractionUi = true) {
     -viewport.y * pixelRatio * viewport.zoom,
   );
 
-  board.objects.forEach(drawObject);
+  getVisibleBoardObjects().forEach(drawObject);
   if (workingObject) drawObject(workingObject);
   drawAlignmentGuides();
 
@@ -793,6 +917,27 @@ function drawBoard(includeInteractionUi = true) {
   }
 
   if (textEditorSession) positionTextEditor();
+}
+
+function getVisibleBoardObjects() {
+  const pixelRatio = window.devicePixelRatio || 1;
+  const margin = 180 / viewport.zoom;
+  const viewportBounds = {
+    x: viewport.x - margin,
+    y: viewport.y - margin,
+    width: canvas.width / pixelRatio / viewport.zoom + margin * 2,
+    height: canvas.height / pixelRatio / viewport.zoom + margin * 2,
+  };
+  return sortArchitectureObjects(
+    board.objects,
+    board.settings.architecture,
+  ).filter((object) => {
+    const bounds = getObjectBounds(object);
+    return bounds.x <= viewportBounds.x + viewportBounds.width
+      && bounds.x + bounds.width >= viewportBounds.x
+      && bounds.y <= viewportBounds.y + viewportBounds.height
+      && bounds.y + bounds.height >= viewportBounds.y;
+  });
 }
 
 function drawGrid(pixelRatio) {
@@ -840,7 +985,9 @@ function drawObject(object) {
   context.lineWidth = object.strokeWidth;
   context.lineCap = "round";
   context.lineJoin = "round";
+  context.globalAlpha = object.opacity ?? 1;
   context.setLineDash(getStrokeDashArray(object.dashPattern, object.strokeWidth));
+  applyObjectShadow(object);
 
   if (object.type === "pen") {
     drawPenStroke(object.points);
@@ -850,6 +997,8 @@ function drawObject(object) {
     drawLine(object);
   } else if (object.type === "arc") {
     drawArc(object);
+  } else if (object.type === "dimension") {
+    drawArchitectureDimension(object);
   } else if (LINE_TYPES.has(object.type)) {
     drawConnector(object);
   } else if (object.type === "shape") {
@@ -857,6 +1006,7 @@ function drawObject(object) {
   } else if (SHAPE_TYPES.has(object.type)) {
     withShapeTransform(object, () => {
       if (object.type === "rectangle") {
+        fillRectangleObject(object);
         context.strokeRect(object.x, object.y, object.w, object.h);
       } else if (object.type === "ellipse") {
         context.beginPath();
@@ -869,7 +1019,15 @@ function drawObject(object) {
           0,
           Math.PI * 2,
         );
+        fillObjectPath(object);
         context.stroke();
+      } else if (object.type === "area") {
+        drawArchitectureArea(object);
+      } else if (object.type === "wall") {
+        fillRectangleObject(object, object.fillColor ?? object.color);
+        context.strokeRect(object.x, object.y, object.w, object.h);
+      } else if (object.type === "symbol") {
+        drawArchitectureSymbol(object);
       } else if (object.type === "textbox") {
         drawTextbox(object);
       } else if (object.type === "image") {
@@ -883,6 +1041,137 @@ function drawObject(object) {
   context.restore();
 }
 
+function applyObjectShadow(object) {
+  if (!object.shadow) return;
+  context.shadowColor = colorWithOpacity(object.shadow.color, object.shadow.opacity);
+  context.shadowBlur = object.shadow.blur;
+  context.shadowOffsetX = object.shadow.offsetX;
+  context.shadowOffsetY = object.shadow.offsetY;
+}
+
+function fillRectangleObject(object, fallbackColor = null) {
+  if (!object.fillColor && !fallbackColor) return;
+  context.save();
+  context.globalAlpha *= object.fillOpacity ?? 1;
+  context.fillStyle = getObjectFillStyle(object, fallbackColor);
+  context.fillRect(object.x, object.y, object.w, object.h);
+  context.restore();
+}
+
+function fillObjectPath(object, fallbackColor = null) {
+  if (!object.fillColor && !fallbackColor) return;
+  context.save();
+  context.globalAlpha *= object.fillOpacity ?? 1;
+  context.fillStyle = getObjectFillStyle(object, fallbackColor);
+  context.fill();
+  context.restore();
+}
+
+function getObjectFillStyle(object, fallbackColor = null) {
+  const fillColor = object.fillColor ?? fallbackColor ?? object.color;
+  if (!object.fillPattern || object.fillPattern === "solid") return fillColor;
+  return getArchitecturePattern(object.fillPattern, fillColor, object.color) ?? fillColor;
+}
+
+function getArchitecturePattern(patternId, fillColor, strokeColor) {
+  const key = `${patternId}:${fillColor}:${strokeColor}`;
+  if (architecturePatternCache.has(key)) return architecturePatternCache.get(key);
+  const tile = document.createElement("canvas");
+  tile.width = 24;
+  tile.height = 24;
+  const tileContext = tile.getContext("2d");
+  tileContext.fillStyle = fillColor;
+  tileContext.fillRect(0, 0, tile.width, tile.height);
+  tileContext.strokeStyle = colorWithOpacity(strokeColor, 0.32);
+  tileContext.fillStyle = colorWithOpacity(strokeColor, 0.34);
+  tileContext.lineWidth = 1;
+
+  if (["hatch", "crosshatch", "wood", "grass", "water", "stone", "pavers", "tile"].includes(patternId)) {
+    tileContext.beginPath();
+  }
+  if (["hatch", "crosshatch"].includes(patternId)) {
+    tileContext.moveTo(-6, 24);
+    tileContext.lineTo(24, -6);
+    tileContext.moveTo(6, 30);
+    tileContext.lineTo(30, 6);
+    if (patternId === "crosshatch") {
+      tileContext.moveTo(-6, 0);
+      tileContext.lineTo(24, 30);
+      tileContext.moveTo(6, -6);
+      tileContext.lineTo(30, 18);
+    }
+  } else if (patternId === "tile") {
+    tileContext.rect(0.5, 0.5, 23, 23);
+    tileContext.moveTo(12, 0);
+    tileContext.lineTo(12, 24);
+    tileContext.moveTo(0, 12);
+    tileContext.lineTo(24, 12);
+  } else if (patternId === "wood") {
+    [5, 12, 19].forEach((y, index) => {
+      tileContext.moveTo(0, y);
+      tileContext.bezierCurveTo(6, y - 2, 15, y + 2, 24, y);
+      if (index === 1) {
+        tileContext.ellipse(17, y - 2, 3, 1.5, 0, 0, Math.PI * 2);
+      }
+    });
+  } else if (patternId === "grass") {
+    [[4, 20], [10, 13], [17, 22], [21, 9]].forEach(([x, y]) => {
+      tileContext.moveTo(x, y);
+      tileContext.lineTo(x - 2, y - 5);
+      tileContext.moveTo(x, y);
+      tileContext.lineTo(x + 2, y - 6);
+    });
+  } else if (patternId === "water") {
+    [6, 14, 22].forEach((y) => {
+      tileContext.moveTo(0, y);
+      tileContext.bezierCurveTo(5, y - 3, 7, y + 3, 12, y);
+      tileContext.bezierCurveTo(17, y - 3, 19, y + 3, 24, y);
+    });
+  } else if (patternId === "stone") {
+    tileContext.moveTo(0, 8);
+    tileContext.lineTo(8, 5);
+    tileContext.lineTo(15, 9);
+    tileContext.lineTo(24, 6);
+    tileContext.moveTo(0, 18);
+    tileContext.lineTo(6, 14);
+    tileContext.lineTo(14, 18);
+    tileContext.lineTo(24, 15);
+    tileContext.moveTo(8, 5);
+    tileContext.lineTo(6, 14);
+    tileContext.moveTo(15, 9);
+    tileContext.lineTo(14, 18);
+  } else if (patternId === "pavers") {
+    tileContext.rect(0.5, 0.5, 11, 7);
+    tileContext.rect(12.5, 0.5, 11, 7);
+    tileContext.rect(-5.5, 8.5, 11, 7);
+    tileContext.rect(6.5, 8.5, 11, 7);
+    tileContext.rect(18.5, 8.5, 11, 7);
+    tileContext.rect(0.5, 16.5, 11, 7);
+    tileContext.rect(12.5, 16.5, 11, 7);
+  }
+  if (["hatch", "crosshatch", "wood", "grass", "water", "stone", "pavers", "tile"].includes(patternId)) {
+    tileContext.stroke();
+  }
+  if (patternId === "dots") {
+    [[5, 5], [18, 9], [10, 19], [22, 22]].forEach(([x, y]) => {
+      tileContext.beginPath();
+      tileContext.arc(x, y, 1.1, 0, Math.PI * 2);
+      tileContext.fill();
+    });
+  }
+  const pattern = context.createPattern(tile, "repeat");
+  architecturePatternCache.set(key, pattern);
+  return pattern;
+}
+
+function colorWithOpacity(color, opacity) {
+  const normalized = normalizeHexColor(color, "#000000");
+  const red = Number.parseInt(normalized.slice(1, 3), 16);
+  const green = Number.parseInt(normalized.slice(3, 5), 16);
+  const blue = Number.parseInt(normalized.slice(5, 7), 16);
+  return `rgb(${red} ${green} ${blue} / ${clamp(finiteNumber(opacity, 1), 0, 1)})`;
+}
+
 function withShapeTransform(object, callback) {
   const center = getShapeCenter(object);
   context.save();
@@ -891,6 +1180,175 @@ function withShapeTransform(object, callback) {
   context.translate(-center.x, -center.y);
   callback();
   context.restore();
+}
+
+function drawArchitectureArea(object) {
+  const vertices = object.vertices.map((point) => ({
+    x: object.x + point.x * object.w,
+    y: object.y + point.y * object.h,
+  }));
+  if (vertices.length < 3) return;
+  context.beginPath();
+  context.moveTo(vertices[0].x, vertices[0].y);
+  vertices.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+  context.closePath();
+  fillObjectPath(object, object.fillColor ?? object.color);
+  context.stroke();
+}
+
+function drawArchitectureDimension(object) {
+  const deltaX = object.endX - object.x;
+  const deltaY = object.endY - object.y;
+  const length = Math.max(0.001, Math.hypot(deltaX, deltaY));
+  const normal = { x: -deltaY / length, y: deltaX / length };
+  const offset = object.offset ?? 24;
+  const start = {
+    x: object.x + normal.x * offset,
+    y: object.y + normal.y * offset,
+  };
+  const end = {
+    x: object.endX + normal.x * offset,
+    y: object.endY + normal.y * offset,
+  };
+  const tickSize = Math.max(6, (object.fontSize ?? 12) * 0.55);
+  context.setLineDash([]);
+  context.beginPath();
+  context.moveTo(object.x, object.y);
+  context.lineTo(start.x, start.y);
+  context.moveTo(object.endX, object.endY);
+  context.lineTo(end.x, end.y);
+  context.moveTo(start.x, start.y);
+  context.lineTo(end.x, end.y);
+  context.moveTo(start.x - normal.x * tickSize, start.y - normal.y * tickSize);
+  context.lineTo(start.x + normal.x * tickSize, start.y + normal.y * tickSize);
+  context.moveTo(end.x - normal.x * tickSize, end.y - normal.y * tickSize);
+  context.lineTo(end.x + normal.x * tickSize, end.y + normal.y * tickSize);
+  context.stroke();
+
+  const label = object.label || formatFloorPlanDimension(
+    { x: object.x, y: object.y },
+    { x: object.endX, y: object.endY },
+    board.settings.floorPlan,
+  );
+  const center = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  context.save();
+  context.shadowColor = "transparent";
+  context.font = `${object.fontSize ?? 12}px Arial, Helvetica, sans-serif`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  const width = context.measureText(label).width + 8;
+  context.fillStyle = "#ffffff";
+  context.fillRect(center.x - width / 2, center.y - (object.fontSize ?? 12) * 0.7, width, (object.fontSize ?? 12) * 1.4);
+  context.fillStyle = object.color;
+  context.fillText(label, center.x, center.y);
+  context.restore();
+}
+
+function drawArchitectureSymbol(object) {
+  const definition = getArchitectureSymbol(object.symbolId);
+  if (!definition) return;
+  withObjectFlip(object, () => {
+    definition.parts.forEach((part) => drawArchitectureSymbolPart(object, part));
+  });
+}
+
+function drawArchitectureSymbolPart(object, part) {
+  context.save();
+  context.setLineDash([]);
+  context.lineWidth = Math.max(0.7, (object.strokeWidth ?? 2) * (part.width ?? 1));
+  context.strokeStyle = resolveSymbolPaint(part.stroke, object, true);
+  context.fillStyle = resolveSymbolPaint(part.fill, object, false);
+
+  if (part.type === "rect" || part.type === "rounded-rect") {
+    const x = object.x + part.x * object.w;
+    const y = object.y + part.y * object.h;
+    const width = part.w * object.w;
+    const height = part.h * object.h;
+    context.beginPath();
+    if (part.type === "rounded-rect") {
+      addRoundedRectanglePath(
+        x,
+        y,
+        width,
+        height,
+        Math.min(width, height) * part.radius,
+      );
+    } else {
+      context.rect(x, y, width, height);
+    }
+    if (part.fill) context.fill();
+    if (part.stroke) context.stroke();
+  } else if (part.type === "ellipse") {
+    context.beginPath();
+    context.ellipse(
+      object.x + (part.x + part.w / 2) * object.w,
+      object.y + (part.y + part.h / 2) * object.h,
+      part.w * object.w / 2,
+      part.h * object.h / 2,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    if (part.fill) context.fill();
+    if (part.stroke) context.stroke();
+  } else if (part.type === "line") {
+    context.beginPath();
+    context.moveTo(object.x + part.x1 * object.w, object.y + part.y1 * object.h);
+    context.lineTo(object.x + part.x2 * object.w, object.y + part.y2 * object.h);
+    context.stroke();
+  } else if (part.type === "arc") {
+    context.beginPath();
+    context.arc(
+      object.x + part.cx * object.w,
+      object.y + part.cy * object.h,
+      part.radius * Math.min(object.w, object.h),
+      part.startAngle,
+      part.endAngle,
+    );
+    context.stroke();
+  } else if (part.type === "polygon") {
+    const points = part.points.map(([x, y]) => ({
+      x: object.x + x * object.w,
+      y: object.y + y * object.h,
+    }));
+    context.beginPath();
+    context.moveTo(points[0].x, points[0].y);
+    points.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+    context.closePath();
+    if (part.fill) context.fill();
+    if (part.stroke) context.stroke();
+  }
+  context.restore();
+}
+
+function resolveSymbolPaint(token, object, isStroke) {
+  if (!token) return "transparent";
+  if (token === "primary") {
+    return isStroke ? object.color : object.fillColor ?? object.color;
+  }
+  if (token === "secondary") {
+    return isStroke ? object.color : object.fillColor ?? "#eadfca";
+  }
+  if (token === "accent") return object.accentColor ?? "#9a6a1f";
+  const materialValue = getArchitectureMaterial(token);
+  if (materialValue) {
+    return isStroke ? materialValue.strokeColor : materialValue.fillColor;
+  }
+  return isStroke ? object.color : object.fillColor ?? "#f7f4ec";
+}
+
+function addRoundedRectanglePath(x, y, width, height, radius) {
+  const resolvedRadius = clamp(radius, 0, Math.min(width, height) / 2);
+  context.moveTo(x + resolvedRadius, y);
+  context.lineTo(x + width - resolvedRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + resolvedRadius);
+  context.lineTo(x + width, y + height - resolvedRadius);
+  context.quadraticCurveTo(x + width, y + height, x + width - resolvedRadius, y + height);
+  context.lineTo(x + resolvedRadius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - resolvedRadius);
+  context.lineTo(x, y + resolvedRadius);
+  context.quadraticCurveTo(x, y, x + resolvedRadius, y);
+  context.closePath();
 }
 
 function drawPenStroke(points) {
@@ -969,25 +1427,47 @@ function drawTextbox(object) {
 function drawTextboxContent(object) {
   const text = object.text.trim() ? object.text : "blank textbox";
   const isPlaceholder = !object.text.trim();
-  const padding = 6;
-  const worldFontSize = getTextWorldFontSize(object.fontSize, viewport.zoom);
+  const padding = object.padding ?? 6;
+  const worldFontSize = getTextWorldFontSize(
+    object.fontSize,
+    viewport.zoom,
+    object.scaleMode,
+  );
   context.save();
+  if (object.fillColor) {
+    context.globalAlpha *= object.fillOpacity ?? 1;
+    context.fillStyle = getObjectFillStyle(object);
+    context.fillRect(object.x, object.y, object.w, object.h);
+    context.globalAlpha = object.opacity ?? 1;
+  }
   context.beginPath();
   context.rect(object.x, object.y, object.w, object.h);
   context.clip();
   context.font = `${worldFontSize}px ${getTextFontCss(object.fontFamily)}`;
   context.textBaseline = "top";
   const lines = wrapTextTokens(text, Math.max(20, object.w - padding * 2));
-  const lineHeight = worldFontSize * 1.25;
+  const lineHeight = worldFontSize * (object.lineHeight ?? 1.25);
+  const totalHeight = lines.length * lineHeight;
+  const contentTop = object.verticalAlign === "middle"
+    ? object.y + Math.max(padding, (object.h - totalHeight) / 2)
+    : object.verticalAlign === "bottom"
+      ? object.y + Math.max(padding, object.h - padding - totalHeight)
+      : object.y + padding;
   lines.forEach((line, index) => {
-    let cursorX = object.x + padding;
+    const lineText = line.tokens.map((token) => token.text).join(" ");
+    const lineWidth = context.measureText(lineText).width;
+    let cursorX = object.textAlign === "center"
+      ? object.x + (object.w - lineWidth) / 2
+      : object.textAlign === "right"
+        ? object.x + object.w - padding - lineWidth
+        : object.x + padding;
     line.tokens.forEach((token, tokenIndex) => {
       if (tokenIndex > 0) {
         cursorX = drawColoredText(
           " ",
           token.start - 1,
           cursorX,
-          object.y + padding + index * lineHeight,
+          contentTop + index * lineHeight,
           object,
           isPlaceholder,
         );
@@ -996,7 +1476,7 @@ function drawTextboxContent(object) {
         token.text,
         token.start,
         cursorX,
-        object.y + padding + index * lineHeight,
+        contentTop + index * lineHeight,
         object,
         isPlaceholder,
       );
@@ -1105,19 +1585,19 @@ function drawFloorPlanDimensionLabel(object) {
   );
   context.save();
   context.setLineDash([]);
-  context.font = `${12 / viewport.zoom}px Arial, Helvetica, sans-serif`;
+  context.font = "12px Arial, Helvetica, sans-serif";
   context.textAlign = "center";
   context.textBaseline = "bottom";
-  const width = context.measureText(label).width + 8 / viewport.zoom;
+  const width = context.measureText(label).width + 8;
   context.fillStyle = "#ffffff";
   context.fillRect(
     center.x - width / 2,
-    center.y - 18 / viewport.zoom,
+    center.y - 18,
     width,
-    16 / viewport.zoom,
+    16,
   );
   context.fillStyle = "#24231f";
-  context.fillText(label, center.x, center.y - 4 / viewport.zoom);
+  context.fillText(label, center.x, center.y - 4);
   context.restore();
 }
 
@@ -1361,7 +1841,9 @@ function getRectangleFromPoints(first, second) {
 
 function findObjectAt(point) {
   const padding = 8 / viewport.zoom;
-  return board.objects.slice().reverse().find((object) => pointHitsObject(object, point, padding)) ?? null;
+  return sortArchitectureObjects(board.objects, board.settings.architecture)
+    .reverse()
+    .find((object) => pointHitsObject(object, point, padding)) ?? null;
 }
 
 function getSelectionUnit(object) {
@@ -2110,7 +2592,11 @@ function commitWorkingObject() {
 
   if (SHAPE_TYPES.has(object.type)) object = alignCubeToGrid(normalizeShape(object));
   if (object.type === "textbox" && (object.w < 8 || object.h < 8)) {
-    const defaultSize = getDefaultTextboxSize(object.fontSize, viewport.zoom);
+    const defaultSize = getDefaultTextboxSize(
+      object.fontSize,
+      viewport.zoom,
+      object.scaleMode,
+    );
     object.w = defaultSize.width;
     object.h = defaultSize.height;
   }
@@ -3529,6 +4015,131 @@ function downloadAnimationBlob(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+async function exportBoardArtwork() {
+  if (!board.objects.length) {
+    announceStatus("Add something to the board before exporting");
+    return;
+  }
+  const format = ["svg", "png", "pdf"].includes(boardExportFormat.value)
+    ? boardExportFormat.value
+    : "svg";
+  const originalLabel = boardExportButton.innerHTML;
+  boardExportButton.disabled = true;
+  boardExportFormat.disabled = true;
+  boardExportButton.textContent = "Saving…";
+
+  try {
+    const viewBounds = getVisualBoardExportBounds(board, { padding: 32 });
+    const title = "Vital Pancakes Visual Board";
+    let blob;
+    if (format === "svg") {
+      blob = new Blob([
+        exportVisualBoardToSvg(board, {
+          viewBounds,
+          width: viewBounds.width,
+          height: viewBounds.height,
+          backgroundColor: "#ffffff",
+          title,
+        }),
+      ], { type: "image/svg+xml;charset=utf-8" });
+    } else {
+      const pngBlob = await createBoardPngBlob(viewBounds, title);
+      blob = format === "pdf"
+        ? await createBoardPdfBlob(pngBlob, viewBounds)
+        : pngBlob;
+    }
+    downloadAnimationBlob(blob, createBoardArtworkFilename(format));
+    announceStatus(`${format.toUpperCase()} saved`);
+  } catch (error) {
+    console.error("Unable to export the Visual Board.", error);
+    announceStatus("Board artwork could not be saved");
+  } finally {
+    boardExportButton.disabled = false;
+    boardExportFormat.disabled = false;
+    boardExportButton.innerHTML = originalLabel;
+  }
+}
+
+async function createBoardPngBlob(viewBounds, title) {
+  const exportScale = Math.min(
+    2,
+    MAX_STATIC_EXPORT_DIMENSION / Math.max(viewBounds.width, viewBounds.height),
+  );
+  const width = Math.max(1, Math.round(viewBounds.width * exportScale));
+  const height = Math.max(1, Math.round(viewBounds.height * exportScale));
+  const svg = exportVisualBoardToSvg(board, {
+    viewBounds,
+    width,
+    height,
+    backgroundColor: "#ffffff",
+    title,
+  });
+  const source = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+  try {
+    const image = await loadImageSource(source);
+    const stagingCanvas = document.createElement("canvas");
+    stagingCanvas.width = width;
+    stagingCanvas.height = height;
+    const stagingContext = stagingCanvas.getContext("2d");
+    stagingContext.drawImage(image, 0, 0, width, height);
+    return await new Promise((resolve, reject) => {
+      stagingCanvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("PNG encoding failed."))),
+        "image/png",
+      );
+    });
+  } finally {
+    URL.revokeObjectURL(source);
+  }
+}
+
+async function createBoardPdfBlob(pngBlob, viewBounds) {
+  const pdfLibrary = await loadPdfLibrary();
+  const pdfDocument = await pdfLibrary.PDFDocument.create();
+  const embeddedImage = await pdfDocument.embedPng(await pngBlob.arrayBuffer());
+  const largestPageDimension = clamp(
+    Math.max(viewBounds.width, viewBounds.height),
+    144,
+    MAX_PDF_PAGE_DIMENSION,
+  );
+  const pageScale = largestPageDimension / Math.max(viewBounds.width, viewBounds.height);
+  const pageWidth = Math.max(1, viewBounds.width * pageScale);
+  const pageHeight = Math.max(1, viewBounds.height * pageScale);
+  const page = pdfDocument.addPage([pageWidth, pageHeight]);
+  page.drawImage(embeddedImage, {
+    x: 0,
+    y: 0,
+    width: pageWidth,
+    height: pageHeight,
+  });
+  return new Blob([await pdfDocument.save()], { type: "application/pdf" });
+}
+
+function loadPdfLibrary() {
+  if (globalThis.PDFLib?.PDFDocument) return Promise.resolve(globalThis.PDFLib);
+  if (loadPdfLibrary.pending) return loadPdfLibrary.pending;
+  loadPdfLibrary.pending = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "../vendor/pdf-lib.min.js";
+    script.addEventListener("load", () => {
+      if (globalThis.PDFLib?.PDFDocument) resolve(globalThis.PDFLib);
+      else reject(new Error("The local PDF library did not initialize."));
+    }, { once: true });
+    script.addEventListener("error", () => {
+      reject(new Error("The local PDF library could not be loaded."));
+    }, { once: true });
+    document.head.append(script);
+  }).finally(() => {
+    loadPdfLibrary.pending = null;
+  });
+  return loadPdfLibrary.pending;
+}
+
+function createBoardArtworkFilename(extension) {
+  const date = new Date().toISOString().slice(0, 10);
+  return `vital-pancakes-visual-board-${date}.${extension}`;
+}
+
 function exportSelectedCharacter() {
   if (!selectedObjects.length) return;
   const characterName = selectedObjects.find((object) => object.name)?.name
@@ -4794,11 +5405,18 @@ function positionTextEditor() {
   editor.style.width = `${Math.max(40, object.w * viewport.zoom)}px`;
   editor.style.height = `${Math.max(28, object.h * viewport.zoom)}px`;
   editor.style.fontSize = `${Math.max(
-    8,
-    getTextWorldFontSize(object.fontSize, viewport.zoom) * viewport.zoom,
+    1,
+    getTextWorldFontSize(object.fontSize, viewport.zoom, object.scaleMode) * viewport.zoom,
   )}px`;
   editor.style.fontFamily = getTextFontCss(object.fontFamily);
   editor.style.color = object.color;
+  editor.style.lineHeight = String(object.lineHeight ?? 1.25);
+  editor.style.padding = `${Math.max(0, (object.padding ?? 6) * viewport.zoom)}px`;
+  editor.style.textAlign = object.textAlign ?? "left";
+  editor.style.boxSizing = "border-box";
+  editor.style.background = object.fillColor
+    ? colorWithOpacity(object.fillColor, (object.fillOpacity ?? 1) * (object.opacity ?? 1))
+    : "#ffffff";
   editor.style.transform = `rotate(${object.rotation ?? 0}rad)`;
 }
 
@@ -5490,6 +6108,7 @@ ungroupSelectionButton.addEventListener("click", releaseSelection);
 explodeSelectionButton.addEventListener("click", divideSelection);
 reassembleSelectionButton.addEventListener("click", reassembleSelection);
 exportCharacterButton.addEventListener("click", exportSelectedCharacter);
+boardExportButton.addEventListener("click", exportBoardArtwork);
 colorInput.addEventListener("input", applySelectedColor);
 colorInput.addEventListener("change", finishColorChange);
 colorInput.addEventListener("blur", finishColorChange);

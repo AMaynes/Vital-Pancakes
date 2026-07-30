@@ -5,7 +5,15 @@
  * keeps browser back/forward controls in one predictable position.
  */
 
+import { installGlobalGlossary } from "./app/glossary-ui.mjs";
+import { scheduleKnowledgeSync } from "./app/knowledge-sync.mjs";
+import { registerOfflineShell } from "./app/offline-shell.mjs";
+
 const SITE_ROOT = new URL("./", import.meta.url);
+
+registerOfflineShell().catch((error) => {
+  console.error("Offline service worker registration failed.", error);
+});
 
 const PAGE_TRAILS = {
   "": [],
@@ -275,3 +283,8 @@ if (workspaceMain) {
     subtree: true,
   });
 }
+
+installGlobalGlossary();
+scheduleKnowledgeSync();
+window.addEventListener("storage", () => scheduleKnowledgeSync());
+window.addEventListener("workspace:changed", () => scheduleKnowledgeSync());

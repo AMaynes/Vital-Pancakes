@@ -424,7 +424,12 @@ function boundPromptContext(context) {
 function createTargetContextOptions(toolId, includeContent) {
   const options = { grantedPermissions: AI_PERMISSION_LEVELS };
   if (toolId === "visual-board") {
-    return { ...options, scope: "selection", maximumObjects: 200 };
+    return {
+      ...options,
+      scope: "viewport",
+      detail: "geometry",
+      maximumObjects: 300,
+    };
   }
   if (toolId === "caption-relay") {
     return {

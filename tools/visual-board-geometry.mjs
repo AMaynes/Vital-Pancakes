@@ -5,10 +5,19 @@
  * resizing, hit testing, and marquee selection deterministic and testable.
  */
 
-import { getQuadraticCurvePoints } from "./visual-board-curves.mjs";
+import { getQuadraticCurvePoints } from "./visual-board-curves.mjs?v=1";
 
-export const SHAPE_TYPES = new Set(["rectangle", "ellipse", "shape", "textbox", "image"]);
-export const LINE_TYPES = new Set(["line", "connector"]);
+export const SHAPE_TYPES = new Set([
+  "rectangle",
+  "ellipse",
+  "shape",
+  "textbox",
+  "image",
+  "area",
+  "wall",
+  "symbol",
+]);
+export const LINE_TYPES = new Set(["line", "connector", "dimension"]);
 export const CURVE_TYPES = new Set(["arc"]);
 
 const SHAPE_SEGMENT_BUILDERS = {
@@ -302,13 +311,17 @@ export function getObjectSegments(object) {
   }
 
   let normalizedSegments = [];
-  if (object.type === "rectangle") {
+  if (object.type === "rectangle" || object.type === "wall") {
     normalizedSegments = polygonSegments([
       [0, 0],
       [1, 0],
       [1, 1],
       [0, 1],
     ]);
+  } else if (object.type === "area") {
+    normalizedSegments = polygonSegments(
+      object.vertices.map((point) => [point.x, point.y]),
+    );
   } else if (object.type === "ellipse") {
     normalizedSegments = ellipseSegments(0, 0, 1, 1, 36);
   } else if (object.type === "shape") {
@@ -324,7 +337,7 @@ export function getObjectSegments(object) {
 export function isExplodableObject(object) {
   return LINE_TYPES.has(object.type)
     || CURVE_TYPES.has(object.type)
-    || ["rectangle", "ellipse", "shape", "trace"].includes(object.type);
+    || ["rectangle", "ellipse", "shape", "trace", "area", "wall"].includes(object.type);
 }
 
 export function getObjectBounds(object) {
@@ -417,6 +430,15 @@ export function pointHitsObject(object, point, padding = 0) {
 
   if (SHAPE_TYPES.has(object.type)) {
     const localPoint = getLocalPoint(object, point);
+    if (object.type === "area") {
+      return pointIsInsidePolygon(
+        {
+          x: (localPoint.x - object.x) / Math.max(1, object.w),
+          y: (localPoint.y - object.y) / Math.max(1, object.h),
+        },
+        object.vertices,
+      );
+    }
     if (object.type === "ellipse") {
       const radiusX = object.w / 2 + strokePadding;
       const radiusY = object.h / 2 + strokePadding;
@@ -483,6 +505,18 @@ function pointIsInsideClosedPaths(point, paths) {
           / (end.y - start.y) + start.x;
       if (crossesRay) isInside = !isInside;
     });
+  });
+  return isInside;
+}
+
+function pointIsInsidePolygon(point, vertices) {
+  let isInside = false;
+  vertices.forEach((start, index) => {
+    const end = vertices[(index + 1) % vertices.length];
+    const crossesRay = (start.y > point.y) !== (end.y > point.y)
+      && point.x < (end.x - start.x) * (point.y - start.y)
+        / (end.y - start.y) + start.x;
+    if (crossesRay) isInside = !isInside;
   });
   return isInside;
 }

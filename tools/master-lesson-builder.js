@@ -48,6 +48,20 @@ import { createRetrievalIndex } from "./master-lesson-retrieval.mjs";
 import { findSavedLesson, lessonToStudyEntry } from "./master-lesson-study.mjs";
 import { normalizePages } from "./master-lesson-text.mjs?v=2";
 import {
+  applyReviewRating,
+  buildQuizQuestion,
+  buildReviewCardsFromLesson,
+  calculateReviewStats,
+  defaultReviewSettings,
+  getReviewQueue,
+  mergeGeneratedReviewCards,
+  normalizeReviewSettings,
+  previewReviewRatings,
+  undoLastReview,
+  validateReviewCard,
+} from "./master-lesson-review.mjs";
+import { createAdaptiveReviewStudio } from "./master-lesson-review-ui.mjs";
+import {
   createEmptyLesson,
   parseStructuredJSON,
   validateChatAnswer,
@@ -57,6 +71,8 @@ import {
 import {
   installCurrentToolAiHost,
   rejectUnknownCommandFields,
+  requireCommandRecord,
+  requireCommandString,
 } from "./current-tool-ai-adapter.mjs";
 
 const elements = Object.fromEntries([
@@ -72,7 +88,12 @@ const elements = Object.fromEntries([
   "lesson-editor-fields", "export-lesson-json", "export-lesson-markdown", "save-to-studies",
   "lesson-preview-content", "clear-chat", "chat-log", "chat-form", "chat-question",
   "source-dialog", "source-dialog-eyebrow", "source-dialog-title", "source-dialog-text",
-  "lesson-toast-region",
+  "lesson-toast-region", "review-sync-selected", "review-sync-book", "review-stats",
+  "review-mode-flashcards", "review-mode-quiz", "review-undo", "review-queue",
+  "review-card-stage", "review-settings-form", "review-retention", "review-new-limit",
+  "review-short-term", "review-all-cards", "review-history", "review-editor-dialog",
+  "review-editor-form", "review-editor-id", "review-editor-front", "review-editor-back",
+  "review-editor-close", "review-editor-cancel",
 ].map((id) => [id, document.getElementById(id)]));
 
 const MODEL_DETAILS = {
@@ -109,6 +130,14 @@ let generationRunning = false;
 let lessonSaveTimer = null;
 let bookSaveTimer = null;
 const generationRequests = new Map();
+const reviewStudio = createAdaptiveReviewStudio({
+  getActiveBook: () => activeBook,
+  getActiveLesson: () => activeLesson,
+  captureActiveLesson: () => {
+    if (activeLesson && !elements["lesson-editor"].hidden) captureLessonEditor();
+  },
+  showToast,
+});
 
 initialize();
 
@@ -186,6 +215,7 @@ function bindEvents() {
   elements["save-to-studies"].addEventListener("click", saveLessonToStudies);
   elements["clear-chat"].addEventListener("click", clearChat);
   elements["chat-form"].addEventListener("submit", askTextbook);
+  reviewStudio.bindEvents();
 }
 
 async function detectWebGpu() {
@@ -327,6 +357,7 @@ async function loadBook(bookId) {
   renderJob();
   clearChat();
   await loadSelectedLesson();
+  await reviewStudio.loadBook(book.id);
 }
 
 function renderOutline() {
@@ -470,10 +501,12 @@ async function loadSelectedLesson() {
   if (!node || node.kind !== "lesson") {
     activeLesson = null;
     renderLessonEditor();
+    reviewStudio.render();
     return;
   }
   activeLesson = await getLesson(activeBook.id, node.id);
   renderLessonEditor();
+  reviewStudio.render();
 }
 
 function renderLessonEditor() {
@@ -1206,13 +1239,25 @@ async function saveLessonToStudies() {
 
 async function exportBook() {
   if (!activeBook) return;
-  const [summaries, lessons] = await Promise.all([
+  const [summaries, lessons, reviewCards, reviewLogs, reviewSettings] = await Promise.all([
     getBookRecords("summaries", activeBook.id),
     getBookRecords("lessons", activeBook.id),
+    getBookRecords("reviewCards", activeBook.id),
+    getBookRecords("reviewLogs", activeBook.id),
+    getBookRecords("reviewSettings", activeBook.id),
   ]);
   downloadFile(
     `${safeFileName(activeBook.title)}-lesson-book.json`,
-    JSON.stringify({ book: activeBook, summaries, lessons }, null, 2),
+    JSON.stringify({
+      book: activeBook,
+      summaries,
+      lessons,
+      adaptiveReview: {
+        cards: reviewCards,
+        logs: reviewLogs,
+        settings: reviewSettings[0] ?? defaultReviewSettings(),
+      },
+    }, null, 2),
     "application/json",
   );
 }
@@ -1228,7 +1273,7 @@ function exportLesson(format) {
 }
 
 async function deleteActiveBook() {
-  if (!activeBook || !window.confirm(`Delete “${activeBook.title}” and all of its local extracted text, progress, and lessons?`)) return;
+  if (!activeBook || !window.confirm(`Delete “${activeBook.title}” and all of its local extracted text, lessons, review cards, and history?`)) return;
   const bookId = activeBook.id;
   await deleteBookData(bookId);
   activeBook = null;
@@ -1236,6 +1281,7 @@ async function deleteActiveBook() {
   activeChunks = [];
   activeLesson = null;
   activeJob = null;
+  reviewStudio.clear();
   elements["lesson-book-workspace"].hidden = true;
   elements["lesson-empty-state"].hidden = false;
   await refreshBookList();
@@ -1251,6 +1297,7 @@ function selectTab(tabName) {
   document.querySelectorAll("[data-lesson-panel]").forEach((panel) => {
     panel.hidden = panel.dataset.lessonPanel !== tabName;
   });
+  if (tabName === "review") reviewStudio.render();
 }
 
 async function loadSelectedModel() {
@@ -1489,6 +1536,7 @@ installCurrentToolAiHost({
       loadedModelId,
       job: activeJob,
     },
+    review: reviewStudio.getSnapshot(),
   }),
   getContext: (_options, snapshot) => ({
     bookCount: snapshot.books.length,
@@ -1512,7 +1560,16 @@ installCurrentToolAiHost({
       loadedModelId: snapshot.generation.loadedModelId,
       jobState: snapshot.generation.job?.state ?? null,
     },
+    review: {
+      cards: snapshot.review.cards.length,
+      due: getReviewQueue(snapshot.review.cards, new Date(), snapshot.review.settings).length,
+      reviews: snapshot.review.logs.length,
+      settings: snapshot.review.settings,
+    },
   }),
+  async commitSnapshot(nextState) {
+    await reviewStudio.commitSnapshot(nextState.review);
+  },
   commands: [
     {
       type: "books.list",
@@ -1554,6 +1611,266 @@ installCurrentToolAiHost({
               lesson: state.activeLesson,
             }
             : null,
+        };
+      },
+    },
+    {
+      type: "review.summary",
+      description: "Read adaptive-review counts, due totals, and FSRS settings without card answers.",
+      permissions: ["read-summary"],
+      schema: { type: "object", additionalProperties: false },
+      example: { type: "review.summary" },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        const stats = calculateReviewStats(state.review.cards);
+        return {
+          value: {
+            ...stats,
+            dueQueue: getReviewQueue(state.review.cards, new Date(), state.review.settings).length,
+            reviewCount: state.review.logs.length,
+            settings: state.review.settings,
+          },
+        };
+      },
+    },
+    {
+      type: "review.cards.list",
+      description: "List adaptive-review cards including fronts, backs, sources, and schedule state.",
+      permissions: ["read-content"],
+      schema: {
+        type: "object",
+        properties: { lessonId: { type: "string" }, dueOnly: { type: "boolean" } },
+        additionalProperties: false,
+      },
+      example: { type: "review.cards.list", dueOnly: true },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["lessonId", "dueOnly"], commandIndex);
+        const source = command.dueOnly
+          ? getReviewQueue(state.review.cards, new Date(), state.review.settings)
+          : state.review.cards;
+        return {
+          value: source.filter((card) => !command.lessonId || card.lessonId === command.lessonId),
+        };
+      },
+    },
+    {
+      type: "review.sync-selected-lesson",
+      description: "Create or refresh cards from the selected lesson while preserving existing FSRS schedules and manual edits.",
+      permissions: ["create", "update"],
+      mutates: true,
+      schema: { type: "object", additionalProperties: false },
+      example: { type: "review.sync-selected-lesson" },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        if (!state.activeBook || !state.activeLesson || !state.activeBook.selectedNodeId) {
+          throw new Error("Select a generated lesson before syncing review cards.");
+        }
+        const generated = buildReviewCardsFromLesson({
+          lesson: state.activeLesson,
+          bookId: state.activeBook.id,
+          lessonId: state.activeBook.selectedNodeId,
+        });
+        if (!generated.length) throw new Error("The selected lesson has no flashcards or key concepts.");
+        const cards = mergeGeneratedReviewCards(state.review.cards, generated);
+        return {
+          state: { ...state, review: { ...state.review, cards } },
+          createdIds: cards
+            .filter((card) => !state.review.cards.some((current) => current.id === card.id))
+            .map((card) => card.id),
+          updatedIds: cards
+            .filter((card) => state.review.cards.some((current) => current.id === card.id))
+            .map((card) => card.id),
+          value: { generated: generated.length, total: cards.length },
+        };
+      },
+    },
+    {
+      type: "review.cards.add",
+      description: "Add one manual FSRS card to the active lesson.",
+      permissions: ["create"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["front", "back"],
+        properties: {
+          front: { type: "string", maxLength: 20000 },
+          back: { type: "string", maxLength: 100000 },
+        },
+        additionalProperties: false,
+      },
+      example: { type: "review.cards.add", front: "What is LTP?", back: "Persistent strengthening of synapses." },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["front", "back"], commandIndex);
+        if (!state.activeBook?.id || !state.activeBook.selectedNodeId) {
+          throw new Error("Select a lesson before adding a review card.");
+        }
+        const front = requireCommandString(command.front, "front", commandIndex, { maximumLength: 20_000 });
+        const back = requireCommandString(command.back, "back", commandIndex, { maximumLength: 100_000 });
+        const [seed] = buildReviewCardsFromLesson({
+          lesson: {
+            title: state.activeLesson?.title ?? "Manual review",
+            flashcards: [{ question: front, answer: back }],
+            sourcePages: state.activeLesson?.sourcePages ?? [],
+          },
+          bookId: state.activeBook.id,
+          lessonId: state.activeBook.selectedNodeId,
+        });
+        const card = validateReviewCard({
+          ...seed,
+          id: `review-manual-${crypto.randomUUID?.() ?? Date.now()}`,
+          sourceKey: `manual:${Date.now()}`,
+          kind: "manual",
+          manuallyEdited: true,
+        });
+        return {
+          state: {
+            ...state,
+            review: { ...state.review, cards: [...state.review.cards, card] },
+          },
+          createdIds: [card.id],
+          value: card,
+        };
+      },
+    },
+    {
+      type: "review.cards.update",
+      description: "Edit or suspend one adaptive-review card without resetting its schedule.",
+      permissions: ["update"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["cardId", "changes"],
+        properties: { cardId: { type: "string" }, changes: { type: "object" } },
+        additionalProperties: false,
+      },
+      example: { type: "review.cards.update", cardId: "review-id", changes: { suspended: true } },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["cardId", "changes"], commandIndex);
+        const cardId = requireCommandString(command.cardId, "cardId", commandIndex, { maximumLength: 500 });
+        const changes = requireCommandRecord(command.changes, "changes", commandIndex);
+        const unknown = Object.keys(changes).find((key) => !["front", "back", "suspended"].includes(key));
+        if (unknown) throw new Error(`Unsupported review-card field: ${unknown}.`);
+        const current = state.review.cards.find((card) => card.id === cardId);
+        if (!current) throw new Error("Review card not found.");
+        const card = validateReviewCard({
+          ...current,
+          ...(changes.front !== undefined ? {
+            front: requireCommandString(changes.front, "changes.front", commandIndex, { maximumLength: 20_000 }),
+            manuallyEdited: true,
+          } : {}),
+          ...(changes.back !== undefined ? {
+            back: requireCommandString(changes.back, "changes.back", commandIndex, { maximumLength: 100_000 }),
+            manuallyEdited: true,
+          } : {}),
+          ...(changes.suspended !== undefined ? { suspended: Boolean(changes.suspended) } : {}),
+          updatedAt: new Date().toISOString(),
+        });
+        return {
+          state: {
+            ...state,
+            review: {
+              ...state.review,
+              cards: state.review.cards.map((candidate) => candidate.id === cardId ? card : candidate),
+            },
+          },
+          updatedIds: [cardId],
+          value: card,
+        };
+      },
+    },
+    {
+      type: "review.cards.delete",
+      description: "Delete one review card without deleting its source lesson.",
+      permissions: ["delete"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["cardId"],
+        properties: { cardId: { type: "string" } },
+        additionalProperties: false,
+      },
+      example: { type: "review.cards.delete", cardId: "review-id" },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["cardId"], commandIndex);
+        const cardId = requireCommandString(command.cardId, "cardId", commandIndex, { maximumLength: 500 });
+        if (!state.review.cards.some((card) => card.id === cardId)) throw new Error("Review card not found.");
+        return {
+          state: {
+            ...state,
+            review: {
+              ...state.review,
+              cards: state.review.cards.filter((card) => card.id !== cardId),
+            },
+          },
+          deletedIds: [cardId],
+        };
+      },
+    },
+    {
+      type: "review.rate",
+      description: "Apply an Again, Hard, Good, or Easy grade through the local FSRS scheduler.",
+      permissions: ["update"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["cardId", "rating"],
+        properties: {
+          cardId: { type: "string" },
+          rating: { type: "string", enum: ["again", "hard", "good", "easy"] },
+          reviewedAt: { type: "string" },
+        },
+        additionalProperties: false,
+      },
+      example: { type: "review.rate", cardId: "review-id", rating: "good" },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["cardId", "rating", "reviewedAt"], commandIndex);
+        const cardId = requireCommandString(command.cardId, "cardId", commandIndex, { maximumLength: 500 });
+        const card = state.review.cards.find((candidate) => candidate.id === cardId);
+        if (!card) throw new Error("Review card not found.");
+        const outcome = applyReviewRating(
+          card,
+          command.rating,
+          command.reviewedAt ? new Date(command.reviewedAt) : new Date(),
+          state.review.settings,
+        );
+        return {
+          state: {
+            ...state,
+            review: {
+              ...state.review,
+              cards: state.review.cards.map((candidate) => candidate.id === cardId ? outcome.card : candidate),
+              logs: [...state.review.logs, outcome.log],
+            },
+          },
+          updatedIds: [cardId],
+          value: { card: outcome.card, log: outcome.log },
+        };
+      },
+    },
+    {
+      type: "review.settings.update",
+      description: "Update bounded FSRS retention, interval, new-card, and learning-step settings.",
+      permissions: ["update"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["changes"],
+        properties: { changes: { type: "object" } },
+        additionalProperties: false,
+      },
+      example: { type: "review.settings.update", changes: { requestRetention: 0.92, dailyNewLimit: 15 } },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["changes"], commandIndex);
+        const changes = requireCommandRecord(command.changes, "changes", commandIndex);
+        const unknown = Object.keys(changes).find((key) => (
+          !["requestRetention", "maximumInterval", "dailyNewLimit", "enableShortTerm"].includes(key)
+        ));
+        if (unknown) throw new Error(`Unsupported review setting: ${unknown}.`);
+        const settings = normalizeReviewSettings({ ...state.review.settings, ...changes });
+        return {
+          state: { ...state, review: { ...state.review, settings } },
+          updatedIds: ["review-settings"],
+          value: settings,
         };
       },
     },

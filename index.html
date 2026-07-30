@@ -26,9 +26,9 @@ Keep the homepage concise and use deeper pages for detailed material.
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="style.css?v=18">
-  <link rel="stylesheet" href="site-navigation.css?v=20">
-  <script type="module" src="site-navigation.js?v=5"></script>
+  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="site-navigation.css?v=21">
+  <script type="module" src="site-navigation.js?v=15"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -89,6 +89,123 @@ Keep the homepage concise and use deeper pages for detailed material.
         <strong>Offline</strong>
         <span>an archive that travels with you</span>
       </div>
+    </section>
+
+    <section class="knowledge-center" id="knowledge-center">
+      <header class="knowledge-center-heading">
+        <div>
+          <p class="eyebrow">Local knowledge center</p>
+          <h2>One index for everything kept here.</h2>
+        </div>
+        <div class="knowledge-index-state">
+          <span id="knowledge-index-status" role="status">Opening the local index...</span>
+          <button type="button" id="knowledge-refresh">Refresh index</button>
+        </div>
+      </header>
+
+      <section class="vault-band" aria-labelledby="vault-title">
+        <div>
+          <p class="eyebrow">Highest priority</p>
+          <h3 id="vault-title">Unified Vault Backup &amp; Restore</h3>
+          <p>Entries, annotations, boards, plans, lessons, databases, and stored files become one password-encrypted archive.</p>
+          <p class="vault-recovery-warning">The password is never stored and cannot be recovered.</p>
+        </div>
+        <div class="vault-band-actions">
+          <strong id="vault-summary">Counting local records...</strong>
+          <div>
+            <button class="button button-primary" id="vault-export" type="button">Export encrypted vault</button>
+            <button class="button button-secondary" id="vault-restore" type="button">Restore vault</button>
+            <input id="vault-file-input" type="file" accept=".vpvault,application/vnd.vital-pancakes.vault" hidden>
+          </div>
+        </div>
+      </section>
+
+      <div class="knowledge-search-layout">
+        <section class="knowledge-search-pane" aria-labelledby="knowledge-search-title">
+          <header class="knowledge-pane-heading">
+            <div>
+              <p class="eyebrow">Universal search</p>
+              <h3 id="knowledge-search-title">Find knowledge across tools</h3>
+            </div>
+            <span id="knowledge-result-count">0 results</span>
+          </header>
+          <form class="knowledge-search-form" id="knowledge-search-form" role="search">
+            <label>
+              <span>Search local knowledge</span>
+              <input id="knowledge-search-query" type="search" autocomplete="off" placeholder="Search lessons, PDFs, highlights, recipes, algorithms...">
+            </label>
+            <label>
+              <span>Source type</span>
+              <select id="knowledge-kind-filter">
+                <option value="">All sources</option>
+              </select>
+            </label>
+          </form>
+          <div class="knowledge-search-results" id="knowledge-search-results"></div>
+        </section>
+
+        <aside class="knowledge-selection" id="knowledge-selection" aria-label="Selected knowledge entry">
+          <p class="knowledge-empty">Select an entry to inspect its backlinks and related records.</p>
+        </aside>
+      </div>
+
+      <section class="knowledge-graph-pane" aria-labelledby="knowledge-graph-title">
+        <header class="knowledge-pane-heading">
+          <div>
+            <p class="eyebrow">Knowledge graph</p>
+            <h3 id="knowledge-graph-title">References become connections</h3>
+          </div>
+          <div class="knowledge-graph-actions">
+            <span id="knowledge-graph-count">0 nodes</span>
+            <button type="button" id="knowledge-graph-reset">Reset view</button>
+            <button type="button" id="knowledge-graph-fullscreen">Full screen</button>
+          </div>
+        </header>
+        <div class="knowledge-graph-view" id="knowledge-graph-view">
+          <svg id="knowledge-graph-svg" role="img" aria-label="Interactive graph of linked Vital Pancakes knowledge"></svg>
+        </div>
+        <div class="knowledge-graph-tools">
+          <form id="knowledge-link-form" class="knowledge-link-form">
+            <h4>Add a manual link</h4>
+            <label>From<select id="knowledge-link-source" name="sourceId" required></select></label>
+            <label>To<select id="knowledge-link-target" name="targetId" required></select></label>
+            <label>Relationship<input name="relation" value="relates to" maxlength="120" required></label>
+            <label>Note<input name="rationale" maxlength="4000" placeholder="Optional reason"></label>
+            <button type="submit">Add link</button>
+          </form>
+          <section class="knowledge-ai-relations" aria-labelledby="knowledge-ai-title">
+            <h4 id="knowledge-ai-title">Local AI suggestions</h4>
+            <div class="knowledge-ai-controls">
+              <select id="knowledge-ai-model" aria-label="Local relationship model"></select>
+              <button type="button" id="knowledge-ai-load">Load local AI</button>
+              <button type="button" id="knowledge-ai-suggest" disabled>Suggest links</button>
+              <button type="button" id="knowledge-ai-cancel" hidden>Cancel</button>
+            </div>
+            <p id="knowledge-ai-status">Load only when wanted. Model weights stay in the browser cache.</p>
+            <div id="knowledge-ai-suggestions"></div>
+          </section>
+        </div>
+        <p class="knowledge-graph-status" id="knowledge-graph-status" role="status"></p>
+      </section>
+
+      <section class="homepage-glossary" aria-labelledby="homepage-glossary-title">
+        <header class="knowledge-pane-heading">
+          <div>
+            <p class="eyebrow">Shared glossary</p>
+            <h3 id="homepage-glossary-title">Definitions available everywhere</h3>
+          </div>
+          <div class="homepage-glossary-actions">
+            <span id="homepage-glossary-count">0 terms</span>
+            <button type="button" id="homepage-glossary-open">Open editor</button>
+          </div>
+        </header>
+        <label class="homepage-glossary-search">
+          <span>Find a term</span>
+          <input id="homepage-glossary-search" type="search" autocomplete="off" placeholder="Term, alias, or definition">
+        </label>
+        <div class="homepage-glossary-list" id="homepage-glossary-list"></div>
+        <p id="homepage-glossary-status" role="status"></p>
+      </section>
     </section>
 
     <section class="section-block">
@@ -158,5 +275,39 @@ Keep the homepage concise and use deeper pages for detailed material.
     <p>Built and maintained by Alex Maynes.</p>
     <a href="https://github.com/AMaynes/Vital-Pancakes">View the project on GitHub</a>
   </footer>
+
+  <dialog class="vault-dialog" id="vault-dialog" aria-labelledby="vault-dialog-title">
+    <form id="vault-dialog-form">
+      <header>
+        <p class="eyebrow">Unified Vault</p>
+        <h2 id="vault-dialog-title">Encrypted vault</h2>
+        <p id="vault-dialog-description"></p>
+      </header>
+      <label>
+        <span>Password</span>
+        <input id="vault-password" type="password" minlength="8" maxlength="1024" autocomplete="new-password" required>
+      </label>
+      <label id="vault-password-confirm-row">
+        <span>Confirm password</span>
+        <input id="vault-password-confirm" type="password" minlength="8" maxlength="1024" autocomplete="new-password">
+      </label>
+      <fieldset id="vault-restore-options" hidden>
+        <legend>Restore behavior</legend>
+        <label><input type="radio" name="vault-restore-mode" value="merge" checked> Merge and overwrite matching record IDs</label>
+        <label><input type="radio" name="vault-restore-mode" value="replace"> Replace stores represented in the archive</label>
+      </fieldset>
+      <p class="vault-dialog-note">All processing stays in this browser. A forgotten password cannot be recovered.</p>
+      <div id="vault-progress-wrap" hidden>
+        <progress id="vault-progress" max="1" value="0"></progress>
+        <span id="vault-progress-text"></span>
+      </div>
+      <p id="vault-dialog-status" role="status"></p>
+      <div class="vault-dialog-actions">
+        <button type="button" id="vault-dialog-cancel">Close</button>
+        <button type="submit" id="vault-dialog-action">Continue</button>
+      </div>
+    </form>
+  </dialog>
+  <script type="module" src="app/home-knowledge.js?v=1"></script>
 </body>
 </html>

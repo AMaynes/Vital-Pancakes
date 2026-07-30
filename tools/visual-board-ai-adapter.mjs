@@ -17,9 +17,18 @@ import {
   createFloorPlanElement,
   createFloorPlanTemplate,
   normalizeFloorPlanSettings,
-} from "./visual-board-floor-plan.mjs";
-import { getObjectBounds } from "./visual-board-geometry.mjs";
-import { flipBoardSelection } from "./visual-board-transform.mjs";
+} from "./visual-board-floor-plan.mjs?v=1";
+import {
+  ARCHITECTURE_FILL_PATTERNS,
+  getArchitectureCatalog,
+  getArchitectureGeometryReport,
+  getArchitectureMaterial,
+  getArchitectureSymbol,
+  normalizeArchitectureSettings,
+  resolveMaterialStyle,
+} from "./visual-board-architecture.mjs?v=1";
+import { getObjectBounds } from "./visual-board-geometry.mjs?v=9";
+import { flipBoardSelection } from "./visual-board-transform.mjs?v=2";
 
 const MAX_OBJECTS_PER_REQUEST = 500;
 const MAX_BOARD_OBJECTS = 10_000;
@@ -86,6 +95,20 @@ const STYLE_PRESET_NAMES = Object.freeze([
   "color-coded",
   "presentation",
 ]);
+const ARCHITECTURE_CATALOG = getArchitectureCatalog();
+const ARCHITECTURE_SYMBOL_IDS = new Set(
+  ARCHITECTURE_CATALOG.symbols.map((item) => item.id),
+);
+const ARCHITECTURE_MATERIAL_IDS = new Set(
+  ARCHITECTURE_CATALOG.materials.map((item) => item.id),
+);
+const ARCHITECTURE_OBJECT_TYPES = Object.freeze([
+  "area",
+  "wall",
+  "symbol",
+  "dimension",
+]);
+const OPENING_SYMBOL_IDS = new Set(["door-single", "door-double", "window"]);
 
 const COMMAND_DEFINITIONS = Object.freeze([
   command("objects.create", ["create"], "Create one or more editable board objects."),
@@ -104,6 +127,15 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("diagram.create", ["create"], "Create a complete semantic diagram in one command."),
   command("viewport.focus", ["update"], "Focus the board viewport on targets or a point."),
   command("board.settings.update", ["update"], "Update grid, snapping, and floor-plan settings."),
+  command("architecture.areas.create", ["create"], "Create exact filled architectural or landscape polygons."),
+  command("architecture.walls.create", ["create"], "Create exact wall segments without choosing their layout."),
+  command("architecture.openings.create", ["create"], "Place exact door or window symbols chosen by the caller."),
+  command("architecture.symbols.place", ["create"], "Place bundled vector symbols at exact frames and rotations."),
+  command("architecture.labels.create", ["create"], "Create clipped, world-scaled architectural labels in exact boxes."),
+  command("architecture.dimensions.create", ["create"], "Create exact architectural dimensions and labels."),
+  command("architecture.materials.apply", ["update"], "Apply an exact bundled material to explicit targets."),
+  command("architecture.layers.set", ["update"], "Replace the deterministic architecture layer stack."),
+  command("architecture.inspect", ["read-summary"], "Measure explicit objects and report bounded intersections without changing the board."),
 ]);
 
 const TARGET_SCHEMA = Object.freeze({
@@ -113,8 +145,15 @@ const TARGET_SCHEMA = Object.freeze({
     ids: { type: "array", items: { type: "string" } },
     clientKeys: { type: "array", items: { type: "string" } },
     selection: { type: "boolean" },
-    semanticRef: { type: "string" },
+    semanticRef: {
+      type: "string",
+      description: "Matches semantic.clientRef or semantic.diagramId.",
+    },
+    diagramId: { type: "string" },
+    role: { type: "string" },
+    tag: { type: "string" },
   },
+  additionalProperties: false,
 });
 
 const PLACEMENT_SCHEMA = Object.freeze({
@@ -137,6 +176,30 @@ const REFERENCE_SCHEMA = Object.freeze({
       },
     },
   ],
+});
+
+const ARCHITECTURE_STYLE_SCHEMA = Object.freeze({
+  type: "object",
+  properties: {
+    color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+    fillColor: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+    accentColor: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+    fillOpacity: { type: "number", minimum: 0, maximum: 1 },
+    opacity: { type: "number", minimum: 0, maximum: 1 },
+    fillPattern: { enum: [...ARCHITECTURE_FILL_PATTERNS] },
+    strokeWidth: { type: "number", minimum: 0.25, maximum: 240 },
+    dashPattern: { enum: [...DASH_PATTERNS] },
+    shadow: { type: "object" },
+  },
+  additionalProperties: false,
+});
+
+const ARCHITECTURE_ITEM_FIELDS = Object.freeze({
+  clientKey: { type: "string" },
+  layerId: { type: "string" },
+  zIndex: { type: "number" },
+  semantic: { type: "object" },
+  style: ARCHITECTURE_STYLE_SCHEMA,
 });
 
 const VISUAL_COMMAND_SCHEMAS = Object.freeze({
@@ -187,12 +250,36 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
         type: "object",
         properties: {
           color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
-          strokeWidth: { type: "number", minimum: 1, maximum: 24 },
+          fillColor: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+          accentColor: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+          fillOpacity: { type: "number", minimum: 0, maximum: 1 },
+          opacity: { type: "number", minimum: 0, maximum: 1 },
+          fillPattern: { enum: [...ARCHITECTURE_FILL_PATTERNS] },
+          materialId: { enum: [...ARCHITECTURE_MATERIAL_IDS] },
+          strokeWidth: { type: "number", minimum: 0.25, maximum: 240 },
           dashPattern: { enum: [...DASH_PATTERNS] },
+          layerId: { type: "string" },
+          zIndex: { type: "number", minimum: -10_000, maximum: 10_000 },
+          shadow: {
+            type: "object",
+            properties: {
+              color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+              opacity: { type: "number", minimum: 0, maximum: 1 },
+              blur: { type: "number", minimum: 0, maximum: 100 },
+              offsetX: { type: "number", minimum: -500, maximum: 500 },
+              offsetY: { type: "number", minimum: -500, maximum: 500 },
+            },
+            additionalProperties: false,
+          },
           locked: { type: "boolean" },
           text: { type: "string" },
-          fontSize: { type: "number", minimum: 8, maximum: 96 },
+          fontSize: { type: "number", minimum: 6, maximum: 96 },
           fontFamily: { enum: [...FONT_FAMILIES] },
+          scaleMode: { enum: ["world", "screen"] },
+          textAlign: { enum: ["left", "center", "right"] },
+          verticalAlign: { enum: ["top", "middle", "bottom"] },
+          lineHeight: { type: "number", minimum: 0.8, maximum: 3 },
+          padding: { type: "number", minimum: 0, maximum: 120 },
           rotation: { type: "number", description: "Radians." },
           semantic: { type: "object" },
         },
@@ -310,6 +397,161 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
       },
     },
   }),
+  "architecture.areas.create": schema(["areas"], {
+    areas: {
+      type: "array",
+      minItems: 1,
+      maxItems: 100,
+      items: {
+        type: "object",
+        required: ["vertices", "materialId"],
+        properties: {
+          vertices: { type: "array", minItems: 3, maxItems: 256, items: pointSchema() },
+          materialId: { enum: [...ARCHITECTURE_MATERIAL_IDS] },
+          ...ARCHITECTURE_ITEM_FIELDS,
+        },
+        additionalProperties: false,
+      },
+    },
+  }),
+  "architecture.walls.create": schema(["walls"], {
+    walls: {
+      type: "array",
+      minItems: 1,
+      maxItems: 250,
+      items: {
+        type: "object",
+        required: ["start", "end", "thickness"],
+        properties: {
+          start: pointSchema(),
+          end: pointSchema(),
+          thickness: { type: "number", exclusiveMinimum: 0 },
+          ...ARCHITECTURE_ITEM_FIELDS,
+        },
+        additionalProperties: false,
+      },
+    },
+  }),
+  "architecture.openings.create": schema(["openings"], {
+    openings: {
+      type: "array",
+      minItems: 1,
+      maxItems: 200,
+      items: {
+        type: "object",
+        required: ["kind", "x", "y", "w", "h"],
+        properties: {
+          kind: { enum: [...OPENING_SYMBOL_IDS] },
+          x: { type: "number" },
+          y: { type: "number" },
+          w: { type: "number", exclusiveMinimum: 0 },
+          h: { type: "number", exclusiveMinimum: 0 },
+          rotation: { type: "number", description: "Radians." },
+          ...ARCHITECTURE_ITEM_FIELDS,
+        },
+        additionalProperties: false,
+      },
+    },
+  }),
+  "architecture.symbols.place": schema(["symbols"], {
+    symbols: {
+      type: "array",
+      minItems: 1,
+      maxItems: 250,
+      items: {
+        type: "object",
+        required: ["symbolId", "x", "y", "w", "h"],
+        properties: {
+          symbolId: { enum: [...ARCHITECTURE_SYMBOL_IDS] },
+          x: { type: "number" },
+          y: { type: "number" },
+          w: { type: "number", exclusiveMinimum: 0 },
+          h: { type: "number", exclusiveMinimum: 0 },
+          rotation: { type: "number", description: "Radians." },
+          ...ARCHITECTURE_ITEM_FIELDS,
+        },
+        additionalProperties: false,
+      },
+    },
+  }),
+  "architecture.labels.create": schema(["labels"], {
+    labels: {
+      type: "array",
+      minItems: 1,
+      maxItems: 250,
+      items: {
+        type: "object",
+        required: ["text", "x", "y", "w", "h"],
+        properties: {
+          text: { type: "string", maxLength: MAX_TEXT_LENGTH },
+          x: { type: "number" },
+          y: { type: "number" },
+          w: { type: "number", exclusiveMinimum: 0 },
+          h: { type: "number", exclusiveMinimum: 0 },
+          rotation: { type: "number", description: "Radians." },
+          fontSize: { type: "number", minimum: 6, maximum: 96 },
+          fontFamily: { enum: [...FONT_FAMILIES] },
+          textAlign: { enum: ["left", "center", "right"] },
+          verticalAlign: { enum: ["top", "middle", "bottom"] },
+          lineHeight: { type: "number", minimum: 0.8, maximum: 3 },
+          padding: { type: "number", minimum: 0, maximum: 120 },
+          ...ARCHITECTURE_ITEM_FIELDS,
+        },
+        additionalProperties: false,
+      },
+    },
+  }),
+  "architecture.dimensions.create": schema(["dimensions"], {
+    dimensions: {
+      type: "array",
+      minItems: 1,
+      maxItems: 250,
+      items: {
+        type: "object",
+        required: ["start", "end"],
+        properties: {
+          start: pointSchema(),
+          end: pointSchema(),
+          offset: { type: "number" },
+          label: { type: "string", maxLength: 240 },
+          fontSize: { type: "number", minimum: 6, maximum: 96 },
+          ...ARCHITECTURE_ITEM_FIELDS,
+        },
+        additionalProperties: false,
+      },
+    },
+  }),
+  "architecture.materials.apply": schema(["materialId"], {
+    targets: TARGET_SCHEMA,
+    target: TARGET_SCHEMA,
+    materialId: { enum: [...ARCHITECTURE_MATERIAL_IDS] },
+    fillOpacity: { type: "number", minimum: 0, maximum: 1 },
+  }),
+  "architecture.layers.set": schema(["layers"], {
+    layers: {
+      type: "array",
+      minItems: 1,
+      maxItems: 64,
+      items: {
+        type: "object",
+        required: ["id", "name", "order"],
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          order: { type: "number" },
+          visible: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+    },
+  }),
+  "architecture.inspect": schema([], {
+    targets: TARGET_SCHEMA,
+    target: TARGET_SCHEMA,
+    includeIntersections: { type: "boolean" },
+    includeWithinGroups: { type: "boolean" },
+    clearance: { type: "number", minimum: 0, maximum: 100_000 },
+  }),
 });
 
 const STYLE_PRESETS = Object.freeze({
@@ -377,6 +619,7 @@ export function createVisualBoardAiAdapter(dependencies) {
         result: {
           summary: summarizeExecution(execution),
           affectedBounds: execution.affectedBounds,
+          outputs: execution.outputs,
           context: serializeVisualBoardContext(execution.state, {
             scope: "selection",
             maximumObjects: 120,
@@ -388,17 +631,20 @@ export function createVisualBoardAiAdapter(dependencies) {
       assertToolIsIdle(dependencies);
       const current = readState(dependencies);
       const execution = executeVisualBoardCommands(current, envelope, dependencies.createId);
-      const revision = await dependencies.commit(execution.state, {
-        requestId: envelope.requestId,
-        summary: summarizeExecution(execution),
-      });
+      const revision = execution.mutated
+        ? await dependencies.commit(execution.state, {
+          requestId: envelope.requestId,
+          summary: summarizeExecution(execution),
+        })
+        : current.board.revision ?? 0;
       return {
         revision,
         ...execution.receipt,
-        undoGroupId: envelope.requestId,
+        undoGroupId: execution.mutated ? envelope.requestId : null,
         result: {
           summary: summarizeExecution(execution),
           affectedBounds: execution.affectedBounds,
+          outputs: execution.outputs,
         },
       };
     },
@@ -423,7 +669,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 1,
+    version: 2,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -434,6 +680,8 @@ export function getVisualBoardAiCapabilities() {
     layoutTypes: [...LAYOUT_TYPES],
     floorPlanElements: [...FLOOR_PLAN_ELEMENTS],
     floorPlanTemplates: [...FLOOR_PLAN_TEMPLATES],
+    architectureObjectTypes: [...ARCHITECTURE_OBJECT_TYPES],
+    architectureCatalog: cloneJson(ARCHITECTURE_CATALOG),
     stylePresets: [...STYLE_PRESET_NAMES],
     limits: {
       maximumCommands: 100,
@@ -446,6 +694,7 @@ export function getVisualBoardAiCapabilities() {
       "Image bytes, freehand point arrays, and trace paths are omitted from AI context.",
       "Rigged characters can be mirrored, but generic duplication, resize, rotation, and layout remain unavailable.",
       "Commands cannot import local files or start animation rendering.",
+      "Architectural commands render exact caller-supplied geometry and never choose or improve a layout.",
     ],
     examples: getVisualBoardAiExamples(),
   };
@@ -506,6 +755,41 @@ export function getVisualBoardAiExamples() {
         },
       },
     },
+    {
+      name: "Exact furnished room",
+      command: {
+        type: "architecture.symbols.place",
+        symbols: [
+          {
+            clientKey: "bed",
+            symbolId: "bed-queen",
+            x: 120,
+            y: 140,
+            w: 150,
+            h: 210,
+            rotation: 0,
+            layerId: "furniture",
+            zIndex: 10,
+            style: {
+              color: "#3f342b",
+              fillColor: "#eadfca",
+              accentColor: "#8b3a3a",
+            },
+          },
+          {
+            clientKey: "desk",
+            symbolId: "desk",
+            x: 320,
+            y: 150,
+            w: 150,
+            h: 75,
+            rotation: 0,
+            layerId: "furniture",
+            zIndex: 10,
+          },
+        ],
+      },
+    },
   ];
 }
 
@@ -520,6 +804,8 @@ export function executeVisualBoardCommands(sourceState, envelope, createIdentifi
     updatedIds: new Set(),
     deletedIds: new Set(),
     warnings: [],
+    outputs: [],
+    mutated: false,
   };
 
   envelope.commands.forEach((rawCommand, commandIndex) => {
@@ -564,6 +850,8 @@ export function executeVisualBoardCommands(sourceState, envelope, createIdentifi
   return {
     state: runtime.state,
     affectedBounds,
+    mutated: runtime.mutated,
+    outputs: runtime.outputs,
     receipt: {
       createdIds: runtime.createdIds,
       updatedIds: [...runtime.updatedIds].filter((id) => initialObjectIds.has(id)),
@@ -576,6 +864,7 @@ export function executeVisualBoardCommands(sourceState, envelope, createIdentifi
 
 export function serializeVisualBoardContext(sourceState, options = {}) {
   const state = normalizeExecutionState(sourceState);
+  const detail = options?.detail === "geometry" ? "geometry" : "summary";
   const scope = ["selection", "viewport", "all"].includes(options?.scope)
     ? options.scope
     : "all";
@@ -602,6 +891,19 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
       selected: selectedIds.has(object.id),
       locked: Boolean(object.locked),
       groupId: object.groupId ?? null,
+      layerId: object.layerId ?? "structure",
+      zIndex: roundNumber(object.zIndex ?? 0),
+      style: {
+        color: object.color ?? "#000000",
+        strokeWidth: roundNumber(object.strokeWidth ?? 1),
+        dashPattern: object.dashPattern ?? "solid",
+        fillColor: object.fillColor ?? null,
+        fillOpacity: roundNumber(object.fillOpacity ?? 1),
+        fillPattern: object.fillPattern ?? "solid",
+        opacity: roundNumber(object.opacity ?? 1),
+        materialId: object.materialId ?? null,
+        accentColor: object.accentColor ?? null,
+      },
       semantic: sanitizeSemantic(object.semantic),
     };
     if (object.type === "textbox") summary.text = String(object.text ?? "").slice(0, 1_000);
@@ -611,6 +913,37 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
         x: roundNumber(object.endX),
         y: roundNumber(object.endY),
       };
+    }
+    if (detail === "geometry") {
+      if (["rectangle", "ellipse", "shape", "textbox", "image", "area", "wall", "symbol"].includes(object.type)) {
+        summary.frame = {
+          x: roundNumber(object.x),
+          y: roundNumber(object.y),
+          w: roundNumber(object.w),
+          h: roundNumber(object.h),
+          rotation: roundNumber(object.rotation ?? 0),
+        };
+      }
+      if (object.type === "area") {
+        summary.vertices = object.vertices.slice(0, 256).map((point) => ({
+          x: roundNumber(object.x + point.x * object.w),
+          y: roundNumber(object.y + point.y * object.h),
+        }));
+      }
+      if (object.type === "symbol") summary.symbolId = object.symbolId;
+      if (object.type === "wall") Object.assign(summary, serializeArchitectureObject(object));
+      if (object.type === "dimension") Object.assign(summary, serializeArchitectureObject(object));
+      if (object.type === "textbox") {
+        summary.textStyle = {
+          fontSize: roundNumber(object.fontSize),
+          fontFamily: object.fontFamily,
+          scaleMode: object.scaleMode ?? "world",
+          textAlign: object.textAlign ?? "left",
+          verticalAlign: object.verticalAlign ?? "top",
+          lineHeight: roundNumber(object.lineHeight ?? 1.25),
+          padding: roundNumber(object.padding ?? 6),
+        };
+      }
     }
     return summary;
   });
@@ -631,12 +964,17 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
       count: Object.keys(state.board.assets ?? {}).length,
       bytesIncluded: false,
     },
+    architecture: {
+      detail,
+      catalogAvailableInCapabilities: true,
+    },
   };
 }
 
 function executeCommand(runtime, commandValue, commandIndex) {
   const command = cloneJson(commandValue);
   assertOnlyCommandFields(command, commandIndex);
+  if (command.type !== "architecture.inspect") runtime.mutated = true;
   switch (command.type) {
     case "objects.create":
       createObjects(runtime, command, commandIndex);
@@ -685,6 +1023,33 @@ function executeCommand(runtime, commandValue, commandIndex) {
       break;
     case "board.settings.update":
       updateBoardSettings(runtime, command, commandIndex);
+      break;
+    case "architecture.areas.create":
+      createArchitectureAreas(runtime, command, commandIndex);
+      break;
+    case "architecture.walls.create":
+      createArchitectureWalls(runtime, command, commandIndex);
+      break;
+    case "architecture.openings.create":
+      createArchitectureOpenings(runtime, command, commandIndex);
+      break;
+    case "architecture.symbols.place":
+      placeArchitectureSymbols(runtime, command, commandIndex);
+      break;
+    case "architecture.labels.create":
+      createArchitectureLabels(runtime, command, commandIndex);
+      break;
+    case "architecture.dimensions.create":
+      createArchitectureDimensions(runtime, command, commandIndex);
+      break;
+    case "architecture.materials.apply":
+      applyArchitectureMaterial(runtime, command, commandIndex);
+      break;
+    case "architecture.layers.set":
+      setArchitectureLayers(runtime, command, commandIndex);
+      break;
+    case "architecture.inspect":
+      inspectArchitecture(runtime, command, commandIndex);
       break;
     default:
       throw commandError(`Unsupported Visual Board command: ${command.type}.`, "unsupported-command", commandIndex);
@@ -815,12 +1180,26 @@ function updateObjects(runtime, command, commandIndex) {
   }
   const allowedFields = new Set([
     "color",
+    "fillColor",
+    "accentColor",
+    "fillOpacity",
+    "opacity",
+    "fillPattern",
+    "materialId",
     "strokeWidth",
     "dashPattern",
+    "layerId",
+    "zIndex",
+    "shadow",
     "locked",
     "text",
     "fontSize",
     "fontFamily",
+    "scaleMode",
+    "textAlign",
+    "verticalAlign",
+    "lineHeight",
+    "padding",
     "rotation",
     "semantic",
   ]);
@@ -834,12 +1213,60 @@ function updateObjects(runtime, command, commandIndex) {
       throw commandError(`Object ${object.id} is locked.`, "object-locked", commandIndex);
     }
     if (patch.color !== undefined) object.color = normalizeColor(patch.color, commandIndex);
-    if (patch.strokeWidth !== undefined) object.strokeWidth = clampNumber(patch.strokeWidth, 1, 24, object.strokeWidth);
+    if (patch.materialId !== undefined) {
+      if (!ARCHITECTURE_MATERIAL_IDS.has(patch.materialId)) {
+        throw commandError("Unknown architectural material.", "invalid-material", commandIndex);
+      }
+      Object.assign(object, resolveMaterialStyle(patch.materialId), {
+        materialId: patch.materialId,
+      });
+    }
+    if (patch.fillColor !== undefined) {
+      object.fillColor = normalizeColor(patch.fillColor, commandIndex);
+    }
+    if (patch.accentColor !== undefined) {
+      object.accentColor = normalizeColor(patch.accentColor, commandIndex);
+    }
+    if (patch.fillOpacity !== undefined) {
+      object.fillOpacity = clampNumber(patch.fillOpacity, 0, 1, object.fillOpacity ?? 1);
+    }
+    if (patch.opacity !== undefined) {
+      object.opacity = clampNumber(patch.opacity, 0, 1, object.opacity ?? 1);
+    }
+    if (patch.fillPattern !== undefined) {
+      if (!ARCHITECTURE_FILL_PATTERNS.includes(patch.fillPattern)) {
+        throw commandError("Unsupported architecture fill pattern.", "invalid-fill-pattern", commandIndex);
+      }
+      object.fillPattern = patch.fillPattern;
+    }
+    if (patch.strokeWidth !== undefined) {
+      const supportsArchitecturalStroke = ARCHITECTURE_OBJECT_TYPES.includes(object.type)
+        || object.semantic?.role?.startsWith("architecture-")
+        || object.semantic?.role === "floor-plan-wall";
+      object.strokeWidth = clampNumber(
+        patch.strokeWidth,
+        supportsArchitecturalStroke ? 0.25 : 1,
+        supportsArchitecturalStroke ? 240 : 24,
+        object.strokeWidth,
+      );
+    }
     if (patch.dashPattern !== undefined) {
       if (!DASH_PATTERNS.has(patch.dashPattern)) {
         throw commandError("Unsupported dash pattern.", "invalid-dash-pattern", commandIndex);
       }
       object.dashPattern = patch.dashPattern;
+    }
+    if (patch.layerId !== undefined) {
+      object.layerId = normalizeArchitecturePlacementMetadata(
+        { layerId: patch.layerId },
+        commandIndex,
+      ).layerId;
+    }
+    if (patch.zIndex !== undefined) {
+      object.zIndex = clampNumber(patch.zIndex, -10_000, 10_000, object.zIndex ?? 0);
+    }
+    if (patch.shadow !== undefined) {
+      object.shadow = normalizeArchitectureShadow(patch.shadow, commandIndex);
     }
     if (patch.locked !== undefined) object.locked = Boolean(patch.locked);
     if (patch.rotation !== undefined && "rotation" in object) {
@@ -850,13 +1277,34 @@ function updateObjects(runtime, command, commandIndex) {
       object.colorRanges = [];
     }
     if (patch.fontSize !== undefined && object.type === "textbox") {
-      object.fontSize = clampNumber(patch.fontSize, 8, 96, object.fontSize);
+      object.fontSize = clampNumber(patch.fontSize, 6, 96, object.fontSize);
     }
     if (patch.fontFamily !== undefined && object.type === "textbox") {
       if (!FONT_FAMILIES.has(patch.fontFamily)) {
         throw commandError("Unsupported font family.", "invalid-font-family", commandIndex);
       }
       object.fontFamily = patch.fontFamily;
+    }
+    if (patch.scaleMode !== undefined && object.type === "textbox") {
+      object.scaleMode = ["world", "screen"].includes(patch.scaleMode)
+        ? patch.scaleMode
+        : object.scaleMode;
+    }
+    if (patch.textAlign !== undefined && object.type === "textbox") {
+      object.textAlign = ["left", "center", "right"].includes(patch.textAlign)
+        ? patch.textAlign
+        : object.textAlign;
+    }
+    if (patch.verticalAlign !== undefined && object.type === "textbox") {
+      object.verticalAlign = ["top", "middle", "bottom"].includes(patch.verticalAlign)
+        ? patch.verticalAlign
+        : object.verticalAlign;
+    }
+    if (patch.lineHeight !== undefined && object.type === "textbox") {
+      object.lineHeight = clampNumber(patch.lineHeight, 0.8, 3, object.lineHeight ?? 1.2);
+    }
+    if (patch.padding !== undefined && object.type === "textbox") {
+      object.padding = clampNumber(patch.padding, 0, 120, object.padding ?? 6);
     }
     if (patch.semantic !== undefined) {
       object.semantic = normalizeSemantic(patch.semantic, object.semantic?.label);
@@ -1318,12 +1766,12 @@ function focusViewport(runtime, command, commandIndex) {
   } else {
     throw commandError("viewport.focus requires targets or a point.", "missing-target", commandIndex);
   }
-  const viewportBounds = getViewportBounds(runtime.state.viewport);
-  runtime.state.viewport.x = point.x - viewportBounds.width / 2;
-  runtime.state.viewport.y = point.y - viewportBounds.height / 2;
-  if (command.zoom !== undefined) {
-    runtime.state.viewport.zoom = clampNumber(command.zoom, 0.15, 4, runtime.state.viewport.zoom);
-  }
+  const zoom = command.zoom === undefined
+    ? runtime.state.viewport.zoom
+    : clampNumber(command.zoom, 0.15, 4, runtime.state.viewport.zoom);
+  runtime.state.viewport.zoom = zoom;
+  runtime.state.viewport.x = point.x - runtime.state.viewport.width / zoom / 2;
+  runtime.state.viewport.y = point.y - runtime.state.viewport.height / zoom / 2;
 }
 
 function updateBoardSettings(runtime, command, commandIndex) {
@@ -1355,6 +1803,519 @@ function updateBoardSettings(runtime, command, commandIndex) {
       ...command.settings.floorPlan,
     });
   }
+}
+
+function createArchitectureAreas(runtime, command, commandIndex) {
+  const items = requireArchitectureItems(command.areas, "areas", 100, commandIndex);
+  const objects = items.map((item, itemIndex) => {
+    assertArchitectureItemFields(
+      item,
+      ["vertices", "materialId", ...architectureCommonItemFields()],
+      `areas[${itemIndex}]`,
+      commandIndex,
+    );
+    const vertices = requireArchitecturePoints(
+      item.vertices,
+      `areas[${itemIndex}].vertices`,
+      3,
+      256,
+      commandIndex,
+    );
+    if (!ARCHITECTURE_MATERIAL_IDS.has(String(item.materialId ?? ""))) {
+      throw commandError("Architecture areas require a supported materialId.", "invalid-material", commandIndex);
+    }
+    const left = Math.min(...vertices.map((point) => point.x));
+    const top = Math.min(...vertices.map((point) => point.y));
+    const right = Math.max(...vertices.map((point) => point.x));
+    const bottom = Math.max(...vertices.map((point) => point.y));
+    if (right - left < 1 || bottom - top < 1) {
+      throw commandError("Architecture areas need non-zero width and height.", "invalid-area", commandIndex);
+    }
+    const id = runtime.createId();
+    const clientKey = registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
+    return {
+      id,
+      type: "area",
+      x: left,
+      y: top,
+      w: right - left,
+      h: bottom - top,
+      rotation: 0,
+      vertices: vertices.map((point) => ({
+        x: (point.x - left) / (right - left),
+        y: (point.y - top) / (bottom - top),
+      })),
+      ...normalizeArchitecturePaint(item, commandIndex, item.materialId),
+      ...normalizeArchitecturePlacementMetadata(item, commandIndex),
+      semantic: normalizeArchitectureSemantic(
+        item.semantic,
+        "architecture-area",
+        clientKey,
+        commandIndex,
+      ),
+    };
+  });
+  addArchitectureObjects(runtime, objects);
+}
+
+function createArchitectureWalls(runtime, command, commandIndex) {
+  const items = requireArchitectureItems(command.walls, "walls", 250, commandIndex);
+  const objects = items.map((item, itemIndex) => {
+    assertArchitectureItemFields(
+      item,
+      ["start", "end", "thickness", ...architectureCommonItemFields()],
+      `walls[${itemIndex}]`,
+      commandIndex,
+    );
+    const start = requireArchitecturePoint(item.start, `walls[${itemIndex}].start`, commandIndex);
+    const end = requireArchitecturePoint(item.end, `walls[${itemIndex}].end`, commandIndex);
+    const length = Math.hypot(end.x - start.x, end.y - start.y);
+    if (length < 1) {
+      throw commandError("Wall endpoints must be different.", "invalid-wall", commandIndex);
+    }
+    const thickness = finiteDimension(item.thickness, 1, "thickness", commandIndex);
+    const id = runtime.createId();
+    const clientKey = registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
+    const paint = normalizeArchitecturePaint(item, commandIndex);
+    return {
+      id,
+      type: "wall",
+      x: (start.x + end.x) / 2 - length / 2,
+      y: (start.y + end.y) / 2 - thickness / 2,
+      w: length,
+      h: thickness,
+      rotation: Math.atan2(end.y - start.y, end.x - start.x),
+      ...paint,
+      fillColor: paint.fillColor ?? paint.color,
+      ...normalizeArchitecturePlacementMetadata(item, commandIndex),
+      semantic: normalizeArchitectureSemantic(
+        item.semantic,
+        "architecture-wall",
+        clientKey,
+        commandIndex,
+      ),
+    };
+  });
+  addArchitectureObjects(runtime, objects);
+}
+
+function createArchitectureOpenings(runtime, command, commandIndex) {
+  const items = requireArchitectureItems(command.openings, "openings", 200, commandIndex);
+  placeArchitectureSymbolItems(runtime, items, commandIndex, {
+    field: "openings",
+    role: "architecture-opening",
+    allowedSymbols: OPENING_SYMBOL_IDS,
+    allowedFields: ["kind", "x", "y", "w", "h", "rotation", ...architectureCommonItemFields()],
+  });
+}
+
+function placeArchitectureSymbols(runtime, command, commandIndex) {
+  const items = requireArchitectureItems(command.symbols, "symbols", 250, commandIndex);
+  placeArchitectureSymbolItems(runtime, items, commandIndex, {
+    field: "symbols",
+    role: "architecture-symbol",
+    allowedSymbols: ARCHITECTURE_SYMBOL_IDS,
+    allowedFields: ["symbolId", "x", "y", "w", "h", "rotation", ...architectureCommonItemFields()],
+  });
+}
+
+function placeArchitectureSymbolItems(runtime, items, commandIndex, options) {
+  const objects = items.map((item, itemIndex) => {
+    assertArchitectureItemFields(
+      item,
+      options.allowedFields,
+      `${options.field}[${itemIndex}]`,
+      commandIndex,
+    );
+    const symbolId = String(item.symbolId ?? item.kind ?? "");
+    if (!options.allowedSymbols.has(symbolId) || !getArchitectureSymbol(symbolId)) {
+      throw commandError(`Unknown architectural symbol: ${symbolId || "(missing)"}.`, "invalid-symbol", commandIndex);
+    }
+    const id = runtime.createId();
+    const clientKey = registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
+    return {
+      id,
+      type: "symbol",
+      symbolId,
+      x: finiteCoordinate(item.x, 0, "x", commandIndex),
+      y: finiteCoordinate(item.y, 0, "y", commandIndex),
+      w: finiteDimension(item.w, 100, "w", commandIndex),
+      h: finiteDimension(item.h, 100, "h", commandIndex),
+      rotation: finiteNumber(item.rotation, 0),
+      ...normalizeArchitecturePaint(item, commandIndex),
+      ...normalizeArchitecturePlacementMetadata(item, commandIndex),
+      semantic: normalizeArchitectureSemantic(
+        item.semantic,
+        options.role,
+        clientKey,
+        commandIndex,
+        symbolId,
+      ),
+    };
+  });
+  addArchitectureObjects(runtime, objects);
+}
+
+function createArchitectureLabels(runtime, command, commandIndex) {
+  const items = requireArchitectureItems(command.labels, "labels", 250, commandIndex);
+  const objects = items.map((item, itemIndex) => {
+    assertArchitectureItemFields(
+      item,
+      [
+        "text", "x", "y", "w", "h", "rotation", "fontSize", "fontFamily",
+        "textAlign", "verticalAlign", "lineHeight", "padding",
+        ...architectureCommonItemFields(),
+      ],
+      `labels[${itemIndex}]`,
+      commandIndex,
+    );
+    const id = runtime.createId();
+    const clientKey = registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
+    return {
+      id,
+      type: "textbox",
+      x: finiteCoordinate(item.x, 0, "x", commandIndex),
+      y: finiteCoordinate(item.y, 0, "y", commandIndex),
+      w: finiteDimension(item.w, 240, "w", commandIndex),
+      h: finiteDimension(item.h, 80, "h", commandIndex),
+      rotation: finiteNumber(item.rotation, 0),
+      text: normalizeText(item.text, commandIndex),
+      colorRanges: [],
+      fontSize: clampNumber(item.fontSize, 6, 96, 16),
+      fontFamily: FONT_FAMILIES.has(item.fontFamily) ? item.fontFamily : "sans",
+      scaleMode: "world",
+      textAlign: ["left", "center", "right"].includes(item.textAlign)
+        ? item.textAlign
+        : "left",
+      verticalAlign: ["top", "middle", "bottom"].includes(item.verticalAlign)
+        ? item.verticalAlign
+        : "top",
+      lineHeight: clampNumber(item.lineHeight, 0.8, 3, 1.2),
+      padding: clampNumber(item.padding, 0, 120, 6),
+      ...normalizeArchitecturePaint(item, commandIndex),
+      ...normalizeArchitecturePlacementMetadata(item, commandIndex, "labels"),
+      semantic: normalizeArchitectureSemantic(
+        item.semantic,
+        "architecture-label",
+        clientKey,
+        commandIndex,
+      ),
+    };
+  });
+  addArchitectureObjects(runtime, objects);
+}
+
+function createArchitectureDimensions(runtime, command, commandIndex) {
+  const items = requireArchitectureItems(command.dimensions, "dimensions", 250, commandIndex);
+  const objects = items.map((item, itemIndex) => {
+    assertArchitectureItemFields(
+      item,
+      ["start", "end", "offset", "label", "fontSize", ...architectureCommonItemFields()],
+      `dimensions[${itemIndex}]`,
+      commandIndex,
+    );
+    const start = requireArchitecturePoint(item.start, `dimensions[${itemIndex}].start`, commandIndex);
+    const end = requireArchitecturePoint(item.end, `dimensions[${itemIndex}].end`, commandIndex);
+    if (Math.hypot(end.x - start.x, end.y - start.y) < 1) {
+      throw commandError("Dimension endpoints must be different.", "invalid-dimension", commandIndex);
+    }
+    const id = runtime.createId();
+    const clientKey = registerArchitectureClientKey(runtime, item.clientKey, id, commandIndex);
+    return {
+      id,
+      type: "dimension",
+      x: start.x,
+      y: start.y,
+      endX: end.x,
+      endY: end.y,
+      offset: finiteCoordinate(item.offset, 24, "offset", commandIndex),
+      label: normalizeOptionalText(item.label, commandIndex),
+      fontSize: clampNumber(item.fontSize, 6, 96, 12),
+      ...normalizeArchitecturePaint(item, commandIndex),
+      ...normalizeArchitecturePlacementMetadata(item, commandIndex, "dimensions"),
+      semantic: normalizeArchitectureSemantic(
+        item.semantic,
+        "architecture-dimension",
+        clientKey,
+        commandIndex,
+      ),
+    };
+  });
+  addArchitectureObjects(runtime, objects);
+}
+
+function applyArchitectureMaterial(runtime, command, commandIndex) {
+  const materialId = String(command.materialId ?? "");
+  if (!ARCHITECTURE_MATERIAL_IDS.has(materialId)) {
+    throw commandError(`Unknown architectural material: ${materialId || "(missing)"}.`, "invalid-material", commandIndex);
+  }
+  const targets = expandRigidGroupTargets(
+    runtime.state.board.objects,
+    resolveTargets(runtime, command.targets ?? command.target, commandIndex),
+  );
+  targets.forEach((object) => {
+    if (object.locked) {
+      throw commandError(`Object ${object.id} is locked.`, "object-locked", commandIndex);
+    }
+    Object.assign(object, resolveMaterialStyle(materialId, {
+      fillOpacity: command.fillOpacity,
+    }));
+    runtime.updatedIds.add(object.id);
+  });
+}
+
+function setArchitectureLayers(runtime, command, commandIndex) {
+  const layers = requireArchitectureItems(command.layers, "layers", 64, commandIndex);
+  const seen = new Set();
+  layers.forEach((item, itemIndex) => {
+    assertArchitectureItemFields(
+      item,
+      ["id", "name", "order", "visible"],
+      `layers[${itemIndex}]`,
+      commandIndex,
+    );
+    const id = String(item.id ?? "").trim().toLowerCase();
+    if (!/^[a-z0-9][a-z0-9._-]{0,79}$/.test(id) || seen.has(id)) {
+      throw commandError("Architecture layer IDs must be unique stable identifiers.", "invalid-layer", commandIndex);
+    }
+    if (!String(item.name ?? "").trim()) {
+      throw commandError("Architecture layers need names.", "invalid-layer", commandIndex);
+    }
+    seen.add(id);
+  });
+  runtime.state.board.settings.architecture = normalizeArchitectureSettings({ layers });
+}
+
+function inspectArchitecture(runtime, command, commandIndex) {
+  const targets = command.targets || command.target
+    ? resolveTargets(runtime, command.targets ?? command.target, commandIndex, { allowEmpty: true })
+    : runtime.state.board.objects.filter((object) => (
+      ARCHITECTURE_OBJECT_TYPES.includes(object.type)
+      || object.semantic?.role?.startsWith("architecture-")
+    ));
+  runtime.outputs.push({
+    type: "architecture.inspect",
+    ...getArchitectureGeometryReport(targets, {
+      includeIntersections: command.includeIntersections,
+      includeWithinGroups: command.includeWithinGroups,
+      clearance: clampNumber(command.clearance, 0, 100_000, 0),
+    }),
+    objects: targets.slice(0, 500).map(serializeArchitectureObject),
+    omittedObjectCount: Math.max(0, targets.length - 500),
+  });
+}
+
+function addArchitectureObjects(runtime, objects) {
+  runtime.state.board.objects.push(...objects);
+  runtime.state.selectedIds = objects.map((object) => object.id);
+  runtime.createdIds.push(...runtime.state.selectedIds);
+}
+
+function normalizeArchitecturePaint(item, commandIndex, materialId = null) {
+  const styleValue = item.style === undefined ? {} : item.style;
+  if (!isRecord(styleValue)) {
+    throw commandError("Architecture style must be an object.", "invalid-architecture-style", commandIndex);
+  }
+  assertArchitectureItemFields(
+    styleValue,
+    [
+      "color", "fillColor", "accentColor", "fillOpacity", "opacity",
+      "fillPattern", "strokeWidth", "dashPattern", "shadow",
+    ],
+    "style",
+    commandIndex,
+  );
+  const resolvedMaterialId = materialId ?? styleValue.materialId;
+  if (resolvedMaterialId && !ARCHITECTURE_MATERIAL_IDS.has(resolvedMaterialId)) {
+    throw commandError(`Unknown architectural material: ${resolvedMaterialId}.`, "invalid-material", commandIndex);
+  }
+  const materialStyle = resolvedMaterialId
+    ? resolveMaterialStyle(resolvedMaterialId, styleValue)
+    : {};
+  const shadow = normalizeArchitectureShadow(styleValue.shadow, commandIndex);
+  const fillPattern = styleValue.fillPattern ?? materialStyle.fillPattern ?? "solid";
+  if (!ARCHITECTURE_FILL_PATTERNS.includes(fillPattern)) {
+    throw commandError("Unsupported architecture fill pattern.", "invalid-fill-pattern", commandIndex);
+  }
+  return {
+    color: styleValue.color !== undefined
+      ? normalizeColor(styleValue.color, commandIndex)
+      : materialStyle.color ?? "#2b2722",
+    strokeWidth: clampNumber(styleValue.strokeWidth, 0.25, 240, 2),
+    dashPattern: DASH_PATTERNS.has(styleValue.dashPattern) ? styleValue.dashPattern : "solid",
+    locked: false,
+    ...(styleValue.fillColor !== undefined
+      ? { fillColor: normalizeColor(styleValue.fillColor, commandIndex) }
+      : materialStyle.fillColor
+        ? { fillColor: materialStyle.fillColor }
+        : {}),
+    ...(styleValue.accentColor !== undefined
+      ? { accentColor: normalizeColor(styleValue.accentColor, commandIndex) }
+      : {}),
+    fillOpacity: clampNumber(
+      styleValue.fillOpacity,
+      0,
+      1,
+      materialStyle.fillOpacity ?? 1,
+    ),
+    opacity: clampNumber(styleValue.opacity, 0, 1, 1),
+    fillPattern,
+    ...(resolvedMaterialId ? { materialId: resolvedMaterialId } : {}),
+    ...(shadow ? { shadow } : {}),
+  };
+}
+
+function normalizeArchitectureShadow(value, commandIndex) {
+  if (value === undefined) return null;
+  if (!isRecord(value)) {
+    throw commandError("Architecture shadow must be an object.", "invalid-shadow", commandIndex);
+  }
+  assertArchitectureItemFields(
+    value,
+    ["color", "opacity", "blur", "offsetX", "offsetY"],
+    "shadow",
+    commandIndex,
+  );
+  return {
+    color: value.color === undefined ? "#000000" : normalizeColor(value.color, commandIndex),
+    opacity: clampNumber(value.opacity, 0, 1, 0.18),
+    blur: clampNumber(value.blur, 0, 100, 0),
+    offsetX: clampNumber(value.offsetX, -500, 500, 0),
+    offsetY: clampNumber(value.offsetY, -500, 500, 0),
+  };
+}
+
+function normalizeArchitecturePlacementMetadata(item, commandIndex, fallbackLayer = "structure") {
+  const layerId = String(item.layerId ?? fallbackLayer).trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9._-]{0,79}$/.test(layerId)) {
+    throw commandError("layerId must be a stable identifier.", "invalid-layer", commandIndex);
+  }
+  return {
+    layerId,
+    zIndex: clampNumber(item.zIndex, -10_000, 10_000, 0),
+  };
+}
+
+function normalizeArchitectureSemantic(value, role, clientKey, commandIndex, label = "") {
+  if (value !== undefined) {
+    if (!isRecord(value)) {
+      throw commandError("Architecture semantic metadata must be an object.", "invalid-semantic", commandIndex);
+    }
+    assertArchitectureItemFields(
+      value,
+      [
+        "label", "role", "tags", "generatedBy", "diagramId", "clientRef",
+        "sourceId", "targetId",
+      ],
+      "semantic",
+      commandIndex,
+    );
+  }
+  return normalizeSemantic({
+    ...(value ?? {}),
+    label: value?.label ?? label,
+    role: value?.role ?? role,
+    generatedBy: value?.generatedBy ?? "ai-command",
+    ...(clientKey ? { clientRef: clientKey } : {}),
+  }, label);
+}
+
+function registerArchitectureClientKey(runtime, value, identifier, commandIndex) {
+  const clientKey = normalizeClientKey(value, runtime, commandIndex);
+  if (clientKey) runtime.clientKeyMap.set(clientKey, identifier);
+  return clientKey;
+}
+
+function requireArchitectureItems(value, field, maximum, commandIndex) {
+  if (!Array.isArray(value) || !value.length || value.length > maximum) {
+    throw commandError(
+      `${field} must contain between 1 and ${maximum} items.`,
+      "invalid-architecture-items",
+      commandIndex,
+    );
+  }
+  value.forEach((item) => {
+    if (!isRecord(item)) {
+      throw commandError(`${field} items must be objects.`, "invalid-architecture-item", commandIndex);
+    }
+  });
+  return value;
+}
+
+function requireArchitecturePoints(value, field, minimum, maximum, commandIndex) {
+  if (!Array.isArray(value) || value.length < minimum || value.length > maximum) {
+    throw commandError(
+      `${field} must contain between ${minimum} and ${maximum} points.`,
+      "invalid-architecture-points",
+      commandIndex,
+    );
+  }
+  return value.map((point, index) => (
+    requireArchitecturePoint(point, `${field}[${index}]`, commandIndex)
+  ));
+}
+
+function requireArchitecturePoint(value, field, commandIndex) {
+  if (!isRecord(value)) {
+    throw commandError(`${field} must be a point.`, "invalid-point", commandIndex);
+  }
+  assertArchitectureItemFields(value, ["x", "y"], field, commandIndex);
+  if (!Number.isFinite(Number(value.x)) || !Number.isFinite(Number(value.y))) {
+    throw commandError(`${field} needs finite x and y values.`, "invalid-point", commandIndex);
+  }
+  return {
+    x: finiteCoordinate(value.x, 0, `${field}.x`, commandIndex),
+    y: finiteCoordinate(value.y, 0, `${field}.y`, commandIndex),
+  };
+}
+
+function assertArchitectureItemFields(value, allowedFields, field, commandIndex) {
+  const allowed = new Set(allowedFields);
+  const unknown = Object.keys(value).find((key) => !allowed.has(key));
+  if (unknown) {
+    throw commandError(
+      `Unsupported ${field} field: ${unknown}.`,
+      "unknown-command-field",
+      commandIndex,
+    );
+  }
+}
+
+function architectureCommonItemFields() {
+  return ["clientKey", "layerId", "zIndex", "semantic", "style"];
+}
+
+function serializeArchitectureObject(object) {
+  const summary = {
+    id: object.id,
+    type: object.type,
+    bounds: roundBounds(getObjectBounds(object)),
+    layerId: object.layerId ?? "structure",
+    zIndex: roundNumber(object.zIndex ?? 0),
+    materialId: object.materialId ?? null,
+    semantic: sanitizeSemantic(object.semantic),
+  };
+  if (object.type === "symbol") summary.symbolId = object.symbolId;
+  if (object.type === "wall") {
+    const center = { x: object.x + object.w / 2, y: object.y + object.h / 2 };
+    const halfLength = object.w / 2;
+    summary.start = {
+      x: roundNumber(center.x - Math.cos(object.rotation ?? 0) * halfLength),
+      y: roundNumber(center.y - Math.sin(object.rotation ?? 0) * halfLength),
+    };
+    summary.end = {
+      x: roundNumber(center.x + Math.cos(object.rotation ?? 0) * halfLength),
+      y: roundNumber(center.y + Math.sin(object.rotation ?? 0) * halfLength),
+    };
+    summary.thickness = roundNumber(object.h);
+  }
+  if (object.type === "dimension") {
+    summary.start = { x: roundNumber(object.x), y: roundNumber(object.y) };
+    summary.end = { x: roundNumber(object.endX), y: roundNumber(object.endY) };
+    summary.offset = roundNumber(object.offset);
+    summary.label = object.label;
+  }
+  return summary;
 }
 
 function normalizeDiagramGraph(command, diagramType, commandIndex) {
@@ -1662,6 +2623,23 @@ function applyDeterministicLayout(units, layoutType, command) {
 
 function resolveTargets(runtime, targetValue, commandIndex, options = {}) {
   const target = isRecord(targetValue) ? targetValue : {};
+  const allowedTargetFields = new Set([
+    "ids",
+    "clientKeys",
+    "selection",
+    "semanticRef",
+    "diagramId",
+    "role",
+    "tag",
+  ]);
+  const unknownTargetField = Object.keys(target).find((field) => !allowedTargetFields.has(field));
+  if (unknownTargetField) {
+    throw commandError(
+      `Unsupported target field: ${unknownTargetField}.`,
+      "unknown-command-field",
+      commandIndex,
+    );
+  }
   const identifiers = new Set();
   (Array.isArray(target.ids) ? target.ids : []).forEach((id) => identifiers.add(String(id)));
   (Array.isArray(target.clientKeys) ? target.clientKeys : []).forEach((key) => {
@@ -1676,7 +2654,25 @@ function resolveTargets(runtime, targetValue, commandIndex, options = {}) {
   }
   if (target.semanticRef) {
     runtime.state.board.objects
-      .filter((object) => object.semantic?.clientRef === target.semanticRef)
+      .filter((object) => (
+        object.semantic?.clientRef === target.semanticRef
+        || object.semantic?.diagramId === target.semanticRef
+      ))
+      .forEach((object) => identifiers.add(object.id));
+  }
+  if (target.diagramId) {
+    runtime.state.board.objects
+      .filter((object) => object.semantic?.diagramId === target.diagramId)
+      .forEach((object) => identifiers.add(object.id));
+  }
+  if (target.role) {
+    runtime.state.board.objects
+      .filter((object) => object.semantic?.role === target.role)
+      .forEach((object) => identifiers.add(object.id));
+  }
+  if (target.tag) {
+    runtime.state.board.objects
+      .filter((object) => object.semantic?.tags?.includes(target.tag))
       .forEach((object) => identifiers.add(object.id));
   }
   const objects = runtime.state.board.objects.filter((object) => identifiers.has(object.id));
@@ -1768,7 +2764,7 @@ function getCombinedUnitBounds(units) {
 }
 
 function transformObject(object, center, transform) {
-  if (["line", "connector", "arc"].includes(object.type)) {
+  if (["line", "connector", "arc", "dimension"].includes(object.type)) {
     const start = transformPoint({ x: object.x, y: object.y }, center, transform);
     const end = transformPoint({ x: object.endX, y: object.endY }, center, transform);
     object.x = start.x;
@@ -1914,6 +2910,9 @@ function normalizeExecutionState(source) {
     : { grid: true, snap: false };
   state.board.settings.floorPlan = normalizeFloorPlanSettings(
     state.board.settings.floorPlan,
+  );
+  state.board.settings.architecture = normalizeArchitectureSettings(
+    state.board.settings.architecture,
   );
   state.selectedIds = Array.isArray(state.selectedIds)
     ? state.selectedIds.filter((id) => typeof id === "string")
