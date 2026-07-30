@@ -100,6 +100,17 @@ test("glossary aliases resolve references and sensitive fields never enter index
   assert.doesNotMatch(indexed, /Never index|also hidden/);
 });
 
+test("text collection enforces traversal and output bounds without repeated joining", () => {
+  const indexed = collectIndexableText(
+    Array.from({ length: 10_000 }, (_, index) => `entry-${index}`),
+    { maximumLength: 2_000, maximumValues: 120 },
+  );
+
+  assert.match(indexed, /entry-0/);
+  assert.doesNotMatch(indexed, /entry-9999/);
+  assert.ok(indexed.length <= 2_000);
+});
+
 test("relationship suggestions are reviewable and deterministic", () => {
   const options = { timestamp: "2026-07-30T00:00:00.000Z" };
   const suggestions = suggestLexicalRelationships(documents, [], options);

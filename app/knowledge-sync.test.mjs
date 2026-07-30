@@ -62,3 +62,44 @@ test("literature annotations are indexed without unrelated view settings", () =>
   assert.equal(documents[0].kind, "highlight");
   assert.match(documents[0].text, /Important finding/);
 });
+
+test("visual boards index searchable labels without traversing geometry", () => {
+  const objects = Array.from({ length: 5_000 }, (_, index) => ({
+    id: `line-${index}`,
+    type: "line",
+    x: index,
+    y: index % 200,
+    endX: index + 10,
+    endY: (index % 200) + 10,
+    groupId: `group-${Math.floor(index / 10)}`,
+    startVertexId: `vertex-${index}`,
+    endVertexId: `vertex-${index + 1}`,
+    ...(index === 2_500
+      ? {
+        type: "textbox",
+        text: "Skeleton bench press",
+        semantic: { label: "Left shoulder", tags: ["anatomy"] },
+      }
+      : {}),
+  }));
+  const localStorage = storage({
+    "artificially-neuroscience-visual-board-v1": JSON.stringify({
+      version: 20,
+      objects,
+      assets: {
+        reference: {
+          name: "skeleton.png",
+          dataUrl: "data:image/png;base64,PRIVATE",
+        },
+      },
+    }),
+  });
+
+  const documents = readOtherLocalStorageDocuments(localStorage);
+
+  assert.equal(documents.length, 1);
+  assert.equal(documents[0].kind, "board");
+  assert.match(documents[0].text, /Skeleton bench press|Left shoulder|anatomy|skeleton\.png/);
+  assert.doesNotMatch(documents[0].text, /vertex-4999|group-499/);
+  assert.ok(documents[0].text.length < 500);
+});

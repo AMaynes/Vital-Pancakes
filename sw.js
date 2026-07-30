@@ -10,23 +10,23 @@
  * Static files listed in APP_SHELL.
  *
  * Notes
- * Navigations use network-first behavior with an offline fallback. Versioned
- * static assets remain cache-first.
+ * Navigations use network-first behavior with an offline fallback. The small
+ * startup shell is pre-cached; other same-origin assets are cached after use.
  * User-created localStorage, IndexedDB, OPFS, and model-cache data stays outside
  * the application shell. File Drop content and large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v74";
+const CACHE_NAME = "vital-pancakes-app-v75";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
 ]);
-const APP_SHELL = [
+const OFFLINE_ASSET_CATALOG = [
   "./",
   "./index.html",
   "./style.css?v=20",
   "./site-navigation.css?v=21",
-  "./site-navigation.js?v=16",
+  "./site-navigation.js?v=17",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
@@ -44,12 +44,12 @@ const APP_SHELL = [
   "./app/ai-command-registry.mjs",
   "./app/ai-page-host.mjs",
   "./app/ai-tool-catalog.mjs",
-  "./app/home-knowledge.js?v=1",
+  "./app/home-knowledge.js?v=2",
   "./app/home-knowledge-ai-adapter.mjs",
   "./app/glossary-ui.mjs",
   "./app/knowledge-db.mjs",
-  "./app/knowledge-model.mjs",
-  "./app/knowledge-sync.mjs",
+  "./app/knowledge-model.mjs?v=2",
+  "./app/knowledge-sync.mjs?v=2",
   "./app/vault-archive.mjs",
   "./app/vault-codec.mjs",
   "./app/vault-storage.mjs",
@@ -261,15 +261,56 @@ const APP_SHELL = [
   "./CheatSheets/Trigonometry-MasterSheet.pdf"
 ];
 
+const STARTUP_PATHS = new Set([
+  "./",
+  "./index.html",
+  "./style.css",
+  "./site-navigation.css",
+  "./site-navigation.js",
+  "./workspace.html",
+  "./workspace.css",
+  "./manifest.webmanifest",
+  "./assets/vital-pancakes-logo-transparent-black.png",
+  "./assets/app-icon-192.png",
+  "./assets/app-icon-512.png",
+  "./app/main.js",
+  "./app/ai-command-protocol.mjs",
+  "./app/ai-command-registry.mjs",
+  "./app/ai-page-host.mjs",
+  "./app/ai-tool-catalog.mjs",
+  "./app/home-knowledge.js",
+  "./app/home-knowledge-ai-adapter.mjs",
+  "./app/glossary-ui.mjs",
+  "./app/knowledge-db.mjs",
+  "./app/knowledge-model.mjs",
+  "./app/knowledge-sync.mjs",
+  "./app/vault-archive.mjs",
+  "./app/vault-codec.mjs",
+  "./app/vault-storage.mjs",
+  "./app/workspace-ai-adapter.mjs",
+  "./app/offline-shell.mjs",
+  "./app/content-view.mjs",
+  "./app/tag-filter.mjs",
+  "./app/store.js",
+  "./app/algorithm-samples.mjs",
+  "./app/algorithm-analysis-samples.mjs",
+  "./tools/current-tool-ai-adapter.mjs",
+  "./tools/local-webllm-client.mjs",
+]);
+const STARTUP_SHELL = OFFLINE_ASSET_CATALOG.filter((asset) => (
+  STARTUP_PATHS.has(asset.split("?")[0])
+));
+
 /**
- * Pre-caches the complete interactive application shell.
+ * Pre-caches only the routes and modules required to start the homepage and
+ * Workspace. Tool bundles, PDFs, and large converters are cached after use.
  *
  * @param {ExtendableEvent} event Install lifecycle event.
  */
 function handleInstall(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then((cache) => cache.addAll(STARTUP_SHELL))
       .then(() => self.skipWaiting()),
   );
 }

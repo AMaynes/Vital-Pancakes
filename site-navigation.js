@@ -6,7 +6,7 @@
  */
 
 import { installGlobalGlossary } from "./app/glossary-ui.mjs";
-import { scheduleKnowledgeSync } from "./app/knowledge-sync.mjs";
+import { scheduleKnowledgeSync } from "./app/knowledge-sync.mjs?v=2";
 import { registerOfflineShell } from "./app/offline-shell.mjs?v=2";
 
 const SITE_ROOT = new URL("./", import.meta.url);
@@ -285,6 +285,8 @@ if (workspaceMain) {
 }
 
 installGlobalGlossary();
-scheduleKnowledgeSync();
-window.addEventListener("storage", () => scheduleKnowledgeSync());
-window.addEventListener("workspace:changed", () => scheduleKnowledgeSync());
+if (getPageKey() === "") {
+  scheduleKnowledgeSync();
+  window.addEventListener("storage", () => scheduleKnowledgeSync());
+  window.addEventListener("workspace:changed", () => scheduleKnowledgeSync());
+}

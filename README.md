@@ -24,7 +24,7 @@ Repository-managed lists use small text files containing `<Entry>` blocks. `gene
 
 The mathematics and arts flashcard applications load subject-specific `flashcards.json` files. Quiz scores, missed-answer queues, and drafted submissions remain in the visitor's browser through `localStorage`.
 
-The homepage also hosts the shared local Knowledge Center: universal text search, backlinks, related entries, an interactive relationship graph, the global glossary, and the Unified Vault. The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches the workspace, tools, PDF dependencies, and public archive for offline use.
+The homepage also hosts the shared local Knowledge Center: universal text search, backlinks, related entries, an interactive relationship graph, the global glossary, and the Unified Vault. The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches only the bounded homepage and Workspace startup shell; tools, PDF dependencies, and public-archive files are cached after they are used.
 
 Every editable content collection shares one predictable interior structure without flattening its subject matter. The collection index can switch between a compact list and a visual grid, remembers that choice per collection, and opens each item as a dedicated page. Entry pages pair a subject animation and concise orientation with the complete type-specific record—for example, stove-readable recipe steps, training prescriptions, study evidence, runnable language notes, or algorithm traces.
 

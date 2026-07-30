@@ -13,7 +13,7 @@ import {
   normalizeKnowledgeLink,
   searchKnowledgeDocuments,
 } from "./knowledge-model.mjs";
-import { syncKnowledgeIndex } from "./knowledge-sync.mjs";
+import { syncKnowledgeIndex } from "./knowledge-sync.mjs?v=2";
 import {
   exportUnifiedVault,
   inspectLocalVaultContents,
@@ -60,7 +60,7 @@ async function initialize() {
   bindEvents();
   populateModelOptions();
   renderLoadingState();
-  await refreshKnowledge({ sync: true });
+  await refreshKnowledge({ sync: false });
   await refreshVaultSummary();
   installCurrentToolAiHost(createHomeKnowledgeAiConfiguration({
     getSnapshot: createAiSnapshot,

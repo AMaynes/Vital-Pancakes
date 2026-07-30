@@ -95,3 +95,15 @@ test("document navigations use the network before the offline cache fallback", a
       < navigationBranch.indexOf("caches.match(event.request"),
   );
 });
+
+test("service worker installation pre-caches only the bounded startup shell", async () => {
+  const source = await readFile(new URL("../sw.js", import.meta.url), "utf8");
+  const startupPaths = source.match(
+    /const STARTUP_PATHS = new Set\(\[([\s\S]*?)\]\);/,
+  )?.[1] ?? "";
+
+  assert.match(source, /cache\.addAll\(STARTUP_SHELL\)/);
+  assert.match(startupPaths, /index\.html/);
+  assert.match(startupPaths, /workspace\.html/);
+  assert.doesNotMatch(startupPaths, /\.pdf|file-converter-app|visual-board\.js|pdf\.worker/);
+});

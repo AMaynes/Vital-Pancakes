@@ -12,7 +12,7 @@ import {
   collectIndexableText,
   extractRecordReferences,
   normalizeKnowledgeDocument,
-} from "./knowledge-model.mjs";
+} from "./knowledge-model.mjs?v=2";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const LOCAL_TOOLS_DATABASE = "vital-pancakes-local-tools";
@@ -105,6 +105,10 @@ export function readOtherLocalStorageDocuments(storage = globalThis.localStorage
       });
       continue;
     }
+    if (/visual-board/i.test(key)) {
+      documents.push(...readVisualBoardDocuments(value, key));
+      continue;
+    }
     documents.push(...documentsFromStoredValue(value, {
       idPrefix: `local-storage:${key}`,
       source: key,
@@ -113,6 +117,54 @@ export function readOtherLocalStorageDocuments(storage = globalThis.localStorage
     }));
   }
   return documents;
+}
+
+function readVisualBoardDocuments(value, storageKey) {
+  const source = String(storageKey);
+  const url = "tools/visual-board.html";
+  if (Array.isArray(value?.items)) {
+    return value.items.map((item, index) => createDocument({
+      id: `local-storage:${source}:library:${item?.id ?? index}`,
+      title: item?.name ?? item?.character?.name ?? `Board library item ${index + 1}`,
+      value: {
+        name: item?.name,
+        characterName: item?.character?.name,
+        text: collectVisualBoardText(item?.character?.objects),
+      },
+      kind: "board asset",
+      source,
+      recordId: item?.id ?? "",
+      url,
+      updatedAt: item?.updatedAt ?? item?.createdAt,
+    }));
+  }
+
+  return [createDocument({
+    id: `local-storage:${source}:board`,
+    title: "Visual Board",
+    value: {
+      text: collectVisualBoardText(value?.objects),
+      assetNames: Object.values(value?.assets ?? {}).map((asset) => asset?.name).filter(Boolean),
+      animationFrames: (value?.animation?.frames ?? []).map((frame) => frame?.name).filter(Boolean),
+    },
+    kind: "board",
+    source,
+    recordId: "board",
+    url,
+    updatedAt: value?.updatedAt,
+  })];
+}
+
+function collectVisualBoardText(objects) {
+  if (!Array.isArray(objects)) return [];
+  return objects.flatMap((object) => [
+    object?.text,
+    object?.name,
+    object?.label,
+    object?.semantic?.label,
+    object?.semantic?.role,
+    ...(Array.isArray(object?.semantic?.tags) ? object.semantic.tags : []),
+  ]).filter((entry) => typeof entry === "string" && entry.trim());
 }
 
 async function readLocalToolDocuments(existing, warnings, options) {

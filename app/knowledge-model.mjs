@@ -269,17 +269,31 @@ export function collectIndexableText(value, options = {}) {
   const parts = [];
   const visited = new WeakSet();
   const maximumLength = Math.max(1_000, Number(options.maximumLength) || MAXIMUM_TEXT_LENGTH);
+  const maximumValues = Math.max(100, Number(options.maximumValues) || 50_000);
+  let collectedLength = 0;
+  let visitedValues = 0;
+
+  function append(valuePart) {
+    const separatorLength = parts.length ? 1 : 0;
+    const remainingLength = maximumLength - collectedLength - separatorLength;
+    if (remainingLength <= 0) return;
+    const text = String(valuePart).slice(0, remainingLength);
+    if (!text) return;
+    parts.push(text);
+    collectedLength += separatorLength + text.length;
+  }
 
   function visit(current, key = "") {
-    if (parts.join("\n").length >= maximumLength) return;
+    if (collectedLength >= maximumLength || visitedValues >= maximumValues) return;
+    visitedValues += 1;
     if (SENSITIVE_KEY.test(key) || BINARY_KEY.test(key)) return;
     if (typeof current === "string") {
       if (/^data:[^,]+;base64,/i.test(current)) return;
-      parts.push(current.slice(0, maximumLength));
+      append(current);
       return;
     }
     if (typeof current === "number" || typeof current === "boolean" || typeof current === "bigint") {
-      parts.push(String(current));
+      append(current);
       return;
     }
     if (!current || typeof current !== "object" || current instanceof Blob || ArrayBuffer.isView(current)) return;

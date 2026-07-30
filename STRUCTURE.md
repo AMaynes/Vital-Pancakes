@@ -21,7 +21,7 @@ vital-pancakes/
 ├── workspace.html — Routes Everyday Life, Studies & Projects, and tools.
 ├── workspace.css — Defines the workspace and tool visual system.
 ├── manifest.webmanifest — Describes the installable workspace app.
-├── sw.js — Caches the workspace, public archive, and tools for offline use.
+├── sw.js — Pre-caches the bounded startup shell and caches other same-origin assets after use.
 ├── genericListLoader.js — Renders repository-managed text lists.
 ├── app/
 │   ├── ai-command-protocol.mjs — Validates provider-independent semantic command envelopes and permissions.
@@ -33,7 +33,7 @@ vital-pancakes/
 │   ├── glossary-ui.mjs — Installs the global glossary editor and reference inserter.
 │   ├── knowledge-db.mjs — Stores documents, relationships, glossary entries, and index metadata.
 │   ├── knowledge-model.mjs — Owns search ranking, references, backlinks, related entries, suggestions, and graph projection.
-│   ├── knowledge-sync.mjs — Indexes Workspace, tools, lessons, annotations, text files, and PDF records locally.
+│   ├── knowledge-sync.mjs — Indexes Workspace, tools, lessons, annotations, text files, and PDF records locally while reducing Visual Board data to searchable labels instead of geometry.
 │   ├── vault-archive.mjs — Frames chunked PBKDF2/AES-GCM encrypted archives with authenticated ordering.
 │   ├── vault-codec.mjs — Preserves structured-clone values through binary attachments.
 │   ├── vault-storage.mjs — Discovers, captures, validates, and restores localStorage, IndexedDB, and OPFS data.
