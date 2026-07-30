@@ -106,7 +106,7 @@ import {
   resizeShapeFromCorner,
   rotatePoint,
   snapValue,
-} from "./visual-board-geometry.mjs?v=10";
+} from "./visual-board-geometry.mjs?v=11";
 import {
   cropToAspect,
   fillCropToFrame,
@@ -120,22 +120,23 @@ import {
   flipBoardSelection,
   getAlignmentSnap,
 } from "./visual-board-transform.mjs?v=3";
+import { eraseObjectNear } from "./visual-board-eraser.mjs?v=1";
 import {
   FLOOR_PLAN_ELEMENTS,
   FLOOR_PLAN_TEMPLATES,
   addFloorPlanRoom,
   createFloorPlanElement,
   createFloorPlanTemplate,
-  cycleFloorPlanRoom,
   formatFloorPlanDimension,
   getFloorPlanElementDefinition,
   getFloorPlanTemplateDefinition,
   hasFloorPlanRemovalPassword,
   isFloorPlanObjectVisible,
+  moveFloorPlanRoom,
   normalizeFloorPlanSettings,
   normalizeFloorPlanRoomState,
   removeActiveFloorPlanRoom,
-} from "./visual-board-floor-plan.mjs?v=5";
+} from "./visual-board-floor-plan.mjs?v=6";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -145,7 +146,7 @@ import {
   replaceFloorPlanTemplate,
   restoreBuiltInFloorPlanTemplate,
   updateFloorPlanTemplate,
-} from "./visual-board-floor-plan-templates.mjs?v=2";
+} from "./visual-board-floor-plan-templates.mjs?v=3";
 import {
   ARCHITECTURE_FILL_PATTERNS,
   fitArchitectureSymbolFrame,
@@ -157,18 +158,18 @@ import {
 import {
   exportVisualBoardToSvg,
   getVisualBoardExportBounds,
-} from "./visual-board-static-export.mjs?v=5";
+} from "./visual-board-static-export.mjs?v=6";
 import { installAiPageHost } from "../app/ai-page-host.mjs";
 import { AI_PERMISSION_LEVELS } from "../app/ai-command-protocol.mjs";
 import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=10";
+} from "./visual-board-ai-adapter.mjs?v=11";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
-const BOARD_VERSION = 18;
+const BOARD_VERSION = 19;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_ZOOM = 0.15;
@@ -223,6 +224,7 @@ const textSizeInput = document.querySelector("#text-font-size");
 const textColorInput = document.querySelector("#text-color");
 const shape2dControl = document.querySelector("#shape-2d-control");
 const shape3dControl = document.querySelector("#shape-3d-control");
+const lineControl = document.querySelector("#line-control");
 const drawingTools = document.querySelector("#drawing-tools");
 const selectionActions = document.querySelector("#selection-actions");
 const selectionCount = document.querySelector("#selection-count");
@@ -302,6 +304,7 @@ const aiCommandsResult = document.querySelector("#ai-commands-result");
 const aiCommandsExample = document.querySelector("#ai-commands-example");
 const flipHorizontalButton = document.querySelector("#flip-horizontal");
 const flipVerticalButton = document.querySelector("#flip-vertical");
+const toggleArrowStartButton = document.querySelector("#toggle-arrow-start");
 const mirrorTextToggle = document.querySelector("#mirror-text-toggle");
 const editImageButton = document.querySelector("#edit-image");
 const floorPlanToggleButton = document.querySelector("#toggle-floor-plan");
@@ -391,6 +394,7 @@ let shapeToolChoices = {
   "2d": shape2dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
   "3d": shape3dControl.querySelector("[data-shape-primary]").dataset.shapeTool,
 };
+let lineToolChoice = lineControl.querySelector("[data-line-primary]").dataset.lineTool;
 
 const imageCache = new Map();
 const architecturePatternCache = new Map();
@@ -700,6 +704,12 @@ function normalizeObject(rawObject, options = {}) {
       y: finiteNumber(rawObject.y, 0),
       endX: finiteNumber(rawObject.endX, finiteNumber(rawObject.x, 0)),
       endY: finiteNumber(rawObject.endY, finiteNumber(rawObject.y, 0)),
+      ...(type === "connector"
+        ? {
+          arrowStart: Boolean(rawObject.arrowStart),
+          arrowEnd: rawObject.arrowEnd !== false,
+        }
+        : {}),
       ...(type === "dimension"
         ? {
           label: String(rawObject.label ?? "").slice(0, 240),
@@ -1049,19 +1059,22 @@ function getVisibleBoardObjects() {
 function getVisibleFloorPlanLabelIds() {
   const visibleIds = new Set(
     selectedObjects
-      .filter((object) => object.semantic?.role === "floor-plan-labeler")
-      .map((object) => object.id),
+      .filter((object) => object.semantic?.role?.startsWith("floor-plan-labeler"))
+      .map((object) => object.semantic?.diagramId ?? object.id),
   );
   if (!hoverPoint) return visibleIds;
   board.objects.forEach((object) => {
-    if (object.semantic?.role !== "floor-plan-labeler") return;
+    if (
+      object.semantic?.role !== "floor-plan-labeler"
+      && object.semantic?.role !== "floor-plan-labeler-detection"
+    ) return;
     const bounds = getObjectBounds(object);
     if (
       hoverPoint.x >= bounds.x
       && hoverPoint.x <= bounds.x + bounds.width
       && hoverPoint.y >= bounds.y
       && hoverPoint.y <= bounds.y + bounds.height
-    ) visibleIds.add(object.id);
+    ) visibleIds.add(object.semantic?.diagramId ?? object.id);
   });
   return visibleIds;
 }
@@ -1178,15 +1191,30 @@ function getLayerDesignatorControls(object) {
   const height = 24 / viewport.zoom;
   const gap = 3 / viewport.zoom;
   const actionWidth = 24 / viewport.zoom;
-  const switchWidth = 88 / viewport.zoom;
+  const labelWidth = 78 / viewport.zoom;
   const right = bounds.x + bounds.width;
   const y = bounds.y - height - gap;
+  const left = right - labelWidth - actionWidth * 4;
   return [
     {
-      action: "cycle",
-      x: right - switchWidth - actionWidth * 2,
+      action: "up",
+      x: left,
       y,
-      width: switchWidth,
+      width: actionWidth,
+      height,
+    },
+    {
+      action: "label",
+      x: left + actionWidth,
+      y,
+      width: labelWidth,
+      height,
+    },
+    {
+      action: "down",
+      x: left + actionWidth + labelWidth,
+      y,
+      width: actionWidth,
       height,
     },
     {
@@ -1212,7 +1240,9 @@ function drawLayerDesignatorControls(object) {
     room.id === state.activeFloorPlanRoomId
   ));
   const labels = {
-    cycle: `${activeRoom?.name ?? "Floor"} ↻`,
+    up: "↑",
+    label: activeRoom?.name ?? "Level 1",
+    down: "↓",
     add: "+",
     remove: "−",
   };
@@ -1686,15 +1716,24 @@ function drawConnector(object) {
   context.moveTo(object.x, object.y);
   context.lineTo(object.endX, object.endY);
   context.stroke();
+  if (object.arrowStart) {
+    drawArrowHead(object.x, object.y, angle + Math.PI, arrowSize);
+  }
+  if (object.arrowEnd !== false) {
+    drawArrowHead(object.endX, object.endY, angle, arrowSize);
+  }
+}
+
+function drawArrowHead(x, y, angle, arrowSize) {
   context.beginPath();
-  context.moveTo(object.endX, object.endY);
+  context.moveTo(x, y);
   context.lineTo(
-    object.endX - arrowSize * Math.cos(angle - Math.PI / 6),
-    object.endY - arrowSize * Math.sin(angle - Math.PI / 6),
+    x - arrowSize * Math.cos(angle - Math.PI / 6),
+    y - arrowSize * Math.sin(angle - Math.PI / 6),
   );
   context.lineTo(
-    object.endX - arrowSize * Math.cos(angle + Math.PI / 6),
-    object.endY - arrowSize * Math.sin(angle + Math.PI / 6),
+    x - arrowSize * Math.cos(angle + Math.PI / 6),
+    y - arrowSize * Math.sin(angle + Math.PI / 6),
   );
   context.closePath();
   context.fill();
@@ -1719,6 +1758,14 @@ function drawTextboxContent(object) {
     context.fillStyle = getObjectFillStyle(object);
     context.fillRect(object.x, object.y, object.w, object.h);
     context.globalAlpha = object.opacity ?? 1;
+  }
+  if (object.semantic?.role === "floor-plan-labeler-text") {
+    context.save();
+    context.setLineDash([]);
+    context.strokeStyle = object.color;
+    context.lineWidth = Math.max(1, object.strokeWidth);
+    context.strokeRect(object.x, object.y, object.w, object.h);
+    context.restore();
   }
   context.beginPath();
   context.rect(object.x, object.y, object.w, object.h);
@@ -2550,7 +2597,14 @@ function createWorkingObject(type, startPoint) {
     };
   }
   if (type === "line" || type === "connector") {
-    return { ...common, x: startPoint.x, y: startPoint.y, endX: startPoint.x, endY: startPoint.y };
+    return {
+      ...common,
+      x: startPoint.x,
+      y: startPoint.y,
+      endX: startPoint.x,
+      endY: startPoint.y,
+      ...(type === "connector" ? { arrowStart: false, arrowEnd: true } : {}),
+    };
   }
   if (type === "rectangle" || type === "ellipse" || type.startsWith("shape:")) {
     return {
@@ -2590,7 +2644,7 @@ function handlePointerMove(event) {
     updateCanvasCursor(worldPoint);
     if (
       activeTool === "eraser"
-      || board.objects.some((object) => object.semantic?.role === "floor-plan-labeler")
+      || board.objects.some((object) => object.semantic?.role?.startsWith("floor-plan-labeler"))
     ) drawBoard();
     return;
   }
@@ -2869,6 +2923,7 @@ function finishPointerInteraction(event, cancelled) {
     if (finishedInteraction.changed) {
       selectedObjects = selectedObjects.filter((object) => board.objects.includes(object));
       saveBoard();
+      updateSelectionControls();
     } else {
       history.pop();
       updateHistoryControls();
@@ -2971,52 +3026,16 @@ function eraseAt(point, radius) {
   const nextObjects = [];
 
   board.objects.forEach((object) => {
-    if (object.locked || object.type === "image") {
-      nextObjects.push(object);
-      return;
-    }
-    if (object.type === "pen") {
-      const fragments = splitPenStroke(object, point, radius);
-      if (fragments.length !== 1 || fragments[0] !== object) changed = true;
-      nextObjects.push(...fragments);
-      return;
-    }
-    if (pointHitsObject(object, point, radius)) {
-      changed = true;
-      return;
-    }
-    nextObjects.push(object);
+    const fragments = eraseObjectNear(object, point, radius, createId);
+    if (fragments.length !== 1 || fragments[0] !== object) changed = true;
+    nextObjects.push(...fragments);
   });
 
-  if (changed) board.objects = nextObjects;
+  if (changed) {
+    board.objects = nextObjects;
+    board.rig = normalizeRig(board.rig, board.objects);
+  }
   return changed;
-}
-
-function splitPenStroke(object, eraserPoint, radius) {
-  const effectiveRadius = radius + object.strokeWidth / 2;
-  const runs = [];
-  let currentRun = [];
-  let removedPoint = false;
-
-  object.points.forEach((point) => {
-    if (distanceBetween(point, eraserPoint) <= effectiveRadius) {
-      removedPoint = true;
-      if (currentRun.length) runs.push(currentRun);
-      currentRun = [];
-    } else {
-      currentRun.push(point);
-    }
-  });
-  if (currentRun.length) runs.push(currentRun);
-  if (!removedPoint) return [object];
-
-  return runs
-    .filter((run) => run.length >= 2)
-    .map((points, index) => ({
-      ...object,
-      id: index === 0 ? object.id : createId(),
-      points,
-    }));
 }
 
 function undo() {
@@ -3183,22 +3202,36 @@ function handleLayerDesignatorAction(object, action) {
     announceStatus("Unlock the layer designator first");
     return;
   }
-  if (action === "cycle") {
+  if (action === "up" || action === "down") {
+    const currentState = normalizeFloorPlanRoomState(object);
+    const nextState = moveFloorPlanRoom(object, action === "up" ? 1 : -1);
+    if (nextState.activeFloorPlanRoomId === currentState.activeFloorPlanRoomId) {
+      announceStatus(action === "up" ? "Already at the highest level" : "Already at the lowest level");
+      return;
+    }
     checkpoint();
-    Object.assign(object, cycleFloorPlanRoom(object, 1));
+    Object.assign(object, nextState);
     saveBoard();
     drawBoard();
     return;
   }
   if (action === "add") {
     const state = normalizeFloorPlanRoomState(object);
-    const name = window.prompt(
-      "Room or floor name",
-      `Floor ${state.floorPlanRooms.length + 1}`,
+    const usedLevels = new Set(state.floorPlanRooms.map((room) => room.level));
+    let suggestedLevel = 1;
+    while (usedLevels.has(suggestedLevel)) suggestedLevel += 1;
+    const enteredLevel = window.prompt(
+      "Level number (negative values are allowed)",
+      String(suggestedLevel),
     );
-    if (name === null) return;
+    if (enteredLevel === null) return;
+    const trimmedLevel = enteredLevel.trim();
+    if (!/^-?\d+$/.test(trimmedLevel)) {
+      announceStatus("Enter a whole level number from -99 to 99");
+      return;
+    }
     try {
-      const next = addFloorPlanRoom(object, name, createId);
+      const next = addFloorPlanRoom(object, Number(trimmedLevel), createId);
       const { room, ...layerState } = next;
       checkpoint();
       Object.assign(object, layerState);
@@ -3208,7 +3241,7 @@ function handleLayerDesignatorAction(object, action) {
       drawBoard();
       announceStatus(`${room.name} added`);
     } catch (error) {
-      announceStatus(error.message || "The room or floor could not be added");
+      announceStatus(error.message || "The level could not be added");
     }
     return;
   }
@@ -3237,9 +3270,9 @@ function handleLayerDesignatorAction(object, action) {
     saveBoard();
     updateSelectionControls();
     drawBoard();
-    announceStatus(`${activeRoom?.name ?? "Floor"} removed`);
+    announceStatus(`${activeRoom?.name ?? "Level"} removed`);
   } catch (error) {
-    announceStatus(error.message || "The room or floor could not be removed");
+    announceStatus(error.message || "The level could not be removed");
   }
 }
 
@@ -3278,9 +3311,11 @@ function renderFloorPlanCatalog() {
     "aria-labelledby",
     `floor-plan-tab-${activeFloorPlanTab}`,
   );
-  floorPlanElementsTitle.textContent = activeFloorPlanTab === "furniture"
-    ? "Furniture"
-    : "Structures";
+  floorPlanElementsTitle.textContent = {
+    structures: "Structures",
+    maintenance: "Maintenance",
+    furniture: "Furniture",
+  }[activeFloorPlanTab] ?? "Structures";
 
   renderFloorPlanCatalogSection(
     "element",
@@ -3310,7 +3345,7 @@ function renderFloorPlanCatalog() {
 }
 
 function setActiveFloorPlanTab(tab, focus = false) {
-  if (!["structures", "furniture", "rooms"].includes(tab)) return;
+  if (!["structures", "maintenance", "furniture", "rooms"].includes(tab)) return;
   activeFloorPlanTab = tab;
   renderFloorPlanCatalog();
   if (focus) {
@@ -3784,6 +3819,23 @@ function flipSelection(axis) {
   updateSelectionControls();
   drawBoard();
   announceStatus(axis === "horizontal" ? "Selection flipped horizontally" : "Selection flipped vertically");
+}
+
+function toggleSelectedArrowStart() {
+  const connectors = selectedObjects.filter((object) => (
+    object.type === "connector" && !object.locked
+  ));
+  if (connectors.length !== selectedObjects.length || !connectors.length) return;
+  const nextArrowStart = !connectors.every((object) => object.arrowStart);
+  checkpoint();
+  connectors.forEach((object) => {
+    object.arrowStart = nextArrowStart;
+    object.arrowEnd = object.arrowEnd !== false;
+  });
+  saveBoard();
+  updateSelectionControls();
+  drawBoard();
+  announceStatus(nextArrowStart ? "Double-sided arrow enabled" : "Start arrowhead removed");
 }
 
 async function openImageEditDialog() {
@@ -5319,6 +5371,15 @@ function updateSelectionControls() {
   flipVerticalButton.hidden = hasLockedSelection;
   flipHorizontalButton.disabled = hasLockedSelection;
   flipVerticalButton.disabled = hasLockedSelection;
+  const connectorSelection = selectedObjects.length > 0
+    && !hasLockedSelection
+    && selectedObjects.every((object) => object.type === "connector");
+  const allConnectorsDoubleSided = connectorSelection
+    && selectedObjects.every((object) => object.arrowStart);
+  toggleArrowStartButton.hidden = !connectorSelection;
+  toggleArrowStartButton.disabled = !connectorSelection;
+  toggleArrowStartButton.classList.toggle("is-active", allConnectorsDoubleSided);
+  toggleArrowStartButton.setAttribute("aria-pressed", String(allConnectorsDoubleSided));
   mirrorTextToggle.hidden = !selectedObjects.some((object) => object.type === "textbox");
   mirrorTextToggle.classList.toggle("is-active", mirrorTextOnFlip);
   mirrorTextToggle.setAttribute("aria-pressed", String(mirrorTextOnFlip));
@@ -5355,14 +5416,14 @@ function updateSelectionControls() {
   lockDimensionsButton.hidden = dimensionState.targets.length === 0;
   deleteSelectionButton.disabled = allLocked;
   deleteSelectionButton.hidden = allLocked;
-  const canGroup = canGroupSelection(selectedObjects);
-  groupSelectionButton.hidden = !canGroup;
-  groupSelectionButton.disabled = !canGroup;
   const canUngroup = !anyLocked && selectedObjects.some((object) => (
     Boolean(object.groupId) || Boolean(object.vertexNetworkId)
   ));
   ungroupSelectionButton.hidden = !canUngroup;
   ungroupSelectionButton.disabled = !canUngroup;
+  const canGroup = !canUngroup && canGroupSelection(selectedObjects);
+  groupSelectionButton.hidden = !canGroup;
+  groupSelectionButton.disabled = !canGroup;
   const canCreateVertices = canCreateVertexNetwork(selectedObjects);
   mergeVerticesButton.hidden = !canCreateVertices;
   mergeVerticesButton.disabled = !canCreateVertices;
@@ -6075,6 +6136,24 @@ function updateShapePickerChoice(family, tool) {
   });
 }
 
+function updateLinePickerChoice(tool) {
+  if (!["line", "connector"].includes(tool)) return;
+  const primary = lineControl.querySelector("[data-line-primary]");
+  const option = document.querySelector(
+    `#line-menu [data-line-option="${CSS.escape(tool)}"]`,
+  );
+  if (!option) return;
+  const isArrow = tool === "connector";
+  lineToolChoice = tool;
+  primary.dataset.lineTool = tool;
+  primary.querySelector("[data-line-icon]").textContent = isArrow ? "↗" : "╱";
+  primary.querySelector("[data-line-label]").textContent = isArrow ? "Arrow" : "Line";
+  primary.title = `Use ${isArrow ? "Arrow" : "Line"}`;
+  document.querySelectorAll("#line-menu [data-line-option]").forEach((candidate) => {
+    candidate.setAttribute("aria-checked", String(candidate === option));
+  });
+}
+
 /**
  * Places a top-layer shape menu directly beneath its split button.
  *
@@ -6143,12 +6222,34 @@ function initializeShapePickers() {
   });
 }
 
+function initializeLinePicker() {
+  const primary = lineControl.querySelector("[data-line-primary]");
+  const toggle = lineControl.querySelector("[data-line-toggle]");
+  const menu = document.querySelector("#line-menu");
+  if (typeof menu.showPopover !== "function") menu.hidden = true;
+
+  primary.addEventListener("click", () => setActiveTool(lineToolChoice));
+  toggle.addEventListener("click", () => toggleShapePickerMenu(lineControl, menu));
+  menu.addEventListener("toggle", () => {
+    toggle.setAttribute("aria-expanded", String(menu.matches(":popover-open")));
+  });
+  menu.querySelectorAll("[data-line-option]").forEach((option) => {
+    option.addEventListener("click", () => {
+      updateLinePickerChoice(option.dataset.lineOption);
+      setActiveTool(lineToolChoice);
+      closeShapePickerMenu(menu);
+      primary.focus({ preventScroll: true });
+    });
+  });
+}
+
 function setActiveTool(nextTool) {
   if (nextTool !== "select") curveVertexInsertionActive = false;
   activeTool = nextTool;
   shapeToolChoices = retainShapeToolChoice(shapeToolChoices, activeTool);
   const shapeFamily = getShapeToolFamily(activeTool);
   if (shapeFamily) updateShapePickerChoice(shapeFamily, activeTool);
+  if (["line", "connector"].includes(activeTool)) updateLinePickerChoice(activeTool);
   drawingTools.querySelectorAll("[data-tool]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.tool === activeTool);
   });
@@ -6156,6 +6257,7 @@ function setActiveTool(nextTool) {
   bucketFillTool.setAttribute("aria-pressed", String(activeTool === "bucket"));
   shape2dControl.classList.toggle("is-active", shapeFamily === "2d");
   shape3dControl.classList.toggle("is-active", shapeFamily === "3d");
+  lineControl.classList.toggle("is-active", ["line", "connector"].includes(activeTool));
   closeTextEditor();
   updateTextStyleControls();
   updateCanvasCursor();
@@ -6825,7 +6927,7 @@ canvas.addEventListener("pointerleave", () => {
   hoverPoint = null;
   if (
     activeTool === "eraser"
-    || board.objects.some((object) => object.semantic?.role === "floor-plan-labeler")
+    || board.objects.some((object) => object.semantic?.role?.startsWith("floor-plan-labeler"))
   ) drawBoard();
 });
 canvas.addEventListener("dblclick", handleDoubleClick);
@@ -7037,6 +7139,7 @@ traceImageButton.addEventListener("click", traceSelectedImages);
 editImageButton.addEventListener("click", openImageEditDialog);
 flipHorizontalButton.addEventListener("click", () => flipSelection("horizontal"));
 flipVerticalButton.addEventListener("click", () => flipSelection("vertical"));
+toggleArrowStartButton.addEventListener("click", toggleSelectedArrowStart);
 mirrorTextToggle.addEventListener("click", () => {
   mirrorTextOnFlip = !mirrorTextOnFlip;
   updateSelectionControls();
@@ -7172,6 +7275,7 @@ window.addEventListener("resize", () => {
 });
 new ResizeObserver(resizeCanvas).observe(canvasFrame);
 
+initializeLinePicker();
 initializeShapePickers();
 renderFloorPlanCatalog();
 syncFloorPlanControls();

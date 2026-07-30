@@ -290,22 +290,20 @@ export function getObjectSegments(object) {
     if (object.type === "connector") {
       const angle = Math.atan2(object.endY - object.y, object.endX - object.x);
       const arrowSize = Math.max(14, (object.strokeWidth ?? 1) * 4);
-      segments.push(
-        [
+      if (object.arrowStart) {
+        segments.push(...getArrowHeadSegments(
+          { x: object.x, y: object.y },
+          angle + Math.PI,
+          arrowSize,
+        ));
+      }
+      if (object.arrowEnd !== false) {
+        segments.push(...getArrowHeadSegments(
           { x: object.endX, y: object.endY },
-          {
-            x: object.endX - arrowSize * Math.cos(angle - Math.PI / 6),
-            y: object.endY - arrowSize * Math.sin(angle - Math.PI / 6),
-          },
-        ],
-        [
-          { x: object.endX, y: object.endY },
-          {
-            x: object.endX - arrowSize * Math.cos(angle + Math.PI / 6),
-            y: object.endY - arrowSize * Math.sin(angle + Math.PI / 6),
-          },
-        ],
-      );
+          angle,
+          arrowSize,
+        ));
+      }
     }
     return segments;
   }
@@ -332,6 +330,25 @@ export function getObjectSegments(object) {
     normalizedPointToWorld(object, start),
     normalizedPointToWorld(object, end),
   ]);
+}
+
+function getArrowHeadSegments(tip, angle, arrowSize) {
+  return [
+    [
+      tip,
+      {
+        x: tip.x - arrowSize * Math.cos(angle - Math.PI / 6),
+        y: tip.y - arrowSize * Math.sin(angle - Math.PI / 6),
+      },
+    ],
+    [
+      tip,
+      {
+        x: tip.x - arrowSize * Math.cos(angle + Math.PI / 6),
+        y: tip.y - arrowSize * Math.sin(angle + Math.PI / 6),
+      },
+    ],
+  ];
 }
 
 export function isExplodableObject(object) {

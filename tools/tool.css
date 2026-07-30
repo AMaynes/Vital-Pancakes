@@ -73,6 +73,7 @@
 .tool-workspace {
   --animation-panel-width: min(360px, 34vw);
   --library-panel-width: min(380px, 36vw);
+  --active-board-panel-width: 0px;
 
   position: relative;
   display: grid;
@@ -83,10 +84,14 @@
 }
 
 .tool-workspace.is-animation-open {
+  --active-board-panel-width: var(--animation-panel-width);
+
   grid-template-columns: minmax(0, 1fr) var(--animation-panel-width);
 }
 
 .tool-workspace.is-library-open {
+  --active-board-panel-width: var(--library-panel-width);
+
   grid-template-columns: minmax(0, 1fr) var(--library-panel-width);
 }
 
@@ -229,16 +234,20 @@
   position: absolute;
   z-index: 14;
   top: 46px;
-  right: 12px;
-  max-width: calc(100% - 24px);
-  flex-wrap: wrap;
+  right: calc(var(--active-board-panel-width) + 12px);
+  width: max-content;
+  max-width: calc(100% - var(--active-board-panel-width) - 24px);
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 5px 6px;
   border: 1px solid var(--line-strong) !important;
   border-radius: 10px;
   background: rgb(123 33 26 / 7%);
   background-color: var(--card);
   box-shadow: var(--shadow-md);
+  scrollbar-width: thin;
 }
 
 .selection-count {
@@ -302,8 +311,11 @@
 }
 
 .shape-picker-primary {
+  display: inline-flex;
   min-width: 72px;
   max-width: 112px;
+  align-items: center;
+  gap: 6px;
   padding: 4px 7px;
   overflow: hidden;
   text-align: left;
@@ -2479,6 +2491,8 @@
   .tool-workspace,
   .tool-workspace.is-animation-open,
   .tool-workspace.is-library-open {
+    --active-board-panel-width: 0px;
+
     grid-template-columns: minmax(0, 1fr);
   }
 

@@ -318,7 +318,7 @@ function normalizeDescription(value) {
 }
 
 function normalizeCategory(value) {
-  return ["structures", "furniture", "rooms", "tools"].includes(value)
+  return ["structures", "maintenance", "furniture", "rooms", "tools"].includes(value)
     ? value
     : null;
 }

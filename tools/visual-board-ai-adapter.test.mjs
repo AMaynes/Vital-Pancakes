@@ -326,8 +326,8 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 7);
-  assert.equal(capabilities.commands.length, 50);
+  assert.equal(capabilities.version, 8);
+  assert.equal(capabilities.commands.length, 51);
   assert.ok(capabilities.architectureCatalog.symbols.length >= 100);
   assert.ok(capabilities.architectureCatalog.materials.length >= 20);
   capabilities.commands.forEach((command) => {
@@ -418,7 +418,7 @@ test("AI can create, edit, insert, remove, and list custom floor-plan elements",
       elementId: "reading-chair",
       name: "Reading chair",
       description: "Custom chair symbol",
-      category: "furniture",
+      category: "maintenance",
       targets: { ids: ["custom-fixture"] },
     },
     {
@@ -442,7 +442,7 @@ test("AI can create, edit, insert, remove, and list custom floor-plan elements",
     (output) => output.type === "floor-plan.elements.list",
   );
   assert.equal(saved.name, "Library chair");
-  assert.equal(saved.category, "furniture");
+  assert.equal(saved.category, "maintenance");
   assert.equal(saved.character.objects.length, 1);
   assert.equal(result.state.board.objects.length, 2);
   assert.equal(
@@ -643,51 +643,100 @@ test("AI can replace, hide, and restore built-in floor-plan templates", () => {
   assert.equal(restoredBedroom.source, "built-in");
 });
 
-test("AI layer-designator commands add, cycle, and password-protect removal", () => {
+test("AI layer commands support signed levels, bounded movement, and protected removal", () => {
+  const createId = idFactory();
   const inserted = execute(createState(), [{
     type: "floor-plan.insert",
     kind: "layer-designator",
     placement: { type: "point", x: 100, y: 100 },
-  }]);
+  }], createId);
   const designator = inserted.state.board.objects[0];
   const added = execute(inserted.state, [{
     type: "floor-plan.layers.add",
     designatorId: designator.id,
-    name: "Floor 2",
-  }]);
-  const floorTwoId = added.state.board.objects[0].activeFloorPlanRoomId;
-  added.state.board.objects.push(rectangle("floor-two-bed", 120, 140, {
+    level: -1,
+  }], createId);
+  const basementId = added.state.board.objects[0].activeFloorPlanRoomId;
+  assert.equal(added.state.board.objects[0].floorPlanRooms[0].name, "Level -1");
+
+  const bounded = execute(added.state, [{
+    type: "floor-plan.layers.move",
+    designatorId: designator.id,
+    direction: "down",
+  }], createId);
+  assert.equal(bounded.outputs[0].moved, false);
+  assert.equal(bounded.state.board.objects[0].activeFloorPlanRoomId, basementId);
+
+  const returnedToOne = execute(bounded.state, [{
+    type: "floor-plan.layers.move",
+    designatorId: designator.id,
+    direction: "up",
+  }], createId);
+  const floorTwo = execute(returnedToOne.state, [{
+    type: "floor-plan.layers.add",
+    designatorId: designator.id,
+    level: 2,
+  }], createId);
+  const floorTwoId = floorTwo.state.board.objects[0].activeFloorPlanRoomId;
+  floorTwo.state.board.objects.push(rectangle("floor-two-bed", 120, 140, {
     semantic: {
       referenceId: designator.id,
       roomId: floorTwoId,
     },
   }));
 
-  const cycled = execute(added.state, [{
+  const cycled = execute(floorTwo.state, [{
     type: "floor-plan.layers.cycle",
     designatorId: designator.id,
     direction: "previous",
-  }]);
+  }], createId);
   assert.notEqual(cycled.state.board.objects[0].activeFloorPlanRoomId, floorTwoId);
 
   assert.throws(() => execute(cycled.state, [{
     type: "floor-plan.layers.remove",
     designatorId: designator.id,
     password: "wrong",
-  }]), (error) => error.code === "invalid-removal-password");
+  }], createId), (error) => error.code === "invalid-removal-password");
 
   const returned = execute(cycled.state, [{
-    type: "floor-plan.layers.cycle",
+    type: "floor-plan.layers.move",
     designatorId: designator.id,
-    direction: "next",
-  }]);
+    direction: "up",
+  }], createId);
   const removed = execute(returned.state, [{
     type: "floor-plan.layers.remove",
     designatorId: designator.id,
     password: "password",
-  }]);
+  }], createId);
   assert.equal(removed.state.board.objects.length, 1);
   assert.equal(removed.outputs[0].deletedObjectCount, 1);
+});
+
+test("AI creates and updates double-sided arrows truthfully", () => {
+  const created = execute(createState(), [{
+    type: "objects.create",
+    objects: [{
+      objectType: "connector",
+      x: 0,
+      y: 0,
+      endX: 100,
+      endY: 0,
+      arrowStart: true,
+      arrowEnd: true,
+    }],
+  }]);
+  assert.equal(created.state.board.objects[0].arrowStart, true);
+
+  const updated = execute(created.state, [{
+    type: "objects.update",
+    targets: { ids: [created.state.board.objects[0].id] },
+    patch: { arrowStart: false },
+  }]);
+  assert.equal(updated.state.board.objects[0].arrowStart, false);
+  assert.equal(
+    serializeVisualBoardContext(updated.state).objects[0].arrowEnd,
+    true,
+  );
 });
 
 test("AI fill updates can paint and clear closed object fills", () => {

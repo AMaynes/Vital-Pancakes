@@ -9,9 +9,9 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=25">
-  <link rel="stylesheet" href="tool.css?v=33">
+  <link rel="stylesheet" href="tool.css?v=34">
   <link rel="stylesheet" href="visual-board-ai.css?v=1">
-  <link rel="stylesheet" href="visual-board-advanced.css?v=5">
+  <link rel="stylesheet" href="visual-board-advanced.css?v=6">
   <link rel="stylesheet" href="../site-navigation.css?v=21">
   <script type="module" src="../site-navigation.js?v=16"></script>
 </head>
@@ -86,14 +86,30 @@
           <button class="tool-button" data-tool="pen" type="button" title="Freehand pen">
             ✎ <span class="tool-button-label">Pen</span>
           </button>
-          <button class="tool-button" data-tool="line" type="button" title="Straight line">
-            ╱ <span class="tool-button-label">Line</span>
-          </button>
+          <div class="shape-picker line-picker" id="line-control" data-line-picker>
+            <button
+              class="shape-picker-primary"
+              type="button"
+              data-line-primary
+              data-line-tool="line"
+              title="Use Line"
+            >
+              <span data-line-icon>╱</span>
+              <span data-line-label>Line</span>
+            </button>
+            <button
+              class="shape-picker-toggle"
+              type="button"
+              data-line-toggle
+              aria-label="Choose line or arrow"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="line-menu"
+              title="Choose line or arrow"
+            >⌄</button>
+          </div>
           <button class="tool-button" data-tool="arc" type="button" title="Three-point arc">
             ⌒ <span class="tool-button-label">Arc</span>
-          </button>
-          <button class="tool-button" data-tool="connector" type="button" title="Arrow connector">
-            ↗ <span class="tool-button-label">Arrow</span>
           </button>
           <div class="shape-picker" id="shape-2d-control" data-shape-picker="2d">
             <button
@@ -248,6 +264,14 @@
         <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:diamond">Diamond</button>
         <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:hexagon">Hexagon</button>
       </div>
+      <div class="shape-picker-menu" id="line-menu" role="menu" popover>
+        <button type="button" role="menuitemradio" aria-checked="true" data-line-option="line">
+          <span aria-hidden="true">╱</span> Line
+        </button>
+        <button type="button" role="menuitemradio" aria-checked="false" data-line-option="connector">
+          <span aria-hidden="true">↗</span> Arrow
+        </button>
+      </div>
       <div class="shape-picker-menu" id="shape-3d-menu" role="menu" popover>
         <button type="button" role="menuitemradio" aria-checked="true" data-shape-option="shape:cube">Cube</button>
         <button type="button" role="menuitemradio" aria-checked="false" data-shape-option="shape:pyramid">Pyramid</button>
@@ -287,6 +311,16 @@
         </button>
         <button class="tool-button" id="flip-vertical" type="button" title="Flip the complete selection vertically">
           ⇅ <span class="tool-button-label">FlipV</span>
+        </button>
+        <button
+          class="tool-button"
+          id="toggle-arrow-start"
+          type="button"
+          aria-pressed="false"
+          title="Toggle a second arrowhead at the start"
+          hidden
+        >
+          ↔ <span class="tool-button-label">Double</span>
         </button>
         <button class="tool-button" id="mirror-text-toggle" type="button" aria-pressed="false" title="Mirror textbox glyphs when flipping instead of keeping text readable" hidden>
           T↔ <span class="tool-button-label">Mirror text</span>
@@ -528,6 +562,14 @@
               aria-controls="floor-plan-elements-section"
               aria-selected="true"
             >Structures</button>
+            <button
+              type="button"
+              role="tab"
+              id="floor-plan-tab-maintenance"
+              data-floor-plan-tab="maintenance"
+              aria-controls="floor-plan-elements-section"
+              aria-selected="false"
+            >Maintenance</button>
             <button
               type="button"
               role="tab"
@@ -835,6 +877,6 @@
       </footer>
     </form>
   </dialog>
-  <script type="module" src="visual-board.js?v=44"></script>
+  <script type="module" src="visual-board.js?v=46"></script>
 </body>
 </html>

@@ -10,6 +10,13 @@ test("selection toolbar uses consolidated contextual actions", async () => {
 
   assert.match(markup, /tool-button-label">FlipH</);
   assert.match(markup, /tool-button-label">FlipV</);
+  assert.match(markup, /id="line-control" data-line-picker/);
+  assert.match(markup, /data-line-option="line"/);
+  assert.match(markup, /data-line-option="connector"/);
+  assert.match(markup, /id="toggle-arrow-start"/);
+  assert.doesNotMatch(markup, /data-tool="line"/);
+  assert.doesNotMatch(markup, /data-tool="connector"/);
+  assert.match(markup, /data-floor-plan-tab="maintenance"/);
   assert.doesNotMatch(markup, /id="curve-vertices"/);
   assert.doesNotMatch(markup, /id="reinitialize-curve-vertices"/);
   assert.doesNotMatch(markup, /id="explode-selection"/);

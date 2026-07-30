@@ -39,7 +39,7 @@ test("custom templates can be added, edited, and removed immutably", () => {
   const updated = updateFloorPlanTemplate(
     added,
     "custom-room",
-    { name: "Garden guest suite", description: "Rear wing", category: "structures" },
+    { name: "Garden guest suite", description: "Rear wing", category: "maintenance" },
     BUILT_INS,
     20,
   );
@@ -49,7 +49,7 @@ test("custom templates can be added, edited, and removed immutably", () => {
   assert.equal(updated.items[0].name, "Garden guest suite");
   assert.equal(updated.items[0].description, "Rear wing");
   assert.equal(updated.items[0].updatedAt, 20);
-  assert.equal(updated.items[0].category, "structures");
+  assert.equal(updated.items[0].category, "maintenance");
   assert.equal(removed.items.length, 0);
 });
 

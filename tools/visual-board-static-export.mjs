@@ -22,7 +22,7 @@ import {
   getObjectBounds,
   getObjectSegments,
   getShapeCenter,
-} from "./visual-board-geometry.mjs?v=10";
+} from "./visual-board-geometry.mjs?v=11";
 import { normalizeImageCrop } from "./visual-board-image.mjs?v=1";
 import { getTextColorSegments } from "./visual-board-rich-text.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
@@ -30,7 +30,7 @@ import { getTextWorldFontSize } from "./visual-board-text.mjs?v=2";
 import {
   formatFloorPlanDimension,
   isFloorPlanObjectVisible,
-} from "./visual-board-floor-plan.mjs?v=5";
+} from "./visual-board-floor-plan.mjs?v=6";
 
 const DEFAULT_EXPORT_PADDING = 24;
 const DEFAULT_STROKE_COLOR = "#000000";
@@ -321,22 +321,31 @@ function renderConnector(object, context) {
   const endY = finiteNumber(object.endY, startY);
   const angle = Math.atan2(endY - startY, endX - startX);
   const arrowSize = Math.max(14, finiteNumber(object.strokeWidth, 1) * 4);
-  const arrowPoints = [
-    { x: endX, y: endY },
-    {
-      x: endX - arrowSize * Math.cos(angle - Math.PI / 6),
-      y: endY - arrowSize * Math.sin(angle - Math.PI / 6),
-    },
-    {
-      x: endX - arrowSize * Math.cos(angle + Math.PI / 6),
-      y: endY - arrowSize * Math.sin(angle + Math.PI / 6),
-    },
-  ];
   const color = normalizeColor(object.color, DEFAULT_STROKE_COLOR);
   return [
     renderLine(object, context),
-    `<polygon points="${pointsAttribute(arrowPoints, context.precision)}" fill="${color}" stroke="none"/>`,
+    ...(object.arrowStart
+      ? [renderArrowHead(startX, startY, angle + Math.PI, arrowSize, color, context)]
+      : []),
+    ...(object.arrowEnd !== false
+      ? [renderArrowHead(endX, endY, angle, arrowSize, color, context)]
+      : []),
   ].join("");
+}
+
+function renderArrowHead(x, y, angle, arrowSize, color, context) {
+  const points = [
+    { x, y },
+    {
+      x: x - arrowSize * Math.cos(angle - Math.PI / 6),
+      y: y - arrowSize * Math.sin(angle - Math.PI / 6),
+    },
+    {
+      x: x - arrowSize * Math.cos(angle + Math.PI / 6),
+      y: y - arrowSize * Math.sin(angle + Math.PI / 6),
+    },
+  ];
+  return `<polygon points="${pointsAttribute(points, context.precision)}" fill="${color}" stroke="none"/>`;
 }
 
 function renderArc(object, context) {

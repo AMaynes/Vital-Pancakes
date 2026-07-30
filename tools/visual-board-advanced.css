@@ -3,6 +3,8 @@
 }
 
 .tool-workspace.is-floor-plan-open {
+  --active-board-panel-width: var(--floor-plan-panel-width);
+
   grid-template-columns: minmax(0, 1fr) var(--floor-plan-panel-width);
 }
 
@@ -134,7 +136,7 @@
 
 .floor-plan-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border: 1px solid var(--line-strong);
 }
 
@@ -433,6 +435,8 @@
 
   .tool-workspace,
   .tool-workspace.is-floor-plan-open {
+    --active-board-panel-width: 0px;
+
     width: 100%;
     grid-template-columns: minmax(0, 1fr);
   }

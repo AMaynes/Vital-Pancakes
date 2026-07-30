@@ -191,6 +191,8 @@ test("existing drawing primitives and embedded raster images serialize as vector
       y: 45,
       endX: 40,
       endY: 45,
+      arrowStart: true,
+      arrowEnd: true,
     },
     {
       ...baseStyle,
@@ -274,6 +276,7 @@ test("existing drawing primitives and embedded raster images serialize as vector
   ].forEach((type) => assert.match(svg, new RegExp(`data-object-type="${type}"`)));
   assert.match(svg, /stroke-dasharray="10 6\.4"/);
   assert.match(svg, /<polygon points="40,45/);
+  assert.match(svg, /<polygon points="0,45/);
   assert.match(svg, / Q 20 30 40 60"/);
   assert.match(svg, /fill-rule="evenodd"/);
   assert.match(svg, /<image href="data:image\/png;base64,/);

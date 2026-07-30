@@ -17,12 +17,12 @@ import {
   addFloorPlanRoom,
   createFloorPlanElement,
   createFloorPlanTemplate,
-  cycleFloorPlanRoom,
   hasFloorPlanRemovalPassword,
+  moveFloorPlanRoom,
   normalizeFloorPlanSettings,
   normalizeFloorPlanRoomState,
   removeActiveFloorPlanRoom,
-} from "./visual-board-floor-plan.mjs?v=5";
+} from "./visual-board-floor-plan.mjs?v=6";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -32,7 +32,7 @@ import {
   replaceFloorPlanTemplate,
   restoreBuiltInFloorPlanTemplate,
   updateFloorPlanTemplate,
-} from "./visual-board-floor-plan-templates.mjs?v=2";
+} from "./visual-board-floor-plan-templates.mjs?v=3";
 import {
   createCharacterPackage,
   instantiateCharacter,
@@ -68,7 +68,7 @@ import {
 import {
   getObjectBounds,
   getObjectSegments,
-} from "./visual-board-geometry.mjs?v=10";
+} from "./visual-board-geometry.mjs?v=11";
 import { flipBoardSelection } from "./visual-board-transform.mjs?v=3";
 
 const MAX_OBJECTS_PER_REQUEST = 500;
@@ -229,9 +229,10 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("floor-plan.templates.remove", ["delete"], "Delete a saved template or hide a built-in template."),
   command("floor-plan.templates.restore", ["update"], "Restore a built-in template and discard its replacement."),
   command("floor-plan.templates.insert", ["create"], "Insert a visible saved, customized, or built-in floor-plan template."),
-  command("floor-plan.layers.cycle", ["update"], "Switch a layer designator to its next or previous room or floor."),
-  command("floor-plan.layers.add", ["create"], "Add and activate a room or floor in a layer designator."),
-  command("floor-plan.layers.remove", ["delete"], "Remove the active room or floor and its assigned objects."),
+  command("floor-plan.layers.move", ["update"], "Move a layer designator up or down one level without wrapping."),
+  command("floor-plan.layers.cycle", ["update"], "Legacy alias for moving a layer designator one level without wrapping."),
+  command("floor-plan.layers.add", ["create"], "Add and activate an automatically named positive or negative level."),
+  command("floor-plan.layers.remove", ["delete"], "Remove the active level and its assigned objects."),
   command("diagram.create", ["create"], "Create a complete semantic diagram in one command."),
   command("viewport.focus", ["update"], "Focus the board viewport on targets or a point."),
   command("board.settings.update", ["update"], "Update grid, snapping, and floor-plan settings."),
@@ -434,6 +435,8 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
             h: { type: "number", exclusiveMinimum: 0 },
             endX: { type: "number" },
             endY: { type: "number" },
+            arrowStart: { type: "boolean" },
+            arrowEnd: { type: "boolean" },
             midX: { type: "number" },
             midY: { type: "number" },
             curvePoints: {
@@ -493,6 +496,8 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
             additionalProperties: false,
           },
           locked: { type: "boolean" },
+          arrowStart: { type: "boolean" },
+          arrowEnd: { type: "boolean" },
           text: { type: "string" },
           fontSize: { type: "number", minimum: 6, maximum: 96 },
           fontFamily: { enum: [...FONT_FAMILIES] },
@@ -552,6 +557,8 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
     color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
     strokeWidth: { type: "number", minimum: 1, maximum: 24 },
     dashPattern: { enum: [...DASH_PATTERNS] },
+    arrowStart: { type: "boolean" },
+    arrowEnd: { type: "boolean" },
   }),
   "objects.disconnect": schema([], {
     from: REFERENCE_SCHEMA,
@@ -596,20 +603,20 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
     elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     name: { type: "string", maxLength: 80 },
     description: { type: "string", maxLength: 240 },
-    category: { enum: ["structures", "furniture", "tools"] },
+    category: { enum: ["structures", "maintenance", "furniture", "tools"] },
     targets: TARGET_SCHEMA,
   }),
   "floor-plan.elements.update": schema(["elementId"], {
     elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     name: { type: "string", maxLength: 80 },
     description: { type: "string", maxLength: 240 },
-    category: { enum: ["structures", "furniture", "tools"] },
+    category: { enum: ["structures", "maintenance", "furniture", "tools"] },
   }),
   "floor-plan.elements.replace": schema(["elementId", "targets"], {
     elementId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     name: { type: "string", maxLength: 80 },
     description: { type: "string", maxLength: 240 },
-    category: { enum: ["structures", "furniture", "tools"] },
+    category: { enum: ["structures", "maintenance", "furniture", "tools"] },
     targets: TARGET_SCHEMA,
   }),
   "floor-plan.elements.remove": schema(["elementId", "password"], {
@@ -655,13 +662,23 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
     templateId: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
     placement: PLACEMENT_SCHEMA,
   }),
+  "floor-plan.layers.move": schema(["designatorId", "direction"], {
+    designatorId: { type: "string", minLength: 1, maxLength: 128 },
+    direction: { enum: ["up", "down"] },
+  }),
   "floor-plan.layers.cycle": schema(["designatorId"], {
     designatorId: { type: "string", minLength: 1, maxLength: 128 },
     direction: { enum: ["next", "previous"] },
   }),
-  "floor-plan.layers.add": schema(["designatorId", "name"], {
+  "floor-plan.layers.add": schema(["designatorId"], {
     designatorId: { type: "string", minLength: 1, maxLength: 128 },
-    name: { type: "string", minLength: 1, maxLength: 80 },
+    level: { type: "integer", minimum: -99, maximum: 99 },
+    name: {
+      type: "string",
+      minLength: 1,
+      maxLength: 80,
+      description: "Legacy level name; its integer is used when level is omitted.",
+    },
   }),
   "floor-plan.layers.remove": schema(["designatorId", "password"], {
     designatorId: { type: "string", minLength: 1, maxLength: 128 },
@@ -1063,7 +1080,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 7,
+    version: 8,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -1199,11 +1216,11 @@ export function getVisualBoardAiExamples() {
       },
     },
     {
-      name: "Add a designator floor",
+      name: "Add a basement level",
       command: {
         type: "floor-plan.layers.add",
         designatorId: "layer-designator-id-from-context",
-        name: "Floor 2",
+        level: -1,
       },
     },
     {
@@ -1422,6 +1439,10 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
         y: roundNumber(object.endY),
       };
     }
+    if (object.type === "connector") {
+      summary.arrowStart = Boolean(object.arrowStart);
+      summary.arrowEnd = object.arrowEnd !== false;
+    }
     if (object.type === "arc") {
       summary.curvePointCount = getCurveVertices(object).length;
       if (detail === "geometry") {
@@ -1434,6 +1455,8 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
     if (object.semantic?.role === "floor-plan-layer-designator") {
       const layerState = normalizeFloorPlanRoomState(object);
       summary.floorPlanLayer = {
+        levels: layerState.floorPlanRooms,
+        activeLevelId: layerState.activeFloorPlanRoomId,
         rooms: layerState.floorPlanRooms,
         activeRoomId: layerState.activeFloorPlanRoomId,
       };
@@ -1635,8 +1658,15 @@ function executeCommand(runtime, commandValue, commandIndex) {
     case "floor-plan.templates.insert":
       insertSavedFloorPlanCatalogItem(runtime, command, commandIndex, "template");
       break;
+    case "floor-plan.layers.move":
+      moveFloorPlanLayer(runtime, command, commandIndex);
+      break;
     case "floor-plan.layers.cycle":
-      cycleFloorPlanLayer(runtime, command, commandIndex);
+      moveFloorPlanLayer(runtime, {
+        ...command,
+        direction: command.direction === "previous" ? "down" : "up",
+        outputType: "floor-plan.layers.cycle",
+      }, commandIndex);
       break;
     case "floor-plan.layers.add":
       addFloorPlanLayer(runtime, command, commandIndex);
@@ -1746,6 +1776,12 @@ function createObjectFromDraft(runtime, draftValue, defaultPoint, commandIndex) 
       y,
       endX: finiteCoordinate(draft.endX, x + 180, "endX", commandIndex),
       endY: finiteCoordinate(draft.endY, y, "endY", commandIndex),
+      ...(objectType === "connector"
+        ? {
+          arrowStart: Boolean(draft.arrowStart),
+          arrowEnd: draft.arrowEnd !== false,
+        }
+        : {}),
       ...style,
       semantic,
     };
@@ -1842,6 +1878,8 @@ function updateObjects(runtime, command, commandIndex) {
     "zIndex",
     "shadow",
     "locked",
+    "arrowStart",
+    "arrowEnd",
     "text",
     "fontSize",
     "fontFamily",
@@ -1920,6 +1958,12 @@ function updateObjects(runtime, command, commandIndex) {
       object.shadow = normalizeArchitectureShadow(patch.shadow, commandIndex);
     }
     if (patch.locked !== undefined) object.locked = Boolean(patch.locked);
+    if (patch.arrowStart !== undefined && object.type === "connector") {
+      object.arrowStart = Boolean(patch.arrowStart);
+    }
+    if (patch.arrowEnd !== undefined && object.type === "connector") {
+      object.arrowEnd = Boolean(patch.arrowEnd);
+    }
     if (patch.rotation !== undefined && "rotation" in object) {
       object.rotation = finiteNumber(patch.rotation, object.rotation ?? 0);
     }
@@ -2366,6 +2410,12 @@ function connectObjects(runtime, command, commandIndex) {
     y: sourceBounds.y + sourceBounds.height / 2,
     endX: targetBounds.x + targetBounds.width / 2,
     endY: targetBounds.y + targetBounds.height / 2,
+    ...(command.connectorType === "line"
+      ? {}
+      : {
+        arrowStart: Boolean(command.arrowStart),
+        arrowEnd: command.arrowEnd !== false,
+      }),
     ...normalizeStyle(command, commandIndex),
     semantic: normalizeSemantic({
       label: command.label,
@@ -2773,23 +2823,26 @@ function getFloorPlanLayerDesignator(runtime, designatorId, commandIndex) {
   return object;
 }
 
-function cycleFloorPlanLayer(runtime, command, commandIndex) {
+function moveFloorPlanLayer(runtime, command, commandIndex) {
   const object = getFloorPlanLayerDesignator(
     runtime,
     command.designatorId,
     commandIndex,
   );
-  const state = cycleFloorPlanRoom(
+  const previousState = normalizeFloorPlanRoomState(object);
+  const state = moveFloorPlanRoom(
     object,
-    command.direction === "previous" ? -1 : 1,
+    command.direction === "down" ? -1 : 1,
   );
   Object.assign(object, state);
   runtime.updatedIds.add(object.id);
   runtime.state.selectedIds = [object.id];
   runtime.outputs.push({
-    type: "floor-plan.layers.cycle",
+    type: command.outputType ?? "floor-plan.layers.move",
     designatorId: object.id,
+    activeLevelId: state.activeFloorPlanRoomId,
     activeRoomId: state.activeFloorPlanRoomId,
+    moved: state.activeFloorPlanRoomId !== previousState.activeFloorPlanRoomId,
   });
 }
 
@@ -2800,7 +2853,11 @@ function addFloorPlanLayer(runtime, command, commandIndex) {
     commandIndex,
   );
   try {
-    const next = addFloorPlanRoom(object, command.name, runtime.createId);
+    const next = addFloorPlanRoom(
+      object,
+      command.level ?? command.name,
+      runtime.createId,
+    );
     const { room, ...state } = next;
     Object.assign(object, state);
     runtime.updatedIds.add(object.id);

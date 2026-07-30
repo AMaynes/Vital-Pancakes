@@ -17,13 +17,14 @@ export const FLOOR_PLAN_ELEMENT_DEFINITIONS = Object.freeze({
   "garage-door": definition("Garage Door", "structures"),
   window: definition("Window", "structures"),
   stairs: definition("Stairs", "structures"),
-  "electrical-route": definition("Electrical Route", "structures"),
-  "electric-meter": definition("Electric Meter", "structures"),
-  "electrical-breaker-box": definition("Electrical Breaker-box", "structures"),
-  "plumbing-route": definition("Plumbing Route", "structures"),
-  "plumbing-meter": definition("Plumbing Meter", "structures"),
-  "plumbing-valve": definition("Plumbing Valve", "structures"),
   dimension: definition("Dimension", "structures"),
+
+  "electrical-route": definition("Electrical Route", "maintenance"),
+  "electric-meter": definition("Electric Meter", "maintenance"),
+  "electrical-breaker-box": definition("Electrical Breaker-box", "maintenance"),
+  "plumbing-route": definition("Plumbing Route", "maintenance"),
+  "plumbing-meter": definition("Plumbing Meter", "maintenance"),
+  "plumbing-valve": definition("Plumbing Valve", "maintenance"),
 
   bed: definition("Bed", "furniture"),
   sofa: definition("Sofa", "furniture"),
@@ -327,10 +328,41 @@ export function createFloorPlanElement(kind, origin, settings, createIdentifier)
   }
 
   if (kind === "labeler" || kind === "room-label") {
-    const object = label("Label", 0, 0, 5, 1.2, "labeler");
-    object.layerId = "labels";
-    object.semantic.label = "Hover label";
-    return [object];
+    const labelerId = id();
+    const detection = shape(
+      "rectangle",
+      3,
+      1.5,
+      4,
+      3,
+      "labeler-detection",
+      "#f7f4ec",
+    );
+    delete detection.groupId;
+    delete detection.rigidGroup;
+    detection.fillOpacity = 0.08;
+    detection.dashPattern = "dashed";
+    detection.hiddenInExport = true;
+    detection.semantic.diagramId = labelerId;
+    detection.semantic.label = "Label detection area";
+
+    const arrow = editableLine(3, 1.2, 5, 2.9, "labeler-arrow");
+    arrow.type = "connector";
+    arrow.arrowStart = false;
+    arrow.arrowEnd = true;
+    arrow.layerId = "labels";
+    arrow.semantic.diagramId = labelerId;
+    arrow.semantic.label = "Label pointer";
+
+    const textbox = label("Label", 0, 0, 4.5, 1.2, "labeler-text");
+    delete textbox.groupId;
+    delete textbox.rigidGroup;
+    textbox.layerId = "labels";
+    textbox.fillColor = "#ffffff";
+    textbox.fillOpacity = 0.94;
+    textbox.semantic.diagramId = labelerId;
+    textbox.semantic.label = "Hover label";
+    return [detection, arrow, textbox];
   }
   if (kind === "layer-designator") {
     const object = shape(
@@ -344,7 +376,7 @@ export function createFloorPlanElement(kind, origin, settings, createIdentifier)
     );
     object.fillOpacity = 0.14;
     object.dashPattern = "dashed";
-    object.floorPlanRooms = [{ id: id(), name: "Floor 1" }];
+    object.floorPlanRooms = [{ id: id(), name: "Level 1", level: 1 }];
     object.activeFloorPlanRoomId = object.floorPlanRooms[0].id;
     return [object];
   }
@@ -495,18 +527,29 @@ export function createFloorPlanTemplate(kind, origin, settings, createIdentifier
 
 export function normalizeFloorPlanRoomState(object) {
   const rooms = [];
-  const seen = new Set();
+  const seenIds = new Set();
+  const seenLevels = new Set();
   (Array.isArray(object?.floorPlanRooms) ? object.floorPlanRooms : [])
     .forEach((room) => {
       const id = normalizeIdentifier(room?.id);
-      if (!id || seen.has(id)) return;
-      seen.add(id);
+      if (!id || seenIds.has(id)) return;
+      seenIds.add(id);
+      const requestedLevel = normalizeLevelNumber(
+        room?.level ?? room?.name,
+        null,
+      );
+      const level = requestedLevel !== null && !seenLevels.has(requestedLevel)
+        ? requestedLevel
+        : getNextPositiveLevel(seenLevels);
+      seenLevels.add(level);
       rooms.push({
         id,
-        name: normalizeRoomName(room?.name, rooms.length + 1),
+        name: formatLevelName(level),
+        level,
       });
     });
-  if (!rooms.length) rooms.push({ id: "floor-1", name: "Floor 1" });
+  if (!rooms.length) rooms.push({ id: "level-1", name: "Level 1", level: 1 });
+  rooms.sort((first, second) => first.level - second.level);
   const activeFloorPlanRoomId = rooms.some((room) => (
     room.id === object?.activeFloorPlanRoomId
   ))
@@ -515,31 +558,48 @@ export function normalizeFloorPlanRoomState(object) {
   return { floorPlanRooms: rooms.slice(0, 50), activeFloorPlanRoomId };
 }
 
-export function cycleFloorPlanRoom(object, direction = 1) {
+export function moveFloorPlanRoom(object, direction = 1) {
   const state = normalizeFloorPlanRoomState(object);
   const currentIndex = state.floorPlanRooms.findIndex((room) => (
     room.id === state.activeFloorPlanRoomId
   ));
-  const nextIndex = (
-    currentIndex + (Number(direction) < 0 ? -1 : 1) + state.floorPlanRooms.length
-  ) % state.floorPlanRooms.length;
+  const nextIndex = Math.max(
+    0,
+    Math.min(
+      state.floorPlanRooms.length - 1,
+      currentIndex + (Number(direction) < 0 ? -1 : 1),
+    ),
+  );
   return {
     ...state,
     activeFloorPlanRoomId: state.floorPlanRooms[nextIndex].id,
   };
 }
 
-export function addFloorPlanRoom(object, name, createIdentifier) {
+/**
+ * Backward-compatible command helper. Level movement no longer wraps.
+ */
+export function cycleFloorPlanRoom(object, direction = 1) {
+  return moveFloorPlanRoom(object, direction);
+}
+
+export function addFloorPlanRoom(object, levelValue, createIdentifier) {
   const state = normalizeFloorPlanRoomState(object);
   if (state.floorPlanRooms.length >= 50) {
-    throw new TypeError("A layer designator can contain at most 50 rooms or floors.");
+    throw new TypeError("A layer designator can contain at most 50 levels.");
   }
+  const levels = new Set(state.floorPlanRooms.map((room) => room.level));
+  const level = normalizeLevelNumber(levelValue, getNextPositiveLevel(levels));
+  if (levels.has(level)) throw new TypeError(`${formatLevelName(level)} already exists.`);
   const room = {
-    id: normalizeIdentifier(createIdentifier()) || `floor-${state.floorPlanRooms.length + 1}`,
-    name: normalizeRoomName(name, state.floorPlanRooms.length + 1),
+    id: normalizeIdentifier(createIdentifier()) || `level-${level}`,
+    name: formatLevelName(level),
+    level,
   };
+  const floorPlanRooms = [...state.floorPlanRooms, room]
+    .sort((first, second) => first.level - second.level);
   return {
-    floorPlanRooms: [...state.floorPlanRooms, room],
+    floorPlanRooms,
     activeFloorPlanRoomId: room.id,
     room,
   };
@@ -548,7 +608,7 @@ export function addFloorPlanRoom(object, name, createIdentifier) {
 export function removeActiveFloorPlanRoom(object) {
   const state = normalizeFloorPlanRoomState(object);
   if (state.floorPlanRooms.length === 1) {
-    throw new TypeError("A layer designator must keep at least one room or floor.");
+    throw new TypeError("A layer designator must keep at least one level.");
   }
   const removedRoomId = state.activeFloorPlanRoomId;
   const currentIndex = state.floorPlanRooms.findIndex((room) => room.id === removedRoomId);
@@ -569,10 +629,14 @@ export function isFloorPlanObjectVisible(object, allObjects, settings, options =
     || role === "floor-plan-dimension-tick"
   )) return false;
   if (
-    role === "floor-plan-labeler"
+    [
+      "floor-plan-labeler",
+      "floor-plan-labeler-arrow",
+      "floor-plan-labeler-text",
+    ].includes(role)
     && !config.labelsAlwaysVisible
     && options.showHoverLabels !== true
-    && !options.visibleLabelIds?.has(object.id)
+    && !options.visibleLabelIds?.has(object.semantic?.diagramId ?? object.id)
   ) return false;
 
   const designatorId = object?.semantic?.referenceId;
@@ -603,6 +667,7 @@ function definition(name, group) {
 function getDefaultLayer(group, kind) {
   if (group === "furniture") return "furniture";
   if (group === "tools") return "labels";
+  if (group === "maintenance") return "fixtures";
   if (kind === "dimension") return "dimensions";
   if (["door", "double-door", "sliding-door", "garage-door", "window"].includes(kind)) {
     return "openings";
@@ -624,9 +689,22 @@ function normalizeIdentifier(value) {
     : "";
 }
 
-function normalizeRoomName(value, index) {
-  const name = String(value ?? "").trim();
-  return name ? name.slice(0, 80) : `Floor ${index}`;
+function normalizeLevelNumber(value, fallback) {
+  const direct = typeof value === "number"
+    ? value
+    : Number(String(value ?? "").trim().match(/-?\d+/)?.[0]);
+  if (!Number.isInteger(direct) || direct < -99 || direct > 99) return fallback;
+  return direct;
+}
+
+function getNextPositiveLevel(levels) {
+  let level = 1;
+  while (levels.has(level) && level < 99) level += 1;
+  return level;
+}
+
+function formatLevelName(level) {
+  return `Level ${level}`;
 }
 
 function clamp(value, minimum, maximum) {
