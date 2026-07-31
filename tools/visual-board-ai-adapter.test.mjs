@@ -299,6 +299,31 @@ test("floor-plan commands insert ordinary editable objects with normalized setti
   assert.equal(result.state.board.settings.floorPlan.alignmentGuides, false);
 });
 
+test("AI inserts Floor Plan-only polygon wall primitives with exact side counts", () => {
+  const result = execute(createState(), [{
+    type: "floor-plan.insert",
+    kind: "outside-fence",
+    placement: { type: "point", x: 100, y: 200 },
+    settings: {
+      wallSides: 9,
+      pixelsPerUnit: 20,
+      wallThickness: 0.5,
+    },
+  }]);
+
+  assert.equal(result.state.board.objects.length, 9);
+  assert.equal(result.state.board.settings.floorPlan.wallSides, 9);
+  assert.ok(result.state.board.objects.every((object) => (
+    object.semantic.role === "floor-plan-outside-fence"
+    && object.semantic.tags.includes("wall-shape")
+  )));
+  assert.throws(() => execute(result.state, [{
+    type: "lines.points.insert",
+    targets: { ids: [result.state.board.objects[0].id] },
+    points: [{ x: 100, y: 100 }],
+  }]), (error) => error.code === "floor-plan-wall-face-limit");
+});
+
 test("AI inserts authored floor-plan defaults as single editable units", () => {
   const result = execute(createState(), [{
     type: "floor-plan.insert",
@@ -391,7 +416,7 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 15);
+  assert.equal(capabilities.version, 16);
   assert.equal(capabilities.commands.length, 54);
   const createSchema = capabilities.commands
     .find((command) => command.type === "objects.create").schema;
@@ -404,6 +429,8 @@ test("every advertised command has a field schema and unknown fields fail", () =
   assert.equal(viewportSchema.properties.zoom.maximum, 32);
   assert.ok(floorPlanSchema.properties.kind.enum.includes("sectional-sofa"));
   assert.ok(floorPlanSchema.properties.kind.enum.includes("pool-hot-tub"));
+  assert.ok(floorPlanSchema.properties.kind.enum.includes("outer-building-wall"));
+  assert.equal(floorPlanSchema.properties.settings.properties.wallSides.maximum, 9);
   assert.ok(capabilities.architectureCatalog.symbols.length >= 100);
   assert.ok(capabilities.architectureCatalog.materials.length >= 20);
   capabilities.commands.forEach((command) => {

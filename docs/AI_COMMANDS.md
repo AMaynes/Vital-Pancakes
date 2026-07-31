@@ -168,6 +168,11 @@ default visible again. Building-block contents remain editable and
 relationship-preserving. Raster images are rejected and should use the general
 Board Library instead.
 
+`floor-plan.insert` also exposes `outer-building-wall`, `inner-building-wall`,
+`outside-wall`, and `outside-fence`. Set `settings.wallSides` from 3 through 9.
+These wall primitives keep Floor Plan’s automatic shell classification,
+overlap deduplication, and opening attachment behavior.
+
 ```json
 {
   "protocolVersion": 1,

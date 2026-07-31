@@ -16,6 +16,11 @@ import {
   getSelectionUnits,
   pushObjectGroupLevel,
 } from "./visual-board-groups.mjs?v=5";
+import {
+  createFloorPlanWallShape,
+  isFloorPlanWallElement,
+  normalizeFloorPlanWallSides,
+} from "./visual-board-floor-plan-walls.mjs?v=1";
 
 export const FLOOR_PLAN_REMOVAL_PASSWORD = "password";
 
@@ -63,6 +68,10 @@ export const FLOOR_PLAN_ELEMENT_DEFINITIONS = Object.freeze({
 
   labeler: definition("Labeler", "tools"),
   "layer-designator": definition("Layer Designator", "tools"),
+  "outer-building-wall": definition("Outer Bldg Wall", "tools"),
+  "inner-building-wall": definition("Inner Bldg Wall", "tools"),
+  "outside-wall": definition("Outside Wall", "tools"),
+  "outside-fence": definition("Outside Fence", "tools"),
 
   // Retained IDs keep older boards and AI commands compatible.
   "room-label": definition("Room Label", "legacy"),
@@ -115,6 +124,7 @@ export function normalizeFloorPlanSettings(value = {}) {
       0.02,
       10,
     ),
+    wallSides: normalizeFloorPlanWallSides(value.wallSides),
     gridSize: clamp(Number(value.gridSize) || 32, 4, 200),
     alignmentGuides: value.alignmentGuides !== false,
     dimensionsVisible: value.dimensionsVisible !== false,
@@ -138,6 +148,9 @@ export function createFloorPlanElement(kind, origin, settings, createIdentifier)
   const id = createIdentifier;
   const scale = config.pixelsPerUnit;
   const definitionValue = FLOOR_PLAN_ELEMENT_DEFINITIONS[kind];
+  if (isFloorPlanWallElement(kind)) {
+    return createFloorPlanWallShape(kind, origin, config, id);
+  }
   const defaultLayer = getDefaultLayer(definitionValue.group, kind);
   const authoredDefault = getFloorPlanDefaultCharacter(kind);
   if (authoredDefault) {

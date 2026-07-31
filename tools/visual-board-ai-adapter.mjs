@@ -22,7 +22,13 @@ import {
   normalizeFloorPlanSettings,
   normalizeFloorPlanRoomState,
   removeActiveFloorPlanRoom,
-} from "./visual-board-floor-plan.mjs?v=7";
+} from "./visual-board-floor-plan.mjs?v=8";
+import {
+  FLOOR_PLAN_WALL_SIDE_MAX,
+  isFloorPlanWallObject,
+  reconcileFloorPlanWalls,
+  reflowFloorPlanOpeningAttachments,
+} from "./visual-board-floor-plan-walls.mjs?v=1";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -634,6 +640,7 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
         units: { enum: ["ft", "m", "in", "cm"] },
         pixelsPerUnit: { type: "number", minimum: 4, maximum: 200 },
         wallThickness: { type: "number", minimum: 0.02, maximum: 10 },
+        wallSides: { type: "integer", minimum: 3, maximum: FLOOR_PLAN_WALL_SIDE_MAX },
         gridSize: { type: "number", minimum: 4, maximum: 200 },
         alignmentGuides: { type: "boolean" },
         dimensionsVisible: { type: "boolean" },
@@ -766,6 +773,7 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
             units: { enum: ["ft", "m", "in", "cm"] },
             pixelsPerUnit: { type: "number", minimum: 4, maximum: 200 },
             wallThickness: { type: "number", minimum: 0.02, maximum: 10 },
+            wallSides: { type: "integer", minimum: 3, maximum: FLOOR_PLAN_WALL_SIDE_MAX },
             gridSize: { type: "number", minimum: 4, maximum: 200 },
             alignmentGuides: { type: "boolean" },
             dimensionsVisible: { type: "boolean" },
@@ -1128,7 +1136,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 15,
+    version: 16,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -1642,6 +1650,7 @@ export function serializeVisualBoardContext(sourceState, options = {}) {
         units: floorPlanSettings.units,
         pixelsPerUnit: floorPlanSettings.pixelsPerUnit,
         wallThickness: floorPlanSettings.wallThickness,
+        wallSides: floorPlanSettings.wallSides,
         gridSize: floorPlanSettings.gridSize,
         alignmentGuides: floorPlanSettings.alignmentGuides,
         dimensionsVisible: floorPlanSettings.dimensionsVisible,
@@ -2063,11 +2072,12 @@ function updateObjects(runtime, command, commandIndex) {
     if (patch.strokeWidth !== undefined) {
       const supportsArchitecturalStroke = ARCHITECTURE_OBJECT_TYPES.includes(object.type)
         || object.semantic?.role?.startsWith("architecture-")
-        || object.semantic?.role === "floor-plan-wall";
+        || object.semantic?.role === "floor-plan-wall"
+        || isFloorPlanWallObject(object);
       object.strokeWidth = clampNumber(
         patch.strokeWidth,
         VISUAL_BOARD_MIN_STROKE_WIDTH,
-        supportsArchitecturalStroke ? 240 : 24,
+        isFloorPlanWallObject(object) ? 4_000 : supportsArchitecturalStroke ? 240 : 24,
         object.strokeWidth,
       );
     }
@@ -2513,6 +2523,19 @@ function insertLinePoints(runtime, command, commandIndex) {
   }
 
   const points = requireInsertionPoints(command.points, "points", commandIndex);
+  if (isFloorPlanWallObject(target)) {
+    const wallSegmentCount = runtime.state.board.objects.filter((object) => (
+      object.vertexNetworkId === target.vertexNetworkId
+      && isFloorPlanWallObject(object)
+    )).length;
+    if (wallSegmentCount + points.length > FLOOR_PLAN_WALL_SIDE_MAX) {
+      throw commandError(
+        "Floor-plan wall polygons support at most 9 faces.",
+        "floor-plan-wall-face-limit",
+        commandIndex,
+      );
+    }
+  }
   let segments = [target];
   const inserted = [];
   points.forEach((point) => {
@@ -2542,6 +2565,17 @@ function insertLinePoints(runtime, command, commandIndex) {
   runtime.state.board.objects = runtime.state.board.objects.flatMap((object) => (
     object.id === target.id ? segments : [object]
   ));
+  if (isFloorPlanWallObject(target)) {
+    const wallResult = reconcileFloorPlanWalls(
+      runtime.state.board.objects,
+      runtime.state.board.settings.floorPlan,
+      runtime.createId,
+    );
+    runtime.state.board.objects = reflowFloorPlanOpeningAttachments(
+      wallResult.objects,
+      runtime.state.board.settings.floorPlan,
+    ).objects;
+  }
   runtime.updatedIds.add(target.id);
   runtime.createdIds.push(
     ...segments
@@ -2942,9 +2976,44 @@ function insertFloorPlan(runtime, command, commandIndex) {
       : createFloorPlanElement(kind, origin, settings, runtime.createId);
 
   runtime.state.board.objects.push(...objects);
-  runtime.state.selectedIds = objects.map((object) => object.id);
-  runtime.createdIds.push(...runtime.state.selectedIds);
   runtime.state.board.settings.floorPlan = settings;
+  finishFloorPlanInsertion(runtime, objects);
+}
+
+function finishFloorPlanInsertion(runtime, objects) {
+  if (!objects.some(isFloorPlanWallObject)) {
+    runtime.state.selectedIds = objects.map((object) => object.id);
+    runtime.createdIds.push(...runtime.state.selectedIds.filter((id) => (
+      !runtime.createdIds.includes(id)
+    )));
+    return;
+  }
+  const originalIds = new Set(objects.map((object) => object.id));
+  const originalPathIds = new Set(
+    objects.map((object) => object.semantic?.wallPathId).filter(Boolean),
+  );
+  const wallResult = reconcileFloorPlanWalls(
+    runtime.state.board.objects,
+    runtime.state.board.settings.floorPlan,
+    runtime.createId,
+  );
+  const openingResult = reflowFloorPlanOpeningAttachments(
+    wallResult.objects,
+    runtime.state.board.settings.floorPlan,
+  );
+  runtime.state.board.objects = openingResult.objects;
+  runtime.state.selectedIds = runtime.state.board.objects
+    .filter((object) => (
+      originalIds.has(object.id)
+      || (
+        isFloorPlanWallObject(object)
+        && originalPathIds.has(object.semantic?.wallPathId)
+      )
+    ))
+    .map((object) => object.id);
+  runtime.createdIds.push(...runtime.state.selectedIds.filter((id) => (
+    !runtime.createdIds.includes(id)
+  )));
 }
 
 function listSavedFloorPlanCatalog(runtime, catalogType) {
@@ -3163,6 +3232,9 @@ function insertSavedFloorPlanCatalogItem(runtime, command, commandIndex, catalog
         runtime.createId,
       );
   addArchitectureObjects(runtime, objects);
+  if (objects.some(isFloorPlanWallObject)) {
+    finishFloorPlanInsertion(runtime, objects);
+  }
   runtime.outputs.push({
     type: `${config.commandPrefix}.insert`,
     [config.idField]: itemId,
@@ -5466,6 +5538,12 @@ function normalizeSemantic(value, fallbackLabel = "") {
       : null,
     openingIndex: Number.isInteger(Number(semantic.openingIndex))
       ? Number(semantic.openingIndex)
+      : null,
+    wallOffset: Number.isFinite(Number(semantic.wallOffset))
+      ? Number(semantic.wallOffset)
+      : null,
+    wallAngle: Number.isFinite(Number(semantic.wallAngle))
+      ? Number(semantic.wallAngle)
       : null,
   };
   return Object.fromEntries(Object.entries(normalized).filter(([, item]) => (

@@ -153,7 +153,15 @@ import {
   normalizeFloorPlanSettings,
   normalizeFloorPlanRoomState,
   removeActiveFloorPlanRoom,
-} from "./visual-board-floor-plan.mjs?v=7";
+} from "./visual-board-floor-plan.mjs?v=8";
+import {
+  FLOOR_PLAN_WALL_SIDE_MAX,
+  isFloorPlanOpeningUnit,
+  isFloorPlanWallObject,
+  reconcileFloorPlanWalls,
+  reflowFloorPlanOpeningAttachments,
+  snapFloorPlanOpeningToWall,
+} from "./visual-board-floor-plan-walls.mjs?v=1";
 import {
   addFloorPlanTemplate,
   createFloorPlanTemplateRecord,
@@ -182,7 +190,7 @@ import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=18";
+} from "./visual-board-ai-adapter.mjs?v=19";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
@@ -330,6 +338,7 @@ const floorPlanPanel = document.querySelector("#floor-plan-panel");
 const floorPlanUnits = document.querySelector("#floor-plan-units");
 const floorPlanScale = document.querySelector("#floor-plan-scale");
 const floorPlanWallThickness = document.querySelector("#floor-plan-wall-thickness");
+const floorPlanWallSides = document.querySelector("#floor-plan-wall-sides");
 const floorPlanGridSize = document.querySelector("#floor-plan-grid-size");
 const floorPlanGuides = document.querySelector("#floor-plan-guides");
 const floorPlanDimensionsVisible = document.querySelector("#floor-plan-dimensions-visible");
@@ -480,6 +489,12 @@ function normalizeObjectSemantic(value) {
     levelId: String(value.levelId ?? "").trim().slice(0, 128),
     segmentIndex: Number.isInteger(value.segmentIndex) ? value.segmentIndex : null,
     openingIndex: Number.isInteger(value.openingIndex) ? value.openingIndex : null,
+    wallOffset: Number.isFinite(Number(value.wallOffset))
+      ? Number(value.wallOffset)
+      : null,
+    wallAngle: Number.isFinite(Number(value.wallAngle))
+      ? Number(value.wallAngle)
+      : null,
   };
   const compact = Object.fromEntries(Object.entries(semantic).filter(([, item]) => (
     Array.isArray(item) ? item.length : item !== null && item !== ""
@@ -606,13 +621,15 @@ function normalizeObject(rawObject, options = {}) {
   const type = rawObject.type === "note" ? "textbox" : rawObject.type;
   const normalizedShadow = normalizeObjectShadow(rawObject.shadow);
   const isLayerDesignator = rawObject.semantic?.role === "floor-plan-layer-designator";
+  const isFloorPlanWall = isFloorPlanWallObject(rawObject);
   const supportsArchitecturalStroke = rawObject.semantic?.role === "floor-plan-wall"
+    || isFloorPlanWall
     || rawObject.semantic?.role?.startsWith("architecture-")
     || ["area", "wall", "symbol", "dimension"].includes(type);
   const strokeWidth = clamp(
     finiteNumber(rawObject.strokeWidth ?? rawObject.width, 3),
     VISUAL_BOARD_MIN_STROKE_WIDTH,
-    supportsArchitecturalStroke ? 240 : 24,
+    isFloorPlanWall ? 4_000 : supportsArchitecturalStroke ? 240 : 24,
   );
   const common = {
     id: rawObject.id || createId(),
@@ -2895,6 +2912,21 @@ function updateMoveInteraction(screenPoint, worldPoint) {
   interaction.objects.filter((object) => !object.locked).forEach((object) => {
     moveObject(object, deltaX, deltaY);
   });
+  if (
+    board.settings.floorPlan?.enabled
+    && isFloorPlanOpeningUnit(interaction.objects)
+  ) {
+    const snapped = snapFloorPlanOpeningToWall(
+      interaction.objects,
+      board.objects,
+      board.settings.floorPlan,
+      28 / viewport.zoom,
+    );
+    snapped.objects.forEach((source) => {
+      const target = interaction.objects.find((object) => object.id === source.id);
+      if (target) replaceObjectProperties(target, source);
+    });
+  }
   board.rig.joints.forEach((joint) => {
     if (!joint.bodyIds.some((bodyId) => interaction.movingBodyIds.has(bodyId))) return;
     joint.x += deltaX;
@@ -2961,6 +2993,32 @@ function moveObject(object, deltaX, deltaY) {
   }
 }
 
+function floorPlanInteractionContainsWall(pointerInteraction) {
+  if (!board.settings.floorPlan?.enabled) return false;
+  return [
+    ...(Array.isArray(pointerInteraction?.objects) ? pointerInteraction.objects : []),
+    ...(pointerInteraction?.object ? [pointerInteraction.object] : []),
+  ].some(isFloorPlanWallObject);
+}
+
+function reconcileActiveFloorPlanWalls() {
+  if (!board.settings.floorPlan?.enabled) return false;
+  const selectedIds = new Set(selectedObjects.map((object) => object.id));
+  const wallResult = reconcileFloorPlanWalls(
+    board.objects,
+    board.settings.floorPlan,
+    createId,
+  );
+  const openingResult = reflowFloorPlanOpeningAttachments(
+    wallResult.objects,
+    board.settings.floorPlan,
+  );
+  if (!wallResult.changed && !openingResult.changed) return false;
+  board.objects = openingResult.objects;
+  selectedObjects = board.objects.filter((object) => selectedIds.has(object.id));
+  return true;
+}
+
 function handlePointerUp(event) {
   finishPointerInteraction(event, false);
 }
@@ -3016,6 +3074,13 @@ function finishPointerInteraction(event, cancelled) {
         mergeDistance,
       );
       if (merged) announceStatus("Overlapping vertices merged");
+    }
+    if (
+      finishedInteraction.changed
+      && !cancelled
+      && floorPlanInteractionContainsWall(finishedInteraction)
+    ) {
+      reconcileActiveFloorPlanWalls();
     }
     if (finishedInteraction.changed) saveBoard();
   } else if (
@@ -3557,6 +3622,7 @@ function syncFloorPlanControls() {
   floorPlanUnits.value = settings.units;
   floorPlanScale.value = String(settings.pixelsPerUnit);
   floorPlanWallThickness.value = String(settings.wallThickness);
+  floorPlanWallSides.value = String(settings.wallSides);
   floorPlanGridSize.value = String(settings.gridSize);
   floorPlanGuides.checked = settings.alignmentGuides;
   floorPlanDimensionsVisible.checked = settings.dimensionsVisible;
@@ -3570,6 +3636,7 @@ function updateFloorPlanSettings() {
     units: floorPlanUnits.value,
     pixelsPerUnit: floorPlanScale.value,
     wallThickness: floorPlanWallThickness.value,
+    wallSides: floorPlanWallSides.value,
     gridSize: floorPlanGridSize.value,
     alignmentGuides: floorPlanGuides.checked,
     dimensionsVisible: floorPlanDimensionsVisible.checked,
@@ -3583,6 +3650,7 @@ function updateFloorPlanSettings() {
     ));
     updateSelectionControls();
   }
+  reconcileActiveFloorPlanWalls();
   saveBoard();
   drawBoard();
 }
@@ -3628,6 +3696,7 @@ function insertSavedFloorPlanCatalogItem(catalogType, itemId) {
     checkpoint();
     board.objects.push(...objects);
     selectedObjects = objects;
+    if (objects.some(isFloorPlanWallObject)) reconcileActiveFloorPlanWalls();
     saveBoard();
     updateSelectionControls();
     drawBoard();
@@ -5554,6 +5623,12 @@ function getSelectedInsertableLines() {
   ) {
     return [];
   }
+  if (
+    network.objects.every(isFloorPlanWallObject)
+    && network.objects.length >= FLOOR_PLAN_WALL_SIDE_MAX
+  ) {
+    return [];
+  }
   return network.objects;
 }
 
@@ -5848,6 +5923,7 @@ function insertSelectedPathVertexAt(target) {
   selectedObjects = board.objects.filter((object) => (
     object.vertexNetworkId === result.networkId
   ));
+  if (result.objects.some(isFloorPlanWallObject)) reconcileActiveFloorPlanWalls();
   saveBoard();
   updateSelectionControls();
   updateCanvasCursor();
@@ -5946,8 +6022,15 @@ function deleteSelection() {
     return;
   }
   checkpoint();
+  const deletesFloorPlanWall = deletableObjects.some(isFloorPlanWallObject);
   const deletedIds = new Set(deletableObjects.map((object) => object.id));
   board.objects = board.objects.filter((object) => !deletedIds.has(object.id));
+  if (deletesFloorPlanWall && board.settings.floorPlan?.enabled) {
+    board.objects = reflowFloorPlanOpeningAttachments(
+      board.objects,
+      board.settings.floorPlan,
+    ).objects;
+  }
   board.rig = normalizeRig(board.rig, board.objects);
   selectedObjects = selectedObjects.filter((object) => !deletedIds.has(object.id));
   closeTextEditor();
@@ -5978,6 +6061,7 @@ function pasteSelection() {
   checkpoint();
   board.objects.push(...pastedObjects);
   selectedObjects = pastedObjects;
+  if (pastedObjects.some(isFloorPlanWallObject)) reconcileActiveFloorPlanWalls();
   closeTextEditor();
   saveBoard();
   updateSelectionControls();
@@ -7222,7 +7306,8 @@ document.querySelector("#close-floor-plan-template-dialog").addEventListener(
   closeFloorPlanTemplateDialog,
 );
 floorPlanTemplateDialog.addEventListener("close", restoreFloorPlanTemplateDialogFocus);
-[floorPlanUnits, floorPlanScale, floorPlanWallThickness, floorPlanGridSize,
+[floorPlanUnits, floorPlanScale, floorPlanWallThickness, floorPlanWallSides,
+  floorPlanGridSize,
   floorPlanGuides, floorPlanDimensionsVisible, floorPlanLabelsVisible]
   .forEach((control) => control.addEventListener("change", updateFloorPlanSettings));
 boardLibrarySearch.addEventListener("input", renderBoardLibrary);

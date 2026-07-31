@@ -28,7 +28,7 @@ const id = () => `id-${++nextId}`;
 
 test("floor-plan settings normalize scale, units, and wall thickness", () => {
   assert.deepEqual(normalizeFloorPlanSettings({ units: "m", pixelsPerUnit: 40, wallThickness: 0.2, gridSize: 20 }), {
-    enabled: false, units: "m", pixelsPerUnit: 40, wallThickness: 0.2, gridSize: 20, alignmentGuides: true,
+    enabled: false, units: "m", pixelsPerUnit: 40, wallThickness: 0.2, wallSides: 4, gridSize: 20, alignmentGuides: true,
     dimensionsVisible: true, labelsAlwaysVisible: false,
     elementLibrary: { version: 1, items: [], hiddenBuiltIns: [] },
     templateLibrary: { version: 1, items: [], hiddenBuiltIns: [] },
@@ -57,6 +57,10 @@ test("requested floor-plan catalogs expose exact tab groups and names", () => {
   assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["electrical-route"].group, "maintenance");
   assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["plumbing-valve"].group, "maintenance");
   assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["layer-designator"].group, "tools");
+  assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["outer-building-wall"].group, "tools");
+  assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["inner-building-wall"].name, "Inner Bldg Wall");
+  assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["outside-wall"].name, "Outside Wall");
+  assert.equal(FLOOR_PLAN_ELEMENT_DEFINITIONS["outside-fence"].name, "Outside Fence");
   assert.equal(FLOOR_PLAN_TEMPLATE_DEFINITIONS["living-room"].name, "Livingroom");
   assert.equal(FLOOR_PLAN_TEMPLATE_DEFINITIONS["blank-house-shell"].name, "House Shell");
 });

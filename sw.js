@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v85";
+const CACHE_NAME = "vital-pancakes-app-v86";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -83,6 +83,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board.js?v=52",
   "./tools/visual-board.js?v=53",
   "./tools/visual-board.js?v=54",
+  "./tools/visual-board.js?v=55",
   "./tools/visual-board-ai.css?v=1",
   "./tools/visual-board-advanced.css?v=6",
   "./tools/visual-board-ai-adapter.mjs?v=11",
@@ -93,6 +94,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-ai-adapter.mjs?v=16",
   "./tools/visual-board-ai-adapter.mjs?v=17",
   "./tools/visual-board-ai-adapter.mjs?v=18",
+  "./tools/visual-board-ai-adapter.mjs?v=19",
   "./tools/visual-board-image.mjs?v=1",
   "./tools/visual-board-transform.mjs?v=3",
   "./tools/visual-board-transform.mjs?v=4",
@@ -102,6 +104,8 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-static-export.mjs?v=7",
   "./tools/visual-board-floor-plan.mjs?v=6",
   "./tools/visual-board-floor-plan.mjs?v=7",
+  "./tools/visual-board-floor-plan.mjs?v=8",
+  "./tools/visual-board-floor-plan-walls.mjs?v=1",
   "./tools/visual-board-floor-plan-defaults.mjs?v=1",
   "./tools/visual-board-floor-plan-templates.mjs?v=3",
   "./tools/visual-board-floor-plan-templates.mjs?v=4",
