@@ -391,8 +391,8 @@ test("busy boards reject both preview and apply", async () => {
 
 test("every advertised command has a field schema and unknown fields fail", () => {
   const capabilities = getVisualBoardAiCapabilities();
-  assert.equal(capabilities.version, 14);
-  assert.equal(capabilities.commands.length, 53);
+  assert.equal(capabilities.version, 15);
+  assert.equal(capabilities.commands.length, 54);
   const createSchema = capabilities.commands
     .find((command) => command.type === "objects.create").schema;
   const viewportSchema = capabilities.commands
@@ -449,6 +449,40 @@ test("AI commands create complex curves and insert exact editable points", () =>
   const context = serializeVisualBoardContext(inserted.state, { detail: "geometry" });
   assert.equal(context.objects[0].curvePointCount, 5);
   assert.equal(context.objects[0].curvePoints.length, 5);
+});
+
+test("AI inserts movable vertices into lines without losing arrow endpoints", () => {
+  const state = createState([{
+    id: "arrow",
+    type: "connector",
+    x: 0,
+    y: 0,
+    endX: 100,
+    endY: 0,
+    arrowStart: true,
+    arrowEnd: true,
+    color: "#000000",
+    strokeWidth: 2,
+    dashPattern: "solid",
+    locked: false,
+  }]);
+  const result = execute(state, [{
+    type: "lines.points.insert",
+    targets: { ids: ["arrow"] },
+    points: [{ x: 40, y: 5 }],
+  }]);
+
+  assert.equal(result.state.board.objects.length, 2);
+  assert.equal(result.outputs[0].type, "lines.points.insert");
+  assert.equal(result.outputs[0].segmentCount, 2);
+  assert.equal(result.state.board.objects[0].arrowStart, true);
+  assert.equal(result.state.board.objects[0].arrowEnd, false);
+  assert.equal(result.state.board.objects[1].arrowStart, false);
+  assert.equal(result.state.board.objects[1].arrowEnd, true);
+  assert.equal(
+    result.state.board.objects[0].endVertexId,
+    result.state.board.objects[1].startVertexId,
+  );
 });
 
 test("AI reinitializes dense curves to endpoints and meaningful extrema", () => {

@@ -27,6 +27,10 @@ test("selection toolbar uses consolidated contextual actions", async () => {
   assert.doesNotMatch(markup, /id="reinitialize-curve-vertices"/);
   assert.doesNotMatch(markup, /id="explode-selection"/);
   assert.doesNotMatch(markup, /id="reassemble-selection"/);
+  assert.match(
+    markup,
+    /id="add-curve-vertex"[\s\S]*?>\s*-\+-\s*<span class="tool-button-label">Add vertex<\/span>/,
+  );
 
   const saveToLibraryMarkup = markup.match(
     /<button[^>]*id="save-to-library"[\s\S]*?<\/button>/,
@@ -51,6 +55,15 @@ test("selection toolbar uses consolidated contextual actions", async () => {
     /exportCharacterButton\.disabled = selectedObjects\.length === 0;/,
   );
   assert.match(controller, /exportCharacterButton\.hidden = false;/);
+  assert.match(controller, /lockDimensionsButton\.hidden = false;/);
+  assert.match(
+    controller,
+    /ungroupSelectionButton\.hidden = false;\s+ungroupSelectionButton\.disabled = !canUngroup;/,
+  );
+  assert.match(
+    controller,
+    /function canCreateVertexNetwork\(objects\) \{[\s\S]*objects\.some\(\(object\) => !LINE_TYPES\.has\(object\.type\)\)/,
+  );
 
   const groupIndex = markup.indexOf('id="group-selection"');
   const ungroupIndex = markup.indexOf('id="ungroup-selection"');

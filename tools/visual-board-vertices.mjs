@@ -21,6 +21,7 @@ import {
 
 const CURVE_SAMPLE_STEPS = 128;
 const SPLIT_EPSILON = 1e-7;
+const INSERTABLE_LINE_TYPES = new Set(["line", "connector"]);
 
 export function createEditableVertexNetwork(
   sourceObjects,
@@ -101,6 +102,95 @@ export function createEditableVertexNetwork(
     networkId,
     groupId,
     vertices,
+  };
+}
+
+/**
+ * Splits the nearest selected line at an exact projected point. Standalone
+ * lines are upgraded to a vertex network; existing network identity is kept.
+ */
+export function insertLineVertex(
+  sourceLines,
+  target,
+  createIdentifier,
+  maximumDistance = Infinity,
+) {
+  if (
+    !Array.isArray(sourceLines)
+    || typeof createIdentifier !== "function"
+    || !Number.isFinite(target?.x)
+    || !Number.isFinite(target?.y)
+  ) {
+    return null;
+  }
+  const distanceLimit = Number.isFinite(maximumDistance)
+    ? Math.max(0, maximumDistance)
+    : Infinity;
+  const candidate = sourceLines
+    .filter((line) => (
+      INSERTABLE_LINE_TYPES.has(line?.type)
+      && !line.locked
+      && Number.isFinite(line.x)
+      && Number.isFinite(line.y)
+      && Number.isFinite(line.endX)
+      && Number.isFinite(line.endY)
+    ))
+    .map((line) => {
+      const projection = projectPointOntoLine(target, line);
+      return {
+        line,
+        projection,
+        distance: distanceBetween(target, projection.point),
+      };
+    })
+    .filter(({ projection, distance }) => (
+      distance <= distanceLimit
+      && projection.progress > SPLIT_EPSILON
+      && projection.progress < 1 - SPLIT_EPSILON
+    ))
+    .sort((first, second) => (
+      first.distance - second.distance
+      || String(first.line.id ?? "").localeCompare(String(second.line.id ?? ""))
+    ))[0];
+  if (!candidate) return null;
+
+  const source = candidate.line;
+  const hasNetworkIdentity = [
+    source.vertexNetworkId,
+    source.startVertexId,
+    source.endVertexId,
+  ].every((value) => typeof value === "string" && value);
+  const base = hasNetworkIdentity
+    ? cloneValue(source)
+    : createEditableVertexNetwork([source], createIdentifier, 0)?.objects[0];
+  if (!base) return null;
+
+  const point = clonePoint(candidate.projection.point);
+  const vertexId = createIdentifier();
+  const first = cloneValue(base);
+  const second = cloneValue(base);
+  second.id = createIdentifier();
+  first.endX = point.x;
+  first.endY = point.y;
+  first.endVertexId = vertexId;
+  second.x = point.x;
+  second.y = point.y;
+  second.startVertexId = vertexId;
+  if (base.type === "connector") {
+    first.arrowStart = Boolean(base.arrowStart);
+    first.arrowEnd = false;
+    second.arrowStart = false;
+    second.arrowEnd = base.arrowEnd !== false;
+  }
+
+  return {
+    sourceObjectId: source.id,
+    objects: [first, second],
+    networkId: first.vertexNetworkId,
+    groupId: first.groupId,
+    vertexId,
+    point,
+    progress: candidate.projection.progress,
   };
 }
 

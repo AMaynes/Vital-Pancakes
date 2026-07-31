@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
+  insertLineVertex,
   mergeVertexNetworkVertexAtNearest,
   mergeVertexNetworkVertices,
   setVertexNetworkPosition,
@@ -217,6 +218,61 @@ test("moving a shared vertex reshapes every incident line only", () => {
     vertices.find((vertex) => vertex.id === sharedVertexId),
     { id: sharedVertexId, x: 70, y: 30 },
   );
+});
+
+test("adding a line vertex creates two segments with one shared joint", () => {
+  const result = insertLineVertex(
+    [{ id: "line", type: "line", x: 0, y: 0, endX: 100, endY: 0 }],
+    { x: 40, y: 3 },
+    identifierFactory(),
+    5,
+  );
+
+  assert.ok(result);
+  assert.equal(result.sourceObjectId, "line");
+  assert.deepEqual(result.point, { x: 40, y: 0 });
+  assert.equal(result.objects.length, 2);
+  assert.equal(result.objects[0].id, "line");
+  assert.equal(result.objects[0].endVertexId, result.vertexId);
+  assert.equal(result.objects[1].startVertexId, result.vertexId);
+  assert.equal(result.objects[0].vertexNetworkId, result.objects[1].vertexNetworkId);
+  assert.equal(result.objects[0].groupId, result.objects[1].groupId);
+  assert.deepEqual(
+    [result.objects[0].endX, result.objects[0].endY],
+    [40, 0],
+  );
+  assert.deepEqual(
+    [result.objects[1].x, result.objects[1].y],
+    [40, 0],
+  );
+});
+
+test("adding an arrow vertex preserves arrowheads only at the original ends", () => {
+  const network = createEditableVertexNetwork([{
+    id: "arrow",
+    type: "connector",
+    x: 0,
+    y: 0,
+    endX: 100,
+    endY: 0,
+    arrowStart: true,
+    arrowEnd: true,
+  }], identifierFactory(), 0);
+  const original = network.objects[0];
+  const result = insertLineVertex(
+    [original],
+    { x: 60, y: 0 },
+    identifierFactory(),
+  );
+
+  assert.ok(result);
+  assert.equal(result.networkId, original.vertexNetworkId);
+  assert.equal(result.objects[0].startVertexId, original.startVertexId);
+  assert.equal(result.objects[1].endVertexId, original.endVertexId);
+  assert.equal(result.objects[0].arrowStart, true);
+  assert.equal(result.objects[0].arrowEnd, false);
+  assert.equal(result.objects[1].arrowStart, false);
+  assert.equal(result.objects[1].arrowEnd, true);
 });
 
 test("closely spaced curve vertices remain distinct unless they touch", () => {

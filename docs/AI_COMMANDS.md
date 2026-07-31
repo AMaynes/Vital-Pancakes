@@ -103,6 +103,8 @@ review the receipt before changing `mode` to `apply`.
 
 `curves.points.insert` adds each requested world-coordinate point at the nearest
 place on one target arc without flattening or replacing the curve.
+`lines.points.insert` splits one target line or arrow at each requested point
+while preserving its endpoint arrowheads and editable shared joints.
 `curves.vertices.reinitialize` reduces target curves to their endpoints,
 meaningful horizontal and vertical extrema, and any joints shared with other paths.
 `vertices.create` keeps line and curve targets editable, inserts vertices at
@@ -120,6 +122,11 @@ their crossings, and assigns one shared vertex ID to every incident path.
       "type": "curves.points.insert",
       "targets": { "ids": ["curve-id-from-context"] },
       "points": [{ "x": 420, "y": 260 }]
+    },
+    {
+      "type": "lines.points.insert",
+      "targets": { "ids": ["line-id-from-context"] },
+      "points": [{ "x": 300, "y": 180 }]
     },
     {
       "type": "curves.vertices.reinitialize",

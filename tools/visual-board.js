@@ -41,9 +41,10 @@ import {
 import {
   createEditableVertexNetwork,
   getVertexNetworkVertices,
+  insertLineVertex,
   mergeVertexNetworkVertexAtNearest,
   setVertexNetworkPosition,
-} from "./visual-board-vertices.mjs?v=6";
+} from "./visual-board-vertices.mjs?v=7";
 import {
   getCurveBezierSegments,
   getCurvePathPoints,
@@ -181,7 +182,7 @@ import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=17";
+} from "./visual-board-ai-adapter.mjs?v=18";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
@@ -199,6 +200,7 @@ const MAX_STATIC_EXPORT_DIMENSION = 4096;
 const MAX_PDF_PAGE_DIMENSION = 1440;
 const VERTEX_TOUCH_TOLERANCE = 0.01;
 const VERTEX_DROP_MERGE_RADIUS = 10;
+const INSERTABLE_LINE_TYPES = new Set(["line", "connector"]);
 const ANIMATION_PANEL_WIDTH_KEY = "visual-board-animation-panel-width";
 const ANIMATION_PREVIEW_HEIGHT_KEY = "visual-board-animation-preview-height";
 const MIN_ANIMATION_PANEL_WIDTH = 300;
@@ -2094,7 +2096,9 @@ function drawObjectSelection(object, showHandles) {
 
     if (showHandles && !object.locked) {
       context.setLineDash([]);
-      Object.values(corners).forEach((point) => drawHandle(point));
+      if (!object.dimensionsLocked) {
+        Object.values(corners).forEach((point) => drawHandle(point));
+      }
       const rotationHandle = getRotationHandlePoint(object);
       context.beginPath();
       context.moveTo(corners.ne.x, corners.ne.y);
@@ -2106,7 +2110,7 @@ function drawObjectSelection(object, showHandles) {
   } else if (CURVE_TYPES.has(object.type)) {
     const bounds = getObjectBounds(object);
     context.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
-    if (showHandles && !object.locked) {
+    if (showHandles && !object.locked && !object.dimensionsLocked) {
       context.setLineDash([]);
       getCurveVertices(object).forEach((point) => drawHandle(point));
     }
@@ -2309,10 +2313,12 @@ function getConnectedRigObjects(objects) {
 }
 
 function isGroupDimensionsLocked(groupId) {
-  return Boolean(
-    groupId
-    && board.rig.bodies.find((body) => body.id === groupId)?.dimensionsLocked
-  );
+  if (!groupId) return false;
+  const rigBody = board.rig.bodies.find((body) => body.id === groupId);
+  if (rigBody) return Boolean(rigBody.dimensionsLocked);
+  const groupObjects = board.objects.filter((object) => object.groupId === groupId);
+  return groupObjects.length > 0
+    && groupObjects.every((object) => object.dimensionsLocked);
 }
 
 function findSelectionHandle(point) {
@@ -2376,13 +2382,15 @@ function findSelectionHandle(point) {
       return { kind: "rotate", object };
     }
     const corners = getShapeCorners(object);
-    const corner = Object.entries(corners).find(([, handle]) => (
-      distanceBetween(point, handle) <= hitRadius
-    ));
+    const corner = object.dimensionsLocked
+      ? null
+      : Object.entries(corners).find(([, handle]) => (
+        distanceBetween(point, handle) <= hitRadius
+      ));
     if (corner) return { kind: "resize", object, corner: corner[0] };
   }
 
-  if (CURVE_TYPES.has(object.type)) {
+  if (CURVE_TYPES.has(object.type) && !object.dimensionsLocked) {
     const vertexIndex = getCurveVertices(object).findIndex((vertex) => (
       distanceBetween(point, vertex) <= hitRadius
     ));
@@ -2422,7 +2430,7 @@ function handlePointerDown(event) {
     && activeTool === "select"
     && event.button === 0
   ) {
-    insertSelectedCurveVertexAt(worldPoint);
+    insertSelectedPathVertexAt(worldPoint);
     return;
   }
   if (activeTool === "bucket" && event.button === 0) {
@@ -2739,7 +2747,10 @@ function handlePointerMove(event) {
     interaction.changed = true;
   } else if (interaction.kind === "endpoint") {
     ensureInteractionCheckpoint();
-    const point = getSnappedPoint(worldPoint);
+    const target = getSnappedPoint(worldPoint);
+    const point = interaction.initialObject.dimensionsLocked
+      ? getLengthLockedEndpointPoint(interaction, target)
+      : target;
     if (interaction.endpoint === "start") {
       interaction.object.x = point.x;
       interaction.object.y = point.y;
@@ -2802,6 +2813,21 @@ function handlePointerMove(event) {
 
   updateCanvasCursor(worldPoint);
   drawBoard();
+}
+
+function getLengthLockedEndpointPoint(endpointInteraction, target) {
+  const source = endpointInteraction.initialObject;
+  const movingStart = endpointInteraction.endpoint === "start";
+  const original = movingStart
+    ? { x: source.x, y: source.y }
+    : { x: source.endX, y: source.endY };
+  const anchor = movingStart
+    ? { x: source.endX, y: source.endY }
+    : { x: source.x, y: source.y };
+  return resolveConstrainedPoint(target, original, [{
+    ...anchor,
+    radius: distanceBetween(original, anchor),
+  }]);
 }
 
 function updateWorkingObject(worldPoint) {
@@ -5439,12 +5465,10 @@ function updateSelectionControls() {
   selectionCount.textContent = selectionUnitCount === 1
     ? "1 selected"
     : `${selectionUnitCount} selected`;
-  const canAddCurveVertex = selectedObjects.length === 1
-    && CURVE_TYPES.has(selectedObjects[0].type)
-    && !selectedObjects[0].locked;
-  addCurveVertexButton.hidden = !canAddCurveVertex;
-  addCurveVertexButton.disabled = !canAddCurveVertex;
-  if (!canAddCurveVertex) curveVertexInsertionActive = false;
+  const canAddVertex = canAddPathVertex();
+  addCurveVertexButton.hidden = false;
+  addCurveVertexButton.disabled = !canAddVertex;
+  if (!canAddVertex) curveVertexInsertionActive = false;
   addCurveVertexButton.classList.toggle("is-active", curveVertexInsertionActive);
   addCurveVertexButton.setAttribute("aria-pressed", String(curveVertexInsertionActive));
 
@@ -5466,7 +5490,7 @@ function updateSelectionControls() {
   lockDimensionsButton.querySelector(".tool-button-label").textContent = dimensionState.allLocked
     ? "Unlock size"
     : "Lock size";
-  lockDimensionsButton.hidden = dimensionState.targets.length === 0;
+  lockDimensionsButton.hidden = false;
   deleteSelectionButton.disabled = allLocked;
   deleteSelectionButton.hidden = allLocked;
   const canUngroup = !anyLocked && selectedObjects.some((object) => (
@@ -5474,7 +5498,7 @@ function updateSelectionControls() {
     || Boolean(object.vertexNetworkId)
     || (object.type !== "line" && isExplodableObject(object))
   ));
-  ungroupSelectionButton.hidden = !canUngroup;
+  ungroupSelectionButton.hidden = false;
   ungroupSelectionButton.disabled = !canUngroup;
   const canGroup = canGroupSelection(selectedObjects);
   groupSelectionButton.hidden = !canGroup;
@@ -5494,6 +5518,43 @@ function updateSelectionControls() {
     widthValue.textContent = styleObject.strokeWidth;
     patternInput.value = styleObject.dashPattern ?? "solid";
   }
+}
+
+function canAddPathVertex() {
+  const singleObject = selectedObjects.length === 1 ? selectedObjects[0] : null;
+  if (
+    singleObject
+    && CURVE_TYPES.has(singleObject.type)
+    && !singleObject.locked
+    && !singleObject.dimensionsLocked
+  ) {
+    return true;
+  }
+  return getSelectedInsertableLines().length > 0;
+}
+
+function getSelectedInsertableLines() {
+  const singleObject = selectedObjects.length === 1 ? selectedObjects[0] : null;
+  if (
+    singleObject
+    && INSERTABLE_LINE_TYPES.has(singleObject.type)
+    && !singleObject.locked
+    && !singleObject.dimensionsLocked
+  ) {
+    return [singleObject];
+  }
+  const network = getSelectedVertexNetwork();
+  if (
+    !network
+    || network.objects.some((object) => (
+      object.locked
+      || object.dimensionsLocked
+      || !INSERTABLE_LINE_TYPES.has(object.type)
+    ))
+  ) {
+    return [];
+  }
+  return network.objects;
 }
 
 function updateTextStyleControls() {
@@ -5654,7 +5715,8 @@ function canCreateLineVertexNetwork(objects) {
 }
 
 function canCreateVertexNetwork(objects) {
-  return canCreateLineVertexNetwork(objects);
+  return canCreateLineVertexNetwork(objects)
+    && objects.some((object) => !LINE_TYPES.has(object.type));
 }
 
 function mergeSelectionVertices() {
@@ -5739,24 +5801,63 @@ function createStyledLine(start, end, source) {
 }
 
 function toggleCurveVertexInsertion() {
-  const canAdd = selectedObjects.length === 1
-    && CURVE_TYPES.has(selectedObjects[0].type)
-    && !selectedObjects[0].locked;
-  if (!canAdd) return;
+  if (!canAddPathVertex()) return;
   if (activeTool !== "select") setActiveTool("select");
   curveVertexInsertionActive = !curveVertexInsertionActive;
   updateSelectionControls();
   updateCanvasCursor();
   if (curveVertexInsertionActive) {
     canvas.focus({ preventScroll: true });
-    announceStatus("Click anywhere on the selected curve to add a movable point");
+    announceStatus("Click the selected line or curve to add a movable point");
   } else {
-    announceStatus("Curve point insertion cancelled");
+    announceStatus("Point insertion cancelled");
   }
 }
 
-function insertSelectedCurveVertexAt(target) {
-  const object = selectedObjects.length === 1 ? selectedObjects[0] : null;
+function insertSelectedPathVertexAt(target) {
+  const curve = selectedObjects.length === 1 ? selectedObjects[0] : null;
+  if (
+    curve
+    && CURVE_TYPES.has(curve.type)
+    && !curve.locked
+    && !curve.dimensionsLocked
+  ) {
+    insertSelectedCurvePoint(curve, target);
+    return;
+  }
+
+  const lines = getSelectedInsertableLines();
+  const result = insertLineVertex(
+    lines,
+    target,
+    createId,
+    12 / viewport.zoom,
+  );
+  curveVertexInsertionActive = false;
+  if (!result) {
+    updateSelectionControls();
+    updateCanvasCursor();
+    announceStatus("Click directly on a selected line to add a point");
+    return;
+  }
+
+  checkpoint();
+  board.objects = board.objects.flatMap((object) => (
+    object.id === result.sourceObjectId ? result.objects : [object]
+  ));
+  selectedObjects = board.objects.filter((object) => (
+    object.vertexNetworkId === result.networkId
+  ));
+  saveBoard();
+  updateSelectionControls();
+  updateCanvasCursor();
+  drawBoard();
+  announceStatus(
+    `${getVertexNetworkVertices(selectedObjects).length} editable line points`,
+  );
+}
+
+function insertSelectedCurvePoint(object, target) {
   if (!object || !CURVE_TYPES.has(object.type) || object.locked) {
     curveVertexInsertionActive = false;
     updateSelectionControls();
@@ -5901,12 +6002,22 @@ function getSelectedDimensionLockState() {
   const vertexNetwork = getSelectedVertexNetwork();
   const selectedBodyIds = getSelectedRigidBodyIds();
   const rigBodies = board.rig.bodies.filter((body) => selectedBodyIds.has(body.id));
+  const coveredObjectIds = new Set(vertexNetwork?.objects.map((object) => object.id) ?? []);
+  rigBodies.forEach((body) => {
+    (body.objectIds ?? []).forEach((objectId) => coveredObjectIds.add(objectId));
+  });
+  const ordinaryObjects = selectedObjects.filter((object) => (
+    !coveredObjectIds.has(object.id)
+  ));
   const targets = [
     ...(vertexNetwork ? [{ kind: "network", objects: vertexNetwork.objects }] : []),
     ...rigBodies.map((body) => ({ kind: "body", body })),
+    ...(ordinaryObjects.length
+      ? [{ kind: "objects", objects: ordinaryObjects }]
+      : []),
   ];
   const lockStates = targets.map((target) => (
-    target.kind === "network"
+    ["network", "objects"].includes(target.kind)
       ? target.objects.every((object) => object.dimensionsLocked)
       : target.body.dimensionsLocked
   ));
@@ -5924,6 +6035,10 @@ function toggleSelectionDimensionLock() {
   checkpoint();
   state.targets.forEach((target) => {
     if (target.kind === "network") {
+      target.objects.forEach((object) => {
+        object.dimensionsLocked = shouldLock;
+      });
+    } else if (target.kind === "objects") {
       target.objects.forEach((object) => {
         object.dimensionsLocked = shouldLock;
       });
@@ -6539,7 +6654,7 @@ function handleKeyDown(event) {
       updateSelectionControls();
       updateCanvasCursor();
       addCurveVertexButton.focus({ preventScroll: true });
-      announceStatus("Curve point insertion cancelled");
+      announceStatus("Point insertion cancelled");
       return;
     }
     if (animationPanelOpen) {

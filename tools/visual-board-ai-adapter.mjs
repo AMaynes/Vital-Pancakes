@@ -54,8 +54,9 @@ import {
 } from "./visual-board-groups.mjs?v=4";
 import {
   createEditableVertexNetwork,
+  insertLineVertex,
   mergeVertexNetworkVertices,
-} from "./visual-board-vertices.mjs?v=6";
+} from "./visual-board-vertices.mjs?v=7";
 import {
   ARCHITECTURE_FILL_PATTERNS,
   getArchitectureCatalog,
@@ -230,6 +231,7 @@ const COMMAND_DEFINITIONS = Object.freeze([
   command("objects.group", ["update"], "Nest target selection units inside one new rigid group level."),
   command("objects.ungroup", ["update"], "Remove one group level, or split an ungrouped compound outline into editable lines."),
   command("curves.points.insert", ["update"], "Insert exact movable points at requested positions on one editable curve."),
+  command("lines.points.insert", ["update"], "Split one line or arrow at requested movable vertex positions."),
   command("curves.vertices.reinitialize", ["update"], "Reduce curves to endpoints, meaningful extrema, and shared joints."),
   command("vertices.create", ["update"], "Create shared editable joints across selected paths, groups, and outlined shapes without changing curve geometry."),
   command("vertices.merge", ["update"], "Merge two existing editable vertex IDs into one shared joint."),
@@ -563,6 +565,16 @@ const VISUAL_COMMAND_SCHEMAS = Object.freeze({
   "objects.group": targetCommandSchema(),
   "objects.ungroup": targetCommandSchema(),
   "curves.points.insert": schema(["points"], {
+    targets: TARGET_SCHEMA,
+    target: TARGET_SCHEMA,
+    points: {
+      type: "array",
+      minItems: 1,
+      maxItems: 64,
+      items: pointSchema(),
+    },
+  }),
+  "lines.points.insert": schema(["points"], {
     targets: TARGET_SCHEMA,
     target: TARGET_SCHEMA,
     points: {
@@ -1116,7 +1128,7 @@ function assertToolIsIdle(dependencies) {
 export function getVisualBoardAiCapabilities() {
   return {
     tool: "visual-board",
-    version: 14,
+    version: 15,
     commands: COMMAND_DEFINITIONS.map((definition) => ({
       ...cloneJson(definition),
       schema: cloneJson(VISUAL_COMMAND_SCHEMAS[definition.type]),
@@ -1201,6 +1213,14 @@ export function getVisualBoardAiExamples() {
       command: {
         type: "curves.points.insert",
         targets: { ids: ["curve-id-from-context"] },
+        points: [{ x: 420, y: 260 }],
+      },
+    },
+    {
+      name: "Add a line vertex",
+      command: {
+        type: "lines.points.insert",
+        targets: { ids: ["line-id-from-context"] },
         points: [{ x: 420, y: 260 }],
       },
     },
@@ -1700,6 +1720,9 @@ function executeCommand(runtime, commandValue, commandIndex) {
       break;
     case "curves.points.insert":
       insertCurvePoints(runtime, command, commandIndex);
+      break;
+    case "lines.points.insert":
+      insertLinePoints(runtime, command, commandIndex);
       break;
     case "curves.vertices.reinitialize":
       reinitializeCurvePointSets(runtime, command, commandIndex);
@@ -2461,6 +2484,76 @@ function insertCurvePoints(runtime, command, commandIndex) {
     objectId: target.id,
     inserted,
     curvePointCount: getCurveVertices(target).length,
+  });
+}
+
+function insertLinePoints(runtime, command, commandIndex) {
+  const targets = resolveTargets(
+    runtime,
+    command.targets ?? command.target,
+    commandIndex,
+  );
+  if (
+    targets.length !== 1
+    || !["line", "connector"].includes(targets[0].type)
+  ) {
+    throw commandError(
+      "Line point insertion requires exactly one line or arrow target.",
+      "invalid-line-target",
+      commandIndex,
+    );
+  }
+  const target = targets[0];
+  if (target.locked || target.dimensionsLocked) {
+    throw commandError(
+      "Unlock the line and its size before adding points.",
+      "object-locked",
+      commandIndex,
+    );
+  }
+
+  const points = requireInsertionPoints(command.points, "points", commandIndex);
+  let segments = [target];
+  const inserted = [];
+  points.forEach((point) => {
+    const result = insertLineVertex(
+      segments,
+      point,
+      runtime.createId,
+    );
+    if (!result) {
+      throw commandError(
+        "A requested line point could not be inserted.",
+        "line-point-insertion-failed",
+        commandIndex,
+      );
+    }
+    segments = segments.flatMap((segment) => (
+      segment.id === result.sourceObjectId ? result.objects : [segment]
+    ));
+    inserted.push({
+      sourceObjectId: result.sourceObjectId,
+      vertexId: result.vertexId,
+      x: result.point.x,
+      y: result.point.y,
+    });
+  });
+
+  runtime.state.board.objects = runtime.state.board.objects.flatMap((object) => (
+    object.id === target.id ? segments : [object]
+  ));
+  runtime.updatedIds.add(target.id);
+  runtime.createdIds.push(
+    ...segments
+      .filter((segment) => segment.id !== target.id)
+      .map((segment) => segment.id),
+  );
+  runtime.state.selectedIds = segments.map((segment) => segment.id);
+  runtime.outputs.push({
+    type: "lines.points.insert",
+    objectId: target.id,
+    inserted,
+    segmentCount: segments.length,
   });
 }
 
