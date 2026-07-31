@@ -13,7 +13,7 @@ import {
   insertCurveVertexAt,
   setCurveVertexPosition,
   setCurveVertexPositionPreservingHandles,
-} from "./visual-board-curves.mjs?v=5";
+} from "./visual-board-curves.mjs?v=6";
 import {
   popObjectGroupLevel,
   pushObjectGroupLevel,

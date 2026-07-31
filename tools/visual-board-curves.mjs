@@ -306,18 +306,12 @@ export function insertCurveVertexAt(arc, segmentIndex, progress) {
 }
 
 /**
- * Moves one visible curve vertex and rebuilds restrained automatic handles
- * from the visible points. This keeps segments direct and avoids hidden-handle
- * overshoot after a large drag.
+ * Moves one visible curve vertex and translates its attached handles by the
+ * same delta. Unrelated handles stay fixed, so a small drag changes only the
+ * neighboring portions of the path instead of recalculating the whole curve.
  */
 export function setCurveVertexPosition(arc, vertexIndex, point) {
-  const editable = createEditableCurveGeometry(arc);
-  if (vertexIndex < 0 || vertexIndex >= editable.curvePoints.length) return false;
-  editable.curvePoints[vertexIndex] = clonePoint(point);
-  editable.curveHandles = createAutomaticHandles(editable.curvePoints);
-  synchronizeLegacyCoordinates(editable);
-  replaceCurveGeometry(arc, editable);
-  return true;
+  return moveCurveVertexWithHandles(arc, vertexIndex, point);
 }
 
 /**
@@ -326,6 +320,10 @@ export function setCurveVertexPosition(arc, vertexIndex, point) {
  * rest of the curve does not get rebuilt.
  */
 export function setCurveVertexPositionPreservingHandles(arc, vertexIndex, point) {
+  return moveCurveVertexWithHandles(arc, vertexIndex, point);
+}
+
+function moveCurveVertexWithHandles(arc, vertexIndex, point) {
   const editable = createEditableCurveGeometry(arc);
   if (vertexIndex < 0 || vertexIndex >= editable.curvePoints.length) return false;
   const current = editable.curvePoints[vertexIndex];
@@ -337,12 +335,10 @@ export function setCurveVertexPositionPreservingHandles(arc, vertexIndex, point)
 
   editable.curvePoints[vertexIndex] = clonePoint(point);
   if (vertexIndex > 0) {
-    editable.curveHandles[vertexIndex - 1].control2.x += delta.x;
-    editable.curveHandles[vertexIndex - 1].control2.y += delta.y;
+    translatePoint(editable.curveHandles[vertexIndex - 1].control2, delta);
   }
   if (vertexIndex < editable.curveHandles.length) {
-    editable.curveHandles[vertexIndex].control1.x += delta.x;
-    editable.curveHandles[vertexIndex].control1.y += delta.y;
+    translatePoint(editable.curveHandles[vertexIndex].control1, delta);
   }
   synchronizeLegacyCoordinates(editable);
   replaceCurveGeometry(arc, editable);
@@ -898,6 +894,11 @@ function interpolatePoint(first, second, progress) {
     x: first.x + (second.x - first.x) * progress,
     y: first.y + (second.y - first.y) * progress,
   };
+}
+
+function translatePoint(point, delta) {
+  point.x += delta.x;
+  point.y += delta.y;
 }
 
 function pointFields(point, xKey, yKey) {

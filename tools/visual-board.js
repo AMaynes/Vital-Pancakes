@@ -43,7 +43,7 @@ import {
   getVertexNetworkVertices,
   mergeVertexNetworkVertexAtNearest,
   setVertexNetworkPosition,
-} from "./visual-board-vertices.mjs?v=5";
+} from "./visual-board-vertices.mjs?v=6";
 import {
   getCurveBezierSegments,
   getCurvePathPoints,
@@ -52,7 +52,7 @@ import {
   normalizeCurveGeometry,
   setCurveVertexPosition,
   transformCurveGeometry,
-} from "./visual-board-curves.mjs?v=5";
+} from "./visual-board-curves.mjs?v=6";
 import { traceBlackAndWhiteImage } from "./visual-board-tracing.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
@@ -181,7 +181,7 @@ import {
   createVisualBoardAiAdapter,
   getVisualBoardAiCapabilities,
   getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=16";
+} from "./visual-board-ai-adapter.mjs?v=17";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
@@ -5409,6 +5409,7 @@ function updateSelectionControls() {
   copySelectionButton.disabled = selectedObjects.length === 0;
   pasteSelectionButton.disabled = objectClipboard.length === 0;
   saveToLibraryButton.disabled = selectedObjects.length === 0;
+  exportCharacterButton.disabled = selectedObjects.length === 0;
   boardLibrarySaveSelectionButton.disabled = selectedObjects.length === 0;
   floorPlanSaveElementButton.disabled = selectedObjects.length === 0;
   floorPlanSaveTemplateButton.disabled = selectedObjects.length === 0;
@@ -5479,14 +5480,9 @@ function updateSelectionControls() {
   groupSelectionButton.hidden = !canGroup;
   groupSelectionButton.disabled = !canGroup;
   const canCreateVertices = canCreateVertexNetwork(selectedObjects);
-  mergeVerticesButton.hidden = !canCreateVertices;
+  mergeVerticesButton.hidden = false;
   mergeVerticesButton.disabled = !canCreateVertices;
-  const canExportCharacter = selectedObjects.length > 1
-    || selectedObjects.some((object) => (
-      Boolean(object.groupId) || Boolean(object.vertexNetworkId)
-    ));
-  exportCharacterButton.hidden = !canExportCharacter;
-  exportCharacterButton.disabled = !canExportCharacter;
+  exportCharacterButton.hidden = false;
 
   const styleObject = selectedObjects.find((object) => (
     object.type !== "image" && object.type !== "textbox"

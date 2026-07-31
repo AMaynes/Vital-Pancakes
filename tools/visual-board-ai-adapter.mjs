@@ -43,7 +43,7 @@ import {
   normalizeCurveGeometry,
   reinitializeCurveVertices,
   transformCurveGeometry,
-} from "./visual-board-curves.mjs?v=5";
+} from "./visual-board-curves.mjs?v=6";
 import {
   getObjectGroupFields,
   getObjectGroupIds,
@@ -55,7 +55,7 @@ import {
 import {
   createEditableVertexNetwork,
   mergeVertexNetworkVertices,
-} from "./visual-board-vertices.mjs?v=5";
+} from "./visual-board-vertices.mjs?v=6";
 import {
   ARCHITECTURE_FILL_PATTERNS,
   getArchitectureCatalog,

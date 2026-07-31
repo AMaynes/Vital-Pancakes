@@ -130,41 +130,38 @@ test("moving an internal curve vertex moves its adjacent geometry", () => {
   assert.deepEqual(curve.curvePoints.at(-1), originalEnd);
 });
 
-test("moving a curve vertex removes hidden-handle loops and keeps a direct path", () => {
-  const curve = normalizeCurveGeometry({
-    type: "arc",
+test("moving a curve vertex translates only its attached handles", () => {
+  const curve = createEditableCurveGeometry({
     x: 0,
     y: 0,
-    midX: 260,
-    midY: 144,
-    endX: 557,
-    endY: 192,
-    curvePoints: [
-      { x: 0, y: 0 },
-      { x: 260, y: 144 },
-      { x: 557, y: 192 },
-    ],
-    curveHandles: [
-      {
-        control1: { x: 80, y: -120 },
-        control2: { x: 190, y: 260 },
-      },
-      {
-        control1: { x: 340, y: 20 },
-        control2: { x: 500, y: 260 },
-      },
-    ],
+    midX: 50,
+    midY: -40,
+    endX: 100,
+    endY: 0,
   });
+  const originalHandles = structuredClone(curve.curveHandles);
+  const delta = { x: 6, y: 4 };
 
-  assert.equal(setCurveVertexPosition(curve, 1, { x: 260, y: 144 }), true);
-  const points = getCurvePathPoints(curve, {
-    tolerance: 0.25,
-    maximumSegmentLength: 12,
+  assert.equal(setCurveVertexPosition(curve, 1, {
+    x: curve.curvePoints[1].x + delta.x,
+    y: curve.curvePoints[1].y + delta.y,
+  }), true);
+  assert.deepEqual(
+    curve.curveHandles[0].control1,
+    originalHandles[0].control1,
+  );
+  assert.deepEqual(curve.curveHandles[0].control2, {
+    x: originalHandles[0].control2.x + delta.x,
+    y: originalHandles[0].control2.y + delta.y,
   });
-  points.slice(1).forEach((point, index) => {
-    assert.ok(point.x >= points[index].x - 1e-8);
-    assert.ok(point.y >= points[index].y - 1e-8);
+  assert.deepEqual(curve.curveHandles[1].control1, {
+    x: originalHandles[1].control1.x + delta.x,
+    y: originalHandles[1].control1.y + delta.y,
   });
+  assert.deepEqual(
+    curve.curveHandles[1].control2,
+    originalHandles[1].control2,
+  );
 });
 
 test("reinitializing a subdivided arc keeps only its ends and true apex", () => {

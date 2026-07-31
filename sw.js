@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v83";
+const CACHE_NAME = "vital-pancakes-app-v84";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -81,6 +81,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board.js?v=50",
   "./tools/visual-board.js?v=51",
   "./tools/visual-board.js?v=52",
+  "./tools/visual-board.js?v=53",
   "./tools/visual-board-ai.css?v=1",
   "./tools/visual-board-advanced.css?v=6",
   "./tools/visual-board-ai-adapter.mjs?v=11",
@@ -89,6 +90,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-ai-adapter.mjs?v=14",
   "./tools/visual-board-ai-adapter.mjs?v=15",
   "./tools/visual-board-ai-adapter.mjs?v=16",
+  "./tools/visual-board-ai-adapter.mjs?v=17",
   "./tools/visual-board-image.mjs?v=1",
   "./tools/visual-board-transform.mjs?v=3",
   "./tools/visual-board-transform.mjs?v=4",
@@ -113,6 +115,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-curves.mjs?v=3",
   "./tools/visual-board-curves.mjs?v=4",
   "./tools/visual-board-curves.mjs?v=5",
+  "./tools/visual-board-curves.mjs?v=6",
   "./tools/visual-board-export.mjs?v=2",
   "./tools/visual-board-geometry.mjs?v=10",
   "./tools/visual-board-geometry.mjs?v=11",
@@ -136,6 +139,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-vertices.mjs?v=3",
   "./tools/visual-board-vertices.mjs?v=4",
   "./tools/visual-board-vertices.mjs?v=5",
+  "./tools/visual-board-vertices.mjs?v=6",
   "./tools/pdf-signer.html",
   "./tools/pdf-signer.js?v=3",
   "./tools/pdf-signer-placements.mjs",

@@ -7,6 +7,10 @@ test("selection toolbar uses consolidated contextual actions", async () => {
     new URL("./visual-board.html", import.meta.url),
     "utf8",
   );
+  const controller = await readFile(
+    new URL("./visual-board.js", import.meta.url),
+    "utf8",
+  );
 
   assert.match(markup, /tool-button-label">FlipH</);
   assert.match(markup, /tool-button-label">FlipV</);
@@ -23,6 +27,30 @@ test("selection toolbar uses consolidated contextual actions", async () => {
   assert.doesNotMatch(markup, /id="reinitialize-curve-vertices"/);
   assert.doesNotMatch(markup, /id="explode-selection"/);
   assert.doesNotMatch(markup, /id="reassemble-selection"/);
+
+  const saveToLibraryMarkup = markup.match(
+    /<button[^>]*id="save-to-library"[\s\S]*?<\/button>/,
+  )?.[0];
+  const downloadSelectionMarkup = markup.match(
+    /<button[^>]*id="export-character"[\s\S]*?<\/button>/,
+  )?.[0];
+  assert.ok(saveToLibraryMarkup);
+  assert.ok(downloadSelectionMarkup);
+  assert.match(saveToLibraryMarkup, /aria-label="Save selection to library"/);
+  assert.match(downloadSelectionMarkup, /aria-label="Download selection"/);
+  assert.match(saveToLibraryMarkup, /<svg /);
+  assert.match(downloadSelectionMarkup, /<svg /);
+  assert.doesNotMatch(saveToLibraryMarkup, /tool-button-label/);
+  assert.doesNotMatch(downloadSelectionMarkup, /tool-button-label/);
+  assert.match(
+    controller,
+    /mergeVerticesButton\.hidden = false;\s+mergeVerticesButton\.disabled = !canCreateVertices;/,
+  );
+  assert.match(
+    controller,
+    /exportCharacterButton\.disabled = selectedObjects\.length === 0;/,
+  );
+  assert.match(controller, /exportCharacterButton\.hidden = false;/);
 
   const groupIndex = markup.indexOf('id="group-selection"');
   const ungroupIndex = markup.indexOf('id="ungroup-selection"');

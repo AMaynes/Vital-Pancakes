@@ -331,17 +331,27 @@
         <button class="tool-button" id="add-curve-vertex" type="button" aria-pressed="false" title="Add a movable point exactly where you click on the selected curve" hidden disabled>
           +⌒ <span class="tool-button-label">Add curve point</span>
         </button>
-        <button class="tool-button" id="save-to-library" type="button" title="Save selection to the reusable Visual Board library">
+        <button
+          class="tool-button"
+          id="save-to-library"
+          type="button"
+          aria-label="Save selection to library"
+          title="Save selection to the reusable Visual Board library"
+        >
           <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
             <path d="M5 4h14v16l-7-4-7 4zM12 7v6M9 10h6"></path>
           </svg>
-          <span class="tool-button-label">Save to library</span>
         </button>
-        <button class="tool-button" id="export-character" type="button" title="Save this character with its groups, joints, and locks">
+        <button
+          class="tool-button"
+          id="export-character"
+          type="button"
+          aria-label="Download selection"
+          title="Download selection with its groups, joints, and locks"
+        >
           <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
             <path d="M12 3v12M7 10l5 5 5-5M4 20h16"></path>
           </svg>
-          <span class="tool-button-label">Download character</span>
         </button>
         <button class="tool-button delete-selection" id="delete-selection" type="button" title="Delete selection">
           <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24">
@@ -877,6 +887,6 @@
       </footer>
     </form>
   </dialog>
-  <script type="module" src="visual-board.js?v=52"></script>
+  <script type="module" src="visual-board.js?v=53"></script>
 </body>
 </html>
