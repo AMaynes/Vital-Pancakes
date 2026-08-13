@@ -9,7 +9,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=17">
-  <link rel="stylesheet" href="tool.css?v=38">
+  <link rel="stylesheet" href="tool.css?v=39">
   <link rel="stylesheet" href="../site-navigation.css?v=22">
   <script type="module" src="../site-navigation.js?v=19"></script>
 </head>
@@ -48,8 +48,8 @@
 
     <main class="pdf-workspace" id="tool-main">
       <aside class="pdf-sidebar">
-        <section class="panel-section">
-          <h2>1. Choose a PDF</h2>
+        <details class="panel-section pdf-sidebar-group" data-pdf-sidebar-group="document" open>
+          <summary><span>Document</span><small>Open PDF</small></summary>
           <p>Your document stays in this browser. Nothing is uploaded.</p>
           <label class="drop-zone" id="pdf-drop-zone">
             <input id="pdf-file" type="file" accept="application/pdf,.pdf">
@@ -58,10 +58,10 @@
               <small>or tap to browse</small>
             </span>
           </label>
-        </section>
+        </details>
 
-        <section class="panel-section">
-          <h2>2. Make your signature</h2>
+        <details class="panel-section pdf-sidebar-group" data-pdf-sidebar-group="signature">
+          <summary><span>Signature</span><small>Type and place</small></summary>
           <p>Type your name, choose a style, then place it on any page.</p>
           <input class="tool-input" id="signature-name" type="text" maxlength="80" placeholder="Type your name">
           <div class="signature-preview signature-font-1" id="signature-preview">Your signature</div>
@@ -71,20 +71,20 @@
             <button class="font-choice signature-font-3" data-font="signature-font-3" type="button">Aa</button>
           </div>
           <button class="button button-primary" id="add-signature" type="button" disabled>Place signature</button>
-        </section>
+        </details>
 
-        <section class="panel-section">
-          <h2>3. Add a date</h2>
+        <details class="panel-section pdf-sidebar-group" data-pdf-sidebar-group="date">
+          <summary><span>Date</span><small>Choose and place</small></summary>
           <p>Choose a date, then place and resize it independently.</p>
           <label class="date-field" for="signature-date">
             <span>Date</span>
             <input class="tool-input" id="signature-date" type="date">
           </label>
           <button class="button button-primary" id="add-date" type="button" disabled>Place date</button>
-        </section>
+        </details>
 
-        <section class="panel-section">
-          <h2>4. Add a fillable area</h2>
+        <details class="panel-section pdf-sidebar-group" data-pdf-sidebar-group="fillable">
+          <summary><span>Fillable</span><small>Text and dimensions</small></summary>
           <p>Creates a real PDF text field that stays editable after download.</p>
           <label class="date-field" for="fillable-text">
             <span>Field text</span>
@@ -115,12 +115,30 @@
               <button class="tool-button pdf-text-style" id="fillable-underline" type="button" aria-label="Underline" aria-pressed="false"><u>U</u></button>
             </div>
           </div>
+          <div class="pdf-field-geometry" aria-label="Selected fillable dimensions">
+            <label for="fillable-width">
+              <span>Width px</span>
+              <input class="tool-input" id="fillable-width" type="number" min="1" step="1" disabled>
+            </label>
+            <label for="fillable-height">
+              <span>Height px</span>
+              <input class="tool-input" id="fillable-height" type="number" min="1" step="1" disabled>
+            </label>
+            <div class="pdf-field-copy-actions">
+              <button class="tool-button" id="copy-text-field" type="button" disabled title="Copy selected fillable" aria-label="Copy selected fillable">
+                <svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"></path></svg>
+              </button>
+              <button class="tool-button" id="paste-text-field" type="button" disabled title="Paste fillable" aria-label="Paste fillable">
+                <svg class="tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h6M9 3h6v4H9z"></path><rect x="5" y="5" width="14" height="16" rx="2"></rect></svg>
+              </button>
+            </div>
+          </div>
           <small class="pdf-field-hint" id="fillable-text-hint">Select a field to edit its text here or directly on the page.</small>
           <button class="button button-primary" id="add-text-field" type="button" disabled>Place fillable field</button>
-        </section>
+        </details>
 
-        <section class="panel-section">
-          <h2>5. Add a mark</h2>
+        <details class="panel-section pdf-sidebar-group" data-pdf-sidebar-group="marks">
+          <summary><span>Marks</span><small>Check, circle, X, white-out</small></summary>
           <p>Place a checkmark, circle, X, or white-out area, then drag and resize it.</p>
           <div class="pdf-mark-buttons" aria-label="PDF marks">
             <button class="button pdf-mark-button" data-mark-kind="checkmark" type="button" disabled aria-label="Place checkmark">✓</button>
@@ -130,7 +148,7 @@
               <span aria-hidden="true"></span>
             </button>
           </div>
-        </section>
+        </details>
       </aside>
 
       <section class="tool-workspace">
@@ -173,6 +191,6 @@
 
   <script src="../vendor/pdf.min.js"></script>
   <script src="../vendor/pdf-lib.min.js"></script>
-  <script type="module" src="pdf-signer.js?v=8"></script>
+  <script type="module" src="pdf-signer.js?v=9"></script>
 </body>
 </html>

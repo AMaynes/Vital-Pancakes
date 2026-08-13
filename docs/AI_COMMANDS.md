@@ -147,6 +147,11 @@ the placement is unlocked. White-out placements add opaque white rectangles with
 altering the source PDF. `placements.remove` only deletes an item added by the
 tool; it cannot remove content that was already inside the source PDF.
 
+Use `placements.duplicate` with a fillable `placementId` to create an unlocked
+copy with identical text, typography, width, and height. Optional normalized
+offsets and a destination page can position the duplicate without changing its
+dimensions.
+
 ## Visual Board examples
 
 Replace `expectedRevision` with the current Visual Board revision. Preview and

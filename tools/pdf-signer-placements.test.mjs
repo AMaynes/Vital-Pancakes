@@ -12,6 +12,7 @@ import test from "node:test";
 
 import {
   createPdfPlacement,
+  duplicatePlacementById,
   removePlacementById,
   updatePlacementById,
 } from "./pdf-signer-placements.mjs";
@@ -85,6 +86,35 @@ test("updates fillable text and geometry without mutating the original list", ()
   assert.equal(result.updated.bold, true);
   assert.equal(result.updated.locked, true);
   assert.equal(original[0].text, "Before");
+});
+
+test("duplicates a fillable field with exact dimensions and an unlocked offset copy", () => {
+  const original = [createPdfPlacement({
+    id: "field-1",
+    kind: "text-field",
+    pageNumber: 1,
+    text: "Copy me",
+    widthRatio: 0.347,
+    heightRatio: 0.041,
+    bold: true,
+    locked: true,
+  })];
+
+  const result = duplicatePlacementById(original, "field-1", {
+    id: "field-2",
+    pageNumber: 2,
+    offsetXRatio: 0.01,
+    offsetYRatio: 0.015,
+  });
+
+  assert.equal(result.duplicated.id, "field-2");
+  assert.equal(result.duplicated.pageNumber, 2);
+  assert.equal(result.duplicated.widthRatio, 0.347);
+  assert.equal(result.duplicated.heightRatio, 0.041);
+  assert.equal(result.duplicated.text, "Copy me");
+  assert.equal(result.duplicated.bold, true);
+  assert.equal(result.duplicated.locked, false);
+  assert.equal(original.length, 1);
 });
 
 test("rejects invalid placement kinds and update fields", () => {

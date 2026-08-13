@@ -1458,8 +1458,63 @@
   background: #f7f4ec;
 }
 
+.pdf-sidebar {
+  padding: 7px;
+}
+
 .panel-section {
   margin-bottom: 12px;
+}
+
+.pdf-sidebar-group {
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pdf-sidebar-group > summary {
+  display: flex;
+  min-height: 37px;
+  padding: 7px 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+
+.pdf-sidebar-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pdf-sidebar-group > summary::after {
+  content: "+";
+  color: var(--ink-faint);
+  font: 600 14px/1 Arial, sans-serif;
+}
+
+.pdf-sidebar-group[open] > summary::after {
+  content: "−";
+}
+
+.pdf-sidebar-group > summary span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pdf-sidebar-group > summary small {
+  margin-left: auto;
+  color: var(--ink-faint);
+  font-size: 8px;
+  text-align: right;
+}
+
+.pdf-sidebar-group[open] {
+  padding-bottom: 9px;
+}
+
+.pdf-sidebar-group[open] > summary {
+  color: var(--forest);
 }
 
 .panel-section h2,
@@ -1619,6 +1674,43 @@
   color: var(--forest);
 }
 
+.pdf-field-geometry {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 5px;
+  margin: 0 0 8px;
+  align-items: end;
+}
+
+.pdf-field-geometry label {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pdf-field-geometry .tool-input {
+  width: 100%;
+  height: 30px;
+  padding: 4px 5px;
+  font: 11px/1 Arial, sans-serif;
+}
+
+.pdf-field-copy-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 29px);
+  gap: 4px;
+}
+
+.pdf-field-copy-actions .tool-button {
+  width: 29px;
+  height: 30px;
+  padding: 6px;
+}
+
 .pdf-field-hint {
   display: block;
   margin: -2px 0 8px;
@@ -1730,8 +1822,8 @@
 }
 
 .pdf-placement.text-field-stamp {
-  min-width: 18px;
-  min-height: 10px;
+  min-width: 1px;
+  min-height: 1px;
   padding: 3px;
   place-items: stretch;
   background: rgb(220 241 251 / 78%);
@@ -1920,6 +2012,23 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
+}
+
+.pdf-placement-dimensions {
+  position: absolute;
+  right: 4px;
+  bottom: -17px;
+  display: none;
+  padding: 2px 4px;
+  background: #17231f;
+  color: #fff;
+  font: 700 8px/1 Arial, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.pdf-placement.is-selected .pdf-placement-dimensions {
+  display: block;
 }
 
 .pdf-placement.is-selected .pdf-placement-delete {
@@ -2782,6 +2891,15 @@
   .pdf-sidebar .panel-section {
     min-width: 230px;
     margin: 0;
+  }
+
+  .pdf-sidebar .pdf-sidebar-group:not([open]) {
+    min-width: 104px;
+    padding-bottom: 0;
+  }
+
+  .pdf-sidebar .pdf-sidebar-group:not([open]) > summary small {
+    display: none;
   }
 
   .drop-zone {

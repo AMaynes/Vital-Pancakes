@@ -230,6 +230,36 @@ function normalizePlacementFont(kind, value) {
   return font;
 }
 
+/**
+ * Duplicates one placement while preserving its exact dimensions and style.
+ *
+ * @param {Array<object>} placements Current placements.
+ * @param {string} placementId Source placement identifier.
+ * @param {object} options New identifier, page, and optional normalized offset.
+ * @returns {{placements: Array<object>, duplicated: object | null}} Duplicate result.
+ */
+export function duplicatePlacementById(placements, placementId, options = {}) {
+  const current = placements.find((placement) => placement.id === placementId) ?? null;
+  if (!current) return { placements: [...placements], duplicated: null };
+  const id = String(options.id ?? "").trim();
+  if (!id) throw new TypeError("A duplicate placement ID is required.");
+  if (placements.some((placement) => placement.id === id)) {
+    throw new TypeError(`Placement ID already exists: ${id}.`);
+  }
+  const pageNumber = options.pageNumber === undefined ? current.pageNumber : Number(options.pageNumber);
+  const offsetXRatio = normalizeOffset(options.offsetXRatio, 0.02, "offsetXRatio");
+  const offsetYRatio = normalizeOffset(options.offsetYRatio, 0.02, "offsetYRatio");
+  const duplicated = createPdfPlacement({
+    ...current,
+    id,
+    pageNumber,
+    xRatio: Math.max(0, Math.min(current.xRatio + offsetXRatio, 1 - current.widthRatio)),
+    yRatio: Math.max(0, Math.min(current.yRatio + offsetYRatio, 1 - current.heightRatio)),
+    locked: false,
+  });
+  return { placements: [...placements, duplicated], duplicated };
+}
+
 function normalizeFontFamily(value) {
   const fontFamily = String(value ?? "");
   if (!["helvetica", "times-roman", "courier"].includes(fontFamily)) {
@@ -248,6 +278,14 @@ function normalizeRatio(value, fallback, minimum, maximum, field) {
   const number = value === undefined ? fallback : Number(value);
   if (!Number.isFinite(number) || number < minimum || number > maximum) {
     throw new TypeError(`${field} must be between ${minimum} and ${maximum}.`);
+  }
+  return number;
+}
+
+function normalizeOffset(value, fallback, field) {
+  const number = value === undefined ? fallback : Number(value);
+  if (!Number.isFinite(number) || number < -1 || number > 1) {
+    throw new TypeError(`${field} must be between -1 and 1.`);
   }
   return number;
 }

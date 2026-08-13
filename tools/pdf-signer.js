@@ -18,10 +18,11 @@
 import { createId } from "../app/store.js";
 import {
   createPdfPlacement,
+  duplicatePlacementById,
   PDF_PLACEMENT_KINDS,
   removePlacementById,
   updatePlacementById,
-} from "./pdf-signer-placements.mjs?v=4";
+} from "./pdf-signer-placements.mjs?v=5";
 import { addFillableTextField, drawVectorMark, drawWhiteout } from "./pdf-tool-export.mjs?v=2";
 import {
   installCurrentToolAiHost,
@@ -45,6 +46,11 @@ const fillableTextHint = document.querySelector("#fillable-text-hint");
 const addTextFieldButton = document.querySelector("#add-text-field");
 const fillableFontFamily = document.querySelector("#fillable-font-family");
 const fillableFontSize = document.querySelector("#fillable-font-size");
+const fillableWidthInput = document.querySelector("#fillable-width");
+const fillableHeightInput = document.querySelector("#fillable-height");
+const copyTextFieldButton = document.querySelector("#copy-text-field");
+const pasteTextFieldButton = document.querySelector("#paste-text-field");
+const sidebarGroups = [...document.querySelectorAll("[data-pdf-sidebar-group]")];
 const fillableStyleButtons = {
   bold: document.querySelector("#fillable-bold"),
   italic: document.querySelector("#fillable-italic"),
@@ -68,6 +74,7 @@ let selectedPlacementId = null;
 let activeDrag = null;
 let renderSequence = 0;
 let fillableTextDraft = "";
+let copiedFillablePlacement = null;
 let renderedPageWidthPoints = 545;
 let fillableStyleDraft = {
   fontFamily: "helvetica",
@@ -122,6 +129,7 @@ async function loadPdf(file) {
     placements = [];
     selectedPlacementId = null;
     fillableTextDraft = "";
+    copiedFillablePlacement = null;
     fillableStyleDraft = {
       fontFamily: "helvetica",
       fontSizeRatio: 0.022,
@@ -134,6 +142,7 @@ async function loadPdf(file) {
     pageStage.hidden = false;
     updateControls();
     await renderPage();
+    openSidebarGroup("fillable");
     setStatus(`${file.name} · kept local`);
   } catch (error) {
     console.error("Unable to open the selected PDF.", error);
@@ -202,9 +211,11 @@ function renderPlacements() {
     stamp.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
     stamp.classList.toggle("is-selected", placement.id === selectedPlacementId);
     stamp.classList.toggle("is-locked", placement.locked);
+    let fillableEditor = null;
 
     if (placement.kind === "text-field") {
       const editor = document.createElement("textarea");
+      fillableEditor = editor;
       editor.className = "pdf-fillable-editor";
       editor.value = placement.text;
       editor.placeholder = "Fillable text";
@@ -287,10 +298,17 @@ function renderPlacements() {
     });
 
     stamp.append(...resizeHandles);
+    if (placement.kind === "text-field" && placement.id === selectedPlacementId) {
+      const dimensions = document.createElement("span");
+      dimensions.className = "pdf-placement-dimensions";
+      dimensions.textContent = formatPlacementDimensions(placement);
+      stamp.append(dimensions);
+    }
     stamp.append(lockControl);
     stamp.append(deleteControl);
     stamp.addEventListener("focus", () => selectPlacement(placement.id));
     signatureLayer.append(stamp);
+    if (fillableEditor) fitFillablePreviewText(fillableEditor, placement);
   });
   deletePlacementButton.disabled = !selectedPlacementId;
   syncFillableTextControl();
@@ -389,6 +407,21 @@ function updateFillableText(placementId, text) {
   if (stamp) {
     stamp.dataset.placementText = text;
     stamp.setAttribute("aria-label", `Selected Fillable field${text ? `: ${text}` : ""}`);
+    const editor = stamp.querySelector(".pdf-fillable-editor");
+    if (editor) fitFillablePreviewText(editor, result.updated);
+  }
+}
+
+function fitFillablePreviewText(editor, placement) {
+  const fieldHeight = placement.heightRatio * pageStage.clientHeight;
+  editor.style.padding = fieldHeight < 12 ? "0 1px" : "3px 5px";
+  const minimum = 1;
+  const maximum = Math.max(minimum, placement.fontSizeRatio * pageStage.clientWidth);
+  let fitted = maximum;
+  editor.style.fontSize = `${fitted}px`;
+  while (fitted > minimum && (editor.scrollWidth > editor.clientWidth + 1 || editor.scrollHeight > editor.clientHeight + 1)) {
+    fitted = Math.max(minimum, fitted - 0.5);
+    editor.style.fontSize = `${fitted}px`;
   }
 }
 
@@ -413,6 +446,55 @@ function togglePlacementLock(placementId) {
   renderPlacements();
   updateControls();
   setStatus(`${PLACEMENT_LABELS[placement.kind]} ${result.updated.locked ? "locked" : "unlocked"}`);
+}
+
+function copySelectedFillable() {
+  const placement = placements.find((candidate) => candidate.id === selectedPlacementId);
+  if (placement?.kind !== "text-field") return;
+  copiedFillablePlacement = { ...placement };
+  updateControls();
+  setStatus("Fillable copied");
+}
+
+function pasteCopiedFillable() {
+  if (!pdfDocument || !copiedFillablePlacement) return;
+  const offsetXRatio = 10 / pageStage.clientWidth;
+  const offsetYRatio = 10 / pageStage.clientHeight;
+  const placement = createPdfPlacement({
+    ...copiedFillablePlacement,
+    id: createId(),
+    pageNumber: currentPageNumber,
+    xRatio: Math.min(copiedFillablePlacement.xRatio + offsetXRatio, 1 - copiedFillablePlacement.widthRatio),
+    yRatio: Math.min(copiedFillablePlacement.yRatio + offsetYRatio, 1 - copiedFillablePlacement.heightRatio),
+    locked: false,
+  });
+  placements.push(placement);
+  selectedPlacementId = placement.id;
+  renderPlacements();
+  updateControls();
+  setStatus("Fillable pasted · exact size preserved");
+}
+
+function updateSelectedFillableDimension(dimension, pixelValue) {
+  const placement = placements.find((candidate) => candidate.id === selectedPlacementId);
+  if (placement?.kind !== "text-field" || placement.locked) return;
+  const stagePixels = dimension === "width" ? pageStage.clientWidth : pageStage.clientHeight;
+  const positionRatio = dimension === "width" ? placement.xRatio : placement.yRatio;
+  const ratioField = dimension === "width" ? "widthRatio" : "heightRatio";
+  const pixels = Math.max(1, Math.round(Number(pixelValue) || 1));
+  const ratio = clamp(pixels / stagePixels, 0.008, 1 - positionRatio);
+  const result = updatePlacementById(placements, placement.id, { [ratioField]: ratio });
+  placements = result.placements;
+  renderPlacements();
+  updateControls();
+}
+
+function formatPlacementDimensions(placement) {
+  return `${Math.round(placement.widthRatio * pageStage.clientWidth)} × ${Math.round(placement.heightRatio * pageStage.clientHeight)} px`;
+}
+
+function openSidebarGroup(groupName) {
+  sidebarGroups.forEach((group) => { group.open = group.dataset.pdfSidebarGroup === groupName; });
 }
 
 function isMarkPlacement(placement) {
@@ -526,6 +608,14 @@ function movePlacement(event) {
     activeDrag.stamp.style.width = `${placement.widthRatio * 100}%`;
     activeDrag.stamp.style.height = `${placement.heightRatio * 100}%`;
     activeDrag.stamp.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
+    const dimensions = activeDrag.stamp.querySelector(".pdf-placement-dimensions");
+    if (dimensions) dimensions.textContent = formatPlacementDimensions(placement);
+    if (placement.kind === "text-field") {
+      fillableWidthInput.value = String(Math.round(placement.widthRatio * pageStage.clientWidth));
+      fillableHeightInput.value = String(Math.round(placement.heightRatio * pageStage.clientHeight));
+      const editor = activeDrag.stamp.querySelector(".pdf-fillable-editor");
+      if (editor) fitFillablePreviewText(editor, placement);
+    }
   } else {
     placement.xRatio = clamp(activeDrag.startLeft + deltaXRatio, 0, 1 - placement.widthRatio);
     const stampHeightRatio = activeDrag.stamp.offsetHeight / pageStage.clientHeight;
@@ -556,6 +646,8 @@ function selectPlacement(placementId) {
   selectedPlacementId = placements.some((placement) => placement.id === placementId)
     ? placementId
     : null;
+  const selected = placements.find((placement) => placement.id === selectedPlacementId);
+  if (selected?.kind === "text-field") openSidebarGroup("fillable");
   signatureLayer.querySelectorAll(".pdf-placement").forEach((stamp) => {
     const isSelected = stamp.dataset.placementId === selectedPlacementId;
     stamp.classList.toggle("is-selected", isSelected);
@@ -582,6 +674,16 @@ function syncFillableTextControl() {
   Object.entries(fillableStyleButtons).forEach(([property, button]) => {
     button.setAttribute("aria-pressed", String(Boolean(style[property])));
   });
+  fillableWidthInput.value = isEditingField
+    ? String(Math.round(selected.widthRatio * pageStage.clientWidth))
+    : "";
+  fillableHeightInput.value = isEditingField
+    ? String(Math.round(selected.heightRatio * pageStage.clientHeight))
+    : "";
+  fillableWidthInput.disabled = !isEditingField || selected.locked;
+  fillableHeightInput.disabled = !isEditingField || selected.locked;
+  copyTextFieldButton.disabled = !isEditingField;
+  pasteTextFieldButton.disabled = !pdfDocument || !copiedFillablePlacement;
   fillableTextHint.textContent = isEditingField
     ? "Editing the selected fillable field. Changes update immediately."
     : "Select a field to edit its text here or directly on the page.";
@@ -748,6 +850,9 @@ function updateControls() {
   markButtons.forEach((button) => { button.disabled = !hasDocument; });
   downloadButton.disabled = !hasDocument || placements.length === 0;
   deletePlacementButton.disabled = !selectedPlacementId;
+  const selected = placements.find((placement) => placement.id === selectedPlacementId);
+  copyTextFieldButton.disabled = selected?.kind !== "text-field";
+  pasteTextFieldButton.disabled = !hasDocument || !copiedFillablePlacement;
 }
 
 /**
@@ -800,6 +905,22 @@ Object.entries(fillableStyleButtons).forEach(([property, button]) => {
     updateFillableStyle({ [property]: button.getAttribute("aria-pressed") !== "true" });
   });
 });
+fillableWidthInput.addEventListener("change", () => {
+  updateSelectedFillableDimension("width", fillableWidthInput.value);
+});
+fillableHeightInput.addEventListener("change", () => {
+  updateSelectedFillableDimension("height", fillableHeightInput.value);
+});
+copyTextFieldButton.addEventListener("click", copySelectedFillable);
+pasteTextFieldButton.addEventListener("click", pasteCopiedFillable);
+sidebarGroups.forEach((group) => {
+  group.addEventListener("toggle", () => {
+    if (!group.open) return;
+    sidebarGroups.forEach((candidate) => {
+      if (candidate !== group) candidate.open = false;
+    });
+  });
+});
 document.querySelectorAll(".font-choice").forEach((button) => {
   button.addEventListener("click", () => {
     signatureFont = button.dataset.font;
@@ -831,7 +952,7 @@ deletePlacementButton.addEventListener("click", () => deletePlacement(selectedPl
 
 document.addEventListener("pointerdown", (event) => {
   if (!selectedPlacementId) return;
-  if (event.target.closest(".pdf-placement, .pdf-text-tools, #fillable-text, #delete-placement")) return;
+  if (event.target.closest(".pdf-placement, .pdf-text-tools, .pdf-field-geometry, #fillable-text, #delete-placement")) return;
   selectPlacement(null);
 });
 
@@ -840,6 +961,21 @@ document.addEventListener("keydown", (event) => {
   const isEditing = target instanceof Element
     && (target.matches("input, textarea, select") || target.closest("[contenteditable='true']"));
   if (isEditing) return;
+
+  const usesCommandKey = event.ctrlKey || event.metaKey;
+  if (usesCommandKey && event.key.toLocaleLowerCase() === "c") {
+    const selected = placements.find((placement) => placement.id === selectedPlacementId);
+    if (selected?.kind === "text-field") {
+      event.preventDefault();
+      copySelectedFillable();
+    }
+    return;
+  }
+  if (usesCommandKey && event.key.toLocaleLowerCase() === "v" && copiedFillablePlacement) {
+    event.preventDefault();
+    pasteCopiedFillable();
+    return;
+  }
 
   if ((event.key === "Delete" || event.key === "Backspace") && selectedPlacementId) {
     event.preventDefault();
@@ -1102,6 +1238,64 @@ installCurrentToolAiHost({
           state: { ...state, placements: result.placements, selectedPlacementId: placementId },
           updatedIds: [placementId],
           value: result.updated,
+        };
+      },
+    },
+    {
+      type: "placements.duplicate",
+      description: "Duplicate a fillable field with the same text, typography, and exact normalized dimensions.",
+      permissions: ["create", "sensitive-data"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["placementId"],
+        properties: {
+          placementId: { type: "string" },
+          id: { type: "string", maxLength: 128 },
+          pageNumber: { type: "integer", minimum: 1 },
+          offsetXRatio: { type: "number", minimum: -1, maximum: 1 },
+          offsetYRatio: { type: "number", minimum: -1, maximum: 1 },
+        },
+        additionalProperties: false,
+      },
+      example: {
+        type: "placements.duplicate",
+        placementId: "field-id",
+        offsetXRatio: 0,
+        offsetYRatio: 0.04,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(
+          command,
+          ["placementId", "id", "pageNumber", "offsetXRatio", "offsetYRatio"],
+          commandIndex,
+        );
+        const placementId = requireCommandString(
+          command.placementId,
+          "placementId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        const current = state.placements.find((placement) => placement.id === placementId);
+        if (!current) throw new Error(`Placement not found: ${placementId}.`);
+        if (current.kind !== "text-field") throw new Error("Only fillable fields can be duplicated.");
+        const id = command.id === undefined
+          ? createId()
+          : requireCommandString(command.id, "id", commandIndex, { maximumLength: 128 });
+        const pageNumber = command.pageNumber === undefined ? current.pageNumber : Number(command.pageNumber);
+        if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > state.document.pageCount) {
+          throw new Error("pageNumber must identify a page in the open PDF.");
+        }
+        const result = duplicatePlacementById(state.placements, placementId, {
+          id,
+          pageNumber,
+          offsetXRatio: command.offsetXRatio,
+          offsetYRatio: command.offsetYRatio,
+        });
+        return {
+          state: { ...state, placements: result.placements, selectedPlacementId: id },
+          createdIds: [id],
+          value: result.duplicated,
         };
       },
     },
