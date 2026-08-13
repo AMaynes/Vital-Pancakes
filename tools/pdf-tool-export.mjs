@@ -25,6 +25,8 @@ export function addFillableTextField({
   placement,
   placementIndex,
   rgb,
+  PDFName,
+  PDFHexString,
 }) {
   const x = pageWidth * placement.xRatio;
   const width = pageWidth * placement.widthRatio;
@@ -34,6 +36,15 @@ export function addFillableTextField({
   const field = form.createTextField(`vp_field_${placementIndex + 1}_${safeId}`);
   field.enableMultiline();
   if (placement.text) field.setText(placement.text);
+  if (placement.bold || placement.italic || placement.underline) {
+    field.enableRichFormatting();
+    if (PDFName && PDFHexString) {
+      field.acroField.dict.set(
+        PDFName.of("RV"),
+        PDFHexString.fromText(createRichTextValue(placement, pageWidth)),
+      );
+    }
+  }
   field.addToPage(page, {
     x,
     y,
@@ -42,11 +53,46 @@ export function addFillableTextField({
     font: formFont,
     textColor: rgb(0.09, 0.14, 0.12),
     borderColor: rgb(0.19, 0.35, 0.31),
-    backgroundColor: rgb(1, 1, 1),
+    backgroundColor: rgb(0.92, 0.97, 1),
     borderWidth: 1,
   });
   field.setFontSize(Math.max(6, Math.min(32, pageWidth * placement.fontSizeRatio)));
+  field.updateAppearances(formFont);
   return field;
+}
+
+function createRichTextValue(placement, pageWidth) {
+  const family = {
+    helvetica: "Helvetica",
+    "times-roman": "Times New Roman",
+    courier: "Courier New",
+  }[placement.fontFamily] ?? "Helvetica";
+  const styles = [
+    `font-family:${family}`,
+    `font-size:${Math.max(6, Math.min(32, pageWidth * placement.fontSizeRatio))}pt`,
+    placement.bold ? "font-weight:bold" : "",
+    placement.italic ? "font-style:italic" : "",
+    placement.underline ? "text-decoration:underline" : "",
+  ].filter(Boolean).join(";");
+  const text = String(placement.text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+  return `<body xmlns="http://www.w3.org/1999/xhtml"><p><span style="${styles}">${text}</span></p></body>`;
+}
+
+/** Draws an opaque white rectangle over source PDF content. */
+export function drawWhiteout(page, placement, pageWidth, pageHeight, rgb) {
+  const width = pageWidth * placement.widthRatio;
+  const height = pageHeight * placement.heightRatio;
+  page.drawRectangle({
+    x: pageWidth * placement.xRatio,
+    y: pageHeight - (pageHeight * placement.yRatio) - height,
+    width,
+    height,
+    color: rgb(1, 1, 1),
+  });
 }
 
 /**

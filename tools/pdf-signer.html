@@ -9,7 +9,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=17">
-  <link rel="stylesheet" href="tool.css?v=36">
+  <link rel="stylesheet" href="tool.css?v=37">
   <link rel="stylesheet" href="../site-navigation.css?v=22">
   <script type="module" src="../site-navigation.js?v=19"></script>
 </head>
@@ -96,17 +96,39 @@
               placeholder="Optional starting text"
             ></textarea>
           </label>
+          <div class="pdf-text-tools" aria-label="Fillable text formatting">
+            <label class="pdf-font-family-label" for="fillable-font-family">
+              <span>Font</span>
+              <select class="tool-input" id="fillable-font-family">
+                <option value="helvetica">Arial</option>
+                <option value="times-roman">Times</option>
+                <option value="courier">Courier</option>
+              </select>
+            </label>
+            <label class="pdf-font-size-label" for="fillable-font-size">
+              <span>Size</span>
+              <input class="tool-input" id="fillable-font-size" type="number" min="4" max="32" step="1" value="12">
+            </label>
+            <div class="pdf-text-style-buttons" aria-label="Text style">
+              <button class="tool-button pdf-text-style" id="fillable-bold" type="button" aria-label="Bold" aria-pressed="false"><strong>B</strong></button>
+              <button class="tool-button pdf-text-style" id="fillable-italic" type="button" aria-label="Italic" aria-pressed="false"><em>I</em></button>
+              <button class="tool-button pdf-text-style" id="fillable-underline" type="button" aria-label="Underline" aria-pressed="false"><u>U</u></button>
+            </div>
+          </div>
           <small class="pdf-field-hint" id="fillable-text-hint">Select a field to edit its text here or directly on the page.</small>
           <button class="button button-primary" id="add-text-field" type="button" disabled>Place fillable field</button>
         </section>
 
         <section class="panel-section">
           <h2>5. Add a mark</h2>
-          <p>Place a checkmark, circle, or X, then drag and resize it.</p>
+          <p>Place a checkmark, circle, X, or white-out area, then drag and resize it.</p>
           <div class="pdf-mark-buttons" aria-label="PDF marks">
             <button class="button pdf-mark-button" data-mark-kind="checkmark" type="button" disabled aria-label="Place checkmark">✓</button>
             <button class="button pdf-mark-button" data-mark-kind="circle" type="button" disabled aria-label="Place circle">○</button>
             <button class="button pdf-mark-button" data-mark-kind="x-mark" type="button" disabled aria-label="Place X">×</button>
+            <button class="button pdf-mark-button pdf-whiteout-button" data-mark-kind="whiteout" type="button" disabled aria-label="Place white-out area" title="White out">
+              <span aria-hidden="true"></span>
+            </button>
           </div>
         </section>
       </aside>
@@ -119,7 +141,7 @@
             <button class="tool-button" id="next-page" type="button" disabled>Next →</button>
           </div>
           <div class="toolbar-group">
-            <span class="tool-save-status">Select · drag to move · resize from the dot</span>
+            <span class="tool-save-status">Select · drag to move · resize from any corner</span>
             <button
               class="tool-button pdf-delete-button"
               id="delete-placement"
@@ -151,6 +173,6 @@
 
   <script src="../vendor/pdf.min.js"></script>
   <script src="../vendor/pdf-lib.min.js"></script>
-  <script type="module" src="pdf-signer.js?v=6"></script>
+  <script type="module" src="pdf-signer.js?v=7"></script>
 </body>
 </html>

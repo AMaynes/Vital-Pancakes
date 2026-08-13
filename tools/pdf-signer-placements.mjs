@@ -18,6 +18,7 @@ export const PDF_PLACEMENT_KINDS = Object.freeze([
   "checkmark",
   "circle",
   "x-mark",
+  "whiteout",
 ]);
 
 const PLACEMENT_DEFAULTS = Object.freeze({
@@ -47,6 +48,10 @@ const PLACEMENT_DEFAULTS = Object.freeze({
     widthRatio: 0.4,
     heightRatio: 0.075,
     fontSizeRatio: 0.022,
+    fontFamily: "helvetica",
+    bold: false,
+    italic: false,
+    underline: false,
   }),
   checkmark: Object.freeze({
     text: "✓",
@@ -75,6 +80,15 @@ const PLACEMENT_DEFAULTS = Object.freeze({
     heightRatio: 0.07,
     fontSizeRatio: 0.05,
   }),
+  whiteout: Object.freeze({
+    text: "",
+    font: "whiteout",
+    xRatio: 0.38,
+    yRatio: 0.5,
+    widthRatio: 0.18,
+    heightRatio: 0.055,
+    fontSizeRatio: 0.008,
+  }),
 });
 
 const EDITABLE_PLACEMENT_FIELDS = new Set([
@@ -84,6 +98,10 @@ const EDITABLE_PLACEMENT_FIELDS = new Set([
   "widthRatio",
   "heightRatio",
   "fontSizeRatio",
+  "fontFamily",
+  "bold",
+  "italic",
+  "underline",
 ]);
 
 /**
@@ -114,8 +132,8 @@ export function createPdfPlacement(input) {
     font: normalizePlacementFont(kind, input.font ?? defaults.font),
     xRatio: normalizeRatio(input.xRatio, defaults.xRatio, 0, 0.98, "xRatio"),
     yRatio: normalizeRatio(input.yRatio, defaults.yRatio, 0, 0.98, "yRatio"),
-    widthRatio: normalizeRatio(input.widthRatio, defaults.widthRatio, 0.02, 1, "widthRatio"),
-    heightRatio: normalizeRatio(input.heightRatio, defaults.heightRatio, 0.02, 1, "heightRatio"),
+    widthRatio: normalizeRatio(input.widthRatio, defaults.widthRatio, 0.008, 1, "widthRatio"),
+    heightRatio: normalizeRatio(input.heightRatio, defaults.heightRatio, 0.008, 1, "heightRatio"),
     fontSizeRatio: normalizeRatio(
       input.fontSizeRatio,
       defaults.fontSizeRatio,
@@ -124,6 +142,12 @@ export function createPdfPlacement(input) {
       "fontSizeRatio",
     ),
   };
+  if (kind === "text-field") {
+    placement.fontFamily = normalizeFontFamily(input.fontFamily ?? defaults.fontFamily);
+    placement.bold = normalizeBoolean(input.bold, defaults.bold, "bold");
+    placement.italic = normalizeBoolean(input.italic, defaults.italic, "italic");
+    placement.underline = normalizeBoolean(input.underline, defaults.underline, "underline");
+  }
   placement.widthRatio = Math.min(placement.widthRatio, 1 - placement.xRatio);
   placement.heightRatio = Math.min(placement.heightRatio, 1 - placement.yRatio);
   return placement;
@@ -179,6 +203,7 @@ function normalizePlacementText(kind, value) {
   if (kind === "checkmark") return "✓";
   if (kind === "circle") return "○";
   if (kind === "x-mark") return "×";
+  if (kind === "whiteout") return "";
   const text = String(value ?? "");
   if (text.length > 500) throw new TypeError("Placement text cannot exceed 500 characters.");
   if ((kind === "signature" || kind === "date") && !text.trim()) {
@@ -199,7 +224,22 @@ function normalizePlacementFont(kind, value) {
   if (kind === "date") return "date-font";
   if (kind === "text-field") return "form-font";
   if (["checkmark", "circle", "x-mark"].includes(kind)) return "mark-font";
+  if (kind === "whiteout") return "whiteout";
   return font;
+}
+
+function normalizeFontFamily(value) {
+  const fontFamily = String(value ?? "");
+  if (!["helvetica", "times-roman", "courier"].includes(fontFamily)) {
+    throw new TypeError(`Unsupported fillable font family: ${fontFamily}.`);
+  }
+  return fontFamily;
+}
+
+function normalizeBoolean(value, fallback, field) {
+  if (value === undefined) return fallback;
+  if (typeof value !== "boolean") throw new TypeError(`${field} must be a boolean.`);
+  return value;
 }
 
 function normalizeRatio(value, fallback, minimum, maximum, field) {

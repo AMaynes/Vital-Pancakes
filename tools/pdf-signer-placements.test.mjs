@@ -28,6 +28,8 @@ test("creates a real fillable-text placement with bounded normalized geometry", 
 
   assert.equal(placement.text, "Editable answer");
   assert.equal(placement.font, "form-font");
+  assert.equal(placement.fontFamily, "helvetica");
+  assert.equal(placement.bold, false);
   assert.ok(Math.abs(placement.widthRatio - 0.2) < Number.EPSILON);
   assert.equal(placement.heightRatio, 0.075);
 });
@@ -36,6 +38,28 @@ test("creates fixed check, circle, and X mark content", () => {
   assert.equal(createPdfPlacement({ id: "check", kind: "checkmark", pageNumber: 1 }).text, "✓");
   assert.equal(createPdfPlacement({ id: "circle", kind: "circle", pageNumber: 1 }).text, "○");
   assert.equal(createPdfPlacement({ id: "x", kind: "x-mark", pageNumber: 1 }).text, "×");
+});
+
+test("creates styled fillable fields and small white-out areas", () => {
+  const field = createPdfPlacement({
+    id: "styled-field",
+    kind: "text-field",
+    pageNumber: 1,
+    fontFamily: "times-roman",
+    bold: true,
+    italic: true,
+    underline: true,
+    widthRatio: 0.008,
+    heightRatio: 0.008,
+  });
+  const whiteout = createPdfPlacement({ id: "whiteout", kind: "whiteout", pageNumber: 1 });
+
+  assert.equal(field.fontFamily, "times-roman");
+  assert.equal(field.bold, true);
+  assert.equal(field.italic, true);
+  assert.equal(field.underline, true);
+  assert.equal(field.widthRatio, 0.008);
+  assert.equal(whiteout.text, "");
 });
 
 test("updates fillable text and geometry without mutating the original list", () => {
@@ -49,10 +73,14 @@ test("updates fillable text and geometry without mutating the original list", ()
   const result = updatePlacementById(original, "field-1", {
     text: "After",
     heightRatio: 0.12,
+    fontFamily: "courier",
+    bold: true,
   });
 
   assert.equal(result.updated.text, "After");
   assert.equal(result.updated.heightRatio, 0.12);
+  assert.equal(result.updated.fontFamily, "courier");
+  assert.equal(result.updated.bold, true);
   assert.equal(original[0].text, "Before");
 });
 

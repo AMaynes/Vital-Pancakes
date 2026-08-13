@@ -21,8 +21,8 @@ import {
   PDF_PLACEMENT_KINDS,
   removePlacementById,
   updatePlacementById,
-} from "./pdf-signer-placements.mjs?v=2";
-import { addFillableTextField, drawVectorMark } from "./pdf-tool-export.mjs?v=1";
+} from "./pdf-signer-placements.mjs?v=3";
+import { addFillableTextField, drawVectorMark, drawWhiteout } from "./pdf-tool-export.mjs?v=2";
 import {
   installCurrentToolAiHost,
   requireCommandRecord,
@@ -30,7 +30,7 @@ import {
   rejectUnknownCommandFields,
 } from "./current-tool-ai-adapter.mjs";
 
-const { PDFDocument, StandardFonts, rgb } = globalThis.PDFLib;
+const { PDFDocument, PDFHexString, PDFName, StandardFonts, rgb } = globalThis.PDFLib;
 globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc = "../vendor/pdf.worker.min.js";
 
 const fileInput = document.querySelector("#pdf-file");
@@ -43,6 +43,13 @@ const addDateButton = document.querySelector("#add-date");
 const fillableTextInput = document.querySelector("#fillable-text");
 const fillableTextHint = document.querySelector("#fillable-text-hint");
 const addTextFieldButton = document.querySelector("#add-text-field");
+const fillableFontFamily = document.querySelector("#fillable-font-family");
+const fillableFontSize = document.querySelector("#fillable-font-size");
+const fillableStyleButtons = {
+  bold: document.querySelector("#fillable-bold"),
+  italic: document.querySelector("#fillable-italic"),
+  underline: document.querySelector("#fillable-underline"),
+};
 const markButtons = [...document.querySelectorAll("[data-mark-kind]")];
 const downloadButton = document.querySelector("#download-signed-pdf");
 const deletePlacementButton = document.querySelector("#delete-placement");
@@ -61,6 +68,14 @@ let selectedPlacementId = null;
 let activeDrag = null;
 let renderSequence = 0;
 let fillableTextDraft = "";
+let renderedPageWidthPoints = 545;
+let fillableStyleDraft = {
+  fontFamily: "helvetica",
+  fontSizeRatio: 0.022,
+  bold: false,
+  italic: false,
+  underline: false,
+};
 
 const FONT_STYLES = {
   "signature-font-1": '"Snell Roundhand", "Segoe Script", cursive',
@@ -78,6 +93,13 @@ const PLACEMENT_LABELS = Object.freeze({
   checkmark: "Checkmark",
   circle: "Circle",
   "x-mark": "X",
+  whiteout: "White-out area",
+});
+
+const FORM_FONT_STYLES = Object.freeze({
+  helvetica: "Arial, Helvetica, sans-serif",
+  "times-roman": 'Georgia, "Times New Roman", serif',
+  courier: '"Courier New", Courier, monospace',
 });
 
 /**
@@ -100,6 +122,13 @@ async function loadPdf(file) {
     placements = [];
     selectedPlacementId = null;
     fillableTextDraft = "";
+    fillableStyleDraft = {
+      fontFamily: "helvetica",
+      fontSizeRatio: 0.022,
+      bold: false,
+      italic: false,
+      underline: false,
+    };
     fillableTextInput.value = "";
     document.querySelector("#pdf-empty").hidden = true;
     pageStage.hidden = false;
@@ -120,6 +149,7 @@ async function renderPage() {
   if (!pdfDocument) return;
   const sequence = ++renderSequence;
   const page = await pdfDocument.getPage(currentPageNumber);
+  renderedPageWidthPoints = page.getViewport({ scale: 1 }).width;
   const viewport = page.getViewport({ scale: 1.35 });
   const pixelRatio = window.devicePixelRatio || 1;
 
@@ -154,6 +184,7 @@ function renderPlacements() {
       placement.kind === "date" ? "date-stamp" : "",
       placement.kind === "text-field" ? "text-field-stamp" : "",
       isMarkPlacement(placement) ? "mark-stamp" : "",
+      placement.kind === "whiteout" ? "whiteout-stamp" : "",
     ].filter(Boolean).join(" ");
     stamp.dataset.placementId = placement.id;
     stamp.dataset.placementKind = placement.kind;
@@ -167,9 +198,7 @@ function renderPlacements() {
     stamp.style.left = `${placement.xRatio * 100}%`;
     stamp.style.top = `${placement.yRatio * 100}%`;
     stamp.style.width = `${placement.widthRatio * 100}%`;
-    if (placement.kind === "text-field" || isMarkPlacement(placement)) {
-      stamp.style.height = `${placement.heightRatio * 100}%`;
-    }
+    stamp.style.height = `${placement.heightRatio * 100}%`;
     stamp.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
     stamp.classList.toggle("is-selected", placement.id === selectedPlacementId);
 
@@ -180,6 +209,10 @@ function renderPlacements() {
       editor.placeholder = "Fillable text";
       editor.maxLength = 500;
       editor.setAttribute("aria-label", "Fillable field text");
+      editor.style.fontFamily = FORM_FONT_STYLES[placement.fontFamily];
+      editor.style.fontWeight = placement.bold ? "700" : "400";
+      editor.style.fontStyle = placement.italic ? "italic" : "normal";
+      editor.style.textDecoration = placement.underline ? "underline" : "none";
       editor.addEventListener("pointerdown", (event) => {
         event.stopPropagation();
         selectPlacement(placement.id);
@@ -201,9 +234,13 @@ function renderPlacements() {
       stamp.append(content);
     }
 
-    const resizeHandle = document.createElement("span");
-    resizeHandle.className = "pdf-placement-resize";
-    resizeHandle.title = `Resize ${placement.kind}`;
+    const resizeHandles = ["nw", "ne", "sw", "se"].map((corner) => {
+      const resizeHandle = document.createElement("span");
+      resizeHandle.className = "pdf-placement-resize";
+      resizeHandle.dataset.resizeCorner = corner;
+      resizeHandle.title = `Resize ${placement.kind} from ${corner.toUpperCase()}`;
+      return resizeHandle;
+    });
 
     const deleteControl = document.createElement("button");
     deleteControl.className = "pdf-placement-delete";
@@ -221,7 +258,7 @@ function renderPlacements() {
       deletePlacement(placement.id);
     });
 
-    stamp.append(resizeHandle);
+    stamp.append(...resizeHandles);
     stamp.append(deleteControl);
     stamp.addEventListener("focus", () => selectPlacement(placement.id));
     signatureLayer.append(stamp);
@@ -277,6 +314,7 @@ function addTextField() {
     kind: "text-field",
     pageNumber: currentPageNumber,
     text: fillableTextInput.value,
+    ...fillableStyleDraft,
   });
   placements.push(placement);
   selectedPlacementId = placement.id;
@@ -288,10 +326,10 @@ function addTextField() {
 /**
  * Adds one vector mark to the visible page.
  *
- * @param {string} kind Checkmark, circle, or X placement kind.
+ * @param {string} kind Checkmark, circle, X, or white-out placement kind.
  */
 function addMark(kind) {
-  if (!pdfDocument || !["checkmark", "circle", "x-mark"].includes(kind)) return;
+  if (!pdfDocument || !["checkmark", "circle", "x-mark", "whiteout"].includes(kind)) return;
   const placement = createPdfPlacement({
     id: createId(),
     kind,
@@ -322,6 +360,18 @@ function updateFillableText(placementId, text) {
   if (stamp) {
     stamp.dataset.placementText = text;
     stamp.setAttribute("aria-label", `Selected Fillable field${text ? `: ${text}` : ""}`);
+  }
+}
+
+function updateFillableStyle(changes) {
+  const selected = placements.find((placement) => placement.id === selectedPlacementId);
+  if (selected?.kind === "text-field") {
+    const result = updatePlacementById(placements, selected.id, changes);
+    placements = result.placements;
+    renderPlacements();
+  } else {
+    fillableStyleDraft = { ...fillableStyleDraft, ...changes };
+    syncFillableTextControl();
   }
 }
 
@@ -381,6 +431,7 @@ function startPlacementGesture(event) {
     stamp,
     pointerId: event.pointerId,
     mode: event.target.classList.contains("pdf-placement-resize") ? "resize" : "move",
+    corner: event.target.dataset.resizeCorner ?? "se",
     startX: event.clientX,
     startY: event.clientY,
     startLeft: placement.xRatio,
@@ -402,28 +453,34 @@ function movePlacement(event) {
   const { placement } = activeDrag;
 
   if (activeDrag.mode === "resize") {
-    const minimumWidth = isMarkPlacement(placement) ? 0.025 : 0.1;
-    placement.widthRatio = clamp(
-      activeDrag.startWidth + deltaXRatio,
-      minimumWidth,
-      1 - placement.xRatio,
-    );
-    if (placement.kind === "text-field" || isMarkPlacement(placement)) {
-      placement.heightRatio = clamp(
-        activeDrag.startHeight + deltaYRatio,
-        0.025,
-        1 - placement.yRatio,
-      );
-      activeDrag.stamp.style.height = `${placement.heightRatio * 100}%`;
+    const minimumWidth = 0.008;
+    const minimumHeight = 0.008;
+    const startRight = activeDrag.startLeft + activeDrag.startWidth;
+    const startBottom = activeDrag.startTop + activeDrag.startHeight;
+    const resizeWest = activeDrag.corner.includes("w");
+    const resizeNorth = activeDrag.corner.includes("n");
+
+    if (resizeWest) {
+      placement.xRatio = clamp(activeDrag.startLeft + deltaXRatio, 0, startRight - minimumWidth);
+      placement.widthRatio = startRight - placement.xRatio;
+    } else {
+      placement.widthRatio = clamp(activeDrag.startWidth + deltaXRatio, minimumWidth, 1 - activeDrag.startLeft);
+    }
+    if (resizeNorth) {
+      placement.yRatio = clamp(activeDrag.startTop + deltaYRatio, 0, startBottom - minimumHeight);
+      placement.heightRatio = startBottom - placement.yRatio;
+    } else {
+      placement.heightRatio = clamp(activeDrag.startHeight + deltaYRatio, minimumHeight, 1 - activeDrag.startTop);
     }
     if (isMarkPlacement(placement)) {
       placement.fontSizeRatio = Math.min(placement.widthRatio, placement.heightRatio) * 0.72;
-    } else if (placement.kind === "text-field") {
-      placement.fontSizeRatio = clamp(placement.heightRatio * 0.3, 0.008, 0.08);
-    } else {
+    } else if (!["text-field", "whiteout"].includes(placement.kind)) {
       placement.fontSizeRatio = placement.widthRatio * 0.16;
     }
+    activeDrag.stamp.style.left = `${placement.xRatio * 100}%`;
+    activeDrag.stamp.style.top = `${placement.yRatio * 100}%`;
     activeDrag.stamp.style.width = `${placement.widthRatio * 100}%`;
+    activeDrag.stamp.style.height = `${placement.heightRatio * 100}%`;
     activeDrag.stamp.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
   } else {
     placement.xRatio = clamp(activeDrag.startLeft + deltaXRatio, 0, 1 - placement.widthRatio);
@@ -474,7 +531,13 @@ function syncFillableTextControl() {
   const selected = placements.find((placement) => placement.id === selectedPlacementId);
   const isEditingField = selected?.kind === "text-field";
   const nextValue = isEditingField ? selected.text : fillableTextDraft;
+  const style = isEditingField ? selected : fillableStyleDraft;
   if (fillableTextInput.value !== nextValue) fillableTextInput.value = nextValue;
+  fillableFontFamily.value = style.fontFamily;
+  fillableFontSize.value = String(Math.round(style.fontSizeRatio * renderedPageWidthPoints));
+  Object.entries(fillableStyleButtons).forEach(([property, button]) => {
+    button.setAttribute("aria-pressed", String(Boolean(style[property])));
+  });
   fillableTextHint.textContent = isEditingField
     ? "Editing the selected fillable field. Changes update immediately."
     : "Select a field to edit its text here or directly on the page.";
@@ -534,7 +597,26 @@ async function downloadSignedPdf() {
     const outputDocument = await PDFDocument.load(pdfBytes.slice());
     const pages = outputDocument.getPages();
     const form = outputDocument.getForm();
-    const formFont = await outputDocument.embedFont(StandardFonts.Helvetica);
+    const formFonts = {
+      helvetica: {
+        regular: await outputDocument.embedFont(StandardFonts.Helvetica),
+        bold: await outputDocument.embedFont(StandardFonts.HelveticaBold),
+        italic: await outputDocument.embedFont(StandardFonts.HelveticaOblique),
+        boldItalic: await outputDocument.embedFont(StandardFonts.HelveticaBoldOblique),
+      },
+      "times-roman": {
+        regular: await outputDocument.embedFont(StandardFonts.TimesRoman),
+        bold: await outputDocument.embedFont(StandardFonts.TimesRomanBold),
+        italic: await outputDocument.embedFont(StandardFonts.TimesRomanItalic),
+        boldItalic: await outputDocument.embedFont(StandardFonts.TimesRomanBoldItalic),
+      },
+      courier: {
+        regular: await outputDocument.embedFont(StandardFonts.Courier),
+        bold: await outputDocument.embedFont(StandardFonts.CourierBold),
+        italic: await outputDocument.embedFont(StandardFonts.CourierOblique),
+        boldItalic: await outputDocument.embedFont(StandardFonts.CourierBoldOblique),
+      },
+    };
 
     for (const [placementIndex, placement] of placements.entries()) {
       const page = pages[placement.pageNumber - 1];
@@ -542,23 +624,30 @@ async function downloadSignedPdf() {
       const pageWidth = page.getWidth();
       const pageHeight = page.getHeight();
       if (placement.kind === "text-field") {
+        const styleKey = placement.bold && placement.italic
+          ? "boldItalic"
+          : placement.bold ? "bold" : placement.italic ? "italic" : "regular";
         addFillableTextField({
           form,
-          formFont,
+          formFont: formFonts[placement.fontFamily][styleKey],
           page,
           pageWidth,
           pageHeight,
           placement,
           placementIndex,
           rgb,
+          PDFName,
+          PDFHexString,
         });
+      } else if (placement.kind === "whiteout") {
+        drawWhiteout(page, placement, pageWidth, pageHeight, rgb);
       } else if (isMarkPlacement(placement)) {
         drawVectorMark(page, placement, pageWidth, pageHeight, rgb);
       } else {
         const pngBytes = await createPlacementPng(placement);
         const placementImage = await outputDocument.embedPng(pngBytes);
         const drawWidth = pageWidth * placement.widthRatio;
-        const drawHeight = drawWidth * (placementImage.height / placementImage.width);
+        const drawHeight = pageHeight * placement.heightRatio;
         page.drawImage(placementImage, {
           x: pageWidth * placement.xRatio,
           y: pageHeight - pageHeight * placement.yRatio - drawHeight,
@@ -567,8 +656,6 @@ async function downloadSignedPdf() {
         });
       }
     }
-
-    form.updateFieldAppearances(formFont);
 
     const signedBytes = await outputDocument.save();
     const blob = new Blob([signedBytes], { type: "application/pdf" });
@@ -656,6 +743,19 @@ fillableTextInput.addEventListener("input", () => {
     fillableTextDraft = fillableTextInput.value;
   }
 });
+fillableFontFamily.addEventListener("change", () => {
+  updateFillableStyle({ fontFamily: fillableFontFamily.value });
+});
+fillableFontSize.addEventListener("change", () => {
+  const points = clamp(Number(fillableFontSize.value) || 12, 4, 32);
+  fillableFontSize.value = String(points);
+  updateFillableStyle({ fontSizeRatio: points / renderedPageWidthPoints });
+});
+Object.entries(fillableStyleButtons).forEach(([property, button]) => {
+  button.addEventListener("click", () => {
+    updateFillableStyle({ [property]: button.getAttribute("aria-pressed") !== "true" });
+  });
+});
 document.querySelectorAll(".font-choice").forEach((button) => {
   button.addEventListener("click", () => {
     signatureFont = button.dataset.font;
@@ -710,7 +810,7 @@ updateControls();
 installCurrentToolAiHost({
   id: "pdf-signer",
   title: "PDF Tool",
-  description: "Describes and stages added signatures, dates, fillable text fields, and marks on a local PDF.",
+  description: "Describes and stages added signatures, dates, styled fillable text fields, marks, and white-out areas on a local PDF.",
   limitations: [
     "AI commands cannot choose a local PDF file.",
     "AI commands only manage added items; they do not detect or remove original PDF content.",
@@ -778,7 +878,7 @@ installCurrentToolAiHost({
     },
     {
       type: "placements.add",
-      description: "Add one signature, date, real fillable text field, checkmark, circle, or X to an open PDF page.",
+      description: "Add one signature, date, styled fillable text field, checkmark, circle, X, or white-out area to an open PDF page.",
       permissions: ["create", "sensitive-data"],
       mutates: true,
       schema: {
@@ -802,12 +902,17 @@ installCurrentToolAiHost({
                   "date-font",
                   "form-font",
                   "mark-font",
+                  "whiteout",
                 ],
               },
+              fontFamily: { type: "string", enum: ["helvetica", "times-roman", "courier"] },
+              bold: { type: "boolean" },
+              italic: { type: "boolean" },
+              underline: { type: "boolean" },
               xRatio: { type: "number", minimum: 0, maximum: 0.98 },
               yRatio: { type: "number", minimum: 0, maximum: 0.98 },
-              widthRatio: { type: "number", minimum: 0.02, maximum: 1 },
-              heightRatio: { type: "number", minimum: 0.02, maximum: 1 },
+              widthRatio: { type: "number", minimum: 0.008, maximum: 1 },
+              heightRatio: { type: "number", minimum: 0.008, maximum: 1 },
               fontSizeRatio: { type: "number", minimum: 0.008, maximum: 0.2 },
             },
             additionalProperties: false,
@@ -821,6 +926,9 @@ installCurrentToolAiHost({
           kind: "text-field",
           pageNumber: 1,
           text: "Editable answer",
+          fontFamily: "times-roman",
+          bold: true,
+          underline: true,
           xRatio: 0.2,
           yRatio: 0.4,
           widthRatio: 0.35,
@@ -837,6 +945,10 @@ installCurrentToolAiHost({
           "pageNumber",
           "text",
           "font",
+          "fontFamily",
+          "bold",
+          "italic",
+          "underline",
           "xRatio",
           "yRatio",
           "widthRatio",
@@ -870,7 +982,7 @@ installCurrentToolAiHost({
     },
     {
       type: "placements.update",
-      description: "Edit an added item's text or normalized geometry. Text is editable on fillable fields.",
+      description: "Edit an added item's geometry or a fillable field's text, font family, size, and emphasis.",
       permissions: ["update", "sensitive-data"],
       mutates: true,
       schema: {
@@ -883,10 +995,14 @@ installCurrentToolAiHost({
             minProperties: 1,
             properties: {
               text: { type: "string", maxLength: 500 },
+              fontFamily: { type: "string", enum: ["helvetica", "times-roman", "courier"] },
+              bold: { type: "boolean" },
+              italic: { type: "boolean" },
+              underline: { type: "boolean" },
               xRatio: { type: "number", minimum: 0, maximum: 0.98 },
               yRatio: { type: "number", minimum: 0, maximum: 0.98 },
-              widthRatio: { type: "number", minimum: 0.02, maximum: 1 },
-              heightRatio: { type: "number", minimum: 0.02, maximum: 1 },
+              widthRatio: { type: "number", minimum: 0.008, maximum: 1 },
+              heightRatio: { type: "number", minimum: 0.008, maximum: 1 },
               fontSizeRatio: { type: "number", minimum: 0.008, maximum: 0.2 },
             },
             additionalProperties: false,
@@ -910,6 +1026,10 @@ installCurrentToolAiHost({
         const changes = requireCommandRecord(command.changes, "changes", commandIndex);
         rejectPlacementFields(changes, [
           "text",
+          "fontFamily",
+          "bold",
+          "italic",
+          "underline",
           "xRatio",
           "yRatio",
           "widthRatio",
@@ -918,8 +1038,10 @@ installCurrentToolAiHost({
         ]);
         const current = state.placements.find((placement) => placement.id === placementId);
         if (!current) throw new Error(`Placement not found: ${placementId}.`);
-        if (changes.text !== undefined && current.kind !== "text-field") {
-          throw new Error("Only fillable-field text can be modified.");
+        const changesFillableStyle = ["text", "fontFamily", "bold", "italic", "underline"]
+          .some((field) => changes[field] !== undefined);
+        if (changesFillableStyle && current.kind !== "text-field") {
+          throw new Error("Only fillable-field text and formatting can be modified.");
         }
         const result = updatePlacementById(state.placements, placementId, changes);
         return {

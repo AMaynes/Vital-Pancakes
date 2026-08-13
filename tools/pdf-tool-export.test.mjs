@@ -11,16 +11,22 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import test from "node:test";
 
-import { addFillableTextField, drawVectorMark } from "./pdf-tool-export.mjs";
+import { addFillableTextField, drawVectorMark, drawWhiteout } from "./pdf-tool-export.mjs";
 
 const require = createRequire(import.meta.url);
-const { PDFDocument, StandardFonts, rgb } = require("../vendor/pdf-lib.min.js");
+const {
+  PDFDocument,
+  PDFHexString,
+  PDFName,
+  StandardFonts,
+  rgb,
+} = require("../vendor/pdf-lib.min.js");
 
 test("exports a reopenable editable text field with vector marks", async () => {
   const document = await PDFDocument.create();
   const page = document.addPage([612, 792]);
   const form = document.getForm();
-  const formFont = await document.embedFont(StandardFonts.Helvetica);
+  const formFont = await document.embedFont(StandardFonts.HelveticaBoldOblique);
   const basePlacement = {
     id: "field-1",
     pageNumber: 1,
@@ -37,9 +43,19 @@ test("exports a reopenable editable text field with vector marks", async () => {
     page,
     pageWidth: page.getWidth(),
     pageHeight: page.getHeight(),
-    placement: { ...basePlacement, kind: "text-field", text: "Editable answer" },
+    placement: {
+      ...basePlacement,
+      kind: "text-field",
+      text: "Editable answer",
+      fontFamily: "helvetica",
+      bold: true,
+      italic: true,
+      underline: true,
+    },
     placementIndex: 0,
     rgb,
+    PDFName,
+    PDFHexString,
   });
   ["checkmark", "circle", "x-mark"].forEach((kind, index) => {
     drawVectorMark(page, {
@@ -52,7 +68,12 @@ test("exports a reopenable editable text field with vector marks", async () => {
       heightRatio: 0.07,
     }, page.getWidth(), page.getHeight(), rgb);
   });
-  form.updateFieldAppearances(formFont);
+  drawWhiteout(page, {
+    ...basePlacement,
+    kind: "whiteout",
+    xRatio: 0.1,
+    yRatio: 0.7,
+  }, page.getWidth(), page.getHeight(), rgb);
 
   const bytes = await document.save();
   const reopened = await PDFDocument.load(bytes);
@@ -61,4 +82,6 @@ test("exports a reopenable editable text field with vector marks", async () => {
   assert.ok(bytes.length > 0);
   assert.equal(field.getText(), "Editable answer");
   assert.equal(field.isMultiline(), true);
+  assert.equal(field.isRichFormatted(), true);
+  assert.ok(field.acroField.dict.get(PDFName.of("RV")));
 });

@@ -1572,6 +1572,53 @@
   resize: vertical;
 }
 
+.pdf-text-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.pdf-font-family-label,
+.pdf-font-size-label {
+  display: grid;
+  gap: 4px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pdf-font-family-label .tool-input,
+.pdf-font-size-label .tool-input {
+  min-width: 0;
+  height: 32px;
+  padding: 5px 6px;
+  color: var(--ink);
+  font: 11px/1 Arial, sans-serif;
+  text-transform: none;
+}
+
+.pdf-text-style-buttons {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, 32px);
+  gap: 5px;
+}
+
+.pdf-text-style {
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  font: 14px/1 Arial, sans-serif;
+}
+
+.pdf-text-style[aria-pressed="true"] {
+  border-color: var(--forest);
+  background: var(--sage-soft);
+  color: var(--forest);
+}
+
 .pdf-field-hint {
   display: block;
   margin: -2px 0 8px;
@@ -1587,7 +1634,7 @@
 
 .pdf-mark-buttons {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 5px;
 }
 
@@ -1595,6 +1642,16 @@
   min-height: 36px;
   padding: 4px;
   font: 600 22px/1 Arial, sans-serif;
+}
+
+.pdf-whiteout-button span {
+  display: block;
+  width: 18px;
+  height: 12px;
+  margin: auto;
+  border: 1px solid #84949b;
+  background: #fff;
+  box-shadow: inset 0 -3px 0 #dceef7;
 }
 
 .font-choice {
@@ -1640,8 +1697,8 @@
   position: absolute;
   z-index: 5;
   display: grid;
-  min-width: 120px;
-  min-height: 45px;
+  min-width: 18px;
+  min-height: 10px;
   padding: 4px 10px;
   place-items: center;
   border: 1px dashed #315a4f;
@@ -1667,27 +1724,35 @@
 }
 
 .pdf-placement.date-stamp {
-  min-width: 90px;
-  min-height: 34px;
+  min-width: 18px;
+  min-height: 10px;
   font-size: 18px;
 }
 
 .pdf-placement.text-field-stamp {
-  min-width: 120px;
-  min-height: 38px;
+  min-width: 18px;
+  min-height: 10px;
   padding: 3px;
   place-items: stretch;
-  font-family: Arial, sans-serif;
+  background: rgb(220 241 251 / 78%);
   font-style: normal;
 }
 
 .pdf-placement.mark-stamp {
-  min-width: 34px;
-  min-height: 34px;
+  min-width: 12px;
+  min-height: 12px;
   padding: 2px;
   font-family: Arial, sans-serif;
   font-style: normal;
   font-weight: 700;
+}
+
+.pdf-placement.whiteout-stamp {
+  min-width: 12px;
+  min-height: 8px;
+  padding: 0;
+  border-color: #84949b;
+  background: #fff;
 }
 
 .pdf-placement-content {
@@ -1702,7 +1767,7 @@
   overflow: hidden;
   border: 0;
   outline: 0;
-  background: rgb(255 255 255 / 72%);
+  background: rgb(220 241 251 / 72%);
   color: #17231f;
   font: inherit;
   line-height: 1.25;
@@ -1733,8 +1798,7 @@
 
 .pdf-placement-resize {
   position: absolute;
-  right: -5px;
-  bottom: -5px;
+  display: none;
   width: 11px;
   height: 11px;
   border: 1px solid var(--white);
@@ -1742,10 +1806,38 @@
   background: var(--forest);
 }
 
+.pdf-placement.is-selected .pdf-placement-resize {
+  display: block;
+}
+
+.pdf-placement-resize[data-resize-corner="nw"] {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.pdf-placement-resize[data-resize-corner="ne"] {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.pdf-placement-resize[data-resize-corner="sw"] {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.pdf-placement-resize[data-resize-corner="se"] {
+  right: -6px;
+  bottom: -6px;
+  cursor: nwse-resize;
+}
+
 .pdf-placement-delete {
   position: absolute;
-  top: -14px;
-  right: -14px;
+  top: -31px;
+  right: -8px;
   display: none;
   width: 27px;
   height: 27px;

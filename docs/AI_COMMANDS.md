@@ -114,6 +114,10 @@ are never exposed. Normalized geometry uses ratios from `0` through `1`.
         "kind": "text-field",
         "pageNumber": 1,
         "text": "Editable answer",
+        "fontFamily": "times-roman",
+        "bold": true,
+        "italic": false,
+        "underline": true,
         "xRatio": 0.2,
         "yRatio": 0.4,
         "widthRatio": 0.35,
@@ -123,19 +127,23 @@ are never exposed. Normalized geometry uses ratios from `0` through `1`.
     {
       "type": "placements.add",
       "placement": {
-        "kind": "checkmark",
+        "kind": "whiteout",
         "pageNumber": 1,
         "xRatio": 0.72,
-        "yRatio": 0.58
+        "yRatio": 0.58,
+        "widthRatio": 0.16,
+        "heightRatio": 0.04
       }
     }
   ]
 }
 ```
 
-Use `placements.update` to change a fillable field’s `text` or any added
-item’s normalized geometry. `placements.remove` only deletes an item added by
-the tool; it cannot remove content that was already inside the source PDF.
+Use `placements.update` to change a fillable field's `text`, `fontFamily`,
+`fontSizeRatio`, `bold`, `italic`, or `underline`, or to change any added item's
+normalized geometry. White-out placements add opaque white rectangles without
+altering the source PDF. `placements.remove` only deletes an item added by the
+tool; it cannot remove content that was already inside the source PDF.
 
 ## Visual Board examples
 
