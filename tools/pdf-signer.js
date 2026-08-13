@@ -442,14 +442,7 @@ function updateFillableText(placementId, text) {
 function fitFillablePreviewText(editor, placement) {
   const fieldHeight = placement.heightRatio * pageStage.clientHeight;
   editor.style.padding = fieldHeight < 12 ? "0 1px" : "3px 5px";
-  const minimum = 1;
-  const maximum = Math.max(minimum, placement.fontSizeRatio * pageStage.clientWidth);
-  let fitted = maximum;
-  editor.style.fontSize = `${fitted}px`;
-  while (fitted > minimum && (editor.scrollWidth > editor.clientWidth + 1 || editor.scrollHeight > editor.clientHeight + 1)) {
-    fitted = Math.max(minimum, fitted - 0.5);
-    editor.style.fontSize = `${fitted}px`;
-  }
+  editor.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
 }
 
 function updateFillableStyle(changes) {
