@@ -95,7 +95,9 @@ test("deduplication and entry conversion remain deterministic", () => {
   };
   assert.equal(deduplicateInferences([inference, { ...inference, id: "b" }]).length, 1);
   assert.equal(convertInferenceToEntry(inference, "study").type, "study");
-  assert.equal(convertInferenceToEntry(inference, "question").type, "question");
+  const idea = convertInferenceToEntry(inference, "question");
+  assert.equal(idea.type, "idea");
+  assert.equal(idea.stage, "Working");
 });
 
 test("prompt injection remains inside explicitly untrusted source data", () => {

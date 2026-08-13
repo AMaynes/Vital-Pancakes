@@ -17,7 +17,7 @@ import { ALGORITHM_ANALYSIS_SAMPLES } from "./algorithm-analysis-samples.mjs?v=1
 import { ALGORITHM_SAMPLES } from "./algorithm-samples.mjs?v=2";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
-const CURRENT_WORKSPACE_VERSION = 14;
+const CURRENT_WORKSPACE_VERSION = 15;
 const EVERYDAY_AREA = "everyday";
 const SAMPLE_DATE = "2026-07-28T12:00:00.000Z";
 const LEGACY_WORKOUT_SAMPLE_IDS = new Set([
@@ -1460,12 +1460,68 @@ const DEFAULT_SECTIONS = [
         notes: "Alternating pairs gives moisture more time to evaporate and helps prevent odor buildup.",
         tags: ["footwear", "odor", "feet", "gym", "as needed"],
       }),
+      createSample("sample-house-master-schedule", {
+        category: "house",
+        cardType: "Master",
+        title: "Home cleaning schedule",
+        summary: "A single cadence card for keeping the home managed from everyday resets through seasonal deep cleaning.",
+        frequency: "Daily through seasonal",
+        zone: "Whole home",
+        supplies: ["Use the supply list attached to each linked cleaning routine"],
+        steps: ["Choose the current timeframe tab and complete only the tasks due in that pass."],
+        schedule: [
+          "Every day | Reset dishes, counters, clutter, spills, and high-use bathroom surfaces.",
+          "Every week | Clean bathrooms, floors, bedding, dust, and empty all waste bins.",
+          "Every month | Clean appliances, vents, baseboards, and less-used rooms.",
+          "Spring / seasonal | Deep-clean windows, storage, textiles, walls, and overlooked fixtures.",
+        ],
+        warnings: "Open the linked material-specific routine before using an unfamiliar product or tool.",
+        notes: "The schedule is a master index. The brief cards contain the exact method for each task.",
+        tags: ["master", "schedule", "daily", "weekly", "monthly", "seasonal"],
+      }),
+      createSample("sample-self-master-schedule", {
+        category: "self-care",
+        cardType: "Master",
+        title: "Self-care schedule",
+        summary: "A practical cadence for hygiene, grooming, laundry, linens, and periodic personal care.",
+        frequency: "Daily through occasional",
+        zone: "Whole-person care",
+        supplies: ["Use the supply list attached to each linked self-care routine"],
+        steps: ["Use the current timeframe tab, then open the brief card when the exact method matters."],
+        schedule: [
+          "Every day | Oral care, bathing as needed, face and hand care, clean clothing, and medication or skin routines.",
+          "Every week | Nail check, hair/scalp care, laundry, bedding review, and grooming maintenance.",
+          "Every month | Replace worn hygiene items, clean tools, review supplies, and schedule anything overdue.",
+          "Extended care | Massage, professional treatments, restorative appointments, and deliberate recovery time.",
+        ],
+        warnings: "Personal care cards are organizational references, not medical diagnosis or treatment.",
+        notes: "Extended care is intentionally separated from baseline hygiene so necessities stay clear.",
+        tags: ["master", "schedule", "daily", "weekly", "monthly", "extended care"],
+      }),
+      createSample("sample-self-extended-care", {
+        category: "self-care",
+        cardType: "Extended",
+        title: "Extended self-care options",
+        summary: "Optional restorative and personal treatments that go beyond baseline hygiene.",
+        frequency: "As wanted, appropriate, and affordable",
+        zone: "Recovery and personal treatments",
+        supplies: [],
+        steps: [
+          "Choose the desired outcome: relaxation, recovery, appearance, comfort, or preventive care.",
+          "Check safety, credentials, cost, aftercare, and scheduling before booking.",
+          "Record what was useful and when repeating it would make sense.",
+        ],
+        schedule: ["As needed | Massage, barber or salon care, skin treatments, sauna, or other chosen personal services."],
+        warnings: "Use qualified professionals where a treatment has meaningful health or safety risk.",
+        notes: "This tab is optional and should never obscure the simple daily self-care schedule.",
+        tags: ["extended care", "treatments", "massage", "recovery", "as needed"],
+      }),
     ],
   },
   {
     id: "studies",
     title: "Studies",
-    description: "Structured inquiries with a question, evidence, findings, limitations, and a next test.",
+    description: "Foldered knowledge studies with rich sections, equations, media, definitions, nested studies, and linked notecards.",
     icon: "◉",
     type: "study",
     items: [
@@ -1505,11 +1561,36 @@ const DEFAULT_SECTIONS = [
     ],
   },
   {
+    id: "idea-playground",
+    title: "Idea Playground",
+    description: "Experimental studies that turn personal ideas into small tests before they become full projects.",
+    icon: "⚗",
+    type: "study",
+    playground: true,
+    items: [
+      createSample("sample-playground-expiring-notes", {
+        title: "Do working ideas need review dates?",
+        summary: "A small experiment for learning whether review dates prevent unfinished ideas from becoming silent clutter.",
+        folderPath: "Knowledge system experiments",
+        researchQuestion: "Does a visible review date make working ideas more likely to be developed, parked intentionally, or removed?",
+        hypothesis: "A lightweight review date will improve deliberate decisions without requiring automatic deletion.",
+        method: "Assign review dates to ten working ideas and leave ten comparable ideas without dates. Compare how many receive a deliberate decision after four weeks.",
+        evidence: ["Ideas developed", "Ideas intentionally parked", "Ideas removed", "Time spent reviewing"],
+        findings: "No result yet; this is an experimental study design.",
+        limitations: "Small personal sample, imperfectly matched ideas, and behavior may change because it is being observed.",
+        nextSteps: "Run the smallest four-week trial before adding review dates to the full Ideas library.",
+        content: "::section Experiment notes\nRecord observations here without treating them as a finished conclusion.\n\n::section Results\nAdd evidence and interpretation after the trial.",
+        definitions: "Review date | A prompt to reconsider an unfinished idea; it is not an automatic expiration date. |",
+        notecardLinks: "",
+      }),
+    ],
+  },
+  {
     id: "questions-ideas",
-    title: "Questions & Ideas",
-    description: "Open questions, emerging ideas, possible explanations, and directions worth pursuing.",
+    title: "Ideas",
+    description: "Unproven personal thinking, with a dedicated Working Ideas formulation area and a place for ideas that have taken shape.",
     icon: "?",
-    type: "question",
+    type: "idea",
     items: [
       createSample("sample-question-note-worth", {
         title: "What makes a note worth preserving?",
@@ -1630,7 +1711,7 @@ const DEFAULT_SECTIONS = [
   {
     id: "projects",
     title: "Projects",
-    description: "Project ideas, animated overviews, architecture, code maps, implementation details, and dependencies.",
+    description: "Hierarchical study umbrellas with one overview, a persistent interactive system map, and recursively nested parts.",
     icon: "◇",
     type: "project",
     items: [
@@ -1746,7 +1827,131 @@ function createInitialWorkspace() {
  * @returns {object} Isolated section copy.
  */
 function cloneDefaultSection(section) {
-  return JSON.parse(JSON.stringify(section));
+  const clone = JSON.parse(JSON.stringify(section));
+  clone.items = clone.items.map((item) => alignEntryFields(clone, item));
+  return clone;
+}
+
+/**
+ * Adds the version-15 knowledge-system fields without replacing any saved
+ * values. This also shapes brand-new starter entries before first storage.
+ */
+function alignEntryFields(section, item) {
+  if (section.type === "study") {
+    const lessonDefinitions = item.lesson?.keyConcepts
+      ?.map(({ term, explanation }) => `${term} | ${explanation} |`)
+      .join("\n") ?? "";
+    return {
+      ...item,
+      abstract: item.abstract ?? item.summary ?? item.lesson?.overview ?? "",
+      folderPath: item.folderPath ?? (section.playground ? "Experiments" : ""),
+      parentStudyId: item.parentStudyId ?? "",
+      projectId: item.projectId ?? "",
+      content: item.content ?? buildLegacyStudyContent(item),
+      definitions: item.definitions ?? lessonDefinitions,
+      notecardLinks: item.notecardLinks ?? "",
+    };
+  }
+  if (section.type === "idea") {
+    return {
+      ...item,
+      stage: item.stage ?? "Working",
+      abstract: item.abstract ?? item.summary ?? "",
+      folderPath: item.folderPath ?? "Working Ideas",
+      thesis: item.thesis ?? item.currentPosition ?? "",
+      reasoning: item.reasoning ?? item.context ?? "",
+      assumptions: item.assumptions ?? [],
+      openQuestions: item.openQuestions ?? item.directions ?? [],
+      content: item.content ?? "::section Formulation notes\nDevelop the idea here without presenting it as proven.\n\n::section What could change my mind\nRecord counterexamples, missing evidence, and unresolved questions.",
+      definitions: item.definitions ?? "",
+      linkedStudyIds: item.linkedStudyIds ?? [],
+    };
+  }
+  if (section.type === "cooking-guide") {
+    return {
+      ...item,
+      abstract: item.abstract ?? item.summary ?? "",
+      content: item.content ?? buildLegacyCookingContent(item),
+      definitions: item.definitions ?? "",
+    };
+  }
+  if (section.type === "recipe") {
+    return {
+      ...item,
+      imageUrl: item.imageUrl ?? "",
+      calories: item.calories ?? "",
+      protein: item.protein ?? "",
+      carbs: item.carbs ?? "",
+      fat: item.fat ?? "",
+      equipment: item.equipment ?? [],
+    };
+  }
+  if (section.type === "workout") {
+    const prescription = [item.frequency, item.duration].filter(Boolean).join(" · ");
+    return {
+      ...item,
+      muscleTags: item.muscleTags ?? String(item.goal ?? "")
+        .split(/[·,]/)
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+      animationUrl: item.animationUrl ?? "",
+      hypertrophyPrescription: item.hypertrophyPrescription ?? prescription,
+      strengthPrescription: item.strengthPrescription ?? prescription,
+      endurancePrescription: item.endurancePrescription ?? prescription,
+      breathing: item.breathing ?? "Inhale during the controlled lowering phase and exhale through the effort.",
+      squeeze: item.squeeze ?? item.notes ?? "Squeeze the target muscles at the strongest controlled point of the movement.",
+    };
+  }
+  if (section.type === "cleaning") {
+    return {
+      ...item,
+      cardType: item.cardType ?? "Brief",
+      schedule: item.schedule ?? [],
+    };
+  }
+  if (section.type === "project") {
+    return {
+      ...item,
+      projectMap: item.projectMap ?? buildLegacyProjectMap(item),
+      studyIds: item.studyIds ?? [],
+    };
+  }
+  return item;
+}
+
+function buildLegacyStudyContent(item) {
+  return [
+    ["Research question", item.researchQuestion],
+    ["Prediction or hypothesis", item.hypothesis],
+    ["Method", item.method],
+    ["Evidence", (item.evidence ?? []).join("\n")],
+    ["Findings", item.findings],
+    ["Limitations", item.limitations],
+    ["Next test", item.nextSteps],
+    ["Supporting notes", item.notes],
+  ].filter(([, body]) => body).map(([title, body]) => `::section ${title}\n${body}`).join("\n\n");
+}
+
+function buildLegacyCookingContent(item) {
+  return [
+    ["Heat", item.heat],
+    ["Sensory signals", item.signals],
+    ["What to understand", item.principles],
+    ["Tools and essentials", item.essentials],
+    ["Method", (item.steps ?? []).join("\n")],
+    ["Common mistakes", item.mistakes],
+  ].filter(([, body]) => body).map(([title, body]) => `::section ${title}\n${body}`).join("\n\n");
+}
+
+function buildLegacyProjectMap(item) {
+  const frames = item.visualFrames ?? [];
+  const explanations = item.frameExplanations ?? [];
+  return [
+    `overview | | Overview & big picture | ${item.overview ?? item.summary ?? ""} |`,
+    ...frames.map((frame, index) => (
+      `part-${index + 1} | overview | ${frame} | ${explanations[index] ?? ""} |`
+    )),
+  ].join("\n");
 }
 
 /**
@@ -2159,6 +2364,37 @@ function migrateWorkspace(workspace) {
       });
       changed = true;
     }
+  }
+
+  if (previousVersion < 15) {
+    const changedCoreIds = new Set([
+      "studies",
+      "idea-playground",
+      "questions-ideas",
+      "projects",
+    ]);
+    workspace.sections.forEach((section) => {
+      const defaultSection = DEFAULT_SECTIONS.find((candidate) => candidate.id === section.id);
+      if (defaultSection && changedCoreIds.has(section.id)) {
+        section.title = defaultSection.title;
+        section.description = defaultSection.description;
+        section.icon = defaultSection.icon;
+        section.type = defaultSection.type;
+        if (defaultSection.playground) section.playground = true;
+      }
+      section.items = (section.items ?? []).map((item) => alignEntryFields(section, item));
+    });
+
+    const cleaningSection = workspace.sections.find((section) => section.id === "cleaning");
+    const defaultCleaningSection = DEFAULT_SECTIONS.find((section) => section.id === "cleaning");
+    if (cleaningSection && defaultCleaningSection) {
+      const existingIds = new Set(cleaningSection.items.map((item) => item.id));
+      const newMasterCards = cloneDefaultSection(defaultCleaningSection).items.filter((item) => (
+        item.cardType && item.cardType !== "Brief" && !existingIds.has(item.id)
+      ));
+      cleaningSection.items.push(...newMasterCards);
+    }
+    changed = true;
   }
 
   if (previousVersion < CURRENT_WORKSPACE_VERSION) {

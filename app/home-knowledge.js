@@ -15,7 +15,7 @@ import {
   normalizeKnowledgeLink,
   searchKnowledgeDocuments,
 } from "./knowledge-model.mjs";
-import { installKnowledgeGlossary } from "./glossary-ui.mjs?v=2";
+import { installKnowledgeGlossary } from "./glossary-ui.mjs?v=3";
 import { syncKnowledgeIndex } from "./knowledge-sync.mjs?v=2";
 import {
   exportUnifiedVault,

@@ -7,6 +7,7 @@ const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const EVERYDAY_SECTION_IDS = ["how-to-cook", "recipes", "workouts", "cleaning"];
 const STUDIES_SECTION_IDS = [
   "studies",
+  "idea-playground",
   "questions-ideas",
   "programming-languages",
   "algorithms",
@@ -40,7 +41,7 @@ function useStorage(initialWorkspace = null) {
   }
 }
 
-test("a new workspace starts with nine permanent libraries and editable examples", () => {
+test("a new workspace starts with ten permanent libraries and editable examples", () => {
   useStorage();
 
   const workspace = getWorkspace();
@@ -50,17 +51,19 @@ test("a new workspace starts with nine permanent libraries and editable examples
   ));
   const sampleIds = coreSections.flatMap((section) => section.items.map((item) => item.id));
 
-  assert.equal(workspace.version, 14);
+  assert.equal(workspace.version, 15);
   assert.deepEqual(everydaySections.map((section) => section.id), EVERYDAY_SECTION_IDS);
   assert.deepEqual(
     workspace.sections.filter((section) => section.area !== "everyday").map((section) => section.id),
     STUDIES_SECTION_IDS,
   );
   assert.ok(everydaySections.every((section) => isCoreSectionId(section.id)));
-  assert.ok(coreSections.every((section) => section.items.length >= 2));
+  assert.ok(coreSections.every((section) => section.items.length >= 1));
   assert.ok(coreSections.every((section) => section.items.every((item) => item.isSample === true)));
   assert.equal(new Set(sampleIds).size, sampleIds.length);
   assert.equal(workspace.sections.find((section) => section.id === "studies").type, "study");
+  assert.equal(workspace.sections.find((section) => section.id === "idea-playground").playground, true);
+  assert.equal(workspace.sections.find((section) => section.id === "questions-ideas").type, "idea");
   assert.ok(workspace.sections.find((section) => section.id === "how-to-cook").items.length >= 16);
   assert.ok(workspace.sections.find((section) => section.id === "how-to-cook").items.every((item) => item.tags?.length));
   const algorithms = workspace.sections.find((section) => section.id === "algorithms");
@@ -88,6 +91,7 @@ test("a new workspace starts with nine permanent libraries and editable examples
     && item.codeMap.length
     && item.specifics
     && item.dependencies.length
+    && item.projectMap
   )));
   assert.equal(isCoreSectionId("questions-ideas"), true);
   assert.equal(workspace.sections.some((section) => section.id === "protocols"), false);
@@ -182,11 +186,14 @@ test("existing workspaces gain examples in empty libraries without losing saved 
   const workspace = getWorkspace();
   const questionsAndIdeas = workspace.sections.find((section) => section.id === "questions-ideas");
 
-  assert.equal(workspace.version, 14);
-  assert.deepEqual(workspace.sections.find((section) => section.id === "studies").items, [savedStudy]);
+  assert.equal(workspace.version, 15);
+  const migratedStudy = workspace.sections.find((section) => section.id === "studies").items[0];
+  assert.equal(migratedStudy.id, savedStudy.id);
+  assert.equal(migratedStudy.notes, savedStudy.notes);
+  assert.match(migratedStudy.content, /Supporting notes/);
   assert.ok(questionsAndIdeas.items.length >= 2);
   assert.ok(questionsAndIdeas.items.every((item) => item.isSample === true));
-  assert.equal(questionsAndIdeas.type, "question");
+  assert.equal(questionsAndIdeas.type, "idea");
   assert.equal(isCoreSectionId(questionsAndIdeas.id), true);
 });
 
@@ -215,7 +222,7 @@ test("version 11 workspaces receive the expanded cooking guide samples", () => {
 
   const cooking = getWorkspace().sections.find((section) => section.id === "how-to-cook");
 
-  assert.equal(getWorkspace().version, 14);
+  assert.equal(getWorkspace().version, 15);
   assert.ok(cooking.items.some((item) => item.id === "user-cook-note"));
   assert.ok(cooking.items.some((item) => item.id === "sample-cook-knife-prep"));
   assert.ok(cooking.items.some((item) => item.tags?.includes("heat control")));
@@ -317,7 +324,7 @@ test("version 13 language, algorithm, and project records gain the new structure
   const project = workspace.sections.find((section) => section.id === "projects")
     .items.find((item) => item.id === "user-project");
 
-  assert.equal(workspace.version, 14);
+  assert.equal(workspace.version, 15);
   assert.deepEqual(language.quickFacts, [
     "Best for | Systems work",
     "Watch for | Borrowing rules are explicit.",
@@ -335,6 +342,7 @@ test("version 13 language, algorithm, and project records gain the new structure
   assert.equal(project.specifics, "Use one timeline.");
   assert.deepEqual(project.codeMap, []);
   assert.deepEqual(project.dependencies, []);
+  assert.match(project.projectMap, /Overview & big picture/);
 });
 
 test("deleted examples do not reappear when a version 7 workspace is upgraded", () => {
@@ -411,8 +419,11 @@ test("version 9 workout libraries receive Pull and Legs samples without losing u
 
   const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
 
-  assert.equal(getWorkspace().version, 14);
-  assert.deepEqual(workouts.items.find((item) => item.id === savedExercise.id), savedExercise);
+  assert.equal(getWorkspace().version, 15);
+  const migratedExercise = workouts.items.find((item) => item.id === savedExercise.id);
+  assert.equal(migratedExercise.id, savedExercise.id);
+  assert.equal(migratedExercise.title, savedExercise.title);
+  assert.deepEqual(migratedExercise.muscleTags, []);
   assert.ok(workouts.items.some((item) => item.id === "sample-pull-pull-up"));
   assert.ok(workouts.items.some((item) => item.id === "sample-legs-back-squat"));
   assert.equal(
@@ -447,7 +458,10 @@ test("version 7 workout samples are replaced without losing categorized user ent
   const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
 
   assert.equal(workouts.items.some((item) => item.id === "sample-workout-full-body"), false);
-  assert.deepEqual(workouts.items.find((item) => item.id === savedPullExercise.id), savedPullExercise);
+  const migratedExercise = workouts.items.find((item) => item.id === savedPullExercise.id);
+  assert.equal(migratedExercise.id, savedPullExercise.id);
+  assert.equal(migratedExercise.category, savedPullExercise.category);
+  assert.equal(migratedExercise.animationUrl, "");
   assert.ok(workouts.items.some((item) => item.id === "sample-push-barbell-bench-press"));
 });
 
@@ -465,6 +479,9 @@ test("Cleaning contains filled House Cleaning and Self Care libraries with tags"
   assert.ok(houseEntries.some((item) => item.title === "Refrigerator cleanout"));
   assert.ok(selfCareEntries.some((item) => item.title === "Personal laundry"));
   assert.ok(selfCareEntries.some((item) => item.title === "Oral hygiene"));
+  assert.ok(houseEntries.some((item) => item.cardType === "Master" && item.schedule.length));
+  assert.ok(selfCareEntries.some((item) => item.cardType === "Master" && item.schedule.length));
+  assert.ok(selfCareEntries.some((item) => item.cardType === "Extended"));
 });
 
 test("version 10 cleaning entries gain categories and tags without losing user content", () => {

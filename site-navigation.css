@@ -303,6 +303,7 @@
 }
 
 .global-glossary-entry-actions button,
+.global-glossary-entry-actions a,
 .global-glossary-form-actions button {
   border: 1px solid #8d8578;
   border-radius: 0;
@@ -313,6 +314,12 @@
   font-size: 0.78rem;
   font-weight: 800;
   padding: 0.45rem 0.65rem;
+}
+
+.global-glossary-entry-actions a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .global-glossary-entry-actions .is-danger {

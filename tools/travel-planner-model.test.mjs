@@ -8,10 +8,13 @@ import {
   isValid24HourTime,
   isValidDateKey,
   removeTravelPlan,
+  sanitizeTravelPlannerState,
   sanitizeTravelPlan,
   sanitizeTravelPlans,
+  sanitizeTravelTrip,
   toggleSelectedTravelDate,
   upsertTravelPlan,
+  upsertTravelTrip,
 } from "./travel-planner-model.mjs";
 
 test("calendar months always provide six complete Sunday-first weeks", () => {
@@ -84,4 +87,36 @@ test("plans can be added, updated, queried, and removed without duplicates", () 
   assert.equal(updated.length, 1);
   assert.equal(getPlansForDate(updated, "2026-07-16")[0].title, "Flight to Da Nang");
   assert.deepEqual(removeTravelPlan(updated, "flight"), []);
+});
+
+test("a trip preserves the five planning answers and normalized date range", () => {
+  const trip = sanitizeTravelTrip({
+    id: "trip-1",
+    title: "Vietnam",
+    destination: " Hanoi ",
+    startDate: "2026-09-10",
+    endDate: "2026-09-18",
+    gettingThere: "Flight and airport transfer",
+    staying: "Old Quarter hotel",
+    eating: "Markets and saved restaurants",
+    activities: "Museums and day trip",
+    departure: "Train on the final morning",
+    nextDestination: "Da Nang",
+  });
+  assert.equal(trip.destination, "Hanoi");
+  assert.equal(trip.nextDestination, "Da Nang");
+  assert.equal(trip.activities, "Museums and day trip");
+});
+
+test("trip state migrates legacy events and upserts trips without duplicates", () => {
+  const legacy = sanitizeTravelPlannerState({
+    version: 1,
+    plans: [{ id: "event", title: "Explore", date: "2026-09-10" }],
+  });
+  assert.equal(legacy.version, 2);
+  assert.equal(legacy.plans[0].tripId, "");
+  const trips = upsertTravelTrip([], { id: "trip", title: "First trip" });
+  const updated = upsertTravelTrip(trips, { id: "trip", title: "Renamed trip" });
+  assert.equal(updated.length, 1);
+  assert.equal(updated[0].title, "Renamed trip");
 });

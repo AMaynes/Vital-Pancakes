@@ -45,7 +45,9 @@ vital-pancakes/
 │   ├── offline-shell.mjs — Registers cache-bypassed update checks and refreshes stale controlled Workspace views once.
 │   ├── content-view.mjs — Normalizes retained List/Grid preferences and creates collection deep links.
 │   ├── content-view.test.mjs — Verifies collection view preferences and encoded entry routes.
-│   ├── main.js — Renders workspace routes, libraries, and editors.
+│   ├── main.js — Renders workspace routes, foldered knowledge libraries, rich study sidebars, project maps, life-reference cards, and editors.
+│   ├── knowledge-entry-model.mjs — Parses rich study blocks, definition/notecard links, folders, and recursive project maps.
+│   ├── knowledge-entry-model.test.mjs — Verifies study blocks, hierarchy, definitions, and folder grouping.
 │   ├── download-app.js — Connects the install page to supported PWA prompts.
 │   ├── store.test.mjs — Verifies permanent libraries, one-time samples, and safe legacy migration.
 │   └── store.js — Owns browser-local data, persistence, and deletion policy.
@@ -209,11 +211,11 @@ vital-pancakes/
 │   ├── literature-curator.js — Owns local curation editing, persistence, and Markdown export.
 │   ├── literature-curator-model.mjs — Validates curations and immutable analysis updates.
 │   ├── literature-curator-model.test.mjs — Verifies validation, evidence categories, and updates.
-│   ├── travel-planner.html — Hosts overhead tools, month selection, day pages, and the anchored event editor.
-│   ├── travel-planner.css — Styles the month grid, 24-hour timeline, place results, and event popover.
-│   ├── travel-planner.js — Renders multi-day selection, editing, place search, and local persistence.
+│   ├── travel-planner.html — Hosts trip briefs, overhead tools, month selection, day pages, and the anchored event editor.
+│   ├── travel-planner.css — Styles trip creation, the month grid, 24-hour timeline, place results, and event popover.
+│   ├── travel-planner.js — Renders trip creation, five-part briefs, trip-filtered itineraries, editing, place search, and local persistence.
 │   ├── travel-planner-config.json — Selects the replaceable Nominatim-compatible place-search endpoint.
-│   ├── travel-planner-model.mjs — Owns calendar dates, selection, 24-hour times, and saved-plan validation.
+│   ├── travel-planner-model.mjs — Owns trip-brief and itinerary validation, calendar dates, selection, and 24-hour times.
 │   ├── travel-planner-model.test.mjs — Verifies Travel Planner model behavior.
 │   ├── travel-place-search.mjs — Builds explicit search requests and validates returned places.
 │   ├── travel-place-search.test.mjs — Verifies place-query and result trust boundaries.
@@ -326,7 +328,7 @@ Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sor
 
 ### `app/main.js`
 
-Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; preserves the overview dashboards; and owns shared collection indexes, dedicated entry pages, subject animations, the nine type-aware record layouts and editors, Questions & Ideas records, relationships, dialogs, and local notices.
+Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; preserves the overview dashboards; and owns shared collection indexes, foldered Studies, rich block editors, collapsible outlines and definitions, Ideas, Idea Playground, persistent project maps, specialized life-reference layouts, relationships, dialogs, and local notices.
 
 ### `app/content-view.mjs`
 
@@ -334,7 +336,7 @@ Provides pure collection-view normalization, per-collection preference keys, and
 
 ### `app/store.js`
 
-Defines the browser-local data schema, nine permanent core libraries, deterministic editable starter entries, versioned additive content migrations, Questions & Ideas migration, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. User-authored content is preserved during migrations. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
+Defines the browser-local data schema, ten permanent core libraries, deterministic editable starter entries, versioned additive migrations for Ideas, Idea Playground, foldered Studies, Projects, and Everyday Life records, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. User-authored content is preserved during migrations. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
 
 ### `app/algorithm-samples.mjs`
 
@@ -412,9 +414,9 @@ Speech workers lazy-load pinned Transformers.js 3.8.1 with Apache-2.0 Whisper Ti
 
 ### Travel Planner
 
-`travel-planner.html` and `travel-planner.css` provide overhead Select and Add Event tools, a six-week month calendar, a multi-selected day pager, complete 24-hour timelines, and a calendar-anchored event editor. `travel-planner.js` keeps plans in local browser storage, preserves strict `HH:MM` time display, and performs only explicit user-submitted place searches through the configured endpoint. Search results are rate-limited, cached locally, attributed to OpenStreetMap, and can populate map-ready places without adding reminders, notifications, accounts, sync, or calendar integrations.
+`travel-planner.html` and `travel-planner.css` begin with named trip creation and a five-part brief covering destination/dates, transportation, staying/eating, activities, and departure/next destination. The active trip filters the existing overhead Select and Add Event tools, six-week month calendar, multi-selected day pager, complete 24-hour timelines, and calendar-anchored event editor. `travel-planner.js` keeps trips and plans in local browser storage, preserves strict `HH:MM` time display, and performs only explicit user-submitted place searches through the configured endpoint. Search results are rate-limited, cached locally, attributed to OpenStreetMap, and can populate map-ready places without adding reminders, notifications, accounts, sync, or calendar integrations.
 
-`travel-planner-model.mjs` owns date generation, validation, multi-day selection, 24-hour time validation, sanitization, ordering, querying, updates, and removal. `travel-place-search.mjs` isolates external query construction and untrusted result validation. Their Node test suites cover calendar boundaries, leap dates, selection order, time limits, malformed persistence, deterministic ordering, the complete plan lifecycle, HTTPS request construction, and returned coordinate bounds.
+`travel-planner-model.mjs` owns trip-brief migration and validation, date generation, multi-day selection, 24-hour time validation, event sanitization, ordering, querying, updates, and removal. `travel-place-search.mjs` isolates external query construction and untrusted result validation. Their Node test suites cover trip lifecycle and five-part content, calendar boundaries, leap dates, selection order, time limits, malformed persistence, deterministic ordering, HTTPS request construction, and returned coordinate bounds.
 
 ### Software Architect
 

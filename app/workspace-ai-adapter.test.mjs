@@ -10,7 +10,7 @@ import {
 
 function createWorkspace() {
   return {
-    version: 14,
+    version: 15,
     sections: [
       {
         id: "studies",
@@ -118,6 +118,11 @@ test("Workspace context is bounded metadata and capabilities describe truthful c
     capabilities.sectionTypes.project.fields.status.values,
     ["Concept", "Active", "Paused", "Complete", "Archived"],
   );
+  assert.equal(capabilities.sectionTypes.study.fields.content.kind, "string");
+  assert.equal(capabilities.sectionTypes.study.fields.notecardLinks.kind, "string");
+  assert.deepEqual(capabilities.sectionTypes.idea.fields.stage.values, ["Working", "Formed", "Parked"]);
+  assert.equal(capabilities.sectionTypes.project.fields.studyIds.kind, "identifier-list");
+  assert.equal(capabilities.sectionTypes.workout.fields.muscleTags.kind, "tags");
 });
 
 test("preview stages a whole batch without saving and apply commits it once", async () => {

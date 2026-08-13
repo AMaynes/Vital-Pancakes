@@ -33,6 +33,9 @@ const BASE_FIELDS = Object.freeze({
 
 const SECTION_SCHEMAS = Object.freeze({
   "cooking-guide": sectionSchema({
+    abstract: field("string"),
+    content: field("string"),
+    definitions: field("string"),
     heat: field("string"),
     signals: field("string"),
     principles: field("string"),
@@ -42,30 +45,45 @@ const SECTION_SCHEMAS = Object.freeze({
     tags: field("tags"),
   }),
   recipe: sectionSchema({
+    imageUrl: field("string"),
+    calories: field("string"),
+    protein: field("string"),
+    carbs: field("string"),
+    fat: field("string"),
     servings: field("string"),
     timing: field("string"),
     ingredients: field("string-list"),
+    equipment: field("string-list"),
     steps: field("string-list"),
     notes: field("string"),
   }),
   workout: sectionSchema({
     category: field("enum", { values: ["push", "pull", "legs"], defaultValue: "push" }),
     goal: field("string"),
+    muscleTags: field("tags"),
+    animationUrl: field("string"),
+    hypertrophyPrescription: field("string"),
+    strengthPrescription: field("string"),
+    endurancePrescription: field("string"),
     frequency: field("string"),
     duration: field("string"),
     equipment: field("string"),
     exercises: field("string-list"),
+    breathing: field("string"),
+    squeeze: field("string"),
     progression: field("string"),
     notes: field("string"),
   }),
   cleaning: sectionSchema({
     category: field("enum", { values: ["house", "self-care"], defaultValue: "house" }),
+    cardType: field("enum", { values: ["Brief", "Master", "Extended"], defaultValue: "Brief" }),
     zone: field("string"),
     frequency: field("string"),
     supplies: field("string-list"),
     steps: field("string-list"),
     warnings: field("string"),
     notes: field("string"),
+    schedule: field("string-list"),
     tags: field("tags", { lowercase: true }),
   }),
   routine: sectionSchema({
@@ -79,6 +97,13 @@ const SECTION_SCHEMAS = Object.freeze({
     sourceLessonId: field("identifier"),
     sourceTitle: field("string"),
     sourcePages: field("page-list"),
+    abstract: field("string"),
+    folderPath: field("string"),
+    parentStudyId: field("identifier"),
+    projectId: field("identifier"),
+    content: field("string"),
+    definitions: field("string"),
+    notecardLinks: field("string"),
     researchQuestion: field("string"),
     hypothesis: field("string"),
     method: field("string"),
@@ -88,6 +113,18 @@ const SECTION_SCHEMAS = Object.freeze({
     nextSteps: field("string"),
     notes: field("string"),
     tags: field("tags"),
+  }),
+  idea: sectionSchema({
+    stage: field("enum", { values: ["Working", "Formed", "Parked"], defaultValue: "Working" }),
+    abstract: field("string"),
+    folderPath: field("string"),
+    thesis: field("string"),
+    reasoning: field("string"),
+    assumptions: field("string-list"),
+    openQuestions: field("string-list"),
+    content: field("string"),
+    definitions: field("string"),
+    linkedStudyIds: field("identifier-list"),
   }),
   language: sectionSchema({
     quickFacts: field("string-list"),
@@ -120,6 +157,8 @@ const SECTION_SCHEMAS = Object.freeze({
     }),
     mainIdea: field("string"),
     overview: field("string"),
+    projectMap: field("string"),
+    studyIds: field("identifier-list"),
     visualFrames: field("string-list"),
     frameExplanations: field("string-list"),
     architecture: field("string"),
@@ -280,7 +319,12 @@ export function getWorkspaceAiCapabilities() {
           item: {
             title: "Retrieval practice follow-up",
             summary: "A draft study generated from an open question.",
+            abstract: "A foldered follow-up study with an explicit test and reusable definitions.",
+            folderPath: "Learning / Memory",
             researchQuestion: "Which retrieval cue produces the strongest delayed recall?",
+            content: "::section Background\nDefine the comparison.\n\n::equation Recall score\nR = correct / attempted",
+            definitions: "Retrieval cue | Information available when attempting recall |",
+            notecardLinks: "Retrieval practice | educational_resources/mathematics/flashcard-practice.html",
             tags: ["memory", "draft"],
           },
         },
@@ -707,6 +751,13 @@ function normalizeEntryFields({
   if (normalized.algorithmIds) {
     validateAlgorithmReferences(workspace, normalized.algorithmIds, commandIndex);
   }
+  if (normalized.studyIds || normalized.linkedStudyIds || normalized.parentStudyId) {
+    validateStudyReferences(workspace, [
+      ...(normalized.studyIds ?? []),
+      ...(normalized.linkedStudyIds ?? []),
+      ...(normalized.parentStudyId ? [normalized.parentStudyId] : []),
+    ], commandIndex);
+  }
   return normalized;
 }
 
@@ -950,6 +1001,22 @@ function validateAlgorithmReferences(workspace, algorithmIds, commandIndex) {
     throw commandError(
       `Project relationship references an unavailable algorithm: ${missing}.`,
       "invalid-algorithm-reference",
+      commandIndex,
+    );
+  }
+}
+
+function validateStudyReferences(workspace, studyIds, commandIndex) {
+  const availableIds = new Set(
+    workspace.sections
+      .filter((section) => section.type === "study")
+      .flatMap((section) => section.items.map((item) => item.id)),
+  );
+  const missing = studyIds.find((studyId) => studyId && !availableIds.has(studyId));
+  if (missing) {
+    throw commandError(
+      `Study relationship references an unavailable study: ${missing}.`,
+      "invalid-study-reference",
       commandIndex,
     );
   }

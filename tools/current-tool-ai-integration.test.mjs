@@ -33,7 +33,7 @@ const TOOL_HOSTS = [
   [
     "travel-planner.js",
     "travel-planner",
-    ["calendar.describe", "plans.list", "plans.get", "plans.upsert"],
+    ["calendar.describe", "trips.list", "trips.get", "trips.upsert", "plans.list", "plans.get", "plans.upsert"],
   ],
   [
     "architecture.js",

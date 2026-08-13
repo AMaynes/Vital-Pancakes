@@ -26,9 +26,13 @@ import {
   isValid24HourTime,
   isValidDateKey,
   removeTravelPlan,
+  sanitizeTravelPlannerState,
   sanitizeTravelPlans,
+  sanitizeTravelTrip,
+  sanitizeTravelTrips,
   toggleSelectedTravelDate,
   upsertTravelPlan,
+  upsertTravelTrip,
 } from "./travel-planner-model.mjs";
 import {
   DEFAULT_PLACE_SEARCH_ENDPOINT,
@@ -85,12 +89,21 @@ const saveButton = document.querySelector("#save-travel-plan");
 const deleteButton = document.querySelector("#delete-travel-plan");
 const status = document.querySelector("#travel-status");
 const modeButtons = [...document.querySelectorAll("[data-travel-mode]")];
+const tripSelect = document.querySelector("#travel-trip-select");
+const tripSummary = document.querySelector("#travel-trip-summary");
+const tripForm = document.querySelector("#travel-trip-form");
+const tripIdInput = document.querySelector("#travel-trip-id");
+const tripTitleInput = document.querySelector("#travel-trip-title");
+const editTripButton = document.querySelector("#edit-travel-trip");
 
 const todayKey = getTodayKey();
 const initialParts = parseDateKey(todayKey);
 const placeSearchConfigPromise = loadPlaceSearchConfig();
 
-let plans = loadPlans();
+const savedPlanner = loadPlannerState();
+let plans = savedPlanner.plans;
+let trips = savedPlanner.trips;
+let activeTripId = savedPlanner.activeTripId;
 let displayedYear = initialParts.year;
 let displayedMonth = initialParts.monthIndex;
 let selectedDates = [todayKey];
@@ -102,13 +115,13 @@ let latestPlaceResults = [];
 let placeSearchCache = loadPlaceSearchCache();
 let lastPlaceRequestAt = 0;
 
-function loadPlans() {
+function loadPlannerState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return sanitizeTravelPlans(saved);
+    return sanitizeTravelPlannerState(saved);
   } catch (error) {
     console.error("Unable to load saved travel plans.", error);
-    return [];
+    return sanitizeTravelPlannerState(null);
   }
 }
 
@@ -116,6 +129,8 @@ function savePlans(message = "Saved locally") {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       version: TRAVEL_PLANNER_VERSION,
+      trips,
+      activeTripId,
       plans,
     }));
     status.textContent = message;
@@ -128,9 +143,136 @@ function savePlans(message = "Saved locally") {
 }
 
 function renderPlanner() {
+  renderTrips();
   renderToolbar();
   renderMonth();
   renderSelectedDayPage();
+}
+
+function getVisiblePlans() {
+  return plans.filter((plan) => activeTripId ? plan.tripId === activeTripId : !plan.tripId);
+}
+
+function renderTrips() {
+  const selected = activeTripId;
+  tripSelect.replaceChildren();
+  const unassigned = document.createElement("option");
+  unassigned.value = "";
+  unassigned.textContent = "Unassigned itinerary";
+  tripSelect.append(unassigned);
+  trips.forEach((trip) => {
+    const option = document.createElement("option");
+    option.value = trip.id;
+    option.textContent = trip.title;
+    option.selected = trip.id === selected;
+    tripSelect.append(option);
+  });
+  tripSelect.value = trips.some((trip) => trip.id === selected) ? selected : "";
+  editTripButton.disabled = !activeTripId;
+  renderTripSummary();
+}
+
+function renderTripSummary() {
+  tripSummary.replaceChildren();
+  const trip = trips.find((candidate) => candidate.id === activeTripId);
+  if (!trip) {
+    const empty = document.createElement("p");
+    empty.textContent = "Create a trip to connect the big-picture brief with its calendar and day-by-day events.";
+    tripSummary.append(empty);
+    return;
+  }
+  const dateRange = [trip.startDate, trip.endDate].filter(Boolean).join(" → ");
+  [
+    ["1 · Where & when", trip.destination || trip.title, dateRange || "Dates not set"],
+    ["2 · Getting there", "Transportation", trip.gettingThere || "Not planned yet"],
+    ["3 · Stay & eat", "Lodging and food", [trip.staying, trip.eating].filter(Boolean).join(" · ") || "Not planned yet"],
+    ["4 · While there", "Activities", trip.activities || "Not planned yet"],
+    ["5 · Leave & next", trip.nextDestination || "Departure", trip.departure || "Not planned yet"],
+  ].forEach(([kicker, title, copy]) => {
+    const card = document.createElement("article");
+    card.className = "travel-trip-summary-card";
+    const label = document.createElement("span");
+    label.textContent = kicker;
+    const heading = document.createElement("strong");
+    heading.textContent = title;
+    const paragraph = document.createElement("p");
+    paragraph.textContent = copy;
+    card.append(label, heading, paragraph);
+    tripSummary.append(card);
+  });
+}
+
+function openNewTripEditor() {
+  tripForm.reset();
+  tripIdInput.value = createTripId();
+  tripForm.hidden = false;
+  tripTitleInput.focus();
+}
+
+function openTripEditor() {
+  const trip = trips.find((candidate) => candidate.id === activeTripId);
+  if (!trip) return;
+  tripForm.reset();
+  Object.entries(trip).forEach(([name, value]) => {
+    const control = tripForm.elements.namedItem(name);
+    if (control && typeof value === "string") control.value = value;
+  });
+  tripForm.hidden = false;
+  tripTitleInput.focus();
+}
+
+function closeTripEditor() {
+  tripForm.hidden = true;
+  tripForm.reset();
+}
+
+function handleTripSubmit(event) {
+  event.preventDefault();
+  const data = new FormData(tripForm);
+  const trip = sanitizeTravelTrip({
+    id: data.get("id"),
+    title: data.get("title"),
+    destination: data.get("destination"),
+    startDate: data.get("startDate"),
+    endDate: data.get("endDate"),
+    gettingThere: data.get("gettingThere"),
+    staying: data.get("staying"),
+    eating: data.get("eating"),
+    activities: data.get("activities"),
+    departure: data.get("departure"),
+    nextDestination: data.get("nextDestination"),
+    notes: data.get("notes"),
+  });
+  if (!trip) return;
+  const existed = trips.some((candidate) => candidate.id === trip.id);
+  trips = upsertTravelTrip(trips, trip);
+  activeTripId = trip.id;
+  if (trip.startDate) {
+    const parts = parseDateKey(trip.startDate);
+    displayedYear = parts.year;
+    displayedMonth = parts.monthIndex;
+    selectedDates = [trip.startDate];
+    activeSelectedIndex = 0;
+  }
+  savePlans(existed ? "Trip brief updated" : "Trip started");
+  closeTripEditor();
+  renderPlanner();
+}
+
+function activateTrip(tripId) {
+  activeTripId = trips.some((trip) => trip.id === tripId) ? tripId : "";
+  const trip = trips.find((candidate) => candidate.id === activeTripId);
+  if (trip?.startDate) {
+    const parts = parseDateKey(trip.startDate);
+    displayedYear = parts.year;
+    displayedMonth = parts.monthIndex;
+    selectedDates = [trip.startDate];
+    activeSelectedIndex = 0;
+  }
+  closeEventEditor();
+  closeTripEditor();
+  savePlans("Current trip changed");
+  renderPlanner();
 }
 
 function renderToolbar() {
@@ -153,8 +295,9 @@ function renderMonth() {
   calendarGrid.replaceChildren();
 
   const activeDate = selectedDates[activeSelectedIndex] ?? "";
+  const visiblePlans = getVisiblePlans();
   createCalendarMonth(displayedYear, displayedMonth).forEach((day) => {
-    const dayPlans = getPlansForDate(plans, day.dateKey);
+    const dayPlans = getPlansForDate(visiblePlans, day.dateKey);
     const cell = document.createElement("div");
     cell.className = "travel-day-cell";
     cell.setAttribute("role", "gridcell");
@@ -230,7 +373,7 @@ function renderSelectedDayPage() {
 
   activeSelectedIndex = clamp(activeSelectedIndex, 0, selectedDates.length - 1);
   const dateKey = selectedDates[activeSelectedIndex];
-  const dayPlans = getPlansForDate(plans, dateKey);
+  const dayPlans = getPlansForDate(getVisiblePlans(), dateKey);
   selectedDateLabel.textContent = formatDayLabel(dateKey);
   selectedPageLabel.textContent = `${activeSelectedIndex + 1} / ${selectedDates.length}`;
   previousSelectedDayButton.disabled = activeSelectedIndex === 0;
@@ -493,6 +636,7 @@ function handleFormSubmit(event) {
     time: enteredTime,
     place: placeInput.value,
     notes: notesInput.value,
+    tripId: activeTripId,
   });
   activateDate(editorDate);
   savePlans(wasEditing ? "Event updated" : "Event added");
@@ -541,6 +685,11 @@ function formatDayLabel(dateKey) {
 function createPlanId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `travel-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function createTripId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `trip-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function clamp(value, minimum, maximum) {
@@ -704,6 +853,11 @@ modeButtons.forEach((button) => {
 });
 
 form.addEventListener("submit", handleFormSubmit);
+tripForm.addEventListener("submit", handleTripSubmit);
+tripSelect.addEventListener("change", () => activateTrip(tripSelect.value));
+document.querySelector("#new-travel-trip").addEventListener("click", openNewTripEditor);
+editTripButton.addEventListener("click", openTripEditor);
+document.querySelector("#cancel-travel-trip").addEventListener("click", closeTripEditor);
 timeInput.addEventListener("input", () => timeInput.setCustomValidity(""));
 deleteButton.addEventListener("click", deleteEditingEvent);
 document.querySelector("#cancel-travel-edit").addEventListener("click", closeEventEditor);
@@ -757,18 +911,22 @@ renderPlanner();
 installCurrentToolAiHost({
   id: "travel-planner",
   title: "Travel Planner",
-  description: "Reads and safely stages local itinerary events without invoking network place search.",
+  description: "Reads and safely stages local trip briefs and itinerary events without invoking network place search.",
   limitations: [
     "Place search is not available through AI commands because it sends a query to an external geocoder.",
     "Event deletion remains an explicit user action.",
   ],
   getSnapshot: () => ({
+    trips,
+    activeTripId,
     plans,
     selectedDates,
     displayedYear,
     displayedMonth,
   }),
   getContext: (_options, snapshot) => ({
+    tripCount: snapshot.trips.length,
+    activeTripId: snapshot.activeTripId,
     eventCount: snapshot.plans.length,
     selectedDates: snapshot.selectedDates,
     displayedMonth: {
@@ -783,15 +941,23 @@ installCurrentToolAiHost({
       : null,
   }),
   commitSnapshot(nextState) {
-    if (!eventPopover.hidden) {
-      throw new Error("Close the open event editor before applying AI changes.");
+    if (!eventPopover.hidden || !tripForm.hidden) {
+      throw new Error("Close the open trip or event editor before applying AI changes.");
     }
-    const nextPlans = sanitizeTravelPlans(nextState.plans);
+    const nextPlanner = sanitizeTravelPlannerState({
+      trips: sanitizeTravelTrips(nextState.trips),
+      activeTripId: nextState.activeTripId,
+      plans: sanitizeTravelPlans(nextState.plans),
+    });
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       version: TRAVEL_PLANNER_VERSION,
-      plans: nextPlans,
+      trips: nextPlanner.trips,
+      activeTripId: nextPlanner.activeTripId,
+      plans: nextPlanner.plans,
     }));
-    plans = nextPlans;
+    trips = nextPlanner.trips;
+    activeTripId = nextPlanner.activeTripId;
+    plans = nextPlanner.plans;
     status.textContent = "AI changes saved locally";
     status.classList.remove("has-error");
     renderPlanner();
@@ -806,11 +972,73 @@ installCurrentToolAiHost({
         return {
           value: {
             eventCount: state.plans.length,
+            tripCount: state.trips.length,
+            activeTripId: state.activeTripId,
             selectedDates: state.selectedDates,
             dateRange: state.plans.length
               ? { first: state.plans[0].date, last: state.plans.at(-1).date }
               : null,
           },
+        };
+      },
+    },
+    {
+      type: "trips.list",
+      description: "List complete trip briefs with destination, dates, transportation, stay, food, activities, and departure answers.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, [], commandIndex);
+        return { value: state.trips };
+      },
+    },
+    {
+      type: "trips.get",
+      description: "Read one trip brief by stable ID.",
+      permissions: ["read-content"],
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["tripId"], commandIndex);
+        const tripId = requireCommandString(command.tripId, "tripId", commandIndex, { maximumLength: 128 });
+        return { value: state.trips.find((trip) => trip.id === tripId) ?? null };
+      },
+    },
+    {
+      type: "trips.upsert",
+      description: "Create or replace one five-part trip brief.",
+      permissions: ["create", "update"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["trip"],
+        properties: { trip: { type: "object" } },
+        additionalProperties: false,
+      },
+      example: {
+        type: "trips.upsert",
+        trip: {
+          title: "Vietnam",
+          destination: "Hanoi",
+          startDate: "2026-09-10",
+          endDate: "2026-09-18",
+          gettingThere: "Flight and airport transfer",
+          staying: "Old Quarter hotel",
+          eating: "Markets and saved restaurants",
+          activities: "Museums and a day trip",
+          departure: "Train on the final morning",
+          nextDestination: "Da Nang",
+        },
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["trip"], commandIndex);
+        const record = requireCommandRecord(command.trip, "trip", commandIndex);
+        const id = typeof record.id === "string" && record.id.trim() ? record.id.trim() : createTripId();
+        const previous = state.trips.find((trip) => trip.id === id);
+        const nextTrips = upsertTravelTrip(state.trips, { ...(previous ?? {}), ...record, id });
+        const saved = nextTrips.find((trip) => trip.id === id);
+        if (!saved) throw new Error("The trip needs a title.");
+        return {
+          state: { ...state, trips: nextTrips, activeTripId: id },
+          ...(previous ? { updatedIds: [id] } : { createdIds: [id] }),
+          value: saved,
         };
       },
     },
@@ -869,7 +1097,12 @@ installCurrentToolAiHost({
           ? record.id.trim()
           : createPlanId();
         const previous = state.plans.find((plan) => plan.id === id);
-        const candidate = { ...(previous ?? {}), ...record, id };
+        const candidate = {
+          ...(previous ?? {}),
+          ...record,
+          id,
+          tripId: record.tripId ?? previous?.tripId ?? state.activeTripId ?? "",
+        };
         const nextPlans = upsertTravelPlan(state.plans, candidate);
         const saved = nextPlans.find((plan) => plan.id === id);
         if (!saved) {

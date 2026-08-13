@@ -193,23 +193,34 @@ export function convertInferenceToEntry(inference, type = "question") {
     return {
       title: inference.title,
       type: "study",
-      question: inference.statement,
+      summary: inference.statement,
+      abstract: inference.statement,
+      researchQuestion: inference.statement,
       hypothesis: inference.kind === "hypothesis" ? inference.statement : "",
       notes: sourceNote,
       method: "Review the cited source records and define a testable next step.",
-      observations: "",
       findings: "",
       limitations: "Generated locally from the Knowledge Center; citations and interpretation require human verification.",
+      folderPath: "Knowledge Center conversions",
+      content: `::section Source-grounded inference\n${inference.statement}\n\n::section Source notes\n${sourceNote}`,
+      definitions: "",
+      notecardLinks: "",
     };
   }
   return {
     title: inference.title,
-    type: "question",
-    prompt: inference.statement,
-    directions: "Review cited source records; test supporting and conflicting explanations.",
-    position: inference.kind === "observation" ? inference.statement : "",
-    notes: sourceNote,
-    status: "open",
+    type: "idea",
+    summary: inference.statement,
+    abstract: inference.statement,
+    stage: "Working",
+    folderPath: "Working Ideas / Knowledge Center conversions",
+    thesis: inference.kind === "observation" ? inference.statement : "",
+    reasoning: sourceNote,
+    assumptions: [],
+    openQuestions: ["Review cited source records and test supporting and conflicting explanations."],
+    content: `::section Formulation notes\n${inference.statement}\n\n::section Evidence to review\n${sourceNote}`,
+    definitions: "",
+    linkedStudyIds: [],
   };
 }
 

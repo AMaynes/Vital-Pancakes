@@ -51,6 +51,219 @@
   --font-display: Georgia, "Times New Roman", serif;
 }
 
+/* Knowledge-system alignment: foldered studies, rich study pages, projects, and condensed life cards. */
+.study-folder {
+  grid-column: 1 / -1;
+  border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--paper) 82%, white);
+}
+
+.study-folder + .study-folder {
+  margin-top: 12px;
+}
+
+.study-folder-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  list-style: none;
+}
+
+.study-folder-heading::-webkit-details-marker { display: none; }
+.study-folder-heading::after { content: "+"; margin-left: auto; font-weight: 900; }
+.study-folder[open] > .study-folder-heading::after { content: "−"; }
+.study-folder-heading small { color: var(--ink-faint); font-size: 9px; }
+.study-folder-icon { color: var(--coral); font-size: 18px; }
+
+.study-folder-entries {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px;
+  background: var(--line);
+}
+
+.study-folder-entries.entry-index-list { grid-template-columns: 1fr; }
+
+.knowledge-entry-layout,
+.project-system-layout {
+  display: grid;
+  grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.knowledge-entry-sidebar,
+.project-map-panel {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 8px;
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+}
+
+.knowledge-sidebar-panel,
+.project-map-panel {
+  border: 1px solid var(--line-strong);
+  background: var(--paper);
+}
+
+.knowledge-sidebar-panel > summary {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.knowledge-outline,
+.knowledge-definition-list,
+.knowledge-relationship-list {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+}
+
+.knowledge-outline a,
+.knowledge-relationship-list a,
+.knowledge-folder-path,
+.knowledge-definition-button {
+  display: block;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: 700 9px/1.35 var(--font-body);
+  text-align: left;
+  text-decoration: none;
+}
+
+.knowledge-outline a:hover,
+.knowledge-relationship-list a:hover,
+.knowledge-definition-button:hover {
+  background: var(--coral-soft);
+  color: var(--ink);
+}
+
+.knowledge-outline a.is-subsection { padding-left: 20px; font-weight: 600; }
+.knowledge-definition-button { border-bottom: 1px solid var(--line); cursor: pointer; }
+.knowledge-sidebar-empty { margin: 0; padding: 8px; color: var(--ink-faint); font-size: 9px; line-height: 1.45; }
+.knowledge-folder-path { color: var(--coral); }
+
+.knowledge-entry-content { min-width: 0; }
+.knowledge-abstract { margin-bottom: 22px; padding: 18px; border-left: 4px solid var(--coral); background: var(--coral-soft); }
+.knowledge-abstract p { margin: 8px 0 0; font: 600 15px/1.55 var(--font-display); }
+.knowledge-block { scroll-margin-top: 18px; margin: 0 0 24px; }
+.knowledge-block h2 { margin: 0 0 10px; padding-bottom: 7px; border-bottom: 1px solid var(--line-strong); }
+.knowledge-block h3 { margin: 0 0 8px; }
+.knowledge-block p { white-space: pre-line; }
+
+.defined-term {
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px dotted var(--coral);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: help;
+}
+
+.knowledge-equation {
+  padding: 18px;
+  overflow-x: auto;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--forest);
+  font: 600 14px/1.5 ui-monospace, monospace;
+  text-align: center;
+}
+
+.knowledge-diagram { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--line); background: #fff; }
+.knowledge-diagram-path { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.knowledge-diagram-node { padding: 7px 9px; border: 1px solid var(--line-strong); background: var(--paper); font-size: 9px; font-weight: 800; }
+.knowledge-diagram-arrow { color: var(--coral); font-style: normal; }
+.knowledge-media { margin: 0; }
+.knowledge-media img,
+.knowledge-block video,
+.knowledge-block iframe { display: block; width: 100%; max-height: 620px; border: 1px solid var(--line-strong); background: #111; object-fit: contain; }
+.knowledge-block iframe { min-height: 420px; background: #fff; }
+.knowledge-media figcaption,
+.knowledge-media-open { display: block; margin-top: 6px; color: var(--ink-faint); font-size: 9px; }
+
+.rich-content-editor { display: grid; gap: 7px; padding: 12px; border: 1px solid var(--line-strong); background: var(--paper); }
+.rich-content-editor-label { font-weight: 800; }
+.rich-content-toolbar { display: flex; flex-wrap: wrap; gap: 5px; }
+.rich-content-editor textarea { width: 100%; font-family: ui-monospace, monospace; line-height: 1.45; }
+
+.definition-dialog { width: min(560px, calc(100vw - 24px)); }
+.definition-dialog-shell { position: relative; padding: 22px; }
+.definition-dialog-shell > .icon-button { position: absolute; top: 8px; right: 8px; }
+.definition-dialog-copy { white-space: pre-line; line-height: 1.6; }
+.definition-dialog-actions a { color: var(--coral); font-weight: 800; }
+
+.recipe-reference-layout { grid-template-columns: minmax(180px, 30%) minmax(0, 1fr); align-items: start; }
+.recipe-media-panel { position: sticky; top: 18px; display: grid; gap: 10px; }
+.recipe-media-panel img,
+.recipe-image-placeholder { width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--line-strong); object-fit: cover; }
+.recipe-image-placeholder { display: grid; place-items: center; background: var(--paper); color: var(--ink-faint); font-size: 10px; text-transform: uppercase; }
+.recipe-macros { display: grid; grid-template-columns: 1fr auto; margin: 0; border: 1px solid var(--line); background: #fff; }
+.recipe-macros dt,
+.recipe-macros dd { margin: 0; padding: 7px 9px; border-bottom: 1px solid var(--line); font-size: 9px; }
+.recipe-macros dt { font-weight: 800; }
+.recipe-reference-content { display: grid; gap: 14px; min-width: 0; }
+
+.workout-reference-card { display: grid; gap: 14px; padding: 14px; border: 1px solid var(--line-strong); background: #fff; }
+.workout-reference-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 38%); gap: 16px; }
+.workout-reference-information { min-width: 0; }
+.workout-animation-panel { display: grid; place-items: center; align-content: center; min-height: 260px; border: 1px solid var(--line); background: var(--paper); }
+.workout-animation-panel img,
+.workout-animation-panel video { width: 100%; max-height: 420px; object-fit: contain; }
+.workout-animation-panel p { padding: 10px; color: var(--ink-faint); font-size: 9px; text-align: center; }
+.workout-training-tabs,
+.care-schedule-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0; }
+.workout-training-tab,
+.care-schedule-tab { padding: 7px 9px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft); font: 800 9px var(--font-body); cursor: pointer; }
+.workout-training-tab[aria-selected="true"],
+.care-schedule-tab[aria-pressed="true"] { border-color: var(--coral); background: var(--coral-soft); color: var(--coral); }
+.workout-breathing-note { padding: 10px 12px; border-top: 1px solid var(--line-strong); color: var(--ink-soft); font-size: 10px; }
+
+.cleaning-notecard { padding: 14px; border: 1px solid var(--line-strong); background: #fff; }
+.cleaning-card-type { display: inline-block; margin-bottom: 10px; padding: 4px 7px; background: var(--sage-soft); color: var(--forest); font-size: 8px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.care-schedule { margin-top: 16px; padding-top: 12px; border-top: 2px solid var(--line-strong); }
+.care-schedule-panel { min-height: 56px; margin: 0; padding: 12px; border: 1px solid var(--line); background: var(--paper); white-space: pre-line; }
+
+.project-map-panel { padding: 14px; }
+.project-map-panel h3 { margin: 4px 0 12px; font-size: 14px; }
+.project-map-tree { margin: 0; padding-left: 14px; list-style: none; }
+.project-map-tree ol { margin-top: 5px; border-left: 1px solid var(--line); }
+.project-map-tree li { position: relative; padding: 4px 0 4px 9px; }
+.project-map-tree li::before { content: ""; position: absolute; left: 0; top: 13px; width: 6px; border-top: 1px solid var(--line); }
+.project-map-tree a { color: var(--ink); font-size: 9px; font-weight: 800; text-decoration: none; }
+.project-map-tree small { display: block; margin-top: 2px; color: var(--ink-faint); font-size: 8px; line-height: 1.35; }
+.project-parts-directory { margin-top: 24px; }
+.project-part-card { margin: 8px 0 8px calc(var(--project-depth, 0) * 18px); padding: 12px; scroll-margin-top: 16px; border: 1px solid var(--line); border-left: 3px solid var(--coral); background: var(--paper); }
+.project-part-card h3 { margin: 4px 0; }
+.project-part-card a { color: var(--coral); font-size: 9px; font-weight: 800; }
+
+@media (max-width: 800px) {
+  .knowledge-entry-layout,
+  .project-system-layout,
+  .recipe-reference-layout,
+  .workout-reference-columns { grid-template-columns: 1fr; }
+  .knowledge-entry-sidebar,
+  .project-map-panel,
+  .recipe-media-panel { position: static; max-height: none; }
+  .study-folder-entries { grid-template-columns: 1fr; }
+}
+
 * {
   box-sizing: border-box;
 }

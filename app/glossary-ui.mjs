@@ -131,6 +131,13 @@ function renderEntries(dialog) {
     definition.textContent = entry.definition || "No definition yet.";
     const actions = document.createElement("div");
     actions.className = "global-glossary-entry-actions";
+    const studyLink = entry.links.find((link) => /^workspace\.html#section=(?:studies|idea-playground)/.test(link));
+    if (studyLink) {
+      const openStudy = document.createElement("a");
+      openStudy.href = studyLink;
+      openStudy.textContent = "Open study";
+      actions.append(openStudy);
+    }
     actions.append(
       actionButton("Insert", () => insertReference(entry, dialog)),
       actionButton("Edit", () => editEntry(entry, dialog)),

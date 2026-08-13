@@ -26,7 +26,7 @@ import {
   isCoreSectionId,
   saveWorkspace,
   updateItem,
-} from "./store.js?v=14";
+} from "./store.js?v=15";
 import { installAiPageHost } from "./ai-page-host.mjs";
 import { createWorkspaceAiAdapter } from "./workspace-ai-adapter.mjs";
 import {
@@ -40,6 +40,15 @@ import {
   filterItemsByTags,
   normalizeEntryTags,
 } from "./tag-filter.mjs?v=1";
+import {
+  buildKnowledgeOutline,
+  buildProjectMapTree,
+  groupEntriesByFolder,
+  parseDefinitionLines,
+  parseKnowledgeContent,
+  parseNotecardLinks,
+} from "./knowledge-entry-model.mjs?v=1";
+import { listGlossaryEntries, saveGlossaryEntry } from "./knowledge-db.mjs";
 
 const appMain = document.querySelector("#app-main");
 const itemDialog = document.querySelector("#item-dialog");
@@ -63,7 +72,8 @@ const SECTION_LABELS = {
   language: "LANGUAGE",
   algorithm: "ALGORITHM",
   project: "PROJECT",
-  question: "QUESTION / IDEA",
+  idea: "IDEA",
+  question: "IDEA",
   custom: "ENTRY",
 };
 
@@ -77,6 +87,7 @@ const SECTION_ACCENTS = {
   language: "blue",
   algorithm: "violet",
   project: "ochre",
+  idea: "sage",
   question: "sage",
   custom: "coral",
 };
@@ -132,10 +143,10 @@ const SECTION_PRESENTATIONS = {
       ["N", "Next test", "End with the smallest useful follow-up, not false closure."],
     ],
   },
-  question: {
+  idea: {
     mode: "idea-board",
-    kicker: "QUESTION & IDEA BOARD",
-    introduction: "Keep uncertainty visible. Prompts, investigation branches, and a provisional position stay together while status shows what deserves attention next.",
+    kicker: "IDEA FORMULATION",
+    introduction: "Ideas are unproven personal thinking. Working Ideas keeps uncertainty, assumptions, reasoning, and open questions visible while the thought takes shape.",
     stages: [
       ["?", "Prompt", "Capture the observation or tension that opened the question."],
       ["↗", "Branches", "List distinct paths to investigate, test, or build."],
@@ -264,6 +275,18 @@ const ALGORITHM_CATEGORIES = Object.freeze([
     id: "analysis",
     title: "Algorithm Analysis",
     description: "Special lessons on comparison, time and space complexity, cases, recurrences, and benchmarking.",
+  },
+]);
+const IDEA_CATEGORIES = Object.freeze([
+  {
+    id: "working",
+    title: "Working Ideas",
+    description: "Ideas still being formulated: provisional, unfinished, and explicitly unproven.",
+  },
+  {
+    id: "formed",
+    title: "Formed Ideas",
+    description: "Coherent personal ideas that remain unproven until they are studied or tested.",
   },
 ]);
 
@@ -624,7 +647,7 @@ function renderStudiesDashboard(workspace) {
   const hero = createAreaHero(
     "STUDIES & PROJECTS",
     "Develop ideas and preserve what you learn.",
-    "Keep questions, emerging ideas, concept studies, programming refreshers, algorithms, projects, and notecards together.",
+    "Form working ideas, build foldered and experimental studies, map project systems, and keep programming references and notecards connected.",
   );
   const sectionHeading = createSectionHeading(
     "Studies and project libraries",
@@ -1013,7 +1036,7 @@ function renderSection(section) {
   const workoutFilters = section.workoutCategory
     ? createWorkoutMuscleFilterBar(section, section.items)
     : null;
-  const sectionFilters = ["cooking-guide", "algorithm"].includes(section.type)
+  const sectionFilters = ["cooking-guide", "algorithm", "study", "idea"].includes(section.type)
     ? createTagSearchFilterBar(section, workoutFilters?.filteredItems ?? section.items)
     : null;
   const cleaningFilters = section.cleaningCategory
@@ -1074,6 +1097,24 @@ function renderSection(section) {
       empty.append(emptyButton);
     }
     grid.append(empty);
+  } else if (["study", "idea"].includes(section.type)) {
+    groupEntriesByFolder(visibleItems).forEach(({ folder, entries }) => {
+      const folderPanel = createElement("details", "study-folder");
+      folderPanel.open = true;
+      const summary = createElement("summary", "study-folder-heading");
+      summary.append(
+        createElement("span", "study-folder-icon", "▱"),
+        createElement("strong", "", folder),
+        createElement("small", "", `${entries.length} ${entries.length === 1 ? "entry" : "entries"}`),
+      );
+      const folderGrid = createElement("div", `study-folder-entries entry-index-${view}`);
+      entries
+        .slice()
+        .sort((left, right) => String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? "")))
+        .forEach((item, index) => folderGrid.append(createEntryIndexCard(section, item, index)));
+      folderPanel.append(summary, folderGrid);
+      grid.append(folderPanel);
+    });
   } else {
     visibleItems
       .slice()
@@ -1127,7 +1168,11 @@ function createTagSearchFilterBar(section, entries) {
   searchInput.type = "search";
   searchInput.placeholder = section.type === "algorithm"
     ? "Search algorithms"
-    : "Search cooking methods";
+    : section.type === "study"
+      ? "Search studies and folders"
+      : section.type === "idea"
+        ? "Search working ideas"
+        : "Search cooking methods";
   searchInput.value = searchText;
   searchInput.addEventListener("input", () => {
     const cursorPosition = searchInput.selectionStart ?? searchInput.value.length;
@@ -1511,13 +1556,13 @@ function createEntryVisual(section, item, compact) {
       const lastClass = index === tokens.length - 1 ? " is-last" : "";
       symbol.append(createElement("i", `visual-node node-${index + 1}${lastClass}`, token.slice(0, 2)));
     });
-  } else if (type === "study" || type === "question") {
+  } else if (type === "study" || type === "idea" || type === "question") {
     symbol.append(
       createElement("i", "visual-orbit"),
       createElement("i", "visual-orbit-node orbit-one"),
       createElement("i", "visual-orbit-node orbit-two"),
       createElement("i", "visual-orbit-node orbit-three"),
-      createElement("i", "visual-core", type === "question" ? "?" : "Q"),
+      createElement("i", "visual-core", ["idea", "question"].includes(type) ? "?" : "Q"),
     );
   } else if (type === "project") {
     symbol.append(
@@ -1599,6 +1644,7 @@ function getEmptyMessage(section) {
     cleaning: "Add a house-care or self-care routine with its frequency, supplies, ordered steps, and tags.",
     routine: "Turn a recurring task into a clear trigger and a checklist you can follow without re-planning it.",
     study: "Frame a question, decide what evidence matters, record the method, and keep limitations beside the findings.",
+    idea: "Start in Working Ideas, make the unproven thought explicit, and record assumptions and open questions as it develops.",
     language: "Add a language when you need a refresher. Capture syntax, mental models, and the mistakes you want to avoid.",
     algorithm: "Add algorithms as you encounter them, including use cases and visual frames you can play back.",
     project: "Document a project’s interesting problem, your approach, and its language and algorithm relationships.",
@@ -1622,6 +1668,7 @@ function getSingularLabel(section) {
     cleaning: "cleaning routine",
     routine: "routine",
     study: "study",
+    idea: "idea",
     language: "language",
     algorithm: "algorithm",
     project: "project",
@@ -1679,16 +1726,19 @@ function createEntryCard(section, item) {
  * @returns {HTMLElement} Complete entry content.
  */
 function createEntryBody(section, item) {
-  if (section.type === "cooking-guide") return createCookingGuideBody(section, item);
+  if (section.type === "cooking-guide") return createKnowledgeEntryLayout(section, item, {
+    label: "Cooking study",
+  });
   if (section.type === "recipe") return createRecipeBody(section, item);
   if (section.type === "workout") return createWorkoutBody(section, item);
   if (section.type === "cleaning") return createCleaningBody(section, item);
   if (section.type === "routine") return createRoutineBody(section, item);
-  if (section.type === "study") return createStudyBody(item);
+  if (section.type === "study") return createStudyBody(section, item);
   if (section.type === "language") return createLanguageBody(item);
   if (section.type === "algorithm") return createAlgorithmBody(item);
-  if (section.type === "project") return createProjectBody(item);
-  if (section.type === "question") return createQuestionBody(item);
+  if (section.type === "project") return createProjectBody(section, item);
+  if (section.type === "idea") return createIdeaBody(section, item);
+  if (section.type === "question") return createIdeaBody(section, item);
   return createGenericBody(item);
 }
 
@@ -1739,16 +1789,41 @@ function createCookingGuideBody(section, item) {
  * @returns {HTMLElement} Recipe content.
  */
 function createRecipeBody(section, item) {
-  const body = createElement("div", "entry-body recipe-spread");
+  const body = createElement("div", "entry-body recipe-spread recipe-reference-layout");
+  const side = createElement("aside", "recipe-media-panel");
+  const imageUrl = normalizeEntryUrl(item.imageUrl, { allowImageData: true });
+  if (imageUrl) {
+    const image = document.createElement("img");
+    image.src = imageUrl;
+    image.alt = item.title;
+    image.loading = "lazy";
+    side.append(image);
+  } else {
+    side.append(createElement("div", "recipe-image-placeholder", "Recipe picture"));
+  }
+  const macros = createElement("dl", "recipe-macros");
+  [
+    ["Calories", item.calories],
+    ["Protein", item.protein],
+    ["Carbs", item.carbs],
+    ["Fat", item.fat],
+  ].filter(([, value]) => value).forEach(([label, value]) => {
+    macros.append(createElement("dt", "", label), createElement("dd", "", value));
+  });
+  if (macros.childElementCount) side.append(macros);
+
+  const recipe = createElement("div", "recipe-reference-content");
   const details = createElement("div", "recipe-facts");
   if (item.servings) details.append(createDefinition("Servings", item.servings));
   if (item.timing) details.append(createDefinition("Time", item.timing));
-  if (details.childElementCount) body.append(details);
+  if (details.childElementCount) recipe.append(details);
   const columns = createElement("div", "recipe-columns");
-  appendPersistentChecklist(columns, section, item, "Mise en place", item.ingredients, "checkedIngredients");
-  appendPersistentChecklist(columns, section, item, "Method", item.steps, "checkedSteps");
-  body.append(columns);
-  if (item.notes) body.append(createDefinition("Adjustment notes", item.notes));
+  appendPersistentChecklist(columns, section, item, "Ingredients", item.ingredients, "checkedIngredients");
+  appendPersistentChecklist(columns, section, item, "Equipment required", item.equipment, "checkedEquipment");
+  recipe.append(columns);
+  appendPersistentChecklist(recipe, section, item, "Cooking instructions", item.steps, "checkedSteps");
+  if (item.notes) recipe.append(createDefinition("Adjustment notes", item.notes));
+  body.append(side, recipe);
   return body;
 }
 
@@ -1760,16 +1835,72 @@ function createRecipeBody(section, item) {
  * @returns {HTMLElement} Workout content.
  */
 function createWorkoutBody(section, item) {
-  const body = createElement("div", "entry-body");
-  const details = createElement("div", "workout-prescription");
-  if (item.goal) details.append(createDefinition("Primary muscles", item.goal));
-  if (item.frequency) details.append(createDefinition("Working sets", item.frequency));
-  if (item.duration) details.append(createDefinition("Rest", item.duration));
-  if (item.equipment) details.append(createDefinition("Equipment", item.equipment));
-  if (details.childElementCount) body.append(details);
-  appendPersistentChecklist(body, section, item, "Execution", item.exercises, "checkedExercises");
-  if (item.progression) body.append(createDefinition("Progression rule", item.progression));
-  if (item.notes) body.append(createDefinition("Coaching notes", item.notes));
+  const body = createElement("div", "entry-body workout-reference-card");
+  const muscles = item.muscleTags?.length
+    ? item.muscleTags
+    : String(item.goal ?? "").split(/[·,]/).map((tag) => tag.trim()).filter(Boolean);
+  appendTagGroup(body, "Muscle groups", muscles);
+  const columns = createElement("div", "workout-reference-columns");
+  const information = createElement("section", "workout-reference-information");
+  if (item.equipment) information.append(createDefinition("Equipment", item.equipment));
+  const tabs = createElement("div", "workout-training-tabs");
+  tabs.setAttribute("role", "tablist");
+  const panels = createElement("div", "workout-training-panels");
+  const modes = [
+    ["Hypertrophy", item.hypertrophyPrescription || item.frequency],
+    ["Strength", item.strengthPrescription || item.frequency],
+    ["Endurance", item.endurancePrescription || item.frequency],
+  ];
+  modes.forEach(([label, prescription], index) => {
+    const key = label.toLocaleLowerCase();
+    const button = createElement("button", "workout-training-tab", label);
+    button.type = "button";
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", String(index === 0));
+    button.dataset.workoutMode = key;
+    const panel = createElement("section", "workout-training-panel");
+    panel.dataset.workoutPanel = key;
+    panel.hidden = index !== 0;
+    panel.append(createDefinition("Sets / reps / rest", prescription || "Add a prescription for this training type."));
+    if (item.squeeze) panel.append(createDefinition("Where to squeeze", item.squeeze));
+    button.addEventListener("click", () => {
+      tabs.querySelectorAll("[role=tab]").forEach((candidate) => candidate.setAttribute("aria-selected", String(candidate === button)));
+      panels.querySelectorAll("[data-workout-panel]").forEach((candidate) => { candidate.hidden = candidate !== panel; });
+    });
+    tabs.append(button);
+    panels.append(panel);
+  });
+  information.append(tabs, panels);
+  appendPersistentChecklist(information, section, item, "How to do it", item.exercises, "checkedExercises");
+  if (item.progression) information.append(createDefinition("Progression rule", item.progression));
+
+  const visual = createElement("aside", "workout-animation-panel");
+  const animationUrl = normalizeEntryUrl(item.animationUrl, { allowImageData: true });
+  if (animationUrl && /\.(?:mp4|webm|ogg)(?:$|[?#])/i.test(animationUrl)) {
+    const video = document.createElement("video");
+    video.controls = true;
+    video.loop = true;
+    video.muted = true;
+    video.preload = "metadata";
+    video.src = animationUrl;
+    visual.append(video);
+  } else if (animationUrl) {
+    const image = document.createElement("img");
+    image.src = animationUrl;
+    image.alt = `How to perform ${item.title}`;
+    image.loading = "lazy";
+    visual.append(image);
+  } else {
+    visual.append(createEntryVisual(section, item, false), createElement("p", "", "Add an animation or demonstration URL in Edit entry."));
+  }
+  columns.append(information, visual);
+  body.append(columns);
+  const breathing = createElement("footer", "workout-breathing-note");
+  breathing.append(
+    createElement("strong", "", "Breathing"),
+    document.createTextNode(` ${item.breathing || "Inhale during the lowering phase and exhale through the effort."}`),
+  );
+  body.append(breathing);
   return body;
 }
 
@@ -1781,7 +1912,8 @@ function createWorkoutBody(section, item) {
  * @returns {HTMLElement} Cleaning content.
  */
 function createCleaningBody(section, item) {
-  const body = createElement("div", "entry-body");
+  const body = createElement("div", `entry-body cleaning-notecard cleaning-card-${String(item.cardType ?? "Brief").toLocaleLowerCase()}`);
+  body.append(createElement("span", "cleaning-card-type", `${item.cardType ?? "Brief"} ${item.category === "self-care" ? "self-care" : "house-cleaning"} card`));
   const details = createElement("div", "cleaning-scope");
   if (item.zone) details.append(createDefinition("Zone", item.zone));
   if (item.frequency) details.append(createDefinition("When to clean it", item.frequency));
@@ -1792,8 +1924,32 @@ function createCleaningBody(section, item) {
   body.append(route);
   if (item.warnings) body.append(createDefinition("Material and safety limits", item.warnings));
   if (item.notes) body.append(createDefinition("Maintenance notes", item.notes));
+  if (item.schedule?.length) body.append(createScheduleTabs(item.schedule));
   appendTagGroup(body, "Tags", normalizeEntryTags(item.tags));
   return body;
+}
+
+function createScheduleTabs(scheduleRows) {
+  const schedule = createElement("section", "care-schedule");
+  schedule.append(createElement("h3", "", "When / how often"));
+  const tabs = createElement("div", "care-schedule-tabs");
+  const panels = createElement("div", "care-schedule-panels");
+  scheduleRows.forEach((row, index) => {
+    const { label, explanation } = splitStructuredLine(row, `Timeframe ${index + 1}`);
+    const button = createElement("button", "care-schedule-tab", label);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(index === 0));
+    const panel = createElement("p", "care-schedule-panel", explanation);
+    panel.hidden = index !== 0;
+    button.addEventListener("click", () => {
+      tabs.querySelectorAll("button").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+      panels.querySelectorAll(".care-schedule-panel").forEach((candidate) => { candidate.hidden = candidate !== panel; });
+    });
+    tabs.append(button);
+    panels.append(panel);
+  });
+  schedule.append(tabs, panels);
+  return schedule;
 }
 
 /**
@@ -1802,32 +1958,314 @@ function createCleaningBody(section, item) {
  * @param {object} item Study record.
  * @returns {HTMLElement} Study content.
  */
-function createStudyBody(item) {
+function createStudyBody(section, item) {
   if (item.format === "lesson" && item.lesson) {
-    return createLessonStudyBody(item);
+    return createKnowledgeEntryLayout(section, item, {
+      content: createLessonStudyBody(item),
+      label: "Study lesson",
+    });
   }
-  const body = createElement("div", "entry-body study-dossier");
-  const premise = createElement("div", "study-premise");
-  if (item.researchQuestion) premise.append(createDefinition("Research question", item.researchQuestion));
-  if (item.hypothesis) premise.append(createDefinition("Prediction", item.hypothesis));
-  if (premise.childElementCount) body.append(premise);
-  if (item.method) body.append(createDefinition("Method", item.method));
-  if (item.evidence?.length) {
-    const evidence = createElement("section", "evidence-register");
-    evidence.append(createElement("h3", "", "Evidence to collect"));
-    const list = createElement("ul");
-    item.evidence.forEach((value) => list.append(createElement("li", "", value)));
-    evidence.append(list);
-    body.append(evidence);
+  return createKnowledgeEntryLayout(section, item, { label: section.playground ? "Experimental study" : "Study" });
+}
+
+/**
+ * Builds the shared study-like reading surface: a sticky, collapsible outline
+ * and definition rail beside rich content. Ideas and How to Cook use the same
+ * structure without inheriting the epistemic claims of a finished Study.
+ */
+function createKnowledgeEntryLayout(section, item, options = {}) {
+  const layout = createElement("div", "knowledge-entry-layout");
+  const sidebar = createElement("aside", "knowledge-entry-sidebar");
+  const definitions = parseDefinitionLines(item.definitions);
+  const blocks = parseKnowledgeContent(item.content);
+  const outline = item.format === "lesson"
+    ? (item.lesson?.sections ?? []).map((lessonSection, index) => ({
+      id: `lesson-section-${index + 1}`,
+      title: lessonSection.heading,
+      level: 2,
+    }))
+    : buildKnowledgeOutline(item.content);
+
+  const outlinePanel = createElement("details", "knowledge-sidebar-panel");
+  outlinePanel.open = true;
+  outlinePanel.append(createElement("summary", "", "Sections"));
+  const outlineNav = createElement("nav", "knowledge-outline");
+  outlineNav.setAttribute("aria-label", `${options.label ?? "Entry"} sections`);
+  if (outline.length) {
+    outline.forEach(({ id, title, level }) => {
+      const link = createElement("a", level === 3 ? "is-subsection" : "", title);
+      link.href = `#${id}`;
+      outlineNav.append(link);
+    });
+  } else {
+    outlineNav.append(createElement("p", "knowledge-sidebar-empty", "Add section blocks to build a jump list."));
   }
-  const evaluation = createElement("div", "study-evaluation");
-  if (item.findings) evaluation.append(createDefinition("Findings", item.findings));
-  if (item.limitations) evaluation.append(createDefinition("Limitations", item.limitations));
-  if (item.nextSteps) evaluation.append(createDefinition("Next test", item.nextSteps));
-  if (evaluation.childElementCount) body.append(evaluation);
-  if (item.notes) body.append(createDefinition("Supporting notes", item.notes));
-  appendTagGroup(body, "Tags", item.tags);
-  return body;
+  outlinePanel.append(outlineNav);
+
+  const definitionPanel = createElement("details", "knowledge-sidebar-panel");
+  definitionPanel.open = true;
+  definitionPanel.append(createElement("summary", "", `Definitions (${definitions.length})`));
+  const definitionList = createElement("div", "knowledge-definition-list");
+  if (definitions.length) {
+    definitions.forEach((definition) => {
+      const button = createElement("button", "knowledge-definition-button", definition.term);
+      button.type = "button";
+      button.addEventListener("click", () => openStudyDefinition(definition));
+      definitionList.append(button);
+    });
+  } else {
+    definitionList.append(createElement("p", "knowledge-sidebar-empty", "Definitions saved here also appear in the main glossary."));
+  }
+  definitionPanel.append(definitionList);
+
+  const relationships = createKnowledgeRelationshipPanel(section, item);
+  sidebar.append(outlinePanel, definitionPanel);
+  if (relationships) sidebar.append(relationships);
+
+  const content = createElement("div", "entry-body knowledge-entry-content");
+  if (item.abstract || item.summary) {
+    const abstract = createElement("section", "knowledge-abstract");
+    abstract.append(createElement("span", "card-kicker", "ABSTRACT SUMMARY"));
+    appendDefinitionAwareText(abstract, item.abstract || item.summary, definitions);
+    content.append(abstract);
+  }
+  if (section.type === "idea" || section.type === "question") {
+    const state = createElement("div", "question-state");
+    state.append(createElement("span", "question-kind", "UNPROVEN IDEA"));
+    if (item.stage) state.append(createElement("span", "question-status", item.stage));
+    content.append(state);
+    if (item.thesis) content.append(createDefinition("Current formulation", item.thesis));
+    if (item.reasoning) content.append(createDefinition("Reasoning so far", item.reasoning));
+    if (item.assumptions?.length) content.append(createDefinition("Assumptions", item.assumptions.join("\n")));
+    if (item.openQuestions?.length) content.append(createDefinition("Open questions", item.openQuestions.join("\n")));
+  }
+  if (options.content) {
+    (item.lesson?.sections ?? []).forEach((lessonSection, index) => {
+      const sectionElement = options.content.querySelectorAll(".saved-lesson-section")[index];
+      if (sectionElement) sectionElement.id = `lesson-section-${index + 1}`;
+    });
+    content.append(options.content);
+  } else if (blocks.length) {
+    blocks.forEach((block) => content.append(createKnowledgeBlock(block, definitions)));
+  } else {
+    content.append(createElement("p", "knowledge-empty-content", "Use Edit entry to add text, sections, images, diagrams, interactables, videos, or LaTeX equations."));
+  }
+  appendTagGroup(content, "Tags", item.tags ?? []);
+  layout.append(sidebar, content);
+  queueMicrotask(() => renderKnowledgeMath(layout));
+  return layout;
+}
+
+function createKnowledgeRelationshipPanel(section, item) {
+  const studies = getWorkspace().sections
+    .filter((candidate) => candidate.type === "study")
+    .flatMap((candidate) => candidate.items.map((study) => ({ ...study, sectionId: candidate.id })));
+  const parent = studies.find((study) => study.id === item.parentStudyId);
+  const children = studies.filter((study) => study.parentStudyId === item.id);
+  const notecards = parseNotecardLinks(item.notecardLinks);
+  const linkedStudies = (item.linkedStudyIds ?? [])
+    .map((studyId) => studies.find((study) => study.id === studyId))
+    .filter(Boolean);
+  if (!parent && !children.length && !notecards.length && !linkedStudies.length && !item.folderPath) return null;
+  const panel = createElement("details", "knowledge-sidebar-panel");
+  panel.open = true;
+  panel.append(createElement("summary", "", "Place & links"));
+  const links = createElement("div", "knowledge-relationship-list");
+  if (item.folderPath) links.append(createElement("span", "knowledge-folder-path", `▱ ${item.folderPath}`));
+  if (parent) links.append(createStudyLink(parent, `Parent · ${parent.title}`));
+  children.forEach((child) => links.append(createStudyLink(child, `Child · ${child.title}`)));
+  linkedStudies.forEach((study) => links.append(createStudyLink(study, `Study · ${study.title}`)));
+  notecards.forEach(({ label, url }) => {
+    const link = createElement("a", "", `Notecard · ${label}`);
+    link.href = normalizeEntryUrl(url) ?? "educational_resources/index.html";
+    links.append(link);
+  });
+  panel.append(links);
+  return panel;
+}
+
+function createStudyLink(study, label = study.title) {
+  const link = createElement("a", "", label);
+  link.href = buildContentHash(study.sectionId, study.id);
+  return link;
+}
+
+function createKnowledgeBlock(block, definitions) {
+  const element = createElement("section", `knowledge-block block-${block.type}`);
+  element.id = block.id;
+  if (block.type === "section") {
+    element.append(createElement("h2", "", block.title || "Section"));
+    appendDefinitionAwareText(element, block.body, definitions);
+    return element;
+  }
+  if (block.type === "subsection") {
+    element.append(createElement("h3", "", block.title || "Subsection"));
+    appendDefinitionAwareText(element, block.body, definitions);
+    return element;
+  }
+  if (block.type === "text") {
+    if (block.title) element.append(createElement("h3", "", block.title));
+    appendDefinitionAwareText(element, block.body, definitions);
+    return element;
+  }
+  if (block.type === "equation") {
+    if (block.title) element.append(createElement("span", "card-kicker", block.title));
+    const equation = createElement("div", "knowledge-equation", block.body);
+    equation.dataset.latex = block.body;
+    element.append(equation);
+    return element;
+  }
+  if (block.type === "diagram") {
+    if (block.title) element.append(createElement("h3", "", block.title));
+    const diagram = createElement("div", "knowledge-diagram");
+    block.body.split("\n").filter(Boolean).forEach((row) => {
+      const path = createElement("div", "knowledge-diagram-path");
+      row.split(">").map((node) => node.trim()).filter(Boolean).forEach((node, index, nodes) => {
+        path.append(createElement("span", "knowledge-diagram-node", node));
+        if (index < nodes.length - 1) path.append(createElement("i", "knowledge-diagram-arrow", "→"));
+      });
+      diagram.append(path);
+    });
+    element.append(diagram);
+    return element;
+  }
+  if (block.type === "image") {
+    const url = normalizeEntryUrl(block.body, { allowImageData: true });
+    if (url) {
+      const figure = createElement("figure", "knowledge-media");
+      const image = document.createElement("img");
+      image.src = url;
+      image.alt = block.title || "Study image";
+      image.loading = "lazy";
+      figure.append(image);
+      if (block.title) figure.append(createElement("figcaption", "", block.title));
+      element.append(figure);
+    }
+    return element;
+  }
+  if (["video", "interactable"].includes(block.type)) {
+    const url = normalizeEntryUrl(block.body);
+    if (block.title) element.append(createElement("h3", "", block.title));
+    if (!url) return element;
+    if (block.type === "video" && /\.(?:mp4|webm|ogg)(?:$|[?#])/i.test(url)) {
+      const video = document.createElement("video");
+      video.controls = true;
+      video.preload = "metadata";
+      video.src = url;
+      element.append(video);
+    } else {
+      const frame = document.createElement("iframe");
+      frame.src = url;
+      frame.title = block.title || (block.type === "video" ? "Study video" : "Study interactable");
+      frame.loading = "lazy";
+      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-presentation");
+      element.append(frame);
+    }
+    const open = createElement("a", "knowledge-media-open", "Open separately ↗");
+    open.href = url;
+    open.target = "_blank";
+    open.rel = "noopener noreferrer";
+    element.append(open);
+  }
+  return element;
+}
+
+function appendDefinitionAwareText(parent, value, definitions) {
+  String(value ?? "").split(/\n{2,}/).filter(Boolean).forEach((paragraphText) => {
+    const paragraph = createElement("p");
+    const terms = definitions.map(({ term }) => term).filter(Boolean).sort((a, b) => b.length - a.length);
+    if (!terms.length) {
+      paragraph.textContent = paragraphText;
+      parent.append(paragraph);
+      return;
+    }
+    const lookup = new Map(definitions.map((definition) => [definition.term.toLocaleLowerCase(), definition]));
+    const escaped = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const pattern = new RegExp(`(\\[\\[(?:${escaped.join("|")})\\]\\]|\\b(?:${escaped.join("|")})\\b)`, "giu");
+    let offset = 0;
+    for (const match of paragraphText.matchAll(pattern)) {
+      paragraph.append(document.createTextNode(paragraphText.slice(offset, match.index)));
+      const raw = match[0].replace(/^\[\[|\]\]$/g, "");
+      const definition = lookup.get(raw.toLocaleLowerCase());
+      const button = createElement("button", "defined-term", raw);
+      button.type = "button";
+      button.addEventListener("click", () => openStudyDefinition(definition));
+      paragraph.append(button);
+      offset = match.index + match[0].length;
+    }
+    paragraph.append(document.createTextNode(paragraphText.slice(offset)));
+    parent.append(paragraph);
+  });
+}
+
+function openStudyDefinition(definition) {
+  if (!definition) return;
+  let dialog = document.querySelector("#study-definition-dialog");
+  if (!dialog) {
+    dialog = createElement("dialog", "app-dialog definition-dialog");
+    dialog.id = "study-definition-dialog";
+    const shell = createElement("div", "definition-dialog-shell");
+    const close = createElement("button", "icon-button", "×");
+    close.type = "button";
+    close.setAttribute("aria-label", "Close definition");
+    close.addEventListener("click", () => dialog.close());
+    shell.append(close, createElement("p", "eyebrow", "DEFINITION"), createElement("h2"), createElement("p", "definition-dialog-copy"), createElement("div", "definition-dialog-actions"));
+    dialog.append(shell);
+    document.body.append(dialog);
+  }
+  dialog.querySelector("h2").textContent = definition.term;
+  dialog.querySelector(".definition-dialog-copy").textContent = definition.definition || "No definition has been written yet.";
+  const actions = dialog.querySelector(".definition-dialog-actions");
+  actions.replaceChildren();
+  const linked = findStudyRecord(definition.linkedStudyId);
+  if (linked) actions.append(createStudyLink(linked, "Open the full study →"));
+  dialog.showModal();
+}
+
+function findStudyRecord(studyId) {
+  if (!studyId) return null;
+  for (const section of getWorkspace().sections.filter((candidate) => candidate.type === "study")) {
+    const study = section.items.find((candidate) => candidate.id === studyId);
+    if (study) return { ...study, sectionId: section.id };
+  }
+  return null;
+}
+
+function normalizeEntryUrl(value, options = {}) {
+  const source = String(value ?? "").trim();
+  if (!source) return null;
+  if (options.allowImageData && /^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(source)) return source;
+  try {
+    const url = new URL(source, document.baseURI);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+let knowledgeKatexModule = null;
+async function renderKnowledgeMath(root) {
+  const nodes = [...root.querySelectorAll("[data-latex]")];
+  if (!nodes.length) return;
+  try {
+    if (!document.querySelector("link[data-knowledge-katex]")) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css";
+      link.dataset.knowledgeKatex = "true";
+      document.head.append(link);
+    }
+    knowledgeKatexModule ??= await import("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.mjs");
+    nodes.forEach((node) => knowledgeKatexModule.render(node.dataset.latex, node, {
+      displayMode: true,
+      throwOnError: false,
+      strict: "warn",
+      trust: false,
+    }));
+  } catch {
+    // LaTeX source remains visible when the optional renderer is unavailable.
+  }
 }
 
 /**
@@ -2106,7 +2544,17 @@ function createAlgorithmAnimation(frames, explanations = [], label = "VISUAL WAL
  * @param {object} item Project record.
  * @returns {HTMLElement} Project content.
  */
-function createProjectBody(item) {
+function createProjectBody(section, item) {
+  const layout = createElement("div", "project-system-layout");
+  const mapPanel = createElement("aside", "project-map-panel");
+  mapPanel.append(
+    createElement("span", "card-kicker", "ALWAYS-VISIBLE PROJECT MAP"),
+    createElement("h3", "", "Overview → parts → studies"),
+  );
+  const mapTree = buildProjectMapTree(item.projectMap);
+  if (mapTree.length) mapPanel.append(createProjectMapList(mapTree));
+  else mapPanel.append(createElement("p", "knowledge-sidebar-empty", "Edit the project to add its system map."));
+
   const body = createElement("div", "entry-body project-blueprint");
   if (item.status) {
     body.append(createElement("span", `project-status status-${item.status.toLowerCase().replaceAll(" ", "-")}`, item.status));
@@ -2132,7 +2580,63 @@ function createProjectBody(item) {
   appendTagGroup(body, "Dependencies / packages / services", item.dependencies);
   if (item.outcome) body.append(createDefinition("Current outcome", item.outcome));
   if (item.nextStep) body.append(createDefinition("Next meaningful move", item.nextStep));
-  return body;
+  const linkedStudies = (item.studyIds ?? []).map(findStudyRecord).filter(Boolean);
+  const mappedStudyIds = new Set(flattenProjectNodes(mapTree).map(({ studyId }) => studyId).filter(Boolean));
+  if (mapTree.length || linkedStudies.length) {
+    const parts = createElement("section", "project-parts-directory");
+    parts.append(createElement("h2", "", "Project parts directory"));
+    appendProjectPartCards(parts, mapTree);
+    linkedStudies.filter(({ id }) => !mappedStudyIds.has(id)).forEach((study) => {
+      const card = createElement("article", "project-part-card");
+      card.append(createElement("span", "card-kicker", "LINKED STUDY"), createElement("h3", "", study.title));
+      if (study.summary) card.append(createElement("p", "", study.summary));
+      card.append(createStudyLink(study, "Open study →"));
+      parts.append(card);
+    });
+    body.append(parts);
+  }
+  layout.append(mapPanel, body);
+  return layout;
+}
+
+function createProjectMapList(nodes) {
+  const list = createElement("ol", "project-map-tree");
+  nodes.forEach((node) => {
+    const row = createElement("li");
+    const study = findStudyRecord(node.studyId);
+    if (study) {
+      row.append(createStudyLink(study, node.label));
+    } else {
+      const link = createElement("a", "", node.label);
+      link.href = `#project-part-${node.id}`;
+      row.append(link);
+    }
+    if (node.note) row.append(createElement("small", "", node.note));
+    if (node.children.length) row.append(createProjectMapList(node.children));
+    list.append(row);
+  });
+  return list;
+}
+
+function appendProjectPartCards(parent, nodes, depth = 0) {
+  nodes.forEach((node) => {
+    const card = createElement("article", "project-part-card");
+    card.id = `project-part-${node.id}`;
+    card.style.setProperty("--project-depth", String(depth));
+    card.append(
+      createElement("span", "card-kicker", depth ? `PART · LEVEL ${depth + 1}` : "BIG PICTURE"),
+      createElement("h3", "", node.label),
+    );
+    if (node.note) card.append(createElement("p", "", node.note));
+    const study = findStudyRecord(node.studyId);
+    if (study) card.append(createStudyLink(study, `Open study · ${study.title} →`));
+    parent.append(card);
+    appendProjectPartCards(parent, node.children, depth + 1);
+  });
+}
+
+function flattenProjectNodes(nodes) {
+  return nodes.flatMap((node) => [node, ...flattenProjectNodes(node.children)]);
 }
 
 /**
@@ -2141,18 +2645,8 @@ function createProjectBody(item) {
  * @param {object} item Question-or-idea record.
  * @returns {HTMLElement} Question or idea content.
  */
-function createQuestionBody(item) {
-  const body = createElement("div", "entry-body");
-  const details = createElement("div", "question-state");
-  if (item.kind) details.append(createElement("span", "question-kind", item.kind));
-  if (item.status) details.append(createElement("span", "question-status", item.status));
-  if (details.childElementCount) body.append(details);
-  if (item.context) body.append(createDefinition("What prompted it", item.context));
-  if (item.directions?.length) {
-    body.append(createDefinition("Possible directions", item.directions.join("\n")));
-  }
-  if (item.currentPosition) body.append(createDefinition("Current position", item.currentPosition));
-  return body;
+function createIdeaBody(section, item) {
+  return createKnowledgeEntryLayout(section, item, { label: "Idea" });
 }
 
 /**
@@ -2311,6 +2805,9 @@ function createItemFields(section, item) {
 
   if (section.type === "cooking-guide") {
     fields.push(
+      createField("Abstract summary", "abstract", "textarea", item?.abstract ?? item?.summary ?? "", false, "Orient the reader to the cooking method"),
+      createRichContentField(item?.content ?? ""),
+      createField("Definitions · term | definition | linked study ID", "definitions", "textarea", item?.definitions ?? "", false, "Browning | Flavor-producing reactions caused by heat | study-id"),
       createField("Heat plan", "heat", "text", item?.heat ?? "", false, "How should the heat change through the method?"),
       createField("Sensory signals", "signals", "textarea", item?.signals ?? "", false, "What should you see, hear, smell, or feel?"),
       createField("What to understand", "principles", "textarea", item?.principles ?? "", false, "The principles behind this method"),
@@ -2321,10 +2818,16 @@ function createItemFields(section, item) {
     );
   } else if (section.type === "recipe") {
     fields.push(
+      createField("Picture URL or image data URL", "imageUrl", "text", item?.imageUrl ?? "", false, "https://…/recipe.jpg"),
+      createField("Calories", "calories", "text", item?.calories ?? "", false, "e.g. 620 kcal per serving"),
+      createField("Protein", "protein", "text", item?.protein ?? "", false, "e.g. 35 g"),
+      createField("Carbohydrates", "carbs", "text", item?.carbs ?? "", false, "e.g. 72 g"),
+      createField("Fat", "fat", "text", item?.fat ?? "", false, "e.g. 18 g"),
       createField("Servings", "servings", "text", item?.servings ?? "", false, "e.g. 4 servings"),
       createField("Prep and cook time", "timing", "text", item?.timing ?? "", false, "e.g. 15 min prep · 35 min cook"),
       createField("Ingredients · one per line", "ingredients", "textarea", (item?.ingredients ?? []).join("\n"), false, "Include useful amounts"),
       createField("Method · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write the cooking order"),
+      createField("Equipment required · one per line", "equipment", "textarea", (item?.equipment ?? []).join("\n"), false, "Pan, thermometer, blender…"),
       createField("Notes and adjustments", "notes", "textarea", item?.notes ?? "", false, "Substitutions, storage, or changes for next time"),
     );
   } else if (section.type === "workout") {
@@ -2335,11 +2838,18 @@ function createItemFields(section, item) {
         item?.category ?? section.workoutCategory ?? "push",
         ["push", "pull", "legs"],
       ),
+      createField("Muscle group tags · comma separated", "muscleTags", "text", (item?.muscleTags ?? []).join(", "), false, "Chest, triceps, front delts"),
+      createField("Animation or demonstration URL", "animationUrl", "text", item?.animationUrl ?? "", false, "Image, GIF, or video URL"),
+      createField("Hypertrophy · sets / reps / rest", "hypertrophyPrescription", "text", item?.hypertrophyPrescription ?? item?.frequency ?? "", false, "3–4 sets · 8–12 reps · 90 sec rest"),
+      createField("Strength · sets / reps / rest", "strengthPrescription", "text", item?.strengthPrescription ?? item?.frequency ?? "", false, "3–5 sets · 3–6 reps · 3 min rest"),
+      createField("Endurance · sets / reps / rest", "endurancePrescription", "text", item?.endurancePrescription ?? item?.frequency ?? "", false, "2–4 sets · 15–25 reps · 45 sec rest"),
       createField("Primary muscles", "goal", "textarea", item?.goal ?? "", false, "The muscles this movement mainly trains"),
       createField("Working sets and reps", "frequency", "text", item?.frequency ?? "", false, "e.g. 3–4 working sets · 6–12 reps"),
       createField("Rest", "duration", "text", item?.duration ?? "", false, "e.g. Rest 90–150 seconds"),
       createField("Equipment", "equipment", "text", item?.equipment ?? "", false, "What must be available"),
       createField("Execution · one cue per line", "exercises", "textarea", (item?.exercises ?? []).join("\n"), false, "List the setup and movement cues in order"),
+      createField("Breathing · one sentence", "breathing", "textarea", item?.breathing ?? "", false, "Where to inhale and exhale during the movement"),
+      createField("Where to squeeze", "squeeze", "textarea", item?.squeeze ?? "", false, "The contraction cue for the target muscles"),
       createField("Progression rule", "progression", "textarea", item?.progression ?? "", false, "Exactly when and how should the workload change?"),
       createField("Coaching notes", "notes", "textarea", item?.notes ?? "", false, "Important form, comfort, or safety notes"),
     );
@@ -2351,12 +2861,14 @@ function createItemFields(section, item) {
         item?.category ?? section.cleaningCategory ?? "house",
         ["house", "self-care"],
       ),
+      createSelectField("Card type", "cardType", item?.cardType ?? "Brief", ["Brief", "Master", "Extended"]),
       createField("Area or items included", "zone", "text", item?.zone ?? "", false, "What does this routine cover?"),
       createField("Frequency", "frequency", "text", item?.frequency ?? "", false, "Daily, weekly, monthly, or as needed"),
       createField("Supplies · one per line", "supplies", "textarea", (item?.supplies ?? []).join("\n"), false, "Only what this routine needs"),
       createField("Cleaning order · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Work from the first action to the last"),
       createField("Material and safety limits", "warnings", "textarea", item?.warnings ?? "", false, "Chemical combinations, delicate materials, or ventilation"),
       createField("Notes", "notes", "textarea", item?.notes ?? "", false, "Warnings, material care, or shortcuts"),
+      createField("Schedule · timeframe | what to do", "schedule", "textarea", (item?.schedule ?? []).join("\n"), false, "Every day | Reset…\nEvery week | Deep clean…"),
       createField("Filter tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "e.g. weekly, kitchen, dust"),
     );
   } else if (section.type === "routine") {
@@ -2365,6 +2877,14 @@ function createItemFields(section, item) {
       createField("Steps · one per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write only the steps you actually need"),
     );
   } else if (section.type === "study") {
+    fields.push(
+      createField("Abstract summary", "abstract", "textarea", item?.abstract ?? item?.summary ?? "", false, "A concise orientation to the study"),
+      createField("Folder path", "folderPath", "text", item?.folderPath ?? "", false, "Information Theory / Foundations"),
+      createStudyParentSelect(item?.parentStudyId ?? "", item?.id),
+      createRichContentField(item?.content ?? ""),
+      createField("Definitions · term | definition | linked study ID", "definitions", "textarea", item?.definitions ?? "", false, "Entropy | Expected information in a distribution | linked-study-id"),
+      createField("Linked notecards · label | URL", "notecardLinks", "textarea", item?.notecardLinks ?? "", false, "Entropy review | educational_resources/mathematics/flashcard-practice.html"),
+    );
     if (item?.format === "lesson" && item.lesson) {
       fields.push(...createLessonStudyFields(item));
     } else {
@@ -2380,6 +2900,19 @@ function createItemFields(section, item) {
         createField("Tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "Optional subject labels"),
       );
     }
+  } else if (section.type === "idea" || section.type === "question") {
+    fields.push(
+      createSelectField("Idea stage", "stage", item?.stage ?? "Working", ["Working", "Formed", "Parked"]),
+      createField("Abstract summary", "abstract", "textarea", item?.abstract ?? item?.summary ?? "", false, "What this unproven idea is about"),
+      createField("Folder path", "folderPath", "text", item?.folderPath ?? "Working Ideas", false, "Working Ideas / Economics"),
+      createField("Current formulation", "thesis", "textarea", item?.thesis ?? item?.currentPosition ?? "", false, "What you presently think, without claiming proof"),
+      createField("Reasoning so far", "reasoning", "textarea", item?.reasoning ?? item?.context ?? "", false, "Why the idea currently seems plausible"),
+      createField("Assumptions · one per line", "assumptions", "textarea", (item?.assumptions ?? []).join("\n"), false, "Assumptions the idea depends on"),
+      createField("Open questions · one per line", "openQuestions", "textarea", (item?.openQuestions ?? item?.directions ?? []).join("\n"), false, "Unknowns and ways the idea might fail"),
+      createRichContentField(item?.content ?? ""),
+      createField("Definitions · term | definition | linked study ID", "definitions", "textarea", item?.definitions ?? "", false, "Term | provisional definition | linked-study-id"),
+      createStudyPicker("Studies or experiments linked to this idea", "linkedStudyIds", item?.linkedStudyIds ?? []),
+    );
   } else if (section.type === "language") {
     fields.push(
       createField("Quick Facts · one per line", "quickFacts", "textarea", (item?.quickFacts ?? []).join("\n"), false, "Use: Label | explanation"),
@@ -2420,6 +2953,8 @@ function createItemFields(section, item) {
       createSelectField("Status", "status", item?.status ?? "Active", ["Concept", "Active", "Paused", "Complete", "Archived"]),
       createField("Main Idea", "mainIdea", "textarea", item?.mainIdea ?? item?.problem ?? "", false, "The central idea in plain language"),
       createField("Broad overview", "overview", "textarea", item?.overview ?? "", false, "What the whole system does"),
+      createField("Interactive project map · id | parent id | label | note | study id", "projectMap", "textarea", item?.projectMap ?? "", false, "overview | | Big picture | Whole system |\npart-a | overview | Part A | What it does | study-id"),
+      createStudyPicker("Studies organized under this project", "studyIds", item?.studyIds ?? []),
       createField("Overview diagram / animation frames · one per line", "visualFrames", "textarea", (item?.visualFrames ?? []).join("\n"), false, "Use > between nodes"),
       createField("Overview step explanations · one per frame", "frameExplanations", "textarea", (item?.frameExplanations ?? []).join("\n"), false, "Explain each visual transition"),
       createField("Architecture Overview", "architecture", "textarea", item?.architecture ?? "", false, "Major components, boundaries, and data flow"),
@@ -2490,6 +3025,97 @@ function createLessonStudyFields(item) {
     createField("Recap", "lessonRecap", "textarea", lesson.recap ?? "", false, "Closing summary"),
     createField("Tags · comma separated", "tags", "text", (item.tags ?? []).join(", "), false, "Chapter, subchapter, and subject labels"),
   ];
+}
+
+function createRichContentField(value) {
+  const wrapper = createElement("section", "rich-content-editor");
+  wrapper.append(
+    createElement("span", "rich-content-editor-label", "Content builder"),
+    createElement("p", "field-hint", "Add blocks in reading order. Media blocks use a URL; diagram lines use > between nodes; equation bodies use LaTeX."),
+  );
+  const toolbar = createElement("div", "rich-content-toolbar");
+  const textarea = document.createElement("textarea");
+  textarea.name = "content";
+  textarea.value = value;
+  textarea.rows = 14;
+  textarea.placeholder = "::section Overview\nWrite the section here.\n\n::equation Entropy\nH(X) = -\\sum_x p(x) \\log p(x)";
+  const labels = {
+    text: "Text",
+    section: "Section",
+    subsection: "Subsection",
+    image: "Image",
+    diagram: "Diagram",
+    interactable: "Interactable",
+    video: "Video",
+    equation: "Equation",
+  };
+  Object.entries(labels).forEach(([type, label]) => {
+    const button = createElement("button", "button button-small", `+ ${label}`);
+    button.type = "button";
+    button.addEventListener("click", () => {
+      const title = ["text"].includes(type) ? "" : ` ${label}`;
+      const body = ["image", "video", "interactable"].includes(type)
+        ? "\nhttps://"
+        : type === "diagram"
+          ? "\nPart A > Part B > Result"
+          : type === "equation"
+            ? "\nE = mc^2"
+            : "\n";
+      const insertion = `${textarea.value.trim() ? "\n\n" : ""}::${type}${title}${body}`;
+      textarea.setRangeText(insertion, textarea.value.length, textarea.value.length, "end");
+      textarea.focus();
+    });
+    toolbar.append(button);
+  });
+  wrapper.append(toolbar, textarea);
+  return wrapper;
+}
+
+function createStudyParentSelect(selectedId, currentId) {
+  const label = createElement("label");
+  label.append(document.createTextNode("Parent study · optional nested study"));
+  const select = document.createElement("select");
+  select.name = "parentStudyId";
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = "No parent study";
+  select.append(empty);
+  getWorkspace().sections.filter((section) => section.type === "study").forEach((section) => {
+    section.items.filter((study) => study.id !== currentId).forEach((study) => {
+      const option = document.createElement("option");
+      option.value = study.id;
+      option.textContent = `${section.title} · ${study.title}`;
+      option.selected = study.id === selectedId;
+      select.append(option);
+    });
+  });
+  label.append(select);
+  return label;
+}
+
+function createStudyPicker(legendText, fieldName, selectedIds) {
+  const fieldset = createElement("fieldset", "relation-fieldset");
+  fieldset.append(createElement("legend", "", legendText));
+  const studies = getWorkspace().sections
+    .filter((section) => section.type === "study")
+    .flatMap((section) => section.items.map((study) => ({ ...study, sectionTitle: section.title })));
+  if (!studies.length) {
+    fieldset.append(createElement("p", "field-hint", "Create a Study or Idea Playground experiment first."));
+    return fieldset;
+  }
+  const grid = createElement("div", "relation-grid");
+  studies.forEach((study) => {
+    const label = createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.name = fieldName;
+    checkbox.value = study.id;
+    checkbox.checked = selectedIds.includes(study.id);
+    label.append(checkbox, document.createTextNode(`${study.sectionTitle} · ${study.title}`));
+    grid.append(label);
+  });
+  fieldset.append(grid);
+  return fieldset;
 }
 
 function createHiddenField(name, value) {
@@ -2620,6 +3246,9 @@ function readItemForm(section) {
   if (section.type === "cooking-guide") {
     return {
       ...base,
+      abstract: String(formData.get("abstract") ?? "").trim(),
+      content: String(formData.get("content") ?? "").trim(),
+      definitions: String(formData.get("definitions") ?? "").trim(),
       heat: String(formData.get("heat") ?? "").trim(),
       signals: String(formData.get("signals") ?? "").trim(),
       principles: String(formData.get("principles") ?? "").trim(),
@@ -2632,9 +3261,15 @@ function readItemForm(section) {
   if (section.type === "recipe") {
     return {
       ...base,
+      imageUrl: String(formData.get("imageUrl") ?? "").trim(),
+      calories: String(formData.get("calories") ?? "").trim(),
+      protein: String(formData.get("protein") ?? "").trim(),
+      carbs: String(formData.get("carbs") ?? "").trim(),
+      fat: String(formData.get("fat") ?? "").trim(),
       servings: String(formData.get("servings") ?? "").trim(),
       timing: String(formData.get("timing") ?? "").trim(),
       ingredients: lineList("ingredients"),
+      equipment: lineList("equipment"),
       steps: lineList("steps"),
       notes: String(formData.get("notes") ?? "").trim(),
     };
@@ -2645,11 +3280,18 @@ function readItemForm(section) {
       category: ["push", "pull", "legs"].includes(String(formData.get("category")))
         ? String(formData.get("category"))
         : "push",
+      muscleTags: commaList("muscleTags"),
+      animationUrl: String(formData.get("animationUrl") ?? "").trim(),
+      hypertrophyPrescription: String(formData.get("hypertrophyPrescription") ?? "").trim(),
+      strengthPrescription: String(formData.get("strengthPrescription") ?? "").trim(),
+      endurancePrescription: String(formData.get("endurancePrescription") ?? "").trim(),
       goal: String(formData.get("goal") ?? "").trim(),
       frequency: String(formData.get("frequency") ?? "").trim(),
       duration: String(formData.get("duration") ?? "").trim(),
       equipment: String(formData.get("equipment") ?? "").trim(),
       exercises: lineList("exercises"),
+      breathing: String(formData.get("breathing") ?? "").trim(),
+      squeeze: String(formData.get("squeeze") ?? "").trim(),
       progression: String(formData.get("progression") ?? "").trim(),
       notes: String(formData.get("notes") ?? "").trim(),
     };
@@ -2660,12 +3302,16 @@ function readItemForm(section) {
       category: ["house", "self-care"].includes(String(formData.get("category")))
         ? String(formData.get("category"))
         : "house",
+      cardType: ["Brief", "Master", "Extended"].includes(String(formData.get("cardType")))
+        ? String(formData.get("cardType"))
+        : "Brief",
       zone: String(formData.get("zone") ?? "").trim(),
       frequency: String(formData.get("frequency") ?? "").trim(),
       supplies: lineList("supplies"),
       steps: lineList("steps"),
       warnings: String(formData.get("warnings") ?? "").trim(),
       notes: String(formData.get("notes") ?? "").trim(),
+      schedule: lineList("schedule"),
       tags: commaList("tags").map((tag) => tag.toLocaleLowerCase()),
     };
   }
@@ -2680,6 +3326,12 @@ function readItemForm(section) {
       const lesson = readLessonStudyForm(formData, existing?.lesson);
       return {
         ...base,
+        abstract: String(formData.get("abstract") ?? "").trim(),
+        folderPath: String(formData.get("folderPath") ?? "").trim(),
+        parentStudyId: String(formData.get("parentStudyId") ?? "").trim(),
+        content: String(formData.get("content") ?? "").trim(),
+        definitions: String(formData.get("definitions") ?? "").trim(),
+        notecardLinks: String(formData.get("notecardLinks") ?? "").trim(),
         format: "lesson",
         lesson,
         sourceBookId: String(formData.get("sourceBookId") ?? ""),
@@ -2691,6 +3343,12 @@ function readItemForm(section) {
     }
     return {
       ...base,
+      abstract: String(formData.get("abstract") ?? "").trim(),
+      folderPath: String(formData.get("folderPath") ?? "").trim(),
+      parentStudyId: String(formData.get("parentStudyId") ?? "").trim(),
+      content: String(formData.get("content") ?? "").trim(),
+      definitions: String(formData.get("definitions") ?? "").trim(),
+      notecardLinks: String(formData.get("notecardLinks") ?? "").trim(),
       researchQuestion: String(formData.get("researchQuestion") ?? "").trim(),
       hypothesis: String(formData.get("hypothesis") ?? "").trim(),
       method: String(formData.get("method") ?? "").trim(),
@@ -2700,6 +3358,23 @@ function readItemForm(section) {
       nextSteps: String(formData.get("nextSteps") ?? "").trim(),
       notes: String(formData.get("notes") ?? "").trim(),
       tags: commaList("tags"),
+    };
+  }
+  if (section.type === "idea" || section.type === "question") {
+    return {
+      ...base,
+      stage: ["Working", "Formed", "Parked"].includes(String(formData.get("stage")))
+        ? String(formData.get("stage"))
+        : "Working",
+      abstract: String(formData.get("abstract") ?? "").trim(),
+      folderPath: String(formData.get("folderPath") ?? "Working Ideas").trim(),
+      thesis: String(formData.get("thesis") ?? "").trim(),
+      reasoning: String(formData.get("reasoning") ?? "").trim(),
+      assumptions: lineList("assumptions"),
+      openQuestions: lineList("openQuestions"),
+      content: String(formData.get("content") ?? "").trim(),
+      definitions: String(formData.get("definitions") ?? "").trim(),
+      linkedStudyIds: formData.getAll("linkedStudyIds").map(String),
     };
   }
   if (section.type === "language") {
@@ -2737,6 +3412,8 @@ function readItemForm(section) {
       status: String(formData.get("status") ?? "Active"),
       mainIdea: String(formData.get("mainIdea") ?? "").trim(),
       overview: String(formData.get("overview") ?? "").trim(),
+      projectMap: String(formData.get("projectMap") ?? "").trim(),
+      studyIds: formData.getAll("studyIds").map(String),
       visualFrames: lineList("visualFrames"),
       frameExplanations: lineList("frameExplanations"),
       architecture: String(formData.get("architecture") ?? "").trim(),
@@ -2872,20 +3549,66 @@ function showToast(message) {
   }, 2600);
 }
 
-itemForm.addEventListener("submit", (event) => {
+itemForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const section = getSection(activeSectionId);
   if (!section) return;
   const itemInput = readItemForm(section);
+  const wasEditing = Boolean(editingItemId);
+  let savedItem;
   if (editingItemId) {
-    updateItem(section.id, editingItemId, itemInput);
+    savedItem = updateItem(section.id, editingItemId, itemInput);
   } else {
-    addItem(section.id, itemInput);
+    savedItem = addItem(section.id, itemInput);
   }
+  const glossaryResult = await syncEntryDefinitions(section, savedItem);
   itemDialog.close();
   renderWorkspace();
-  showToast(editingItemId ? "Entry updated." : "Entry added.");
+  showToast(glossaryResult
+    ? `${wasEditing ? "Entry updated" : "Entry added"}; ${glossaryResult} definition${glossaryResult === 1 ? "" : "s"} synced to the glossary.`
+    : (wasEditing ? "Entry updated." : "Entry added."));
 });
+
+async function syncEntryDefinitions(section, item, options = {}) {
+  const definitions = parseDefinitionLines(item?.definitions);
+  if (!definitions.length) return 0;
+  try {
+    const glossary = await listGlossaryEntries();
+    let savedCount = 0;
+    for (const definition of definitions) {
+      const existing = glossary.find((entry) => entry.term.toLocaleLowerCase() === definition.term.toLocaleLowerCase());
+      const linked = findStudyRecord(definition.linkedStudyId);
+      const link = linked
+        ? `workspace.html${buildContentHash(linked.sectionId, linked.id)}`
+        : `workspace.html${buildContentHash(section.id, item.id)}`;
+      const saved = await saveGlossaryEntry({
+        ...existing,
+        id: existing?.id,
+        term: definition.term,
+        definition: definition.definition,
+        links: [...new Set([...(existing?.links ?? []), link])],
+        tags: [...new Set([...(existing?.tags ?? []), "study definition"])],
+        createdAt: existing?.createdAt,
+      });
+      glossary.push(saved);
+      savedCount += 1;
+    }
+    return savedCount;
+  } catch (error) {
+    console.warn("Study definitions could not be synchronized to the glossary.", error);
+    if (!options.quiet) showToast("Entry saved; one or more glossary definitions need review.");
+    return 0;
+  }
+}
+
+async function syncAllWorkspaceDefinitions(workspace = getWorkspace()) {
+  const sections = workspace.sections.filter((section) => ["study", "idea", "cooking-guide"].includes(section.type));
+  for (const section of sections) {
+    for (const item of section.items) {
+      if (item.definitions) await syncEntryDefinitions(section, item, { quiet: true });
+    }
+  }
+}
 
 document.querySelectorAll("[data-dialog-close]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog")?.close());
@@ -2893,11 +3616,13 @@ document.querySelectorAll("[data-dialog-close]").forEach((button) => {
 window.addEventListener("hashchange", renderWorkspace);
 
 renderWorkspace();
+syncAllWorkspaceDefinitions().catch((error) => console.warn("Glossary synchronization was not completed.", error));
 
 installAiPageHost(createWorkspaceAiAdapter({
   readWorkspace: getWorkspace,
   commitWorkspace: (workspace) => {
     saveWorkspace(workspace);
+    syncAllWorkspaceDefinitions(workspace).catch((error) => console.warn("Glossary synchronization was not completed.", error));
     window.requestAnimationFrame(renderWorkspace);
   },
   createId,

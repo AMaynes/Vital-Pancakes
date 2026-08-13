@@ -385,7 +385,7 @@ export function createKnowledgeInferenceController({
     const sectionId = type === "study" ? "studies" : "questions-ideas";
     const created = addItem(sectionId, convertInferenceToEntry(inference, type));
     setStatus(created
-      ? `Saved to ${type === "study" ? "Studies" : "Questions & Ideas"}.`
+      ? `Saved to ${type === "study" ? "Studies" : "Working Ideas"}.`
       : "The destination library could not be found.", !created);
   }
 

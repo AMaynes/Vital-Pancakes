@@ -2,11 +2,12 @@
  * Pure calendar and persistence helpers for the Travel Planner.
  */
 
-export const TRAVEL_PLANNER_VERSION = 1;
+export const TRAVEL_PLANNER_VERSION = 2;
 
 const TITLE_LIMIT = 120;
 const PLACE_LIMIT = 200;
 const NOTES_LIMIT = 2000;
+const TRIP_TEXT_LIMIT = 5000;
 
 export function createCalendarMonth(year, monthIndex) {
   const normalizedMonth = new Date(Date.UTC(year, monthIndex, 1));
@@ -80,7 +81,60 @@ export function sanitizeTravelPlan(candidate) {
     time: normalizeTime(candidate.time),
     place: normalizeText(candidate.place, PLACE_LIMIT),
     notes: normalizeText(candidate.notes, NOTES_LIMIT, true),
+    tripId: normalizeText(candidate.tripId, 128),
   };
+}
+
+export function sanitizeTravelTrips(saved) {
+  const source = Array.isArray(saved) ? saved : saved?.trips;
+  if (!Array.isArray(source)) return [];
+  return source.map(sanitizeTravelTrip).filter(Boolean).sort((left, right) => (
+    left.startDate.localeCompare(right.startDate) || left.title.localeCompare(right.title)
+  ));
+}
+
+export function sanitizeTravelTrip(candidate) {
+  if (!candidate || typeof candidate !== "object") return null;
+  const id = normalizeText(candidate.id, 128);
+  const title = normalizeText(candidate.title, TITLE_LIMIT);
+  if (!id || !title) return null;
+  const startDate = isValidDateKey(candidate.startDate) ? candidate.startDate : "";
+  const endDate = isValidDateKey(candidate.endDate) ? candidate.endDate : "";
+  return {
+    id,
+    title,
+    destination: normalizeText(candidate.destination, PLACE_LIMIT),
+    startDate,
+    endDate: startDate && endDate && endDate < startDate ? startDate : endDate,
+    gettingThere: normalizeText(candidate.gettingThere, TRIP_TEXT_LIMIT, true),
+    staying: normalizeText(candidate.staying, TRIP_TEXT_LIMIT, true),
+    eating: normalizeText(candidate.eating, TRIP_TEXT_LIMIT, true),
+    activities: normalizeText(candidate.activities, TRIP_TEXT_LIMIT, true),
+    departure: normalizeText(candidate.departure, TRIP_TEXT_LIMIT, true),
+    nextDestination: normalizeText(candidate.nextDestination, PLACE_LIMIT),
+    notes: normalizeText(candidate.notes, TRIP_TEXT_LIMIT, true),
+  };
+}
+
+export function sanitizeTravelPlannerState(saved) {
+  const trips = sanitizeTravelTrips(saved);
+  const tripIds = new Set(trips.map(({ id }) => id));
+  const activeTripId = tripIds.has(saved?.activeTripId) ? saved.activeTripId : (trips[0]?.id ?? "");
+  return {
+    version: TRAVEL_PLANNER_VERSION,
+    trips,
+    activeTripId,
+    plans: sanitizeTravelPlans(saved),
+  };
+}
+
+export function upsertTravelTrip(trips, candidate) {
+  const normalized = sanitizeTravelTrip(candidate);
+  if (!normalized) return sanitizeTravelTrips(trips);
+  return sanitizeTravelTrips([
+    ...trips.filter((trip) => trip.id !== normalized.id),
+    normalized,
+  ]);
 }
 
 export function sortTravelPlans(plans) {
