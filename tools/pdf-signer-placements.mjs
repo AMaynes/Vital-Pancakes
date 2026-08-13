@@ -102,6 +102,7 @@ const EDITABLE_PLACEMENT_FIELDS = new Set([
   "bold",
   "italic",
   "underline",
+  "locked",
 ]);
 
 /**
@@ -141,6 +142,7 @@ export function createPdfPlacement(input) {
       0.2,
       "fontSizeRatio",
     ),
+    locked: normalizeBoolean(input.locked, false, "locked"),
   };
   if (kind === "text-field") {
     placement.fontFamily = normalizeFontFamily(input.fontFamily ?? defaults.fontFamily);

@@ -115,6 +115,10 @@ test("PDF Tool exposes add-only PDF editing with truthful mutation contracts", a
 
   assert.match(source, /title:\s*["']PDF Tool["']/);
   assert.match(source, /kind:\s*["']text-field["']/);
+  assert.match(source, /className = ["']pdf-placement-edge["']/);
+  assert.match(source, /className = ["']pdf-placement-lock["']/);
+  assert.match(source, /locked:\s*\{\s*type:\s*["']boolean["']\s*\}/);
+  assert.doesNotMatch(source, /pdf-placement-move/);
   assert.match(source, /\["checkmark",\s*"circle",\s*"x-mark"\]/);
   assert.match(source, /type:\s*["']placements\.add["'][\s\S]*?mutates:\s*true/);
   assert.match(source, /type:\s*["']placements\.update["'][\s\S]*?permissions:\s*\["update",\s*"sensitive-data"\]/);

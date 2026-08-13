@@ -21,7 +21,7 @@ import {
   PDF_PLACEMENT_KINDS,
   removePlacementById,
   updatePlacementById,
-} from "./pdf-signer-placements.mjs?v=3";
+} from "./pdf-signer-placements.mjs?v=4";
 import { addFillableTextField, drawVectorMark, drawWhiteout } from "./pdf-tool-export.mjs?v=2";
 import {
   installCurrentToolAiHost,
@@ -201,6 +201,7 @@ function renderPlacements() {
     stamp.style.height = `${placement.heightRatio * 100}%`;
     stamp.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
     stamp.classList.toggle("is-selected", placement.id === selectedPlacementId);
+    stamp.classList.toggle("is-locked", placement.locked);
 
     if (placement.kind === "text-field") {
       const editor = document.createElement("textarea");
@@ -221,12 +222,15 @@ function renderPlacements() {
       editor.addEventListener("input", () => updateFillableText(placement.id, editor.value));
       stamp.append(editor);
 
-      const moveHandle = document.createElement("span");
-      moveHandle.className = "pdf-placement-move";
-      moveHandle.title = "Drag fillable field";
-      moveHandle.setAttribute("aria-hidden", "true");
-      moveHandle.textContent = "•••";
-      stamp.append(moveHandle);
+      const moveEdges = ["top", "right", "bottom", "left"].map((edge) => {
+        const moveEdge = document.createElement("span");
+        moveEdge.className = "pdf-placement-edge";
+        moveEdge.dataset.moveEdge = edge;
+        moveEdge.title = placement.locked ? "Unlock to move" : "Drag fillable field";
+        moveEdge.setAttribute("aria-hidden", "true");
+        return moveEdge;
+      });
+      stamp.append(...moveEdges);
     } else {
       const content = document.createElement("span");
       content.className = "pdf-placement-content";
@@ -239,7 +243,31 @@ function renderPlacements() {
       resizeHandle.className = "pdf-placement-resize";
       resizeHandle.dataset.resizeCorner = corner;
       resizeHandle.title = `Resize ${placement.kind} from ${corner.toUpperCase()}`;
+      resizeHandle.setAttribute("aria-hidden", "true");
       return resizeHandle;
+    });
+
+    const lockControl = document.createElement("button");
+    lockControl.className = "pdf-placement-lock";
+    lockControl.type = "button";
+    lockControl.title = placement.locked ? `Unlock ${placement.kind}` : `Lock ${placement.kind} in place`;
+    lockControl.setAttribute("aria-label", lockControl.title);
+    lockControl.setAttribute("aria-pressed", String(placement.locked));
+    lockControl.innerHTML = placement.locked ? `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+        <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+      </svg>
+    ` : `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+        <path d="M8 10V7a4 4 0 0 1 7.4-2.1"></path>
+      </svg>
+    `;
+    lockControl.addEventListener("pointerdown", (event) => event.stopPropagation());
+    lockControl.addEventListener("click", (event) => {
+      event.stopPropagation();
+      togglePlacementLock(placement.id);
     });
 
     const deleteControl = document.createElement("button");
@@ -259,6 +287,7 @@ function renderPlacements() {
     });
 
     stamp.append(...resizeHandles);
+    stamp.append(lockControl);
     stamp.append(deleteControl);
     stamp.addEventListener("focus", () => selectPlacement(placement.id));
     signatureLayer.append(stamp);
@@ -375,6 +404,17 @@ function updateFillableStyle(changes) {
   }
 }
 
+function togglePlacementLock(placementId) {
+  const placement = placements.find((candidate) => candidate.id === placementId);
+  if (!placement) return;
+  const result = updatePlacementById(placements, placementId, { locked: !placement.locked });
+  placements = result.placements;
+  selectedPlacementId = placementId;
+  renderPlacements();
+  updateControls();
+  setStatus(`${PLACEMENT_LABELS[placement.kind]} ${result.updated.locked ? "locked" : "unlocked"}`);
+}
+
 function isMarkPlacement(placement) {
   return ["checkmark", "circle", "x-mark"].includes(placement.kind);
 }
@@ -424,13 +464,17 @@ function startPlacementGesture(event) {
   const placement = placements.find((candidate) => candidate.id === stamp.dataset.placementId);
   if (!placement) return;
   selectPlacement(placement.id);
+  const isResizeHandle = event.target.classList.contains("pdf-placement-resize");
+  const isMoveEdge = event.target.classList.contains("pdf-placement-edge");
+  if (placement.locked && (isResizeHandle || isMoveEdge || placement.kind !== "text-field")) return;
+  if (placement.kind === "text-field" && !isResizeHandle && !isMoveEdge) return;
   stamp.setPointerCapture(event.pointerId);
   stamp.classList.add("is-dragging");
   activeDrag = {
     placement,
     stamp,
     pointerId: event.pointerId,
-    mode: event.target.classList.contains("pdf-placement-resize") ? "resize" : "move",
+    mode: isResizeHandle ? "resize" : "move",
     corner: event.target.dataset.resizeCorner ?? "se",
     startX: event.clientX,
     startY: event.clientY,
@@ -785,6 +829,12 @@ document.querySelector("#next-page").addEventListener("click", async () => {
 });
 deletePlacementButton.addEventListener("click", () => deletePlacement(selectedPlacementId));
 
+document.addEventListener("pointerdown", (event) => {
+  if (!selectedPlacementId) return;
+  if (event.target.closest(".pdf-placement, .pdf-text-tools, #fillable-text, #delete-placement")) return;
+  selectPlacement(null);
+});
+
 document.addEventListener("keydown", (event) => {
   const target = event.target;
   const isEditing = target instanceof Element
@@ -909,6 +959,7 @@ installCurrentToolAiHost({
               bold: { type: "boolean" },
               italic: { type: "boolean" },
               underline: { type: "boolean" },
+              locked: { type: "boolean" },
               xRatio: { type: "number", minimum: 0, maximum: 0.98 },
               yRatio: { type: "number", minimum: 0, maximum: 0.98 },
               widthRatio: { type: "number", minimum: 0.008, maximum: 1 },
@@ -949,6 +1000,7 @@ installCurrentToolAiHost({
           "bold",
           "italic",
           "underline",
+          "locked",
           "xRatio",
           "yRatio",
           "widthRatio",
@@ -999,6 +1051,7 @@ installCurrentToolAiHost({
               bold: { type: "boolean" },
               italic: { type: "boolean" },
               underline: { type: "boolean" },
+              locked: { type: "boolean" },
               xRatio: { type: "number", minimum: 0, maximum: 0.98 },
               yRatio: { type: "number", minimum: 0, maximum: 0.98 },
               widthRatio: { type: "number", minimum: 0.008, maximum: 1 },
@@ -1030,6 +1083,7 @@ installCurrentToolAiHost({
           "bold",
           "italic",
           "underline",
+          "locked",
           "xRatio",
           "yRatio",
           "widthRatio",

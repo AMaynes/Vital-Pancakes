@@ -380,7 +380,7 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 ### PDF Tool
 
-`pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js; manages selectable, movable, four-corner-resizable signatures, dates, styled fillable text fields, vector marks, and white-out overlays; and exports them with PDF-Lib. `pdf-tool-export.mjs` turns fillable areas into genuine editable AcroForm text fields, preserves field-level typography, and renders marks and white-out areas as vectors. The tool only adds overlays and never detects or removes original PDF content. `pdf-signer-placements.mjs` validates immutable placement creation, editing, and deletion for both UI and AI commands, with adjacent Node test suites.
+`pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js; manages selectable, edge-draggable, lockable, four-corner-resizable signatures, dates, styled fillable text fields, vector marks, and white-out overlays; and exports them with PDF-Lib. `pdf-tool-export.mjs` turns fillable areas into genuine editable AcroForm text fields, preserves field-level typography, and renders marks and white-out areas as vectors. The tool only adds overlays and never detects or removes original PDF content. `pdf-signer-placements.mjs` validates immutable placement creation, editing, locking, and deletion for both UI and AI commands, with adjacent Node test suites.
 
 ### Literature Analyzer
 

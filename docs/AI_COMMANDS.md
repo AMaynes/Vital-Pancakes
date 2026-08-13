@@ -118,6 +118,7 @@ are never exposed. Normalized geometry uses ratios from `0` through `1`.
         "bold": true,
         "italic": false,
         "underline": true,
+        "locked": false,
         "xRatio": 0.2,
         "yRatio": 0.4,
         "widthRatio": 0.35,
@@ -141,7 +142,8 @@ are never exposed. Normalized geometry uses ratios from `0` through `1`.
 
 Use `placements.update` to change a fillable field's `text`, `fontFamily`,
 `fontSizeRatio`, `bold`, `italic`, or `underline`, or to change any added item's
-normalized geometry. White-out placements add opaque white rectangles without
+normalized geometry. Set `locked` to prevent pointer movement and resizing until
+the placement is unlocked. White-out placements add opaque white rectangles without
 altering the source PDF. `placements.remove` only deletes an item added by the
 tool; it cannot remove content that was already inside the source PDF.
 

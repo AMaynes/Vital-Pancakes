@@ -30,6 +30,7 @@ test("creates a real fillable-text placement with bounded normalized geometry", 
   assert.equal(placement.font, "form-font");
   assert.equal(placement.fontFamily, "helvetica");
   assert.equal(placement.bold, false);
+  assert.equal(placement.locked, false);
   assert.ok(Math.abs(placement.widthRatio - 0.2) < Number.EPSILON);
   assert.equal(placement.heightRatio, 0.075);
 });
@@ -75,12 +76,14 @@ test("updates fillable text and geometry without mutating the original list", ()
     heightRatio: 0.12,
     fontFamily: "courier",
     bold: true,
+    locked: true,
   });
 
   assert.equal(result.updated.text, "After");
   assert.equal(result.updated.heightRatio, 0.12);
   assert.equal(result.updated.fontFamily, "courier");
   assert.equal(result.updated.bold, true);
+  assert.equal(result.updated.locked, true);
   assert.equal(original[0].text, "Before");
 });
 
