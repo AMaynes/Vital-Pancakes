@@ -1,6 +1,6 @@
 /**
  * Overview & Purpose
- * Verifies deletion behavior for PDF Signer field placements.
+ * Verifies creation, editing, and deletion for PDF Tool placements.
  *
  * Architectural Relationships
  * Tests: pdf-signer-placements.mjs.
@@ -10,7 +10,63 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { removePlacementById } from "./pdf-signer-placements.mjs";
+import {
+  createPdfPlacement,
+  removePlacementById,
+  updatePlacementById,
+} from "./pdf-signer-placements.mjs";
+
+test("creates a real fillable-text placement with bounded normalized geometry", () => {
+  const placement = createPdfPlacement({
+    id: "field-1",
+    kind: "text-field",
+    pageNumber: 2,
+    text: "Editable answer",
+    xRatio: 0.8,
+    widthRatio: 0.4,
+  });
+
+  assert.equal(placement.text, "Editable answer");
+  assert.equal(placement.font, "form-font");
+  assert.ok(Math.abs(placement.widthRatio - 0.2) < Number.EPSILON);
+  assert.equal(placement.heightRatio, 0.075);
+});
+
+test("creates fixed check, circle, and X mark content", () => {
+  assert.equal(createPdfPlacement({ id: "check", kind: "checkmark", pageNumber: 1 }).text, "✓");
+  assert.equal(createPdfPlacement({ id: "circle", kind: "circle", pageNumber: 1 }).text, "○");
+  assert.equal(createPdfPlacement({ id: "x", kind: "x-mark", pageNumber: 1 }).text, "×");
+});
+
+test("updates fillable text and geometry without mutating the original list", () => {
+  const original = [createPdfPlacement({
+    id: "field-1",
+    kind: "text-field",
+    pageNumber: 1,
+    text: "Before",
+  })];
+
+  const result = updatePlacementById(original, "field-1", {
+    text: "After",
+    heightRatio: 0.12,
+  });
+
+  assert.equal(result.updated.text, "After");
+  assert.equal(result.updated.heightRatio, 0.12);
+  assert.equal(original[0].text, "Before");
+});
+
+test("rejects invalid placement kinds and update fields", () => {
+  assert.throws(
+    () => createPdfPlacement({ id: "bad", kind: "eraser", pageNumber: 1 }),
+    /Unsupported PDF placement kind/,
+  );
+  const placements = [createPdfPlacement({ id: "field-1", kind: "text-field", pageNumber: 1 })];
+  assert.throws(
+    () => updatePlacementById(placements, "field-1", { pageNumber: 2 }),
+    /Unsupported placement field/,
+  );
+});
 
 test("removes the selected placed field without mutating the original list", () => {
   const signature = { id: "signature-1", kind: "signature" };

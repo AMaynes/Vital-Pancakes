@@ -16,7 +16,7 @@ export const CURRENT_AI_TOOLS = Object.freeze([
   current("color-aesthetic", "Color Aesthetic Generator", "tools/color-aesthetic.html", "tools/current-tool-ai-adapter.mjs"),
   current("bracket-generator", "Bracket Generator", "tools/bracket-generator.html", "tools/current-tool-ai-adapter.mjs"),
   current("randomized-picker", "Randomized Picker", "tools/randomized-picker.html", "tools/current-tool-ai-adapter.mjs"),
-  current("pdf-signer", "PDF Signer", "tools/pdf-signer.html", "tools/current-tool-ai-adapter.mjs"),
+  current("pdf-signer", "PDF Tool", "tools/pdf-signer.html", "tools/current-tool-ai-adapter.mjs"),
   current("literature-analyzer", "Literature Analyzer", "tools/literature-analyzer.html", "tools/current-tool-ai-adapter.mjs"),
   current("master-lesson-builder", "Master Lesson Builder", "tools/master-lesson-builder.html", "tools/current-tool-ai-adapter.mjs"),
   current("literature-curator", "Literature Curation", "tools/literature-curator.html", "tools/current-tool-ai-adapter.mjs"),

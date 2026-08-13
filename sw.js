@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v86";
+const CACHE_NAME = "vital-pancakes-app-v87";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
   "vital-pancakes-rife-v1",
@@ -27,6 +27,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./style.css?v=22",
   "./site-navigation.css?v=22",
   "./site-navigation.js?v=18",
+  "./site-navigation.js?v=19",
   "./research-literature.html",
   "./download-app.html",
   "./download-app.css?v=16",
@@ -37,9 +38,10 @@ const OFFLINE_ASSET_CATALOG = [
   "./assets/vital-pancakes-logo-transparent-white.png?v=1",
   "./assets/app-icon-192.png",
   "./assets/app-icon-512.png",
-  "./assets/app-preview-workspace.svg?v=4",
+  "./assets/app-preview-workspace.svg?v=5",
   "./assets/app-preview-studies.svg?v=2",
   "./app/main.js?v=20",
+  "./app/main.js?v=21",
   "./app/ai-command-protocol.mjs",
   "./app/ai-command-registry.mjs",
   "./app/ai-page-host.mjs",
@@ -67,6 +69,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./app/download-app.js",
   "./tools/tool.css?v=33",
   "./tools/tool.css?v=34",
+  "./tools/tool.css?v=36",
   "./tools/workspace-suite.css?v=1",
   "./tools/local-toolkit.mjs",
   "./tools/suite-ui.mjs",
@@ -149,7 +152,10 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/visual-board-vertices.mjs?v=7",
   "./tools/pdf-signer.html",
   "./tools/pdf-signer.js?v=3",
+  "./tools/pdf-signer.js?v=6",
   "./tools/pdf-signer-placements.mjs",
+  "./tools/pdf-signer-placements.mjs?v=2",
+  "./tools/pdf-tool-export.mjs?v=1",
   "./tools/literature-analyzer.html",
   "./tools/literature-analyzer.css?v=2",
   "./tools/literature-analyzer.js?v=3",

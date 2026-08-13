@@ -101,7 +101,7 @@ const PAGE_TRAILS = {
   ],
   "tools/pdf-signer.html": [
     segment("workspace", "workspace.html#area=tools"),
-    segment("pdf-signer"),
+    segment("pdf-tool"),
   ],
   "tools/literature-analyzer.html": [
     segment("workspace", "workspace.html#area=tools"),

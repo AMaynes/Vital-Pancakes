@@ -1,7 +1,7 @@
 /**
  * Overview & Purpose
  * Provides the full-screen and windowed workspace styling shared by the Visual
- * Board, PDF Signer, Literature Analyzer, Travel Planner, and Software
+ * Board, PDF Tool, Literature Analyzer, Travel Planner, and Software
  * Architect.
  *
  * Architectural Relationships
@@ -1441,7 +1441,7 @@
   text-align: center;
 }
 
-/* PDF signer */
+/* PDF Tool */
 
 .pdf-workspace {
   display: grid;
@@ -1566,6 +1566,37 @@
   text-transform: none;
 }
 
+.pdf-field-text-input {
+  min-height: 48px;
+  padding: 7px;
+  resize: vertical;
+}
+
+.pdf-field-hint {
+  display: block;
+  margin: -2px 0 8px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.pdf-field-hint.is-editing {
+  color: var(--forest);
+  font-weight: 700;
+}
+
+.pdf-mark-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.pdf-mark-button {
+  min-height: 36px;
+  padding: 4px;
+  font: 600 22px/1 Arial, sans-serif;
+}
+
 .font-choice {
   height: 33px;
   border: 1px solid var(--line);
@@ -1605,7 +1636,7 @@
   height: auto;
 }
 
-.signature-stamp {
+.pdf-placement {
   position: absolute;
   z-index: 5;
   display: grid;
@@ -1623,25 +1654,84 @@
   user-select: none;
 }
 
-.signature-stamp.is-dragging {
+.pdf-placement.is-dragging {
   cursor: grabbing;
   box-shadow: 0 5px 18px rgb(23 35 31 / 20%);
 }
 
-.signature-stamp.is-selected {
+.pdf-placement.is-selected {
   border-style: solid;
   outline: 2px solid rgb(123 33 26 / 30%);
   outline-offset: 2px;
   background: rgb(255 255 255 / 72%);
 }
 
-.signature-stamp.date-stamp {
+.pdf-placement.date-stamp {
   min-width: 90px;
   min-height: 34px;
   font-size: 18px;
 }
 
-.signature-resize {
+.pdf-placement.text-field-stamp {
+  min-width: 120px;
+  min-height: 38px;
+  padding: 3px;
+  place-items: stretch;
+  font-family: Arial, sans-serif;
+  font-style: normal;
+}
+
+.pdf-placement.mark-stamp {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 2px;
+  font-family: Arial, sans-serif;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.pdf-placement-content {
+  pointer-events: none;
+}
+
+.pdf-fillable-editor {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 3px 5px;
+  overflow: hidden;
+  border: 0;
+  outline: 0;
+  background: rgb(255 255 255 / 72%);
+  color: #17231f;
+  font: inherit;
+  line-height: 1.25;
+  resize: none;
+  touch-action: auto;
+  user-select: text;
+}
+
+.pdf-fillable-editor::placeholder {
+  color: #6f7773;
+}
+
+.pdf-placement-move {
+  position: absolute;
+  top: -15px;
+  left: -1px;
+  min-width: 30px;
+  height: 14px;
+  padding: 1px 5px;
+  border: 1px solid #315a4f;
+  background: #315a4f;
+  color: #fff;
+  font: 700 7px/1 Arial, sans-serif;
+  letter-spacing: 1px;
+  text-align: center;
+  cursor: grab;
+}
+
+.pdf-placement-resize {
   position: absolute;
   right: -5px;
   bottom: -5px;
@@ -1652,7 +1742,7 @@
   background: var(--forest);
 }
 
-.signature-delete {
+.pdf-placement-delete {
   position: absolute;
   top: -14px;
   right: -14px;
@@ -1669,18 +1759,18 @@
   box-shadow: 0 3px 10px rgb(23 22 19 / 24%);
 }
 
-.signature-stamp.is-selected .signature-delete {
+.pdf-placement.is-selected .pdf-placement-delete {
   display: grid;
 }
 
-.signature-delete:hover,
-.signature-delete:focus-visible {
+.pdf-placement-delete:hover,
+.pdf-placement-delete:focus-visible {
   background: #5f1712;
   outline: 2px solid #fff;
   outline-offset: 1px;
 }
 
-.signature-delete svg {
+.pdf-placement-delete svg {
   width: 14px;
   height: 14px;
   fill: none;

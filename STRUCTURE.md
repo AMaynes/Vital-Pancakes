@@ -155,10 +155,12 @@ vital-pancakes/
 │   ├── visual-board-text.test.mjs — Verifies zoom-stable world text and opt-in screen annotations.
 │   ├── visual-board-vertices.mjs — Builds and reshapes mixed line-and-curve networks with shared editable vertices.
 │   ├── visual-board-vertices.test.mjs — Verifies line, curve, crossing, and shared-joint merging and reshaping.
-│   ├── pdf-signer.html — Hosts local PDF viewing and signing.
-│   ├── pdf-signer.js — Renders PDFs and embeds placed signatures and dates.
-│   ├── pdf-signer-placements.mjs — Owns immutable deletion of placed PDF fields.
-│   ├── pdf-signer-placements.test.mjs — Verifies placed-field deletion behavior.
+│   ├── pdf-signer.html — Hosts local PDF signing, fillable fields, and marks.
+│   ├── pdf-signer.js — Renders PDFs and exports added fields and vector marks.
+│   ├── pdf-signer-placements.mjs — Validates immutable PDF placement changes.
+│   ├── pdf-signer-placements.test.mjs — Verifies PDF placement creation, editing, and deletion.
+│   ├── pdf-tool-export.mjs — Creates genuine PDF form fields and vector marks.
+│   ├── pdf-tool-export.test.mjs — Verifies editable-field and vector-mark export.
 │   ├── literature-analyzer.html — Hosts PDF and website reading, highlighting, and comments.
 │   ├── literature-analyzer.css — Styles the split reading and annotation workspace.
 │   ├── literature-analyzer.js — Owns source loading, persistence, comments, and exports.
@@ -376,9 +378,9 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 `local-webllm-client.mjs` and `local-webllm-worker.js` provide explicit WebGPU compatibility checks, lazy model loading, streamed output, cancellation, and memory cleanup for Knowledge Center analysis and Tool Designer. Indexed text is wrapped as untrusted data, model output remains reviewable, large weights are never application-shell assets, and no feature adds an account, backend, analytics, or required cloud storage. Overhead private records stay outside service-worker caches; it uses password-derived authenticated Web Crypto envelopes and never stores plaintext passwords or decrypted records.
 
-### PDF Signer
+### PDF Tool
 
-`pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js, manages page navigation and selectable, movable, resizable, or deletable signature and date placements, and embeds the remaining fields into a downloadable PDF with PDF-Lib. Selected fields expose an inline trash control and can also be deleted from the toolbar or keyboard. `pdf-signer-placements.mjs` owns immutable removal from export state, with an adjacent Node test suite.
+`pdf-signer.html` hosts the local workflow. `pdf-signer.js` loads a chosen PDF with bundled PDF.js; manages selectable, movable, and resizable signatures, dates, fillable text fields, and vector marks; and exports them with PDF-Lib. `pdf-tool-export.mjs` turns fillable areas into genuine editable AcroForm text fields and renders marks as vectors. The tool only adds overlays and never detects or removes original PDF content. `pdf-signer-placements.mjs` validates immutable placement creation, editing, and deletion for both UI and AI commands, with adjacent Node test suites.
 
 ### Literature Analyzer
 

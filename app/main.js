@@ -795,8 +795,8 @@ function renderToolsDashboard() {
       accent: "ochre",
     },
     {
-      title: "PDF Signer",
-      copy: "View a PDF, create a typed signature, place it, and download the signed copy.",
+      title: "PDF Tool",
+      copy: "Sign PDFs, add genuine fillable text fields and vector marks, then download the edited copy.",
       href: "tools/pdf-signer.html",
       icon: "⌁",
       accent: "ochre",

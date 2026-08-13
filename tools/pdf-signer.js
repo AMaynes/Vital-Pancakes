@@ -1,7 +1,7 @@
 /**
  * Overview & Purpose
- * Provides local PDF viewing, page navigation, signature and date placement,
- * and export of a genuine signed PDF with every placed field embedded.
+ * Provides local PDF viewing, signatures, dates, real fillable text fields,
+ * vector marks, and export with every added item embedded.
  *
  * Architectural Relationships
  * Called by: pdf-signer.html.
@@ -16,13 +16,21 @@
  */
 
 import { createId } from "../app/store.js";
-import { removePlacementById } from "./pdf-signer-placements.mjs";
+import {
+  createPdfPlacement,
+  PDF_PLACEMENT_KINDS,
+  removePlacementById,
+  updatePlacementById,
+} from "./pdf-signer-placements.mjs?v=2";
+import { addFillableTextField, drawVectorMark } from "./pdf-tool-export.mjs?v=1";
 import {
   installCurrentToolAiHost,
+  requireCommandRecord,
+  requireCommandString,
   rejectUnknownCommandFields,
 } from "./current-tool-ai-adapter.mjs";
 
-const { PDFDocument } = globalThis.PDFLib;
+const { PDFDocument, StandardFonts, rgb } = globalThis.PDFLib;
 globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc = "../vendor/pdf.worker.min.js";
 
 const fileInput = document.querySelector("#pdf-file");
@@ -32,6 +40,10 @@ const signaturePreview = document.querySelector("#signature-preview");
 const addSignatureButton = document.querySelector("#add-signature");
 const dateInput = document.querySelector("#signature-date");
 const addDateButton = document.querySelector("#add-date");
+const fillableTextInput = document.querySelector("#fillable-text");
+const fillableTextHint = document.querySelector("#fillable-text-hint");
+const addTextFieldButton = document.querySelector("#add-text-field");
+const markButtons = [...document.querySelectorAll("[data-mark-kind]")];
 const downloadButton = document.querySelector("#download-signed-pdf");
 const deletePlacementButton = document.querySelector("#delete-placement");
 const pageStage = document.querySelector("#pdf-page-stage");
@@ -48,13 +60,25 @@ let placements = [];
 let selectedPlacementId = null;
 let activeDrag = null;
 let renderSequence = 0;
+let fillableTextDraft = "";
 
 const FONT_STYLES = {
   "signature-font-1": '"Snell Roundhand", "Segoe Script", cursive',
   "signature-font-2": '"Brush Script MT", "Bradley Hand", cursive',
   "signature-font-3": '"American Typewriter", Georgia, serif',
   "date-font": 'Georgia, "Times New Roman", serif',
+  "form-font": "Arial, Helvetica, sans-serif",
+  "mark-font": "Arial, Helvetica, sans-serif",
 };
+
+const PLACEMENT_LABELS = Object.freeze({
+  signature: "Signature",
+  date: "Date",
+  "text-field": "Fillable field",
+  checkmark: "Checkmark",
+  circle: "Circle",
+  "x-mark": "X",
+});
 
 /**
  * Loads a user-selected PDF into PDF.js without uploading it.
@@ -75,6 +99,8 @@ async function loadPdf(file) {
     currentPageNumber = 1;
     placements = [];
     selectedPlacementId = null;
+    fillableTextDraft = "";
+    fillableTextInput.value = "";
     document.querySelector("#pdf-empty").hidden = true;
     pageStage.hidden = false;
     updateControls();
@@ -115,36 +141,72 @@ async function renderPage() {
 }
 
 /**
- * Rebuilds draggable signature and date stamps for the current PDF page.
+ * Rebuilds draggable added items for the current PDF page.
  */
 function renderPlacements() {
   signatureLayer.replaceChildren();
   const currentPlacements = placements.filter((placement) => placement.pageNumber === currentPageNumber);
   currentPlacements.forEach((placement) => {
     const stamp = document.createElement("div");
-    stamp.className = `signature-stamp ${placement.font} ${placement.kind === "date" ? "date-stamp" : ""}`;
+    stamp.className = [
+      "pdf-placement",
+      placement.font,
+      placement.kind === "date" ? "date-stamp" : "",
+      placement.kind === "text-field" ? "text-field-stamp" : "",
+      isMarkPlacement(placement) ? "mark-stamp" : "",
+    ].filter(Boolean).join(" ");
     stamp.dataset.placementId = placement.id;
     stamp.dataset.placementKind = placement.kind;
     stamp.dataset.placementText = placement.text;
-    stamp.textContent = placement.text;
     stamp.tabIndex = 0;
     stamp.setAttribute("role", "group");
     stamp.setAttribute(
       "aria-label",
-      `${placement.id === selectedPlacementId ? "Selected " : ""}placed ${placement.kind}: ${placement.text}`,
+      `${placement.id === selectedPlacementId ? "Selected " : ""}${PLACEMENT_LABELS[placement.kind]}${placement.text ? `: ${placement.text}` : ""}`,
     );
     stamp.style.left = `${placement.xRatio * 100}%`;
     stamp.style.top = `${placement.yRatio * 100}%`;
     stamp.style.width = `${placement.widthRatio * 100}%`;
+    if (placement.kind === "text-field" || isMarkPlacement(placement)) {
+      stamp.style.height = `${placement.heightRatio * 100}%`;
+    }
     stamp.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
     stamp.classList.toggle("is-selected", placement.id === selectedPlacementId);
 
+    if (placement.kind === "text-field") {
+      const editor = document.createElement("textarea");
+      editor.className = "pdf-fillable-editor";
+      editor.value = placement.text;
+      editor.placeholder = "Fillable text";
+      editor.maxLength = 500;
+      editor.setAttribute("aria-label", "Fillable field text");
+      editor.addEventListener("pointerdown", (event) => {
+        event.stopPropagation();
+        selectPlacement(placement.id);
+      });
+      editor.addEventListener("focus", () => selectPlacement(placement.id));
+      editor.addEventListener("input", () => updateFillableText(placement.id, editor.value));
+      stamp.append(editor);
+
+      const moveHandle = document.createElement("span");
+      moveHandle.className = "pdf-placement-move";
+      moveHandle.title = "Drag fillable field";
+      moveHandle.setAttribute("aria-hidden", "true");
+      moveHandle.textContent = "•••";
+      stamp.append(moveHandle);
+    } else {
+      const content = document.createElement("span");
+      content.className = "pdf-placement-content";
+      content.textContent = placement.text;
+      stamp.append(content);
+    }
+
     const resizeHandle = document.createElement("span");
-    resizeHandle.className = "signature-resize";
+    resizeHandle.className = "pdf-placement-resize";
     resizeHandle.title = `Resize ${placement.kind}`;
 
     const deleteControl = document.createElement("button");
-    deleteControl.className = "signature-delete";
+    deleteControl.className = "pdf-placement-delete";
     deleteControl.type = "button";
     deleteControl.title = `Delete ${placement.kind}`;
     deleteControl.setAttribute("aria-label", `Delete placed ${placement.kind}`);
@@ -165,6 +227,7 @@ function renderPlacements() {
     signatureLayer.append(stamp);
   });
   deletePlacementButton.disabled = !selectedPlacementId;
+  syncFillableTextControl();
 }
 
 /**
@@ -172,17 +235,13 @@ function renderPlacements() {
  */
 function addSignature() {
   if (!pdfDocument || !signatureInput.value.trim()) return;
-  const placement = {
+  const placement = createPdfPlacement({
     id: createId(),
     kind: "signature",
     pageNumber: currentPageNumber,
     text: signatureInput.value.trim(),
     font: signatureFont,
-    xRatio: 0.36,
-    yRatio: 0.72,
-    widthRatio: 0.28,
-    fontSizeRatio: 0.045,
-  };
+  });
   placements.push(placement);
   selectedPlacementId = placement.id;
   renderPlacements();
@@ -195,22 +254,79 @@ function addSignature() {
  */
 function addDate() {
   if (!pdfDocument || !dateInput.value) return;
-  const placement = {
+  const placement = createPdfPlacement({
     id: createId(),
     kind: "date",
     pageNumber: currentPageNumber,
     text: formatDateValue(dateInput.value),
-    font: "date-font",
-    xRatio: 0.68,
-    yRatio: 0.78,
-    widthRatio: 0.18,
-    fontSizeRatio: 0.026,
-  };
+  });
   placements.push(placement);
   selectedPlacementId = placement.id;
   renderPlacements();
   updateControls();
   setStatus("Date placed · selected");
+}
+
+/**
+ * Adds a genuine PDF text field to the visible page.
+ */
+function addTextField() {
+  if (!pdfDocument) return;
+  const placement = createPdfPlacement({
+    id: createId(),
+    kind: "text-field",
+    pageNumber: currentPageNumber,
+    text: fillableTextInput.value,
+  });
+  placements.push(placement);
+  selectedPlacementId = placement.id;
+  renderPlacements();
+  updateControls();
+  setStatus("Fillable field placed · edit its text anytime");
+}
+
+/**
+ * Adds one vector mark to the visible page.
+ *
+ * @param {string} kind Checkmark, circle, or X placement kind.
+ */
+function addMark(kind) {
+  if (!pdfDocument || !["checkmark", "circle", "x-mark"].includes(kind)) return;
+  const placement = createPdfPlacement({
+    id: createId(),
+    kind,
+    pageNumber: currentPageNumber,
+  });
+  placements.push(placement);
+  selectedPlacementId = placement.id;
+  renderPlacements();
+  updateControls();
+  setStatus(`${PLACEMENT_LABELS[kind]} placed · selected`);
+}
+
+/**
+ * Updates the live and exported value of one fillable field.
+ *
+ * @param {string} placementId Field identifier.
+ * @param {string} text Next field value.
+ */
+function updateFillableText(placementId, text) {
+  const current = placements.find((placement) => placement.id === placementId);
+  if (!current || current.kind !== "text-field") return;
+  const result = updatePlacementById(placements, placementId, { text });
+  placements = result.placements;
+  if (selectedPlacementId === placementId && fillableTextInput.value !== text) {
+    fillableTextInput.value = text;
+  }
+  const stamp = signatureLayer.querySelector(`[data-placement-id="${CSS.escape(placementId)}"]`);
+  if (stamp) {
+    stamp.dataset.placementText = text;
+    stamp.setAttribute("aria-label", `Selected Fillable field${text ? `: ${text}` : ""}`);
+  }
+}
+
+function isMarkPlacement(placement) {
+  return ["checkmark", "circle", "x-mark"].includes(placement.kind);
 }
 
 /**
@@ -243,12 +359,13 @@ function getTodayInputValue() {
 }
 
 /**
- * Starts dragging or resizing a placed signature or date.
+ * Starts dragging or resizing an added PDF item.
  *
  * @param {PointerEvent} event Pointer-down event on the signature layer.
  */
 function startPlacementGesture(event) {
-  const stamp = event.target.closest(".signature-stamp");
+  if (event.target.closest("button, textarea, input")) return;
+  const stamp = event.target.closest(".pdf-placement");
   if (!stamp) {
     selectPlacement(null);
     return;
@@ -263,12 +380,13 @@ function startPlacementGesture(event) {
     placement,
     stamp,
     pointerId: event.pointerId,
-    mode: event.target.classList.contains("signature-resize") ? "resize" : "move",
+    mode: event.target.classList.contains("pdf-placement-resize") ? "resize" : "move",
     startX: event.clientX,
     startY: event.clientY,
     startLeft: placement.xRatio,
     startTop: placement.yRatio,
     startWidth: placement.widthRatio,
+    startHeight: placement.heightRatio,
   };
 }
 
@@ -284,8 +402,27 @@ function movePlacement(event) {
   const { placement } = activeDrag;
 
   if (activeDrag.mode === "resize") {
-    placement.widthRatio = clamp(activeDrag.startWidth + deltaXRatio, 0.12, 0.65);
-    placement.fontSizeRatio = placement.widthRatio * 0.16;
+    const minimumWidth = isMarkPlacement(placement) ? 0.025 : 0.1;
+    placement.widthRatio = clamp(
+      activeDrag.startWidth + deltaXRatio,
+      minimumWidth,
+      1 - placement.xRatio,
+    );
+    if (placement.kind === "text-field" || isMarkPlacement(placement)) {
+      placement.heightRatio = clamp(
+        activeDrag.startHeight + deltaYRatio,
+        0.025,
+        1 - placement.yRatio,
+      );
+      activeDrag.stamp.style.height = `${placement.heightRatio * 100}%`;
+    }
+    if (isMarkPlacement(placement)) {
+      placement.fontSizeRatio = Math.min(placement.widthRatio, placement.heightRatio) * 0.72;
+    } else if (placement.kind === "text-field") {
+      placement.fontSizeRatio = clamp(placement.heightRatio * 0.3, 0.008, 0.08);
+    } else {
+      placement.fontSizeRatio = placement.widthRatio * 0.16;
+    }
     activeDrag.stamp.style.width = `${placement.widthRatio * 100}%`;
     activeDrag.stamp.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
   } else {
@@ -318,15 +455,30 @@ function selectPlacement(placementId) {
   selectedPlacementId = placements.some((placement) => placement.id === placementId)
     ? placementId
     : null;
-  signatureLayer.querySelectorAll(".signature-stamp").forEach((stamp) => {
+  signatureLayer.querySelectorAll(".pdf-placement").forEach((stamp) => {
     const isSelected = stamp.dataset.placementId === selectedPlacementId;
     stamp.classList.toggle("is-selected", isSelected);
     stamp.setAttribute(
       "aria-label",
-      `${isSelected ? "Selected " : ""}placed ${stamp.dataset.placementKind}: ${stamp.dataset.placementText}`,
+      `${isSelected ? "Selected " : ""}${PLACEMENT_LABELS[stamp.dataset.placementKind]}${stamp.dataset.placementText ? `: ${stamp.dataset.placementText}` : ""}`,
     );
   });
+  syncFillableTextControl();
   updateControls();
+}
+
+/**
+ * Shows the selected fillable field in the sidebar editor, or the new-field draft.
+ */
+function syncFillableTextControl() {
+  const selected = placements.find((placement) => placement.id === selectedPlacementId);
+  const isEditingField = selected?.kind === "text-field";
+  const nextValue = isEditingField ? selected.text : fillableTextDraft;
+  if (fillableTextInput.value !== nextValue) fillableTextInput.value = nextValue;
+  fillableTextHint.textContent = isEditingField
+    ? "Editing the selected fillable field. Changes update immediately."
+    : "Select a field to edit its text here or directly on the page.";
+  fillableTextHint.classList.toggle("is-editing", isEditingField);
 }
 
 /**
@@ -341,8 +493,7 @@ function deletePlacement(placementId) {
   selectedPlacementId = null;
   renderPlacements();
   updateControls();
-  const label = result.removed.kind === "date" ? "Date" : "Signature";
-  setStatus(`${label} deleted`);
+  setStatus(`${PLACEMENT_LABELS[result.removed.kind]} deleted`);
 }
 
 /**
@@ -373,7 +524,7 @@ async function createPlacementPng(placement) {
 }
 
 /**
- * Embeds every placed signature and date into the original PDF.
+ * Embeds signatures/dates, creates real form fields, and draws vector marks.
  */
 async function downloadSignedPdf() {
   if (!pdfBytes || !placements.length) return;
@@ -382,23 +533,42 @@ async function downloadSignedPdf() {
     downloadButton.textContent = "Preparing…";
     const outputDocument = await PDFDocument.load(pdfBytes.slice());
     const pages = outputDocument.getPages();
+    const form = outputDocument.getForm();
+    const formFont = await outputDocument.embedFont(StandardFonts.Helvetica);
 
-    for (const placement of placements) {
+    for (const [placementIndex, placement] of placements.entries()) {
       const page = pages[placement.pageNumber - 1];
       if (!page) continue;
-      const pngBytes = await createPlacementPng(placement);
-      const placementImage = await outputDocument.embedPng(pngBytes);
       const pageWidth = page.getWidth();
       const pageHeight = page.getHeight();
-      const drawWidth = pageWidth * placement.widthRatio;
-      const drawHeight = drawWidth * (placementImage.height / placementImage.width);
-      page.drawImage(placementImage, {
-        x: pageWidth * placement.xRatio,
-        y: pageHeight - pageHeight * placement.yRatio - drawHeight,
-        width: drawWidth,
-        height: drawHeight,
-      });
+      if (placement.kind === "text-field") {
+        addFillableTextField({
+          form,
+          formFont,
+          page,
+          pageWidth,
+          pageHeight,
+          placement,
+          placementIndex,
+          rgb,
+        });
+      } else if (isMarkPlacement(placement)) {
+        drawVectorMark(page, placement, pageWidth, pageHeight, rgb);
+      } else {
+        const pngBytes = await createPlacementPng(placement);
+        const placementImage = await outputDocument.embedPng(pngBytes);
+        const drawWidth = pageWidth * placement.widthRatio;
+        const drawHeight = drawWidth * (placementImage.height / placementImage.width);
+        page.drawImage(placementImage, {
+          x: pageWidth * placement.xRatio,
+          y: pageHeight - pageHeight * placement.yRatio - drawHeight,
+          width: drawWidth,
+          height: drawHeight,
+        });
+      }
     }
+
+    form.updateFieldAppearances(formFont);
 
     const signedBytes = await outputDocument.save();
     const blob = new Blob([signedBytes], { type: "application/pdf" });
@@ -406,15 +576,15 @@ async function downloadSignedPdf() {
     const link = document.createElement("a");
     const baseName = pdfFileName.replace(/\.pdf$/i, "");
     link.href = downloadUrl;
-    link.download = `${baseName}-signed.pdf`;
+    link.download = `${baseName}-edited.pdf`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-    setStatus("Signed copy downloaded");
+    setStatus("Edited PDF downloaded");
   } catch (error) {
-    console.error("Unable to create the signed PDF.", error);
-    window.alert("The signed copy could not be created. The original PDF has not been changed.");
+    console.error("Unable to create the edited PDF.", error);
+    window.alert("The edited copy could not be created. The original PDF has not been changed.");
   } finally {
-    downloadButton.textContent = "Download signed PDF";
+    downloadButton.textContent = "Download PDF";
     updateControls();
   }
 }
@@ -443,6 +613,8 @@ function updateControls() {
   document.querySelector("#next-page").disabled = !hasDocument || currentPageNumber >= pdfDocument.numPages;
   addSignatureButton.disabled = !hasDocument || !signatureInput.value.trim();
   addDateButton.disabled = !hasDocument || !dateInput.value;
+  addTextFieldButton.disabled = !hasDocument;
+  markButtons.forEach((button) => { button.disabled = !hasDocument; });
   downloadButton.disabled = !hasDocument || placements.length === 0;
   deletePlacementButton.disabled = !selectedPlacementId;
 }
@@ -476,6 +648,14 @@ signatureInput.addEventListener("input", () => {
   updateControls();
 });
 dateInput.addEventListener("change", updateControls);
+fillableTextInput.addEventListener("input", () => {
+  const selected = placements.find((placement) => placement.id === selectedPlacementId);
+  if (selected?.kind === "text-field") {
+    updateFillableText(selected.id, fillableTextInput.value);
+  } else {
+    fillableTextDraft = fillableTextInput.value;
+  }
+});
 document.querySelectorAll(".font-choice").forEach((button) => {
   button.addEventListener("click", () => {
     signatureFont = button.dataset.font;
@@ -486,6 +666,10 @@ document.querySelectorAll(".font-choice").forEach((button) => {
 
 addSignatureButton.addEventListener("click", addSignature);
 addDateButton.addEventListener("click", addDate);
+addTextFieldButton.addEventListener("click", addTextField);
+markButtons.forEach((button) => {
+  button.addEventListener("click", () => addMark(button.dataset.markKind));
+});
 downloadButton.addEventListener("click", downloadSignedPdf);
 document.querySelector("#previous-page").addEventListener("click", async () => {
   if (currentPageNumber <= 1) return;
@@ -525,11 +709,12 @@ updateControls();
 
 installCurrentToolAiHost({
   id: "pdf-signer",
-  title: "PDF Signer",
-  description: "Describes the locally opened PDF and its current field placements.",
+  title: "PDF Tool",
+  description: "Describes and stages added signatures, dates, fillable text fields, and marks on a local PDF.",
   limitations: [
     "AI commands cannot choose a local PDF file.",
-    "Signature placement changes and signed-PDF export remain explicit user actions.",
+    "AI commands only manage added items; they do not detect or remove original PDF content.",
+    "PDF export remains an explicit user action.",
     "PDF bytes are never included in AI context.",
   ],
   getSnapshot: () => ({
@@ -549,12 +734,29 @@ installCurrentToolAiHost({
       pageCount: snapshot.document.pageCount,
     },
     placementCount: snapshot.placements.length,
-    placementKinds: Object.fromEntries(["signature", "date"].map((kind) => [
+    placementKinds: Object.fromEntries(PDF_PLACEMENT_KINDS.map((kind) => [
       kind,
       snapshot.placements.filter((placement) => placement.kind === kind).length,
     ])),
     selectedPlacementId: snapshot.selectedPlacementId,
   }),
+  commitSnapshot(nextState) {
+    if (!pdfDocument) throw new Error("Choose a PDF before applying placement changes.");
+    const nextPlacements = nextState.placements.map((placement) => createPdfPlacement(placement));
+    if (nextPlacements.some((placement) => placement.pageNumber > pdfDocument.numPages)) {
+      throw new Error("A placement page is outside the open PDF.");
+    }
+    if (new Set(nextPlacements.map((placement) => placement.id)).size !== nextPlacements.length) {
+      throw new Error("Placement IDs must be unique.");
+    }
+    placements = nextPlacements;
+    selectedPlacementId = placements.some((placement) => placement.id === nextState.selectedPlacementId)
+      ? nextState.selectedPlacementId
+      : null;
+    renderPlacements();
+    updateControls();
+    setStatus("AI placement changes applied locally");
+  },
   commands: [
     {
       type: "document.describe",
@@ -567,12 +769,199 @@ installCurrentToolAiHost({
     },
     {
       type: "placements.list",
-      description: "List placed signature and date fields, including their text and normalized geometry.",
+      description: "List added signatures, dates, fillable fields, and marks with normalized geometry.",
       permissions: ["read-content", "sensitive-data"],
       execute(state, command, { commandIndex }) {
         rejectUnknownCommandFields(command, [], commandIndex);
         return { value: state.placements };
       },
     },
+    {
+      type: "placements.add",
+      description: "Add one signature, date, real fillable text field, checkmark, circle, or X to an open PDF page.",
+      permissions: ["create", "sensitive-data"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["placement"],
+        properties: {
+          placement: {
+            type: "object",
+            required: ["kind"],
+            properties: {
+              id: { type: "string", maxLength: 128 },
+              kind: { type: "string", enum: PDF_PLACEMENT_KINDS },
+              pageNumber: { type: "integer", minimum: 1 },
+              text: { type: "string", maxLength: 500 },
+              font: {
+                type: "string",
+                enum: [
+                  "signature-font-1",
+                  "signature-font-2",
+                  "signature-font-3",
+                  "date-font",
+                  "form-font",
+                  "mark-font",
+                ],
+              },
+              xRatio: { type: "number", minimum: 0, maximum: 0.98 },
+              yRatio: { type: "number", minimum: 0, maximum: 0.98 },
+              widthRatio: { type: "number", minimum: 0.02, maximum: 1 },
+              heightRatio: { type: "number", minimum: 0.02, maximum: 1 },
+              fontSizeRatio: { type: "number", minimum: 0.008, maximum: 0.2 },
+            },
+            additionalProperties: false,
+          },
+        },
+        additionalProperties: false,
+      },
+      example: {
+        type: "placements.add",
+        placement: {
+          kind: "text-field",
+          pageNumber: 1,
+          text: "Editable answer",
+          xRatio: 0.2,
+          yRatio: 0.4,
+          widthRatio: 0.35,
+          heightRatio: 0.08,
+        },
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["placement"], commandIndex);
+        if (!state.document.loaded) throw new Error("Choose a PDF before adding placements.");
+        const record = requireCommandRecord(command.placement, "placement", commandIndex);
+        rejectPlacementFields(record, [
+          "id",
+          "kind",
+          "pageNumber",
+          "text",
+          "font",
+          "xRatio",
+          "yRatio",
+          "widthRatio",
+          "heightRatio",
+          "fontSizeRatio",
+        ]);
+        const id = record.id === undefined
+          ? createId()
+          : requireCommandString(record.id, "placement.id", commandIndex, { maximumLength: 128 });
+        if (state.placements.some((placement) => placement.id === id)) {
+          throw new Error(`Placement ID already exists: ${id}.`);
+        }
+        const kind = requireCommandString(record.kind, "placement.kind", commandIndex, { maximumLength: 32 });
+        const pageNumber = record.pageNumber === undefined
+          ? state.document.currentPage
+          : Number(record.pageNumber);
+        if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > state.document.pageCount) {
+          throw new Error("placement.pageNumber must identify a page in the open PDF.");
+        }
+        const placement = createPdfPlacement({ ...record, id, kind, pageNumber });
+        return {
+          state: {
+            ...state,
+            placements: [...state.placements, placement],
+            selectedPlacementId: placement.id,
+          },
+          createdIds: [placement.id],
+          value: placement,
+        };
+      },
+    },
+    {
+      type: "placements.update",
+      description: "Edit an added item's text or normalized geometry. Text is editable on fillable fields.",
+      permissions: ["update", "sensitive-data"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["placementId", "changes"],
+        properties: {
+          placementId: { type: "string" },
+          changes: {
+            type: "object",
+            minProperties: 1,
+            properties: {
+              text: { type: "string", maxLength: 500 },
+              xRatio: { type: "number", minimum: 0, maximum: 0.98 },
+              yRatio: { type: "number", minimum: 0, maximum: 0.98 },
+              widthRatio: { type: "number", minimum: 0.02, maximum: 1 },
+              heightRatio: { type: "number", minimum: 0.02, maximum: 1 },
+              fontSizeRatio: { type: "number", minimum: 0.008, maximum: 0.2 },
+            },
+            additionalProperties: false,
+          },
+        },
+        additionalProperties: false,
+      },
+      example: {
+        type: "placements.update",
+        placementId: "field-id",
+        changes: { text: "Updated answer" },
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["placementId", "changes"], commandIndex);
+        const placementId = requireCommandString(
+          command.placementId,
+          "placementId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        const changes = requireCommandRecord(command.changes, "changes", commandIndex);
+        rejectPlacementFields(changes, [
+          "text",
+          "xRatio",
+          "yRatio",
+          "widthRatio",
+          "heightRatio",
+          "fontSizeRatio",
+        ]);
+        const current = state.placements.find((placement) => placement.id === placementId);
+        if (!current) throw new Error(`Placement not found: ${placementId}.`);
+        if (changes.text !== undefined && current.kind !== "text-field") {
+          throw new Error("Only fillable-field text can be modified.");
+        }
+        const result = updatePlacementById(state.placements, placementId, changes);
+        return {
+          state: { ...state, placements: result.placements, selectedPlacementId: placementId },
+          updatedIds: [placementId],
+          value: result.updated,
+        };
+      },
+    },
+    {
+      type: "placements.remove",
+      description: "Remove one item previously added by this tool; original PDF content is never removed.",
+      permissions: ["delete"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["placementId"],
+        properties: { placementId: { type: "string" } },
+        additionalProperties: false,
+      },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["placementId"], commandIndex);
+        const placementId = requireCommandString(
+          command.placementId,
+          "placementId",
+          commandIndex,
+          { maximumLength: 128 },
+        );
+        const result = removePlacementById(state.placements, placementId);
+        if (!result.removed) throw new Error(`Placement not found: ${placementId}.`);
+        return {
+          state: { ...state, placements: result.placements, selectedPlacementId: null },
+          deletedIds: [placementId],
+          value: result.removed,
+        };
+      },
+    },
   ],
 });
+
+function rejectPlacementFields(record, allowedFields) {
+  const allowed = new Set(allowedFields);
+  const unknown = Object.keys(record).find((field) => !allowed.has(field));
+  if (unknown) throw new TypeError(`Unknown placement field: ${unknown}.`);
+}

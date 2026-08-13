@@ -112,9 +112,9 @@ The Board is deliberately only the drawing instrument: it validates, previews, s
 
 These tools share an archival responsive shell, versioned validation, browser-local persistence, and deterministic model tests. Large local-model weights load only after an explicit action and are excluded from the offline application shell.
 
-### PDF Signer
+### PDF Tool
 
-Opens PDFs locally with bundled PDF.js, supports page navigation, creates signatures in three visual styles, adds selectable dates, and allows every placed field to be moved, resized, or deleted before export. Select a signature or date to use its visible trash control, the toolbar action, or Delete/Backspace; Escape clears the selection. The finished file downloads as a genuinely signed PDF with PDF-Lib, and documents never leave the browser.
+Opens PDFs locally with bundled PDF.js; adds signatures, dates, genuine editable PDF text fields, and vector checkmarks, circles, or X marks. Added items can be selected, moved, resized, edited when applicable, or deleted before PDF-Lib exports an edited copy. Original PDF content is never detected or removed, and documents never leave the browser.
 
 ### Literature Analyzer
 

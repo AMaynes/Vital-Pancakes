@@ -94,6 +94,49 @@ review-setting updates. Mutations participate in the same preview-first,
 revision-checked atomic commit as lesson changes. Review content is limited to
 the active local book.
 
+## PDF Tool examples
+
+The stable tool ID remains `pdf-signer`. Its commands can add and edit tool-owned
+placements after the user opens a PDF; PDF bytes and original document content
+are never exposed. Normalized geometry uses ratios from `0` through `1`.
+
+```json
+{
+  "protocolVersion": 1,
+  "requestId": "pdf-fields-1",
+  "tool": "pdf-signer",
+  "mode": "preview",
+  "expectedRevision": 3,
+  "commands": [
+    {
+      "type": "placements.add",
+      "placement": {
+        "kind": "text-field",
+        "pageNumber": 1,
+        "text": "Editable answer",
+        "xRatio": 0.2,
+        "yRatio": 0.4,
+        "widthRatio": 0.35,
+        "heightRatio": 0.08
+      }
+    },
+    {
+      "type": "placements.add",
+      "placement": {
+        "kind": "checkmark",
+        "pageNumber": 1,
+        "xRatio": 0.72,
+        "yRatio": 0.58
+      }
+    }
+  ]
+}
+```
+
+Use `placements.update` to change a fillable field’s `text` or any added
+item’s normalized geometry. `placements.remove` only deletes an item added by
+the tool; it cannot remove content that was already inside the source PDF.
+
 ## Visual Board examples
 
 Replace `expectedRevision` with the current Visual Board revision. Preview and

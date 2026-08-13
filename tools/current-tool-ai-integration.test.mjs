@@ -3,7 +3,17 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const TOOL_HOSTS = [
-  ["pdf-signer.js", "pdf-signer", ["document.describe", "placements.list"]],
+  [
+    "pdf-signer.js",
+    "pdf-signer",
+    [
+      "document.describe",
+      "placements.list",
+      "placements.add",
+      "placements.update",
+      "placements.remove",
+    ],
+  ],
   [
     "literature-analyzer.js",
     "literature-analyzer",
@@ -99,6 +109,17 @@ for (const [filename, toolId, commandTypes] of TOOL_HOSTS) {
     });
   });
 }
+
+test("PDF Tool exposes add-only PDF editing with truthful mutation contracts", async () => {
+  const source = await readFile(new URL("pdf-signer.js", import.meta.url), "utf8");
+
+  assert.match(source, /title:\s*["']PDF Tool["']/);
+  assert.match(source, /kind:\s*["']text-field["']/);
+  assert.match(source, /\["checkmark",\s*"circle",\s*"x-mark"\]/);
+  assert.match(source, /type:\s*["']placements\.add["'][\s\S]*?mutates:\s*true/);
+  assert.match(source, /type:\s*["']placements\.update["'][\s\S]*?permissions:\s*\["update",\s*"sensitive-data"\]/);
+  assert.match(source, /original PDF content is never removed/);
+});
 
 test("caption-relay installs its dedicated privacy-aware AI host", async () => {
   const [pageSource, adapterSource] = await Promise.all([
