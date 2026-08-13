@@ -59,6 +59,10 @@ const fillableStyleButtons = {
 const markButtons = [...document.querySelectorAll("[data-mark-kind]")];
 const downloadButton = document.querySelector("#download-signed-pdf");
 const deletePlacementButton = document.querySelector("#delete-placement");
+const stageWrap = document.querySelector(".pdf-stage-wrap");
+const zoomSlider = document.querySelector("#pdf-zoom");
+const zoomValue = document.querySelector("#pdf-zoom-value");
+const zoomPresetButtons = [...document.querySelectorAll("[data-pdf-zoom]")];
 const pageStage = document.querySelector("#pdf-page-stage");
 const signatureLayer = document.querySelector("#signature-layer");
 const pdfCanvas = document.querySelector("#pdf-canvas");
@@ -73,6 +77,9 @@ let placements = [];
 let selectedPlacementId = null;
 let activeDrag = null;
 let renderSequence = 0;
+let activeRenderTask = null;
+let zoomPercent = 100;
+let zoomRenderTimer = null;
 let fillableTextDraft = "";
 let copiedFillablePlacement = null;
 let renderedPageWidthPoints = 545;
@@ -154,12 +161,19 @@ async function loadPdf(file) {
 /**
  * Renders the current page at a comfortable working scale.
  */
-async function renderPage() {
+async function renderPage({ preserveScroll = false } = {}) {
   if (!pdfDocument) return;
   const sequence = ++renderSequence;
+  activeRenderTask?.cancel();
+  const scrollCenter = preserveScroll && stageWrap.scrollWidth && stageWrap.scrollHeight
+    ? {
+        x: (stageWrap.scrollLeft + stageWrap.clientWidth / 2) / stageWrap.scrollWidth,
+        y: (stageWrap.scrollTop + stageWrap.clientHeight / 2) / stageWrap.scrollHeight,
+      }
+    : null;
   const page = await pdfDocument.getPage(currentPageNumber);
   renderedPageWidthPoints = page.getViewport({ scale: 1 }).width;
-  const viewport = page.getViewport({ scale: 1.35 });
+  const viewport = page.getViewport({ scale: 1.35 * zoomPercent / 100 });
   const pixelRatio = window.devicePixelRatio || 1;
 
   pdfCanvas.width = Math.floor(viewport.width * pixelRatio);
@@ -169,14 +183,27 @@ async function renderPage() {
   pageStage.style.width = `${Math.floor(viewport.width)}px`;
   pageStage.style.height = `${Math.floor(viewport.height)}px`;
 
-  await page.render({
+  const renderTask = page.render({
     canvasContext: pdfContext,
     viewport,
     transform: pixelRatio === 1 ? null : [pixelRatio, 0, 0, pixelRatio, 0, 0],
-  }).promise;
+  });
+  activeRenderTask = renderTask;
+  try {
+    await renderTask.promise;
+  } catch (error) {
+    if (error?.name === "RenderingCancelledException") return;
+    throw error;
+  } finally {
+    if (activeRenderTask === renderTask) activeRenderTask = null;
+  }
   if (sequence !== renderSequence) return;
   renderPlacements();
   updateControls();
+  if (scrollCenter) {
+    stageWrap.scrollLeft = scrollCenter.x * stageWrap.scrollWidth - stageWrap.clientWidth / 2;
+    stageWrap.scrollTop = scrollCenter.y * stageWrap.scrollHeight - stageWrap.clientHeight / 2;
+  }
 }
 
 /**
@@ -844,6 +871,9 @@ function updateControls() {
     : "Page 0 / 0";
   document.querySelector("#previous-page").disabled = !hasDocument || currentPageNumber <= 1;
   document.querySelector("#next-page").disabled = !hasDocument || currentPageNumber >= pdfDocument.numPages;
+  zoomSlider.disabled = !hasDocument;
+  zoomPresetButtons.forEach((button) => { button.disabled = !hasDocument; });
+  zoomValue.value = `${zoomPercent}%`;
   addSignatureButton.disabled = !hasDocument || !signatureInput.value.trim();
   addDateButton.disabled = !hasDocument || !dateInput.value;
   addTextFieldButton.disabled = !hasDocument;
@@ -878,6 +908,26 @@ fileInput.addEventListener("change", () => loadPdf(fileInput.files[0]));
   });
 });
 dropZone.addEventListener("drop", (event) => loadPdf(event.dataTransfer.files[0]));
+
+zoomSlider.addEventListener("input", () => {
+  zoomPercent = Number(zoomSlider.value);
+  zoomValue.value = `${zoomPercent}%`;
+  window.clearTimeout(zoomRenderTimer);
+  zoomRenderTimer = window.setTimeout(() => renderPage({ preserveScroll: true }), 60);
+});
+
+zoomPresetButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    zoomSlider.value = button.dataset.pdfZoom;
+    zoomSlider.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+});
+
+stageWrap.addEventListener("wheel", (event) => {
+  if (!event.shiftKey) return;
+  event.preventDefault();
+  stageWrap.scrollLeft += event.deltaY || event.deltaX;
+}, { passive: false });
 
 signatureInput.addEventListener("input", () => {
   signaturePreview.textContent = signatureInput.value.trim() || "Your signature";
@@ -1009,6 +1059,7 @@ installCurrentToolAiHost({
       name: pdfDocument ? pdfFileName : "",
       currentPage: pdfDocument ? currentPageNumber : 0,
       pageCount: pdfDocument?.numPages ?? 0,
+      zoomPercent,
     },
     placements: placements.map((placement) => ({ ...placement })),
     selectedPlacementId,
@@ -1018,6 +1069,7 @@ installCurrentToolAiHost({
       loaded: snapshot.document.loaded,
       currentPage: snapshot.document.currentPage,
       pageCount: snapshot.document.pageCount,
+      zoomPercent: snapshot.document.zoomPercent,
     },
     placementCount: snapshot.placements.length,
     placementKinds: Object.fromEntries(PDF_PLACEMENT_KINDS.map((kind) => [
@@ -1028,6 +1080,11 @@ installCurrentToolAiHost({
   }),
   commitSnapshot(nextState) {
     if (!pdfDocument) throw new Error("Choose a PDF before applying placement changes.");
+    const nextZoomPercent = Number(nextState.document.zoomPercent);
+    if (!Number.isInteger(nextZoomPercent) || nextZoomPercent < 50 || nextZoomPercent > 200 || nextZoomPercent % 25 !== 0) {
+      throw new Error("Zoom must be a marked percentage from 50 to 200 in steps of 25.");
+    }
+    const zoomChanged = nextZoomPercent !== zoomPercent;
     const nextPlacements = nextState.placements.map((placement) => createPdfPlacement(placement));
     if (nextPlacements.some((placement) => placement.pageNumber > pdfDocument.numPages)) {
       throw new Error("A placement page is outside the open PDF.");
@@ -1039,9 +1096,12 @@ installCurrentToolAiHost({
     selectedPlacementId = placements.some((placement) => placement.id === nextState.selectedPlacementId)
       ? nextState.selectedPlacementId
       : null;
+    zoomPercent = nextZoomPercent;
+    zoomSlider.value = String(zoomPercent);
     renderPlacements();
     updateControls();
-    setStatus("AI placement changes applied locally");
+    if (zoomChanged) void renderPage({ preserveScroll: true });
+    setStatus("AI changes applied locally");
   },
   commands: [
     {
@@ -1296,6 +1356,34 @@ installCurrentToolAiHost({
           state: { ...state, placements: result.placements, selectedPlacementId: id },
           createdIds: [id],
           value: result.duplicated,
+        };
+      },
+    },
+    {
+      type: "view.set-zoom",
+      description: "Set the PDF viewport zoom to one of the marked percentages.",
+      permissions: ["update"],
+      mutates: true,
+      schema: {
+        type: "object",
+        required: ["percent"],
+        properties: {
+          percent: { type: "integer", enum: [50, 75, 100, 125, 150, 175, 200] },
+        },
+      },
+      example: { type: "view.set-zoom", percent: 150 },
+      execute(state, command, { commandIndex }) {
+        rejectUnknownCommandFields(command, ["percent"], commandIndex);
+        const percent = Number(command.percent);
+        if (![50, 75, 100, 125, 150, 175, 200].includes(percent)) {
+          throw new Error("percent must be one of the marked zoom percentages.");
+        }
+        return {
+          state: {
+            ...state,
+            document: { ...state.document, zoomPercent: percent },
+          },
+          value: { zoomPercent: percent },
         };
       },
     },

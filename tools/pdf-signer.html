@@ -9,7 +9,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=17">
-  <link rel="stylesheet" href="tool.css?v=39">
+  <link rel="stylesheet" href="tool.css?v=41">
   <link rel="stylesheet" href="../site-navigation.css?v=22">
   <script type="module" src="../site-navigation.js?v=19"></script>
 </head>
@@ -48,18 +48,6 @@
 
     <main class="pdf-workspace" id="tool-main">
       <aside class="pdf-sidebar">
-        <details class="panel-section pdf-sidebar-group" data-pdf-sidebar-group="document" open>
-          <summary><span>Document</span><small>Open PDF</small></summary>
-          <p>Your document stays in this browser. Nothing is uploaded.</p>
-          <label class="drop-zone" id="pdf-drop-zone">
-            <input id="pdf-file" type="file" accept="application/pdf,.pdf">
-            <span>
-              <strong>Drop PDF here</strong>
-              <small>or tap to browse</small>
-            </span>
-          </label>
-        </details>
-
         <details class="panel-section pdf-sidebar-group" data-pdf-sidebar-group="signature">
           <summary><span>Signature</span><small>Type and place</small></summary>
           <p>Type your name, choose a style, then place it on any page.</p>
@@ -158,6 +146,31 @@
             <span class="zoom-value" id="page-count">Page 0 / 0</span>
             <button class="tool-button" id="next-page" type="button" disabled>Next →</button>
           </div>
+          <div class="pdf-zoom-control">
+            <label for="pdf-zoom">Zoom</label>
+            <div class="pdf-zoom-range">
+              <input id="pdf-zoom" type="range" min="50" max="200" step="25" value="100" list="pdf-zoom-marks" disabled>
+              <datalist id="pdf-zoom-marks">
+                <option value="50"></option>
+                <option value="75"></option>
+                <option value="100"></option>
+                <option value="125"></option>
+                <option value="150"></option>
+                <option value="175"></option>
+                <option value="200"></option>
+              </datalist>
+              <div class="pdf-zoom-ticks" aria-label="Zoom presets">
+                <button type="button" data-pdf-zoom="50" disabled>50</button>
+                <button type="button" data-pdf-zoom="75" disabled>75</button>
+                <button type="button" data-pdf-zoom="100" disabled>100</button>
+                <button type="button" data-pdf-zoom="125" disabled>125</button>
+                <button type="button" data-pdf-zoom="150" disabled>150</button>
+                <button type="button" data-pdf-zoom="175" disabled>175</button>
+                <button type="button" data-pdf-zoom="200" disabled>200</button>
+              </div>
+            </div>
+            <output id="pdf-zoom-value" for="pdf-zoom">100%</output>
+          </div>
           <div class="toolbar-group">
             <span class="tool-save-status">Select · drag to move · resize from any corner</span>
             <button
@@ -174,12 +187,13 @@
             </button>
           </div>
         </div>
-        <div class="pdf-stage-wrap">
-          <div class="pdf-empty" id="pdf-empty">
-            <span>⌁</span>
-            <h2>Your document will appear here</h2>
-            <p>Choose a PDF, then add signatures, dates, fillable text fields, and marks.</p>
-          </div>
+        <div class="pdf-stage-wrap" id="pdf-drop-zone">
+          <label class="pdf-empty" id="pdf-empty" for="pdf-file">
+            <input id="pdf-file" type="file" accept="application/pdf,.pdf">
+            <span aria-hidden="true">+</span>
+            <h2>Open or drop a PDF</h2>
+            <p>Click anywhere here to browse, or drag a PDF into the center.</p>
+          </label>
           <div class="pdf-page-stage" id="pdf-page-stage" hidden>
             <canvas id="pdf-canvas"></canvas>
             <div id="signature-layer"></div>
@@ -191,6 +205,6 @@
 
   <script src="../vendor/pdf.min.js"></script>
   <script src="../vendor/pdf-lib.min.js"></script>
-  <script type="module" src="pdf-signer.js?v=9"></script>
+  <script type="module" src="pdf-signer.js?v=11"></script>
 </body>
 </html>

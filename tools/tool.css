@@ -1761,20 +1761,21 @@
 
 .pdf-stage-wrap {
   position: relative;
-  display: grid;
+  display: block;
   min-width: 0;
   min-height: 0;
-  place-items: center;
   overflow: auto;
   padding: 11px;
   background: #d9d6ce;
+  scrollbar-gutter: stable both-edges;
 }
 
 .pdf-page-stage {
   position: relative;
-  display: inline-block;
+  display: block;
   min-width: 300px;
   min-height: 420px;
+  margin: 0 auto;
   background: var(--white);
   box-shadow: 0 7px 28px rgb(23 35 31 / 18%);
 }
@@ -2058,11 +2059,27 @@
 
 .pdf-empty {
   display: grid;
-  min-height: 220px;
+  width: 100%;
+  min-height: 100%;
+  padding: 24px;
   place-items: center;
   align-content: center;
+  border: 1px dashed transparent;
   color: var(--ink-faint);
+  cursor: pointer;
   text-align: center;
+}
+
+.pdf-empty input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.pdf-stage-wrap.is-over .pdf-empty {
+  border-color: var(--forest);
+  background: rgb(255 255 255 / 28%);
 }
 
 .pdf-empty span {
@@ -2080,6 +2097,65 @@
   margin: 0;
   font-size: 10px;
   line-height: 1.5;
+}
+
+.pdf-zoom-control {
+  display: grid;
+  width: min(250px, 32vw);
+  grid-template-columns: auto minmax(100px, 1fr) 38px;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-faint);
+  font: 700 9px/1 Arial, sans-serif;
+}
+
+.pdf-zoom-control input {
+  width: 100%;
+  accent-color: var(--forest);
+}
+
+.pdf-zoom-range {
+  position: relative;
+  padding-bottom: 10px;
+}
+
+.pdf-zoom-ticks {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.pdf-zoom-ticks button {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font: 600 6px/1 Arial, sans-serif;
+}
+
+.pdf-zoom-ticks button::before {
+  display: block;
+  width: 1px;
+  height: 3px;
+  margin: 0 auto 1px;
+  background: currentcolor;
+  content: "";
+}
+
+.pdf-zoom-ticks button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.pdf-zoom-control output {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 /* Software Architect */
@@ -2907,7 +2983,11 @@
   }
 
   .pdf-stage-wrap {
-    padding: 15px;
+    padding: 9px;
+  }
+
+  .pdf-zoom-control {
+    width: min(230px, 70vw);
   }
 
   .architecture-workspace {
