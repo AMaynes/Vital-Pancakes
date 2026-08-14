@@ -8,6 +8,7 @@
  */
 
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -16,6 +17,19 @@ import {
   removePlacementById,
   updatePlacementById,
 } from "./pdf-signer-placements.mjs";
+
+const signerStyles = await readFile(new URL("./pdf-signer.css", import.meta.url), "utf8");
+
+test("check, circle, and X placements stay transparent when idle", () => {
+  assert.match(
+    signerStyles,
+    /\.pdf-placement\.mark-stamp\s*\{[^}]*border-color:\s*transparent;[^}]*background:\s*transparent;/s,
+  );
+  assert.match(
+    signerStyles,
+    /\.pdf-placement\.mark-stamp\.is-selected\s*\{[^}]*background:\s*transparent;/s,
+  );
+});
 
 test("creates a real fillable-text placement with bounded normalized geometry", () => {
   const placement = createPdfPlacement({
