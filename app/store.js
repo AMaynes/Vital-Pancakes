@@ -15,6 +15,7 @@
 
 import { ALGORITHM_ANALYSIS_SAMPLES } from "./algorithm-analysis-samples.mjs?v=1";
 import { ALGORITHM_SAMPLES } from "./algorithm-samples.mjs?v=2";
+import { normalizeFolderCatalog, normalizeFolderPath } from "./knowledge-entry-model.mjs?v=2";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const CURRENT_WORKSPACE_VERSION = 16;
@@ -1929,6 +1930,7 @@ function createInitialWorkspace() {
 function cloneDefaultSection(section) {
   const clone = JSON.parse(JSON.stringify(section));
   clone.items = clone.items.map((item) => alignEntryFields(clone, item));
+  if (clone.type === "study") clone.folders = normalizeFolderCatalog(clone.items, clone.folders);
   return clone;
 }
 
@@ -2538,6 +2540,14 @@ function migrateWorkspace(workspace) {
     workspace.version = CURRENT_WORKSPACE_VERSION;
     changed = true;
   }
+  workspace.sections.forEach((section) => {
+    if (section.type !== "study") return;
+    const folders = normalizeFolderCatalog(section.items, section.folders);
+    if (JSON.stringify(section.folders ?? []) !== JSON.stringify(folders)) {
+      section.folders = folders;
+      changed = true;
+    }
+  });
   return { workspace, changed };
 }
 
@@ -2664,6 +2674,83 @@ export function updateItem(sectionId, itemId, itemInput) {
   section.items[itemIndex] = updatedItem;
   saveWorkspace(workspace);
   return updatedItem;
+}
+
+export function addStudyFolder(sectionId, folderInput) {
+  const folderPath = normalizeFolderPath(folderInput);
+  if (!folderPath) return false;
+  const workspace = getWorkspace();
+  const section = workspace.sections.find((candidate) => candidate.id === sectionId);
+  if (section?.type !== "study") return false;
+  const folders = normalizeFolderCatalog(section.items, section.folders);
+  if (folders.includes(folderPath)) return false;
+  section.folders = [...folders, folderPath].sort((left, right) => left.localeCompare(right));
+  saveWorkspace(workspace);
+  return true;
+}
+
+export function moveStudyEntry(sectionId, itemId, folderInput) {
+  const workspace = getWorkspace();
+  const section = workspace.sections.find((candidate) => candidate.id === sectionId);
+  const item = section?.items.find((candidate) => candidate.id === itemId);
+  if (section?.type !== "study" || !item) return false;
+  const folderPath = normalizeFolderPath(folderInput);
+  if (normalizeFolderPath(item.folderPath) === folderPath) return false;
+  item.folderPath = folderPath;
+  item.updatedAt = new Date().toISOString();
+  section.folders = normalizeFolderCatalog(section.items, section.folders);
+  saveWorkspace(workspace);
+  return true;
+}
+
+export function moveStudyFolder(sectionId, sourceInput, targetInput) {
+  const sourcePath = normalizeFolderPath(sourceInput);
+  const targetPath = normalizeFolderPath(targetInput);
+  if (!sourcePath || targetPath === sourcePath || targetPath.startsWith(`${sourcePath} / `)) return false;
+  const workspace = getWorkspace();
+  const section = workspace.sections.find((candidate) => candidate.id === sectionId);
+  if (section?.type !== "study") return false;
+  const folders = normalizeFolderCatalog(section.items, section.folders);
+  if (!folders.includes(sourcePath)) return false;
+  const leafName = sourcePath.split(" / ").at(-1);
+  const destinationPath = targetPath ? `${targetPath} / ${leafName}` : leafName;
+  if (folders.includes(destinationPath) && destinationPath !== sourcePath) return false;
+  const remap = (pathInput) => {
+    const path = normalizeFolderPath(pathInput);
+    if (path === sourcePath) return destinationPath;
+    if (path.startsWith(`${sourcePath} / `)) return `${destinationPath}${path.slice(sourcePath.length)}`;
+    return path;
+  };
+  section.folders = [...new Set(folders.map(remap))].sort((left, right) => left.localeCompare(right));
+  section.items.forEach((item) => {
+    const movedPath = remap(item.folderPath);
+    if (movedPath !== normalizeFolderPath(item.folderPath)) {
+      item.folderPath = movedPath;
+      item.updatedAt = new Date().toISOString();
+    }
+  });
+  saveWorkspace(workspace);
+  return true;
+}
+
+export function removeStudyFolder(sectionId, folderInput) {
+  const folderPath = normalizeFolderPath(folderInput);
+  if (!folderPath) return false;
+  const workspace = getWorkspace();
+  const section = workspace.sections.find((candidate) => candidate.id === sectionId);
+  if (section?.type !== "study") return false;
+  const folders = normalizeFolderCatalog(section.items, section.folders);
+  if (!folders.includes(folderPath)) return false;
+  const belongsToFolder = (pathInput) => {
+    const path = normalizeFolderPath(pathInput);
+    return path === folderPath || path.startsWith(`${folderPath} / `);
+  };
+  section.folders = folders.filter((path) => !belongsToFolder(path));
+  section.items.forEach((item) => {
+    if (belongsToFolder(item.folderPath)) item.folderPath = "";
+  });
+  saveWorkspace(workspace);
+  return true;
 }
 
 /**

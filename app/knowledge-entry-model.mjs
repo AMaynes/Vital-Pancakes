@@ -140,8 +140,20 @@ export function normalizeFolderPath(value) {
     .join(" / ");
 }
 
-export function groupEntriesByFolder(entries) {
+export function normalizeFolderCatalog(entries, folders = []) {
+  const normalized = [
+    ...(Array.isArray(folders) ? folders : []),
+    ...(Array.isArray(entries) ? entries.map((entry) => entry?.folderPath) : []),
+  ]
+    .map(normalizeFolderPath)
+    .filter(Boolean);
+  return [...new Set(normalized)].sort((left, right) => left.localeCompare(right));
+}
+
+export function groupEntriesByFolder(entries, folders = [], options = {}) {
   const groups = new Map();
+  normalizeFolderCatalog(entries, folders).forEach((folder) => groups.set(folder, []));
+  if (options.includeUnfiled) groups.set("Unfiled", []);
   (Array.isArray(entries) ? entries : []).forEach((entry) => {
     const folder = normalizeFolderPath(entry?.folderPath) || "Unfiled";
     if (!groups.has(folder)) groups.set(folder, []);

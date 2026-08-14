@@ -17,6 +17,7 @@
  */
 
 import {
+  addStudyFolder,
   addItem,
   createId,
   deleteItem,
@@ -24,9 +25,12 @@ import {
   getSection,
   getWorkspace,
   isCoreSectionId,
+  moveStudyEntry,
+  moveStudyFolder,
+  removeStudyFolder,
   saveWorkspace,
   updateItem,
-} from "./store.js?v=16";
+} from "./store.js?v=17";
 import { installAiPageHost } from "./ai-page-host.mjs";
 import { createWorkspaceAiAdapter } from "./workspace-ai-adapter.mjs";
 import {
@@ -47,12 +51,15 @@ import {
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
-} from "./knowledge-entry-model.mjs?v=1";
+} from "./knowledge-entry-model.mjs?v=2";
 import { listGlossaryEntries, saveGlossaryEntry } from "./knowledge-db.mjs";
 
 const appMain = document.querySelector("#app-main");
 const itemDialog = document.querySelector("#item-dialog");
 const itemForm = document.querySelector("#item-form");
+const folderDialog = document.querySelector("#folder-dialog");
+const folderForm = document.querySelector("#folder-form");
+const folderNameInput = document.querySelector("#folder-name");
 const animationTimers = new Set();
 
 let activeSectionId = null;
@@ -1207,7 +1214,14 @@ function renderSection(section) {
   const addButton = createElement("button", "button button-primary", `+ Add ${getSingularLabel(section)}`);
   addButton.type = "button";
   addButton.addEventListener("click", () => openItemDialog(section));
-  actions.append(viewSwitcher, addButton);
+  actions.append(viewSwitcher);
+  if (section.type === "study") {
+    const addFolderButton = createElement("button", "button button-quiet folder-add-button", "+ Folder");
+    addFolderButton.type = "button";
+    addFolderButton.addEventListener("click", () => openFolderDialog(section));
+    actions.append(addFolderButton);
+  }
+  actions.append(addButton);
   if (!isCoreSectionId(section.id)) {
     const deleteButton = createElement("button", "button button-quiet", "Delete section");
     deleteButton.type = "button";
@@ -1227,7 +1241,7 @@ function renderSection(section) {
   }
 
   const grid = createElement("div", `entry-index entry-index-${view}`);
-  if (!visibleItems.length) {
+  if (!visibleItems.length && !(section.type === "study" && section.folders?.length)) {
     const empty = createEmptyState(
       section.items.length ? "No entries match those filters" : `No ${section.title.toLocaleLowerCase()} yet`,
       section.items.length ? "Try another search or clear a tag filter." : getEmptyMessage(section),
@@ -1240,20 +1254,49 @@ function renderSection(section) {
     }
     grid.append(empty);
   } else if (["study", "idea", "howto"].includes(section.type)) {
-    groupEntriesByFolder(visibleItems).forEach(({ folder, entries }) => {
+    groupEntriesByFolder(
+      visibleItems,
+      section.type === "study" ? section.folders : [],
+      { includeUnfiled: section.type === "study" },
+    ).forEach(({ folder, entries }) => {
       const folderPanel = createElement("details", "study-folder");
       folderPanel.open = true;
       const summary = createElement("summary", "study-folder-heading");
+      const isStudyFolder = section.type === "study";
+      const folderPath = folder === "Unfiled" ? "" : folder;
       summary.append(
         createElement("span", "study-folder-icon", "▱"),
         createElement("strong", "", folder),
         createElement("small", "", `${entries.length} ${entries.length === 1 ? "entry" : "entries"}`),
       );
+      if (isStudyFolder && folderPath) {
+        const dragHandle = createElement("span", "study-folder-drag-handle", "⠿");
+        dragHandle.draggable = true;
+        dragHandle.title = `Move ${folder}`;
+        dragHandle.setAttribute("aria-label", `Move ${folder}`);
+        dragHandle.addEventListener("dragstart", (event) => startStudyDrag(event, {
+          type: "folder",
+          sectionId: section.id,
+          folderPath,
+        }));
+        dragHandle.addEventListener("dragend", clearStudyDragState);
+        const removeButton = createElement("button", "icon-button study-folder-remove", "×");
+        removeButton.type = "button";
+        removeButton.title = `Remove ${folder}`;
+        removeButton.setAttribute("aria-label", `Remove ${folder}`);
+        removeButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          confirmStudyFolderRemove(section, folderPath, entries.length);
+        });
+        summary.append(dragHandle, removeButton);
+      }
       const folderGrid = createElement("div", `study-folder-entries entry-index-${view}`);
       entries
         .slice()
         .sort((left, right) => String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? "")))
         .forEach((item, index) => folderGrid.append(createEntryIndexCard(section, item, index)));
+      if (isStudyFolder) enableStudyFolderDrop(folderPanel, section, folderPath);
       folderPanel.append(summary, folderGrid);
       grid.append(folderPanel);
     });
@@ -1600,6 +1643,17 @@ function createEntryIndexCard(section, item, index) {
         ? buildAlgorithmHash(section.algorithmCategory, item.id)
         : buildContentHash(section.id, item.id);
   link.setAttribute("aria-label", `Open ${item.title}`);
+  if (section.type === "study") {
+    link.draggable = false;
+    card.draggable = true;
+    card.title = `Drag ${item.title} to another folder`;
+    card.addEventListener("dragstart", (event) => startStudyDrag(event, {
+      type: "entry",
+      sectionId: section.id,
+      itemId: item.id,
+    }));
+    card.addEventListener("dragend", clearStudyDragState);
+  }
 
   const copy = createElement("div", "entry-index-copy");
   copy.append(
@@ -3750,6 +3804,80 @@ function parseLessonSections(value, existingSections = []) {
     });
 }
 
+const STUDY_DRAG_TYPE = "application/x-vital-pancakes-study";
+
+function openFolderDialog(section) {
+  activeSectionId = section.id;
+  folderForm.reset();
+  folderDialog.showModal();
+  window.setTimeout(() => folderNameInput.focus(), 0);
+}
+
+function startStudyDrag(event, payload) {
+  event.stopPropagation();
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData(STUDY_DRAG_TYPE, JSON.stringify(payload));
+  event.dataTransfer.setData("text/plain", payload.type === "folder" ? payload.folderPath : payload.itemId);
+  event.currentTarget.classList.add("is-dragging");
+  document.body.classList.add("study-drag-active");
+}
+
+function clearStudyDragState() {
+  document.body.classList.remove("study-drag-active");
+  document.querySelectorAll(".is-dragging, .is-drop-target").forEach((element) => {
+    element.classList.remove("is-dragging", "is-drop-target");
+  });
+}
+
+function readStudyDrag(event) {
+  try {
+    return JSON.parse(event.dataTransfer.getData(STUDY_DRAG_TYPE));
+  } catch {
+    return null;
+  }
+}
+
+function enableStudyFolderDrop(folderPanel, section, folderPath) {
+  folderPanel.dataset.folderPath = folderPath;
+  folderPanel.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    folderPanel.classList.add("is-drop-target");
+  });
+  folderPanel.addEventListener("dragleave", (event) => {
+    if (!folderPanel.contains(event.relatedTarget)) folderPanel.classList.remove("is-drop-target");
+  });
+  folderPanel.addEventListener("drop", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const payload = readStudyDrag(event);
+    clearStudyDragState();
+    if (!payload || payload.sectionId !== section.id) return;
+    const moved = payload.type === "entry"
+      ? moveStudyEntry(section.id, payload.itemId, folderPath)
+      : moveStudyFolder(section.id, payload.folderPath, folderPath);
+    if (!moved) {
+      showToast(payload.type === "folder" ? "That folder cannot be moved there." : "Entry is already in this folder.");
+      return;
+    }
+    renderWorkspace();
+    showToast(payload.type === "folder" ? "Folder moved." : "Entry moved.");
+  });
+}
+
+function confirmStudyFolderRemove(section, folderPath) {
+  const affectedEntries = section.items.filter((item) => (
+    item.folderPath === folderPath || item.folderPath?.startsWith(`${folderPath} / `)
+  )).length;
+  const entryMessage = affectedEntries
+    ? ` ${affectedEntries} ${affectedEntries === 1 ? "entry" : "entries"} will move to Unfiled.`
+    : "";
+  if (!window.confirm(`Remove “${folderPath}”?${entryMessage}`)) return;
+  if (!removeStudyFolder(section.id, folderPath)) return;
+  renderWorkspace();
+  showToast("Folder removed.");
+}
+
 /**
  * Confirms before deleting a section.
  *
@@ -3796,6 +3924,25 @@ function showToast(message) {
     window.setTimeout(() => toast.remove(), 250);
   }, 2600);
 }
+
+folderForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const folderName = folderNameInput.value;
+  if (!addStudyFolder(activeSectionId, folderName)) {
+    folderNameInput.setCustomValidity("Enter a new folder name.");
+    folderNameInput.reportValidity();
+    return;
+  }
+  folderNameInput.setCustomValidity("");
+  folderDialog.close();
+  renderWorkspace();
+  showToast("Folder added.");
+});
+
+folderNameInput.addEventListener("input", () => folderNameInput.setCustomValidity(""));
+document.querySelectorAll("[data-folder-dialog-close]").forEach((button) => {
+  button.addEventListener("click", () => folderDialog.close());
+});
 
 itemForm.addEventListener("submit", async (event) => {
   event.preventDefault();

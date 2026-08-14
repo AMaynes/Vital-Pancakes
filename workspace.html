@@ -17,7 +17,7 @@
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="apple-touch-icon" href="assets/app-icon-192.png">
-  <link rel="stylesheet" href="workspace.css?v=28">
+  <link rel="stylesheet" href="workspace.css?v=29">
   <link rel="stylesheet" href="site-navigation.css?v=22">
   <script type="module" src="site-navigation.js?v=18"></script>
 </head>
@@ -61,7 +61,25 @@
     </form>
   </dialog>
 
+  <dialog class="app-dialog folder-dialog" id="folder-dialog">
+    <form method="dialog" id="folder-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">STUDY ORGANIZATION</p>
+          <h2>Add folder</h2>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-folder-dialog-close aria-label="Close">&times;</button>
+      </div>
+      <label class="field-label" for="folder-name">Folder name</label>
+      <input id="folder-name" name="folderName" required autocomplete="off" placeholder="Example: Mathematics / Probability">
+      <div class="dialog-actions">
+        <button class="button button-quiet" type="button" data-folder-dialog-close>Cancel</button>
+        <button class="button button-primary" type="submit">Add folder</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="toast-region" id="toast-region" aria-live="polite"></div>
-  <script type="module" src="app/main.js?v=26"></script>
+  <script type="module" src="app/main.js?v=27"></script>
 </body>
 </html>

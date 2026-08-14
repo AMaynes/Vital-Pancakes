@@ -56,6 +56,7 @@
   grid-column: 1 / -1;
   border: 1px solid var(--line-strong);
   background: color-mix(in srgb, var(--paper) 82%, white);
+  transition: border-color 120ms ease, background 120ms ease;
 }
 
 .study-folder + .study-folder {
@@ -78,15 +79,60 @@
 .study-folder-heading small { color: var(--ink-faint); font-size: 9px; }
 .study-folder-icon { color: var(--coral); font-size: 18px; }
 
+.study-folder-drag-handle {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: var(--ink-faint);
+  cursor: grab;
+  font-size: 14px;
+}
+
+.study-folder-drag-handle:active,
+.entry-study[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.study-folder-remove {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  font-size: 15px;
+}
+
+.study-folder.is-drop-target {
+  border-color: var(--coral);
+  background: var(--coral-soft);
+}
+
+.study-folder.is-drop-target > .study-folder-heading {
+  color: var(--coral);
+}
+
+.entry-study[draggable="true"] {
+  cursor: grab;
+}
+
+.entry-study.is-dragging,
+.study-folder-drag-handle.is-dragging {
+  opacity: 0.42;
+}
+
 .study-folder-entries {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
   padding: 1px;
   background: var(--line);
+  min-height: 34px;
 }
 
 .study-folder-entries.entry-index-list { grid-template-columns: 1fr; }
+
+.folder-dialog {
+  width: min(430px, calc(100vw - 28px));
+}
 
 .knowledge-entry-layout,
 .project-system-layout {

@@ -5,6 +5,7 @@ import {
   buildKnowledgeOutline,
   buildProjectMapTree,
   groupEntriesByFolder,
+  normalizeFolderCatalog,
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
@@ -52,4 +53,17 @@ test("study folders are normalized and grouped without flattening entries", () =
   ]);
   assert.equal(groups[0].folder, "Information / Theory");
   assert.equal(groups[1].folder, "Unfiled");
+});
+
+test("explicit study folders remain visible when empty", () => {
+  const entries = [{ id: "a", folderPath: "Information/Theory" }];
+  assert.deepEqual(normalizeFolderCatalog(entries, ["Drafts", "Information / Theory"]), [
+    "Drafts",
+    "Information / Theory",
+  ]);
+  assert.deepEqual(
+    groupEntriesByFolder(entries, ["Drafts"], { includeUnfiled: true })
+      .map(({ folder, entries: folderEntries }) => [folder, folderEntries.length]),
+    [["Drafts", 0], ["Information / Theory", 1], ["Unfiled", 0]],
+  );
 });

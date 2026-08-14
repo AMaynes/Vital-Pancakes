@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getWorkspace, isCoreSectionId } from "./store.js";
+import {
+  addStudyFolder,
+  getWorkspace,
+  isCoreSectionId,
+  moveStudyEntry,
+  moveStudyFolder,
+  removeStudyFolder,
+} from "./store.js";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const EVERYDAY_SECTION_IDS = ["how-to-cook", "recipes", "workouts", "cleaning", "everyday-other"];
@@ -36,10 +43,33 @@ class MemoryStorage {
 
 function useStorage(initialWorkspace = null) {
   globalThis.localStorage = new MemoryStorage();
+  globalThis.window = { dispatchEvent() {} };
+  globalThis.CustomEvent = class CustomEvent {};
   if (initialWorkspace) {
     localStorage.setItem(WORKSPACE_KEY, JSON.stringify(initialWorkspace));
   }
 }
+
+test("study folders can be added, nested, populated, and removed without deleting entries", () => {
+  useStorage();
+  const initial = getWorkspace();
+  const studies = initial.sections.find((section) => section.id === "studies");
+  const entry = studies.items[0];
+
+  assert.equal(addStudyFolder("studies", "Drafts"), true);
+  assert.equal(addStudyFolder("studies", "Archive"), true);
+  assert.equal(moveStudyEntry("studies", entry.id, "Drafts"), true);
+  assert.equal(moveStudyFolder("studies", "Drafts", "Archive"), true);
+
+  let savedStudies = getWorkspace().sections.find((section) => section.id === "studies");
+  assert.ok(savedStudies.folders.includes("Archive / Drafts"));
+  assert.equal(savedStudies.items.find((item) => item.id === entry.id).folderPath, "Archive / Drafts");
+
+  assert.equal(removeStudyFolder("studies", "Archive"), true);
+  savedStudies = getWorkspace().sections.find((section) => section.id === "studies");
+  assert.equal(savedStudies.folders.some((folder) => folder.startsWith("Archive")), false);
+  assert.equal(savedStudies.items.find((item) => item.id === entry.id).folderPath, "");
+});
 
 test("a new workspace starts with eleven permanent libraries and editable examples", () => {
   useStorage();
