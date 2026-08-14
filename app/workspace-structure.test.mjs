@@ -32,13 +32,14 @@ test("Workspace keeps exactly four ordered Main tools before collapsed Other too
   assert.match(controller, /createElement\("strong", "", "Other tools"\)/);
 });
 
-test("Studies and Projects exposes only four top-level knowledge areas", () => {
+test("Studies and Projects orders three knowledge areas above Notecards", () => {
   const dashboard = controller.match(
     /function renderStudiesDashboard\(workspace\) \{([\s\S]*?)\n\}\n\n\/\*\*/,
   )?.[1] ?? "";
 
-  assert.match(dashboard, /title: "Notecards"/);
-  assert.match(dashboard, /\["studies", "questions-ideas", "projects"\]/);
+  assert.match(dashboard, /\["questions-ideas", "studies", "projects"\]/);
+  assert.doesNotMatch(dashboard, /notecardsCard|libraryGrid\.append\([^)]*Notecards/);
+  assert.ok(dashboard.indexOf('createElement("section", "notecard-collections")') > dashboard.indexOf('createElement("div", "library-grid studies-hub-grid")'));
   assert.doesNotMatch(dashboard, /"algorithms", "programming-languages"/);
   assert.match(controller, /Algorithms and Programming Languages live inside Studies/);
   assert.match(controller, /Working Ideas holds unfinished personal thinking; Idea Playground/);

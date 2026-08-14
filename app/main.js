@@ -666,22 +666,11 @@ function renderStudiesDashboard(workspace) {
   );
   const sectionHeading = createSectionHeading(
     "Knowledge areas",
-    "Notecards, Studies, Ideas, and Projects are the only top-level areas here.",
+    "Ideas, Studies, and Projects are the only top-level areas here.",
   );
   const libraryGrid = createElement("div", "library-grid studies-hub-grid");
 
-  const notecardsCard = createLibraryCard({
-    id: "notecards",
-    title: "Notecards",
-    description: "Open the separate notecard archive for practice, review, and subject collections.",
-    icon: "▤",
-    type: "custom",
-    items: [{}, {}, {}],
-  });
-  notecardsCard.href = "educational_resources/";
-  libraryGrid.append(notecardsCard);
-
-  ["studies", "questions-ideas", "projects"]
+  ["questions-ideas", "studies", "projects"]
     .map((sectionId) => sectionsById.get(sectionId))
     .filter(Boolean)
     .forEach((section) => libraryGrid.append(createLibraryCard(section)));
