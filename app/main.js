@@ -135,6 +135,16 @@ const SECTION_PRESENTATIONS = {
       ["R", "Route", "Work high to low and clean to dirty without backtracking."],
     ],
   },
+  howto: {
+    mode: "howto-manual",
+    kicker: "PERSONAL HOW-TO MANUAL",
+    introduction: "Keep random practical procedures short, specific, and easy to follow when you do not want to rely on memory.",
+    stages: [
+      ["1", "Prepare", "List what must be ready before the task begins."],
+      ["2", "Do", "Preserve the verified sequence in plain language."],
+      ["3", "Confirm", "Record how to know the task is actually complete."],
+    ],
+  },
   study: {
     mode: "study-dossier",
     kicker: "INQUIRY DOSSIERS",
@@ -277,16 +287,6 @@ const ALGORITHM_CATEGORIES = Object.freeze([
     id: "analysis",
     title: "Algorithm Analysis",
     description: "Special lessons on comparison, time and space complexity, cases, recurrences, and benchmarking.",
-  },
-  howto: {
-    mode: "howto-manual",
-    kicker: "PERSONAL HOW-TO MANUAL",
-    introduction: "Keep random practical procedures short, specific, and easy to follow when you do not want to rely on memory.",
-    stages: [
-      ["1", "Prepare", "List what must be ready before the task begins."],
-      ["2", "Do", "Preserve the verified sequence in plain language."],
-      ["3", "Confirm", "Record how to know the task is actually complete."],
-    ],
   },
 ]);
 const IDEA_CATEGORIES = Object.freeze([

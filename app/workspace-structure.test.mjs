@@ -4,6 +4,20 @@ import test from "node:test";
 
 const controller = await readFile(new URL("./main.js", import.meta.url), "utf8");
 
+test("Everyday how-to presentation stays in the presentation map", () => {
+  const presentations = controller.slice(
+    controller.indexOf("const SECTION_PRESENTATIONS"),
+    controller.indexOf("const LESSON_STUDY_PRESENTATION"),
+  );
+  const algorithmCategories = controller.slice(
+    controller.indexOf("const ALGORITHM_CATEGORIES"),
+    controller.indexOf("const IDEA_CATEGORIES"),
+  );
+
+  assert.match(presentations, /howto:\s*\{/);
+  assert.doesNotMatch(algorithmCategories, /howto:\s*\{/);
+});
+
 test("Workspace keeps exactly four ordered Main tools before collapsed Other tools", () => {
   const mainTools = controller.match(/const mainTools = \[([\s\S]*?)\];\n  const otherTools =/i)?.[1] ?? "";
   const titles = [...mainTools.matchAll(/title: "([^"]+)"/g)].map((match) => match[1]);
