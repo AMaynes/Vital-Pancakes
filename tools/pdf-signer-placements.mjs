@@ -21,6 +21,8 @@ export const PDF_PLACEMENT_KINDS = Object.freeze([
   "whiteout",
 ]);
 
+export const PDF_FIELD_BACKGROUND_COLORS = Object.freeze(["blue", "yellow", "red", "transparent"]);
+
 const PLACEMENT_DEFAULTS = Object.freeze({
   signature: Object.freeze({
     text: "Signature",
@@ -52,6 +54,7 @@ const PLACEMENT_DEFAULTS = Object.freeze({
     bold: false,
     italic: false,
     underline: false,
+    backgroundColor: "blue",
   }),
   checkmark: Object.freeze({
     text: "✓",
@@ -102,6 +105,7 @@ const EDITABLE_PLACEMENT_FIELDS = new Set([
   "bold",
   "italic",
   "underline",
+  "backgroundColor",
   "locked",
 ]);
 
@@ -149,6 +153,7 @@ export function createPdfPlacement(input) {
     placement.bold = normalizeBoolean(input.bold, defaults.bold, "bold");
     placement.italic = normalizeBoolean(input.italic, defaults.italic, "italic");
     placement.underline = normalizeBoolean(input.underline, defaults.underline, "underline");
+    placement.backgroundColor = normalizeBackgroundColor(input.backgroundColor ?? defaults.backgroundColor);
   }
   placement.widthRatio = Math.min(placement.widthRatio, 1 - placement.xRatio);
   placement.heightRatio = Math.min(placement.heightRatio, 1 - placement.yRatio);
@@ -228,6 +233,14 @@ function normalizePlacementFont(kind, value) {
   if (["checkmark", "circle", "x-mark"].includes(kind)) return "mark-font";
   if (kind === "whiteout") return "whiteout";
   return font;
+}
+
+function normalizeBackgroundColor(value) {
+  const backgroundColor = String(value ?? "").trim().toLocaleLowerCase();
+  if (!PDF_FIELD_BACKGROUND_COLORS.includes(backgroundColor)) {
+    throw new TypeError(`Unsupported fillable background color: ${backgroundColor}.`);
+  }
+  return backgroundColor;
 }
 
 /**

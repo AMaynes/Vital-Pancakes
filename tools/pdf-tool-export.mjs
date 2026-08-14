@@ -27,6 +27,7 @@ export function addFillableTextField({
   rgb,
   PDFName,
   PDFHexString,
+  defaultTextFieldAppearanceProvider,
 }) {
   const x = pageWidth * placement.xRatio;
   const width = pageWidth * placement.widthRatio;
@@ -34,7 +35,7 @@ export function addFillableTextField({
   const y = pageHeight - (pageHeight * placement.yRatio) - height;
   const safeId = placement.id.replace(/[^a-z0-9_-]/gi, "").slice(0, 48);
   const field = form.createTextField(`vp_field_${placementIndex + 1}_${safeId}`);
-  field.enableMultiline();
+  if (/\r|\n/.test(placement.text)) field.enableMultiline();
   if (placement.text) field.setText(placement.text);
   if (placement.bold || placement.italic || placement.underline) {
     field.enableRichFormatting();
@@ -45,6 +46,12 @@ export function addFillableTextField({
       );
     }
   }
+  const backgroundComponents = {
+    blue: [0.86, 0.945, 0.984],
+    yellow: [1, 0.953, 0.749],
+    red: [0.992, 0.878, 0.875],
+    transparent: [1, 1, 1],
+  }[placement.backgroundColor ?? "blue"];
   field.addToPage(page, {
     x,
     y,
@@ -52,13 +59,49 @@ export function addFillableTextField({
     height,
     font: formFont,
     textColor: rgb(0.09, 0.14, 0.12),
-    borderColor: rgb(0.19, 0.35, 0.31),
-    backgroundColor: rgb(0.92, 0.97, 1),
-    borderWidth: 1,
+    backgroundColor: rgb(...backgroundComponents),
+    borderWidth: 0,
   });
-  field.setFontSize(Math.max(6, Math.min(32, pageWidth * placement.fontSizeRatio)));
-  field.updateAppearances(formFont);
+  if (placement.backgroundColor === "transparent" && PDFName) {
+    const widget = field.acroField.getWidgets().at(-1);
+    widget.getAppearanceCharacteristics()?.dict.delete(PDFName.of("BG"));
+  }
+  field.setFontSize(Math.max(4, Math.min(32, pageWidth * placement.fontSizeRatio)));
+  const appearanceProvider = placement.backgroundColor === "transparent" && defaultTextFieldAppearanceProvider
+    ? createBorderlessTransparentAppearance(defaultTextFieldAppearanceProvider)
+    : undefined;
+  field.updateAppearances(formFont, appearanceProvider);
   return field;
+}
+
+function createBorderlessTransparentAppearance(defaultAppearanceProvider) {
+  return (field, widget, font) => {
+    const operators = defaultAppearanceProvider(field, widget, font);
+    const operatorText = operators.map((operator) => operator.toString());
+    const markedContentIndex = operatorText.indexOf("/Tx BMC");
+    const boxStart = operatorText.indexOf("q", 3);
+    let boxEnd = -1;
+    for (let index = markedContentIndex - 1; index > boxStart; index -= 1) {
+      if (operatorText[index] === "Q") {
+        boxEnd = index;
+        break;
+      }
+    }
+    if (boxStart < 0 || boxEnd < boxStart) return operators;
+    return [...operators.slice(0, boxStart), ...operators.slice(boxEnd + 1)];
+  };
+}
+
+/** Flattens form appearances and removes dangling widget references left by PDF-Lib. */
+export function flattenPdfForm(form, pages, context) {
+  form.flatten();
+  pages.forEach((page) => {
+    const annotations = page.node.Annots();
+    if (!annotations) return;
+    annotations.asArray().forEach((reference) => {
+      if (!context.lookup(reference)) page.node.removeAnnot(reference);
+    });
+  });
 }
 
 function createRichTextValue(placement, pageWidth) {
@@ -69,7 +112,7 @@ function createRichTextValue(placement, pageWidth) {
   }[placement.fontFamily] ?? "Helvetica";
   const styles = [
     `font-family:${family}`,
-    `font-size:${Math.max(6, Math.min(32, pageWidth * placement.fontSizeRatio))}pt`,
+    `font-size:${Math.max(4, Math.min(32, pageWidth * placement.fontSizeRatio))}pt`,
     placement.bold ? "font-weight:bold" : "",
     placement.italic ? "font-style:italic" : "",
     placement.underline ? "text-decoration:underline" : "",

@@ -10,6 +10,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=17">
   <link rel="stylesheet" href="tool.css?v=42">
+  <link rel="stylesheet" href="pdf-signer.css?v=1">
   <link rel="stylesheet" href="../site-navigation.css?v=22">
   <script type="module" src="../site-navigation.js?v=19"></script>
 </head>
@@ -40,6 +41,10 @@
       </div>
       <div class="tool-topbar-actions">
         <span class="tool-save-status" id="pdf-status" aria-live="polite">No document loaded</span>
+        <div class="pdf-export-mode" aria-label="PDF download mode">
+          <button type="button" data-pdf-export-mode="editable" aria-pressed="true">Editable fields</button>
+          <button type="button" data-pdf-export-mode="flattened" aria-pressed="false">Flattened text</button>
+        </div>
         <button class="button button-primary" id="download-signed-pdf" type="button" disabled>
           Download PDF
         </button>
@@ -101,6 +106,15 @@
               <button class="tool-button pdf-text-style" id="fillable-bold" type="button" aria-label="Bold" aria-pressed="false"><strong>B</strong></button>
               <button class="tool-button pdf-text-style" id="fillable-italic" type="button" aria-label="Italic" aria-pressed="false"><em>I</em></button>
               <button class="tool-button pdf-text-style" id="fillable-underline" type="button" aria-label="Underline" aria-pressed="false"><u>U</u></button>
+            </div>
+            <div class="pdf-background-picker" aria-label="Fillable background">
+              <span>Background</span>
+              <div>
+                <button class="pdf-background-swatch is-blue" type="button" data-fillable-background="blue" aria-label="Light blue background" aria-pressed="true"></button>
+                <button class="pdf-background-swatch is-yellow" type="button" data-fillable-background="yellow" aria-label="Light yellow background" aria-pressed="false"></button>
+                <button class="pdf-background-swatch is-red" type="button" data-fillable-background="red" aria-label="Light red background" aria-pressed="false"></button>
+                <button class="pdf-background-swatch is-transparent" type="button" data-fillable-background="transparent" aria-label="Transparent background" aria-pressed="false"></button>
+              </div>
             </div>
           </div>
           <div class="pdf-field-geometry" aria-label="Selected fillable dimensions">
@@ -205,6 +219,6 @@
 
   <script src="../vendor/pdf.min.js"></script>
   <script src="../vendor/pdf-lib.min.js"></script>
-  <script type="module" src="pdf-signer.js?v=13"></script>
+  <script type="module" src="pdf-signer.js?v=14"></script>
 </body>
 </html>

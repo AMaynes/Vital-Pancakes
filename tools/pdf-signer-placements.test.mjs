@@ -31,6 +31,7 @@ test("creates a real fillable-text placement with bounded normalized geometry", 
   assert.equal(placement.font, "form-font");
   assert.equal(placement.fontFamily, "helvetica");
   assert.equal(placement.bold, false);
+  assert.equal(placement.backgroundColor, "blue");
   assert.equal(placement.locked, false);
   assert.ok(Math.abs(placement.widthRatio - 0.2) < Number.EPSILON);
   assert.equal(placement.heightRatio, 0.075);
@@ -51,6 +52,7 @@ test("creates styled fillable fields and small white-out areas", () => {
     bold: true,
     italic: true,
     underline: true,
+    backgroundColor: "yellow",
     widthRatio: 0.008,
     heightRatio: 0.008,
   });
@@ -60,6 +62,7 @@ test("creates styled fillable fields and small white-out areas", () => {
   assert.equal(field.bold, true);
   assert.equal(field.italic, true);
   assert.equal(field.underline, true);
+  assert.equal(field.backgroundColor, "yellow");
   assert.equal(field.widthRatio, 0.008);
   assert.equal(whiteout.text, "");
 });
@@ -77,6 +80,7 @@ test("updates fillable text and geometry without mutating the original list", ()
     heightRatio: 0.12,
     fontFamily: "courier",
     bold: true,
+    backgroundColor: "red",
     locked: true,
   });
 
@@ -84,6 +88,7 @@ test("updates fillable text and geometry without mutating the original list", ()
   assert.equal(result.updated.heightRatio, 0.12);
   assert.equal(result.updated.fontFamily, "courier");
   assert.equal(result.updated.bold, true);
+  assert.equal(result.updated.backgroundColor, "red");
   assert.equal(result.updated.locked, true);
   assert.equal(original[0].text, "Before");
 });
@@ -97,6 +102,7 @@ test("duplicates a fillable field with exact dimensions and an unlocked offset c
     widthRatio: 0.347,
     heightRatio: 0.041,
     bold: true,
+    backgroundColor: "transparent",
     locked: true,
   })];
 
@@ -113,6 +119,7 @@ test("duplicates a fillable field with exact dimensions and an unlocked offset c
   assert.equal(result.duplicated.heightRatio, 0.041);
   assert.equal(result.duplicated.text, "Copy me");
   assert.equal(result.duplicated.bold, true);
+  assert.equal(result.duplicated.backgroundColor, "transparent");
   assert.equal(result.duplicated.locked, false);
   assert.equal(original.length, 1);
 });
@@ -126,6 +133,10 @@ test("rejects invalid placement kinds and update fields", () => {
   assert.throws(
     () => updatePlacementById(placements, "field-1", { pageNumber: 2 }),
     /Unsupported placement field/,
+  );
+  assert.throws(
+    () => createPdfPlacement({ id: "bad-color", kind: "text-field", pageNumber: 1, backgroundColor: "green" }),
+    /Unsupported fillable background color/,
   );
 });
 

@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import test from "node:test";
 
-import { addFillableTextField, drawVectorMark, drawWhiteout } from "./pdf-tool-export.mjs";
+import { addFillableTextField, drawVectorMark, drawWhiteout, flattenPdfForm } from "./pdf-tool-export.mjs";
 
 const require = createRequire(import.meta.url);
 const {
@@ -19,6 +19,7 @@ const {
   PDFHexString,
   PDFName,
   StandardFonts,
+  defaultTextFieldAppearanceProvider,
   rgb,
 } = require("../vendor/pdf-lib.min.js");
 
@@ -51,11 +52,13 @@ test("exports a reopenable editable text field with vector marks", async () => {
       bold: true,
       italic: true,
       underline: true,
+      backgroundColor: "yellow",
     },
     placementIndex: 0,
     rgb,
     PDFName,
     PDFHexString,
+    defaultTextFieldAppearanceProvider,
   });
   ["checkmark", "circle", "x-mark"].forEach((kind, index) => {
     drawVectorMark(page, {
@@ -81,7 +84,50 @@ test("exports a reopenable editable text field with vector marks", async () => {
 
   assert.ok(bytes.length > 0);
   assert.equal(field.getText(), "Editable answer");
-  assert.equal(field.isMultiline(), true);
+  assert.equal(field.isMultiline(), false);
   assert.equal(field.isRichFormatted(), true);
   assert.ok(field.acroField.dict.get(PDFName.of("RV")));
+  const widget = field.acroField.getWidgets()[0];
+  assert.equal(widget.getBorderStyle().getWidth(), 0);
+  assert.deepEqual(widget.getAppearanceCharacteristics().getBackgroundColor(), [1, 0.953, 0.749]);
+});
+
+test("exports transparent fields and can flatten their visible text", async () => {
+  const document = await PDFDocument.create();
+  const page = document.addPage([612, 792]);
+  const form = document.getForm();
+  const formFont = await document.embedFont(StandardFonts.Helvetica);
+  addFillableTextField({
+    form,
+    formFont,
+    page,
+    pageWidth: page.getWidth(),
+    pageHeight: page.getHeight(),
+    placement: {
+      id: "transparent-field",
+      kind: "text-field",
+      pageNumber: 1,
+      text: "Static answer",
+      fontFamily: "helvetica",
+      fontSizeRatio: 0.022,
+      backgroundColor: "transparent",
+      xRatio: 0.2,
+      yRatio: 0.3,
+      widthRatio: 0.4,
+      heightRatio: 0.08,
+    },
+    placementIndex: 0,
+    rgb,
+    PDFName,
+    PDFHexString,
+    defaultTextFieldAppearanceProvider,
+  });
+  const widget = form.getTextField("vp_field_1_transparent-field").acroField.getWidgets()[0];
+  assert.equal(widget.getAppearanceCharacteristics().getBackgroundColor(), undefined);
+  flattenPdfForm(form, document.getPages(), document.context);
+
+  const bytes = await document.save();
+  const reopened = await PDFDocument.load(bytes);
+  assert.equal(reopened.getForm().getFields().length, 0);
+  assert.equal(reopened.getPages()[0].node.Annots()?.size() ?? 0, 0);
 });

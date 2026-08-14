@@ -19,11 +19,12 @@ import { createId } from "../app/store.js";
 import {
   createPdfPlacement,
   duplicatePlacementById,
+  PDF_FIELD_BACKGROUND_COLORS,
   PDF_PLACEMENT_KINDS,
   removePlacementById,
   updatePlacementById,
-} from "./pdf-signer-placements.mjs?v=5";
-import { addFillableTextField, drawVectorMark, drawWhiteout } from "./pdf-tool-export.mjs?v=2";
+} from "./pdf-signer-placements.mjs?v=6";
+import { addFillableTextField, drawVectorMark, drawWhiteout, flattenPdfForm } from "./pdf-tool-export.mjs?v=3";
 import {
   installCurrentToolAiHost,
   requireCommandRecord,
@@ -31,7 +32,7 @@ import {
   rejectUnknownCommandFields,
 } from "./current-tool-ai-adapter.mjs";
 
-const { PDFDocument, PDFHexString, PDFName, StandardFonts, rgb } = globalThis.PDFLib;
+const { defaultTextFieldAppearanceProvider, PDFDocument, PDFHexString, PDFName, StandardFonts, rgb } = globalThis.PDFLib;
 globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc = "../vendor/pdf.worker.min.js";
 
 const fileInput = document.querySelector("#pdf-file");
@@ -48,6 +49,7 @@ const fillableFontFamily = document.querySelector("#fillable-font-family");
 const fillableFontSize = document.querySelector("#fillable-font-size");
 const fillableWidthInput = document.querySelector("#fillable-width");
 const fillableHeightInput = document.querySelector("#fillable-height");
+const fillableBackgroundButtons = [...document.querySelectorAll("[data-fillable-background]")];
 const copyTextFieldButton = document.querySelector("#copy-text-field");
 const pasteTextFieldButton = document.querySelector("#paste-text-field");
 const sidebarGroups = [...document.querySelectorAll("[data-pdf-sidebar-group]")];
@@ -59,6 +61,7 @@ const fillableStyleButtons = {
 const markButtons = [...document.querySelectorAll("[data-mark-kind]")];
 const downloadButton = document.querySelector("#download-signed-pdf");
 const deletePlacementButton = document.querySelector("#delete-placement");
+const exportModeButtons = [...document.querySelectorAll("[data-pdf-export-mode]")];
 const stageWrap = document.querySelector(".pdf-stage-wrap");
 const zoomSlider = document.querySelector("#pdf-zoom");
 const zoomValue = document.querySelector("#pdf-zoom-value");
@@ -80,6 +83,7 @@ let renderSequence = 0;
 let activeRenderTask = null;
 let zoomPercent = 100;
 let zoomRenderTimer = null;
+let exportMode = "editable";
 let fillableTextDraft = "";
 let copiedFillablePlacement = null;
 let renderedPageWidthPoints = 545;
@@ -89,6 +93,7 @@ let fillableStyleDraft = {
   bold: false,
   italic: false,
   underline: false,
+  backgroundColor: "blue",
 };
 
 const FONT_STYLES = {
@@ -143,6 +148,7 @@ async function loadPdf(file) {
       bold: false,
       italic: false,
       underline: false,
+      backgroundColor: "blue",
     };
     fillableTextInput.value = "";
     document.querySelector("#pdf-empty").hidden = true;
@@ -225,6 +231,7 @@ function renderPlacements() {
     stamp.dataset.placementId = placement.id;
     stamp.dataset.placementKind = placement.kind;
     stamp.dataset.placementText = placement.text;
+    if (placement.kind === "text-field") stamp.dataset.fieldBackground = placement.backgroundColor;
     stamp.tabIndex = 0;
     stamp.setAttribute("role", "group");
     stamp.setAttribute(
@@ -449,6 +456,16 @@ function fitFillablePreviewText(editor, placement) {
   editor.style.padding = fieldHeight < 12 ? "0 1px" : "0 5px";
   editor.style.height = "0px";
   editor.style.height = `${editor.scrollHeight}px`;
+  const requiredHeight = editor.scrollHeight + 6;
+  if (requiredHeight > fieldHeight + 0.5) {
+    placement.heightRatio = Math.min(requiredHeight / pageStage.clientHeight, 1);
+    placement.yRatio = Math.min(placement.yRatio, 1 - placement.heightRatio);
+    const stamp = editor.closest(".pdf-placement");
+    stamp.style.top = `${placement.yRatio * 100}%`;
+    stamp.style.height = `${placement.heightRatio * 100}%`;
+    const dimensions = stamp.querySelector(".pdf-placement-dimensions");
+    if (dimensions) dimensions.textContent = formatPlacementDimensions(placement);
+  }
 }
 
 function updateFillableStyle(changes) {
@@ -700,6 +717,9 @@ function syncFillableTextControl() {
   Object.entries(fillableStyleButtons).forEach(([property, button]) => {
     button.setAttribute("aria-pressed", String(Boolean(style[property])));
   });
+  fillableBackgroundButtons.forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.fillableBackground === style.backgroundColor));
+  });
   fillableWidthInput.value = isEditingField
     ? String(Math.round(selected.widthRatio * pageStage.clientWidth))
     : "";
@@ -810,6 +830,7 @@ async function downloadSignedPdf() {
           rgb,
           PDFName,
           PDFHexString,
+          defaultTextFieldAppearanceProvider,
         });
       } else if (placement.kind === "whiteout") {
         drawWhiteout(page, placement, pageWidth, pageHeight, rgb);
@@ -829,16 +850,17 @@ async function downloadSignedPdf() {
       }
     }
 
+    if (exportMode === "flattened") flattenPdfForm(form, pages, outputDocument.context);
     const signedBytes = await outputDocument.save();
     const blob = new Blob([signedBytes], { type: "application/pdf" });
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     const baseName = pdfFileName.replace(/\.pdf$/i, "");
     link.href = downloadUrl;
-    link.download = `${baseName}-edited.pdf`;
+    link.download = `${baseName}_modified.pdf`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-    setStatus("Edited PDF downloaded");
+    setStatus(`${exportMode === "flattened" ? "Flattened" : "Editable"} PDF downloaded`);
   } catch (error) {
     console.error("Unable to create the edited PDF.", error);
     window.alert("The edited copy could not be created. The original PDF has not been changed.");
@@ -952,6 +974,19 @@ fillableFontSize.addEventListener("change", () => {
 Object.entries(fillableStyleButtons).forEach(([property, button]) => {
   button.addEventListener("click", () => {
     updateFillableStyle({ [property]: button.getAttribute("aria-pressed") !== "true" });
+  });
+});
+fillableBackgroundButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    updateFillableStyle({ backgroundColor: button.dataset.fillableBackground });
+  });
+});
+exportModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    exportMode = button.dataset.pdfExportMode;
+    exportModeButtons.forEach((candidate) => {
+      candidate.setAttribute("aria-pressed", String(candidate === button));
+    });
   });
 });
 fillableWidthInput.addEventListener("change", () => {
@@ -1154,6 +1189,7 @@ installCurrentToolAiHost({
               bold: { type: "boolean" },
               italic: { type: "boolean" },
               underline: { type: "boolean" },
+              backgroundColor: { type: "string", enum: PDF_FIELD_BACKGROUND_COLORS },
               locked: { type: "boolean" },
               xRatio: { type: "number", minimum: 0, maximum: 0.98 },
               yRatio: { type: "number", minimum: 0, maximum: 0.98 },
@@ -1195,6 +1231,7 @@ installCurrentToolAiHost({
           "bold",
           "italic",
           "underline",
+          "backgroundColor",
           "locked",
           "xRatio",
           "yRatio",
@@ -1246,6 +1283,7 @@ installCurrentToolAiHost({
               bold: { type: "boolean" },
               italic: { type: "boolean" },
               underline: { type: "boolean" },
+              backgroundColor: { type: "string", enum: PDF_FIELD_BACKGROUND_COLORS },
               locked: { type: "boolean" },
               xRatio: { type: "number", minimum: 0, maximum: 0.98 },
               yRatio: { type: "number", minimum: 0, maximum: 0.98 },
@@ -1278,6 +1316,7 @@ installCurrentToolAiHost({
           "bold",
           "italic",
           "underline",
+          "backgroundColor",
           "locked",
           "xRatio",
           "yRatio",
@@ -1287,7 +1326,7 @@ installCurrentToolAiHost({
         ]);
         const current = state.placements.find((placement) => placement.id === placementId);
         if (!current) throw new Error(`Placement not found: ${placementId}.`);
-        const changesFillableStyle = ["text", "fontFamily", "bold", "italic", "underline"]
+        const changesFillableStyle = ["text", "fontFamily", "bold", "italic", "underline", "backgroundColor"]
           .some((field) => changes[field] !== undefined);
         if (changesFillableStyle && current.kind !== "text-field") {
           throw new Error("Only fillable-field text and formatting can be modified.");

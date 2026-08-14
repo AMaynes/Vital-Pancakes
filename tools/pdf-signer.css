@@ -1,0 +1,105 @@
+.pdf-background-picker {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pdf-background-picker > div {
+  display: flex;
+  gap: 5px;
+}
+
+.pdf-background-swatch {
+  position: relative;
+  width: 24px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  cursor: pointer;
+}
+
+.pdf-background-swatch.is-blue {
+  background: #dcf1fb;
+}
+
+.pdf-background-swatch.is-yellow {
+  background: #fff3bf;
+}
+
+.pdf-background-swatch.is-red {
+  background: #fde0df;
+}
+
+.pdf-background-swatch.is-transparent::after {
+  position: absolute;
+  top: 9px;
+  left: 3px;
+  width: 16px;
+  height: 1px;
+  background: #9c433b;
+  content: "";
+  transform: rotate(-35deg);
+}
+
+.pdf-background-swatch[aria-pressed="true"] {
+  outline: 2px solid var(--forest);
+  outline-offset: 1px;
+}
+
+.pdf-export-mode {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+}
+
+.pdf-export-mode button {
+  min-height: 28px;
+  padding: 4px 7px;
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font: 700 8px/1 Arial, sans-serif;
+}
+
+.pdf-export-mode button:last-child {
+  border-right: 0;
+}
+
+.pdf-export-mode button[aria-pressed="true"] {
+  background: var(--forest);
+  color: #fff;
+}
+
+.pdf-placement.text-field-stamp {
+  border-color: transparent;
+  background: transparent;
+}
+
+.pdf-placement.text-field-stamp.is-selected {
+  border-color: #315a4f;
+  background: transparent;
+}
+
+.pdf-fillable-editor-frame {
+  background: #dcf1fb;
+}
+
+.pdf-placement[data-field-background="yellow"] .pdf-fillable-editor-frame {
+  background: #fff3bf;
+}
+
+.pdf-placement[data-field-background="red"] .pdf-fillable-editor-frame {
+  background: #fde0df;
+}
+
+.pdf-placement[data-field-background="transparent"] .pdf-fillable-editor-frame {
+  background: transparent;
+}
