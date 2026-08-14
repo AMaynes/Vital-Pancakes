@@ -32,6 +32,18 @@ test("Workspace keeps exactly four ordered Main tools before collapsed Other too
   assert.match(controller, /createElement\("strong", "", "Other tools"\)/);
 });
 
+test("Workspace places a collapsed external resource list below Other tools", () => {
+  const dashboard = controller.match(
+    /function renderToolsDashboard\(\) \{([\s\S]*?)\n\}\n\/\*\*/,
+  )?.[1] ?? "";
+
+  assert.match(dashboard, /const externalTools = \[/);
+  assert.match(dashboard, /createElement\("strong", "", "External tools"\)/);
+  assert.match(dashboard, /createElement\("ul", "external-tools-list"\)/);
+  assert.match(dashboard, /link\.target = "_blank"/);
+  assert.match(dashboard, /appMain\.append\(hero, mainHeading, mainGrid, otherSection, externalSection\)/);
+});
+
 test("Studies and Projects orders three knowledge areas above Notecards", () => {
   const dashboard = controller.match(
     /function renderStudiesDashboard\(workspace\) \{([\s\S]*?)\n\}\n\n\/\*\*/,
