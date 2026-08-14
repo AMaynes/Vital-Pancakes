@@ -4,7 +4,7 @@
  * modules so this file owns only browser workflow and rendering.
  */
 
-import { addItem, getSection, updateItem } from "../app/store.js?v=15";
+import { addItem, getSection, updateItem } from "../app/store.js?v=16";
 import { chunkPages, chunksForSection } from "./master-lesson-chunking.mjs";
 import {
   deleteBookData,

@@ -1162,7 +1162,7 @@ export function getVisualBoardAiCapabilities() {
     },
     limitations: [
       "Image bytes, freehand point arrays, and trace paths are omitted from AI context.",
-      "Commands cannot import local files or start animation rendering.",
+      "Commands cannot import local files.",
       "Architectural commands render exact caller-supplied geometry and never choose or improve a layout.",
       "Custom floor-plan elements and templates preserve editable vector objects and relationships but reject image assets.",
       "Floor-plan catalog and layer removals require the configured removal password.",

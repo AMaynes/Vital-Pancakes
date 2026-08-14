@@ -71,7 +71,6 @@
 }
 
 .tool-workspace {
-  --animation-panel-width: min(360px, 34vw);
   --library-panel-width: min(380px, 36vw);
   --active-board-panel-width: 0px;
 
@@ -83,20 +82,10 @@
   transition: grid-template-columns 180ms ease;
 }
 
-.tool-workspace.is-animation-open {
-  --active-board-panel-width: var(--animation-panel-width);
-
-  grid-template-columns: minmax(0, 1fr) var(--animation-panel-width);
-}
-
 .tool-workspace.is-library-open {
   --active-board-panel-width: var(--library-panel-width);
 
   grid-template-columns: minmax(0, 1fr) var(--library-panel-width);
-}
-
-.tool-workspace.is-resizing-animation-panel {
-  transition: none;
 }
 
 .tool-toolbar {
@@ -440,66 +429,6 @@
   background: #ffffff;
 }
 
-.animation-panel {
-  --animation-preview-height: 210px;
-
-  position: relative;
-  z-index: 15;
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  grid-column: 2;
-  grid-row: 2;
-  flex-direction: column;
-  overflow: hidden;
-  border-left: 1px solid var(--line-strong);
-  background: #f7f4ec;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(24px);
-  transition:
-    opacity 140ms ease,
-    transform 180ms ease;
-  visibility: hidden;
-}
-
-.animation-panel-resize-handle {
-  position: absolute;
-  z-index: 8;
-  top: 0;
-  bottom: 0;
-  left: -5px;
-  width: 10px;
-  border: 0;
-  outline: none;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.animation-panel-resize-handle::after {
-  position: absolute;
-  top: 0;
-  right: 4px;
-  bottom: 0;
-  width: 1px;
-  background: transparent;
-  content: "";
-}
-
-.animation-panel-resize-handle:hover::after,
-.animation-panel-resize-handle:focus-visible::after,
-.animation-panel-resize-handle.is-resizing::after {
-  width: 2px;
-  background: var(--coral);
-}
-
-.tool-workspace.is-animation-open .animation-panel {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-  visibility: visible;
-}
-
 .board-library-panel {
   position: relative;
   z-index: 15;
@@ -686,536 +615,11 @@
   color: var(--coral);
 }
 
-.board-library-save-dialog .interpolation-count-control input {
+.board-library-save-dialog .board-dialog-field input {
   text-align: left;
 }
 
-.animation-panel-header,
-.animation-frame-actions,
-.animation-playback-controls {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-}
-
-.animation-panel-header {
-  flex: 0 0 auto;
-  min-height: 48px;
-  justify-content: space-between;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-  background: var(--card);
-}
-
-.animation-panel-header h2 {
-  margin: 0;
-  font-size: 14px;
-}
-
-.animation-panel-header span {
-  display: block;
-  margin-top: 2px;
-  color: var(--ink-faint);
-  font-size: 9px;
-}
-
-.animation-preview {
-  position: relative;
-  display: grid;
-  width: calc(100% - 20px);
-  height: var(--animation-preview-height);
-  min-height: 120px;
-  flex: 0 0 var(--animation-preview-height);
-  margin: 10px 10px 4px;
-  overflow: hidden;
-  place-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  outline: none;
-  background: #ffffff;
-}
-
-.animation-preview:focus-visible {
-  outline: 2px solid var(--coral);
-  outline-offset: 2px;
-}
-
-.animation-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.animation-preview-actions {
-  position: absolute;
-  z-index: 2;
-  top: 7px;
-  right: 7px;
-  display: flex;
-  gap: 5px;
-}
-
-.animation-preview-button {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: rgb(255 255 255 / 92%);
-  color: var(--ink);
-  font: 700 12px/1 var(--font-body);
-}
-
-.animation-preview-button:hover,
-.animation-preview-button:focus-visible,
-.animation-preview-button[aria-pressed="true"] {
-  border-color: var(--coral);
-  outline: none;
-  color: var(--coral);
-}
-
-.animation-preview-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.animation-preview-empty {
-  color: var(--ink-faint);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.animation-preview-count {
-  position: absolute;
-  right: 7px;
-  bottom: 7px;
-  min-width: 38px;
-  padding: 3px 5px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: rgb(255 255 255 / 92%);
-  color: var(--ink-soft);
-  font-size: 9px;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.animation-preview-resize-handle {
-  position: relative;
-  height: 10px;
-  flex: 0 0 10px;
-  margin: 0 10px 4px;
-  outline: none;
-  cursor: row-resize;
-  touch-action: none;
-}
-
-.animation-preview-resize-handle::after {
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  width: 44px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--line-strong);
-  content: "";
-  transform: translateX(-50%);
-}
-
-.animation-preview-resize-handle:hover::after,
-.animation-preview-resize-handle:focus-visible::after,
-.animation-preview-resize-handle.is-resizing::after {
-  background: var(--coral);
-}
-
-.animation-preview:fullscreen,
-.animation-preview.is-preview-maximized {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  max-height: none;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  background: #ffffff;
-}
-
-.animation-preview.is-preview-maximized {
-  position: fixed;
-  z-index: 100;
-  inset: 0;
-}
-
-.animation-preview:fullscreen .animation-preview-actions,
-.animation-preview.is-preview-maximized .animation-preview-actions {
-  top: 18px;
-  right: 18px;
-}
-
-.animation-preview:fullscreen .animation-preview-button,
-.animation-preview.is-preview-maximized .animation-preview-button {
-  width: 42px;
-  height: 42px;
-  border-color: rgb(255 255 255 / 46%);
-  background: rgb(23 22 19 / 84%);
-  color: #ffffff;
-  font-size: 17px;
-}
-
-.animation-preview:fullscreen .animation-preview-count,
-.animation-preview.is-preview-maximized .animation-preview-count {
-  right: 18px;
-  bottom: 18px;
-  padding: 6px 9px;
-  background: rgb(23 22 19 / 84%);
-  color: #ffffff;
-  font-size: 12px;
-}
-
-.animation-playback-controls {
-  gap: 10px;
-  padding: 0 10px 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.animation-play-button {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-  place-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  background: var(--card);
-  color: var(--forest);
-  font-size: 13px;
-}
-
-.animation-play-button:hover,
-.animation-play-button[aria-pressed="true"] {
-  border-color: var(--forest);
-  background: var(--sage-soft);
-}
-
-.animation-play-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.animation-timing {
-  display: grid;
-  min-width: 0;
-  flex: 1;
-  grid-template-columns: 1fr auto;
-  gap: 3px 8px;
-}
-
-.animation-timing > span {
-  color: var(--ink-faint);
-  font-size: 8px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.animation-timing > output {
-  align-self: center;
-  grid-column: 2;
-  grid-row: 1 / 3;
-  color: var(--coral);
-  font-size: 9px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.animation-stepper {
-  display: grid;
-  width: 156px;
-  grid-template-columns: 28px minmax(48px, 1fr) 26px 28px;
-  align-items: center;
-  border: 1px solid var(--line);
-  background: var(--card);
-}
-
-.animation-stepper button {
-  height: 27px;
-  border: 0;
-  background: transparent;
-  color: var(--ink-soft);
-  font-size: 14px;
-}
-
-.animation-stepper button:hover {
-  background: var(--sage-soft);
-  color: var(--forest);
-}
-
-.animation-stepper input {
-  width: 100%;
-  min-width: 0;
-  height: 27px;
-  padding: 0 3px;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--ink);
-  font: 700 10px/1 var(--font-body);
-  text-align: right;
-}
-
-.animation-stepper span {
-  color: var(--ink-faint);
-  font-size: 8px;
-}
-
-.animation-export-controls {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: end;
-  gap: 7px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-  background: rgb(255 255 255 / 28%);
-}
-
-.animation-export-controls label {
-  display: grid;
-  flex: 0 0 76px;
-  gap: 3px;
-}
-
-.animation-export-controls label > span {
-  color: var(--ink-faint);
-  font-size: 8px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.animation-export-controls select {
-  width: 100%;
-  height: 30px;
-  padding: 0 7px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--card);
-  color: var(--ink);
-  font: 700 9px/1 var(--font-body);
-}
-
-.animation-export-controls .button {
-  min-height: 30px;
-  flex: 1;
-}
-
-.animation-export-progress {
-  display: grid;
-  flex: 0 0 auto;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 5px 8px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-  background: var(--card);
-}
-
-.animation-export-progress[hidden] {
-  display: none;
-}
-
-.animation-export-progress > div {
-  display: flex;
-  min-width: 0;
-  grid-column: 1 / -1;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--ink-soft);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.animation-export-progress progress {
-  width: 100%;
-  height: 8px;
-  align-self: center;
-}
-
-.animation-export-progress .button {
-  min-height: 26px;
-  padding: 4px 8px;
-}
-
-.animation-export-error {
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 7px 10px;
-  border-bottom: 1px solid #d8a59f;
-  background: #fff1ef;
-  color: var(--coral);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.animation-frame-actions {
-  gap: 6px;
-  padding: 8px 10px;
-}
-
-.animation-frame-actions .button {
-  min-height: 30px;
-  flex: 1;
-}
-
-.animation-frame-actions .tool-button {
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
-  border-color: var(--line);
-  background: var(--card);
-}
-
-.animation-frame-list {
-  flex: 1 1 auto;
-  min-height: 0;
-  margin: 0;
-  padding: 0 10px 12px;
-  overflow-y: auto;
-  list-style: none;
-}
-
-.animation-frame-item {
-  min-height: 62px;
-  border-top: 1px solid var(--line);
-}
-
-.animation-frame-item:last-child {
-  border-bottom: 1px solid var(--line);
-}
-
-.animation-frame-item.is-selected {
-  background: #eee7f4;
-}
-
-.animation-frame-number {
-  color: var(--coral);
-  font-size: 9px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.animation-frame-select {
-  display: grid;
-  width: 100%;
-  min-height: 62px;
-  padding: 0;
-  grid-template-columns: 25px 70px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-}
-
-.animation-frame-select:hover {
-  background: rgb(255 255 255 / 55%);
-}
-
-.animation-frame-gap {
-  position: relative;
-  display: grid;
-  height: 27px;
-  place-items: center;
-}
-
-.animation-frame-gap::before {
-  position: absolute;
-  width: 1px;
-  height: 100%;
-  background: var(--line-strong);
-  content: "";
-}
-
-.animation-chain-button {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  place-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  background: var(--card);
-  color: var(--forest);
-  font: 700 12px/1 var(--font-body);
-}
-
-.animation-chain-button:hover,
-.animation-chain-button:focus-visible {
-  border-color: var(--coral);
-  color: var(--coral);
-}
-
-.animation-chain-button:focus-visible {
-  outline: 2px solid var(--coral);
-  outline-offset: 2px;
-}
-
-.animation-chain-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
-}
-
-.animation-frame-thumbnail {
-  display: grid;
-  width: 70px;
-  height: 48px;
-  overflow: hidden;
-  place-items: center;
-  border: 1px solid var(--line);
-  background: #ffffff;
-}
-
-.animation-frame-thumbnail img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.animation-frame-thumbnail span {
-  color: var(--ink-faint);
-  font-size: 8px;
-  font-weight: 800;
-}
-
-.animation-frame-name {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--ink-soft);
-  font-size: 10px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.animation-panel.is-drop-target::after {
-  position: absolute;
-  z-index: 5;
-  display: grid;
-  inset: 8px;
-  place-items: center;
-  border: 2px dashed var(--coral);
-  background: rgb(255 255 255 / 90%);
-  color: var(--coral);
-  content: "DROP IMAGE INTO FRAME";
-  font: 800 11px/1 var(--font-body);
-  pointer-events: none;
-}
-
-.interpolation-dialog {
+.board-dialog {
   width: min(420px, calc(100% - 24px));
   padding: 0;
   border: 1px solid var(--line-strong);
@@ -1225,58 +629,57 @@
   box-shadow: var(--shadow-lg);
 }
 
-.interpolation-dialog::backdrop {
+.board-dialog::backdrop {
   background: rgb(23 22 19 / 46%);
 }
 
-.interpolation-dialog form {
+.board-dialog form {
   display: grid;
   gap: 0;
 }
 
-.interpolation-dialog header,
-.interpolation-dialog footer,
-.interpolation-progress > div {
+.board-dialog header,
+.board-dialog footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.interpolation-dialog header {
+.board-dialog header {
   min-height: 56px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
   background: var(--card);
 }
 
-.interpolation-dialog h2,
-.interpolation-dialog p {
+.board-dialog h2,
+.board-dialog p {
   margin: 0;
 }
 
-.interpolation-dialog h2 {
+.board-dialog h2 {
   font-size: 15px;
 }
 
-.interpolation-dialog header p {
+.board-dialog header p {
   margin-top: 3px;
   color: var(--ink-faint);
   font-size: 9px;
 }
 
-.interpolation-count-control {
+.board-dialog-field {
   display: grid;
   gap: 6px;
   padding: 14px 12px;
 }
 
-.interpolation-count-control span {
+.board-dialog-field span {
   color: var(--ink-soft);
   font-size: 10px;
   font-weight: 800;
 }
 
-.interpolation-count-control input {
+.board-dialog-field input {
   width: 100%;
   height: 38px;
   padding: 0 10px;
@@ -1287,36 +690,12 @@
   font: 700 13px/1 var(--font-body);
 }
 
-.interpolation-count-control input:focus-visible {
+.board-dialog-field input:focus-visible {
   outline: 2px solid var(--coral);
   outline-offset: 2px;
 }
 
-.interpolation-progress {
-  display: grid;
-  gap: 7px;
-  padding: 0 12px 14px;
-}
-
-.interpolation-progress span,
-.interpolation-progress output {
-  color: var(--ink-soft);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.interpolation-progress output {
-  color: var(--coral);
-  font-variant-numeric: tabular-nums;
-}
-
-.interpolation-progress progress {
-  width: 100%;
-  height: 7px;
-  accent-color: var(--coral);
-}
-
-.interpolation-error {
+.board-dialog-error {
   margin: 0 12px 14px !important;
   padding: 8px;
   border-left: 3px solid var(--coral);
@@ -1326,18 +705,18 @@
   line-height: 1.4;
 }
 
-.interpolation-dialog footer {
+.board-dialog footer {
   gap: 8px;
   padding: 10px 12px;
   border-top: 1px solid var(--line);
   background: var(--card);
 }
 
-.interpolation-dialog footer .button {
+.board-dialog footer .button {
   min-width: 96px;
 }
 
-.interpolation-dialog footer .button-primary {
+.board-dialog footer .button-primary {
   margin-left: auto;
 }
 
@@ -2936,20 +2315,18 @@
   }
 
   .tool-workspace,
-  .tool-workspace.is-animation-open,
   .tool-workspace.is-library-open {
     --active-board-panel-width: 0px;
 
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .animation-panel,
   .board-library-panel {
     position: absolute;
     top: 38px;
     right: 0;
     bottom: 0;
-    width: min(var(--animation-panel-width), 100%);
+    width: min(var(--library-panel-width), 100%);
     grid-column: auto;
     grid-row: auto;
     box-shadow: var(--shadow-md);

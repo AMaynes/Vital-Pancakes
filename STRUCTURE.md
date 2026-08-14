@@ -123,16 +123,12 @@ vital-pancakes/
 │   ├── visual-board-floor-plan-templates.mjs — Normalizes user-owned vector templates and built-in replacements.
 │   ├── visual-board-floor-plan-templates.test.mjs — Verifies template create, edit, replace, remove, restore, and safety rules.
 │   ├── visual-board-{image,transform,floor-plan}.test.mjs — Verifies crop, flip, joint, dimension, snapping, and migration geometry.
-│   ├── visual-board-animation.mjs — Normalizes animation frames and playback timing.
-│   ├── visual-board-animation.test.mjs — Verifies animation state, timing, and playable frames.
 │   ├── visual-board-character.mjs — Exports and restores portable characters with embedded assets and rig settings.
 │   ├── visual-board-character.test.mjs — Verifies character relationship remapping and placement.
 │   ├── visual-board-clipboard.mjs — Duplicates selected board objects while preserving internal relationships.
 │   ├── visual-board-clipboard.test.mjs — Verifies multi-object clipboard duplication and identifier remapping.
 │   ├── visual-board-curves.mjs — Preserves legacy arcs and owns exact insertion, endpoint/extrema reinitialization, sampling, and transforms.
 │   ├── visual-board-curves.test.mjs — Verifies path-preserving insertion, key-vertex reinitialization, sampling, and transforms.
-│   ├── visual-board-export.mjs — Encodes local animation frames into MP4 or WebM video.
-│   ├── visual-board-export.test.mjs — Verifies export formats, frame ordering, timing, and cancellation.
 │   ├── visual-board-geometry.mjs — Provides pure hit-testing, bounds, rotation, and resizing math.
 │   ├── visual-board-geometry.test.mjs — Verifies Visual Board geometry with Node's test runner.
 │   ├── visual-board-groups.mjs — Owns nested group history, one-level ungrouping, and shared selection transforms.
@@ -227,7 +223,6 @@ vital-pancakes/
 │   ├── mathjs-15.2.0.min.js — Pinned math.js scientific expression and high-precision arithmetic runtime.
 │   ├── mathjs-15.2.0-LICENSE.txt — Apache-2.0 license for bundled math.js.
 │   ├── mathjs-15.2.0-NOTICE.txt — Upstream math.js attribution notice.
-│   ├── mediabunny-1.51.0.min.mjs — Pinned browser-native MP4 and WebM encoding runtime.
 │   ├── pdf.min.js — Bundled PDF.js viewer runtime.
 │   ├── pdf.worker.min.js — Bundled PDF.js worker.
 │   └── pdf-lib.min.js — Bundled PDF-Lib editing runtime.
@@ -306,7 +301,7 @@ The compact install destination with animated archival diagrams, phone preview s
 
 ### `workspace.html`
 
-The accessible application shell for three hash-routed areas. Everyday Life owns separate Cooking, Gym, and Cleaning libraries; Studies & Projects owns editable knowledge libraries and notecards; Workspace displays tools only. Its area dashboards remain compact overviews, while every content collection opens into a retained List/Grid index and every item has a deep-linked subject page.
+The accessible application shell for three hash-routed areas. Everyday Life owns Cooking, Gym, Cleaning, and Other how-to libraries; Studies & Projects exposes only Notecards, Studies, Ideas, and Projects at the top level; Workspace keeps four Main tools visible and places the rest in a collapsed Other tools grid. Every content collection opens into a retained List/Grid index and every item has a deep-linked subject page.
 
 ### `workspace.css`
 
@@ -328,7 +323,7 @@ Fetches files selected by `data-list-source`, parses valid `<Entry>` blocks, sor
 
 ### `app/main.js`
 
-Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; preserves the overview dashboards; and owns shared collection indexes, foldered Studies, rich block editors, collapsible outlines and definitions, Ideas, Idea Playground, persistent project maps, specialized life-reference layouts, relationships, dialogs, and local notices.
+Renders the Everyday Life, Studies & Projects, and Workspace routes beneath the permanent top navigation; owns the Main/Other tool shelf, shared collection indexes, the Other how-to library, foldered Studies, rich block editors, collapsible outlines and definitions, nested Study and Idea subsections, persistent project maps, specialized life-reference layouts, relationships, dialogs, and local notices.
 
 ### `app/content-view.mjs`
 
@@ -336,7 +331,7 @@ Provides pure collection-view normalization, per-collection preference keys, and
 
 ### `app/store.js`
 
-Defines the browser-local data schema, ten permanent core libraries, deterministic editable starter entries, versioned additive migrations for Ideas, Idea Playground, foldered Studies, Projects, and Everyday Life records, Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. User-authored content is preserved during migrations. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
+Defines the browser-local data schema, eleven permanent core libraries, deterministic editable starter entries, versioned additive migrations for Ideas, Idea Playground, foldered Studies, Projects, the Other how-to library, and other Everyday Life records, plus Protocols-to-Personal-Routines migration, persistence, identifiers, and entry operations. User-authored content is preserved during migrations. Its legacy `artificially-neuroscience-*` storage key is retained deliberately so the rebrand does not orphan existing browser data.
 
 ### `app/algorithm-samples.mjs`
 
@@ -362,11 +357,11 @@ Shares responsive full-screen and windowed layouts, controls, panels, canvas sur
 
 ### Visual Board
 
-`visual-board.html` hosts the organized creation, selection, view, history, and style controls, including a combined Line/Arrow chooser, persistent 2D and 3D shape menus, copy and paste tools, contextual textbox typography, grouping, rigging, a reusable local Board library, and character export actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, repeated line, arrow, curve, and shape placement, optional double-ended arrows, exact line-and-curve point insertion, Escape-to-Select behavior, freehand drawing, brush-local vector erasing, inline textboxes, tight per-object selection outlines, marquee selection, multi-object copy and paste, object and dimension locking, stroke patterns, hierarchical rigid grouping and one-level ungrouping, editable mixed line-and-curve vertex networks, external group joints, dimension-locked joint dragging, grid snapping, 300-action undo and redo history, local autosave, reusable-asset thumbnails and placement, animation, and local video export. Dropped images and portable character files remain on the device.
+`visual-board.html` hosts the organized creation, selection, view, history, and style controls, including a combined Line/Arrow chooser, persistent 2D and 3D shape menus, copy and paste tools, contextual textbox typography, grouping, rigging, a reusable local Board library, and character export actions. `visual-board.js` owns the unbounded world-coordinate camera, mouse and trackpad navigation, repeated line, arrow, curve, and shape placement, optional double-ended arrows, exact line-and-curve point insertion, Escape-to-Select behavior, freehand drawing, brush-local vector erasing, inline textboxes, tight per-object selection outlines, marquee selection, multi-object copy and paste, object and dimension locking, stroke patterns, hierarchical rigid grouping and one-level ungrouping, editable mixed line-and-curve vertex networks, external group joints, dimension-locked joint dragging, grid snapping, 300-action undo and redo history, local autosave, reusable-asset thumbnails and placement, and static SVG, PNG, and PDF export. Dropped images and portable character files remain on the device.
 
 `visual-board-groups.mjs` stores each object's reversible group history so larger assemblies can contain smaller groups without flattening them. `visual-board-clipboard.mjs` deep-copies selected objects, offsets pasted copies, and remaps every nested group and vertex-network identifier without mutating the originals. `visual-board-character.mjs` packages selected connected artwork, embedded images, nested groups, internal vertices, external joints, and both lock types into a remapped `.vp-character.json` file that can be dropped back onto the board. `visual-board-library.mjs` stores those complete packages as named, searchable local assets so inserting a library item remaps every identifier without flattening its structure. `visual-board-rigging.mjs` retains bodies at every group level, creates contact joints shared by selected rigid groups, and solves the closest exact position allowed by locked distances. `visual-board-curves.mjs` upgrades legacy three-point arcs to exact piecewise Beziers only when needed, so inserting a knot or intersection does not alter the visible path; moved knots translate only their attached handles so neighboring arc shapes stay locally stable. `visual-board-fill.mjs` traces connected vector faces for selection-free bucket painting and stores generated fills as ordinary editable areas underneath their boundaries. `visual-board-geometry.mjs` isolates reusable geometry, while `visual-board-vertices.mjs` inserts line and arrow vertices, preserves endpoint arrowheads, detects mixed-path crossings, inserts curve knots against the same editable segments used for sampling, assigns common draggable vertex IDs, and merges compatible vertex identities when one joint is dropped onto another.
 
-`visual-board-image.mjs` stores crop rectangles in source-image coordinates and supplies fit, fill, reset, replacement, and draw geometry without iterative recompression. `visual-board-transform.mjs` mirrors complete selections and only their fully selected rig joints while preserving IDs, locks, vertices, arrows, architectural areas and symbols, crop state, and readable text. `visual-board-floor-plan.mjs` creates the Structures, Maintenance, Furniture, Tools, and Rooms catalogs through the existing object and group schema. It also owns two-point dimensions, detection-box labelers with vertex-controlled arrows, signed ordered levels, and level-scoped visibility. `visual-board-floor-plan-defaults.mjs` supplies the 30 authored vector-only defaults, remapped into one top-level editable unit while preserving their internal grouping. `visual-board-floor-plan-templates.mjs` stores categorized vector-only character packages inside separate floor-plan element and room-template libraries, supports custom items and built-in overrides, and keeps every insertion editable. The Board UI can create, rename, replace, insert, password-remove, and restore both kinds of building block; version 20 adds nested group history while preserving earlier templates, rig bodies, and exact multi-point curves.
+`visual-board-image.mjs` stores crop rectangles in source-image coordinates and supplies fit, fill, reset, replacement, and draw geometry without iterative recompression. `visual-board-transform.mjs` mirrors complete selections and only their fully selected rig joints while preserving IDs, locks, vertices, arrows, architectural areas and symbols, crop state, and readable text. `visual-board-floor-plan.mjs` creates the Structures, Maintenance, Furniture, Tools, and Rooms catalogs through the existing object and group schema. It also owns two-point dimensions, detection-box labelers with vertex-controlled arrows, signed ordered levels, and level-scoped visibility. `visual-board-floor-plan-defaults.mjs` supplies the 30 authored vector-only defaults, remapped into one top-level editable unit while preserving their internal grouping. `visual-board-floor-plan-templates.mjs` stores categorized vector-only character packages inside separate floor-plan element and room-template libraries, supports custom items and built-in overrides, and keeps every insertion editable. The Board UI can create, rename, replace, insert, password-remove, and restore both kinds of building block; version 21 retains nested group history and earlier saved drawing content while removing the former frame-animation subsystem.
 
 `visual-board-architecture.mjs` owns the architectural drawing vocabulary: filled polygonal areas, wall bodies, dimensions, 25 deterministic materials, 18 Canvas/SVG fill patterns, 10 ordered visibility layers, 3 style systems, and 133 reusable vector symbols. `visual-board-architecture-geometry.mjs` samples caller-authored curves, compiles connected wall paths into editable runs/join patches/caps, removes genuine door and window intervals, preserves catalog symbol proportions, and provides polygon tests. Geometry reports remain bounded and non-mutating, with checks for wall connectivity, room access, label collisions, furniture clearance, and distorted symbols. Architectural text uses board-coordinate font sizes, weights, alignment, padding, and clipping, so camera zoom no longer changes its layout.
 
@@ -444,7 +439,7 @@ Speech workers lazy-load pinned Transformers.js 3.8.1 with Apache-2.0 Whisper Ti
 
 ### `vendor/`
 
-Contains pinned minified math.js 15.2.0, Mediabunny 1.51.0, PDF.js 3.11.174, and PDF-Lib 1.17.1 browser assets so calculation, animation export, viewing, and signing do not depend on a network CDN.
+Contains pinned minified math.js 15.2.0, PDF.js 3.11.174, and PDF-Lib 1.17.1 browser assets so calculation, viewing, and signing do not depend on a network CDN.
 
 ## Public Archive
 

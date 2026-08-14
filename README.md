@@ -26,16 +26,16 @@ The mathematics and arts flashcard applications load subject-specific `flashcard
 
 The homepage also hosts the shared local Knowledge Center: universal text search, backlinks, related entries, an interactive relationship graph, button-driven glossary and inference functions, and the Unified Vault. The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches only the bounded homepage and Workspace startup shell; tools, PDF dependencies, and public-archive files are cached after they are used.
 
-Every editable content collection shares one predictable interior structure without flattening its subject matter. The collection index can switch between a compact list and a visual grid, remembers that choice per collection, and opens each item as a dedicated page. Entry pages pair a subject animation and concise orientation with the complete type-specific record—for example, stove-readable recipe steps, training prescriptions, study evidence, runnable language notes, or algorithm traces.
+Every editable content collection shares one predictable interior structure without flattening its subject matter. The collection index can switch between a compact list and a visual grid, remembers that choice per collection, and opens each item as a dedicated page. Entry pages pair a compact subject visual and concise orientation with the complete type-specific record—for example, stove-readable recipe steps, training prescriptions, study evidence, runnable language notes, or algorithm traces.
 
 See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 
 ## Five Top-Level Sections
 
-- **Everyday Life** — Study-shaped cooking methods, recipe references, condensed exercise guides, and separate house-cleaning and self-care systems.
+- **Everyday Life** — Study-shaped cooking methods, recipe references, condensed exercise guides, house-cleaning and self-care systems, and an Other library for random practical how-tos.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
-- **Studies & Projects** — Working Ideas, foldered Studies, the experimental Idea Playground, programming-language refreshers, algorithm labs, hierarchical project maps, and the existing notecard collections.
-- **Workspace** — A browser-local tool shelf spanning planning, graphing, writing, visual design, tournaments, random selection, lessons, captions, finance, conversion, and the Visual Board.
+- **Studies & Projects** — Four top-level areas: Notecards, Studies, Ideas, and Projects. Algorithms and Programming Languages live under Studies; Working Ideas and Idea Playground live under Ideas.
+- **Workspace** — An always-visible Main shelf for Overhead, Visual Board, PDF Tool, and Master Lesson Builder, followed by a collapsed Other tools grid.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the forest-and-circuit *Vital Pancakes* skull.
@@ -56,12 +56,13 @@ The primary logo combines a skull with a forest-like brain, neural-chip circuitr
 
 ## Personal Libraries
 
-The editable areas use ten permanent core libraries. A new or previously empty library receives a small set of fully editable starter entries once; those examples can be rewritten or deleted and do not return after deletion.
+The editable areas use eleven permanent underlying libraries, grouped into the simpler parent-and-subsection structure shown above. A new or previously empty library receives a small set of fully editable starter entries once; those examples can be rewritten or deleted and do not return after deletion.
 
 - **How to Cook** — Study-shaped cooking guides with an abstract, jump outline, glossary-linked definitions, rich sections, media, diagrams, and equations.
 - **Recipes** — Picture-and-macronutrient references with timing, yield, ingredients, required equipment, cooking instructions, and adjustment notes.
 - **Workout Types** — Condensed exercise guides with muscle tags, a movement animation, Hypertrophy/Strength/Endurance prescriptions, execution cues, breathing, and contraction notes.
 - **Cleaning** — Separate House Cleaning and Self Care libraries with brief task cards, master schedule cards, timeframe tabs, and an Extended Self Care card.
+- **Other** — Foldered personal how-to cards for random practical procedures, with preparation lists, ordered steps, warnings, notes, and tags.
 - **Studies** — Foldered, nestable studies with an abstract, rich block content, collapsible jump/definition sidebars, global glossary synchronization, and linked notecards.
 - **Idea Playground** — Experimental Studies that turn personal ideas into small tests before they become projects.
 - **Ideas** — Unproven personal thinking, organized around a dedicated Working Ideas formulation area and linked Studies or experiments.
@@ -69,7 +70,7 @@ The editable areas use ten permanent core libraries. A new or previously empty l
 - **Algorithms** — Personal, Traditional, Advanced, and special Algorithm Analysis libraries with clickable topic filters. Algorithm pages progress from purpose and reasoning through explained step diagrams, English pseudocode, complexity, and real C and Java implementations. The starter curriculum includes seventeen traditional algorithms, five advanced algorithms, and six analysis subjects.
 - **Projects** — Study umbrellas with one overview, a recursively nested part directory, a persistent interactive map, linked Studies, architecture, algorithms, languages, dependencies, outcomes, and next moves.
 
-These ten core libraries cannot be added, renamed, or deleted. Their entries—including every starter example—remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library, while existing user-authored algorithms migrate into Personal Algorithms without being discarded.
+These eleven core libraries cannot be added, renamed, or deleted. Their entries—including every starter example—remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library, while existing user-authored algorithms migrate into Personal Algorithms without being discarded.
 
 User-created entries, boards, caption projects, tool projects, literature curations, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
 
@@ -86,6 +87,8 @@ The shared glossary stores definitions, aliases, examples, links, and tags in In
 Unified Vault exports local settings, discovered user IndexedDB schemas and records, binary values, lesson data, annotations, boards, plans, and OPFS files into one chunked `.vpvault` archive. PBKDF2-SHA-256 derives a key from the chosen password and every frame uses authenticated AES-GCM encryption. Entry names and metadata are encrypted along with content. Restore verifies the complete archive before changing storage, supports merge or replace behavior, preserves database keys and indexes, and can be cancelled. Regenerable runtime/model caches and temporary session state are excluded. The password is never stored and cannot be recovered.
 
 ## Workspace Tools
+
+The Workspace page keeps **Overhead**, **Visual Board**, **PDF Tool**, and **Master Lesson Builder** visible under Main in that order. Every remaining tool stays available in the collapsed **Other tools** grid.
 
 ### Visual Board
 

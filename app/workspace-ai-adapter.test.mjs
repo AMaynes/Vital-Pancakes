@@ -10,7 +10,7 @@ import {
 
 function createWorkspace() {
   return {
-    version: 15,
+    version: 16,
     sections: [
       {
         id: "studies",

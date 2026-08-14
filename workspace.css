@@ -445,7 +445,7 @@ h3 {
 
 .everyday-domain-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(0, 0.82fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
 }
 
@@ -643,6 +643,77 @@ h3 {
   height: 35px;
   background: var(--card);
   font-size: 15px;
+}
+
+.other-tools-section {
+  margin-top: 18px;
+  border: 1px solid var(--line-strong);
+  background: rgb(251 250 246 / 45%);
+}
+
+.other-tools-summary {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.other-tools-summary::-webkit-details-marker {
+  display: none;
+}
+
+.other-tools-summary > span:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.other-tools-summary strong {
+  font: 700 18px/1.1 var(--font-display);
+}
+
+.other-tools-summary small,
+.other-tools-toggle {
+  color: var(--ink-faint);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.other-tools-toggle {
+  color: var(--coral);
+}
+
+.other-tools-grid {
+  padding: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.knowledge-subsection-panel {
+  margin: 6px 0 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: rgb(251 250 246 / 42%);
+}
+
+.knowledge-subsection-panel > .content-heading-row:first-child {
+  margin-top: 0;
+}
+
+.knowledge-subsection-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.knowledge-entry-heading {
+  margin-top: 18px !important;
+}
+
+.notecard-collections {
+  margin-top: 20px;
 }
 
 .legacy-strip {

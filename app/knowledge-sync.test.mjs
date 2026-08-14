@@ -84,7 +84,7 @@ test("visual boards index searchable labels without traversing geometry", () => 
   }));
   const localStorage = storage({
     "artificially-neuroscience-visual-board-v1": JSON.stringify({
-      version: 20,
+      version: 21,
       objects,
       assets: {
         reference: {

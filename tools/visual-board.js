@@ -57,24 +57,6 @@ import {
 import { traceBlackAndWhiteImage } from "./visual-board-tracing.mjs?v=1";
 import { getStrokeDashArray } from "./visual-board-strokes.mjs?v=1";
 import {
-  MAX_ANIMATION_FRAMES,
-  createAnimationFrame,
-  getPlayableFrames,
-  normalizeAnimation,
-  normalizeFrameDuration,
-  replaceAnimationFrame,
-} from "./visual-board-animation.mjs?v=1";
-import {
-  FrameInterpolationError,
-  insertIntermediateFrames,
-  normalizeIntermediateFrameCount,
-} from "./visual-board-interpolation.mjs?v=1";
-import {
-  AnimationExportError,
-  createAnimationExportFilename,
-  recordAnimationVideo,
-} from "./visual-board-export.mjs?v=2";
-import {
   getObjectGroupFields,
   getSelectionBounds,
   getSelectionUnits,
@@ -194,7 +176,7 @@ import {
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
-const BOARD_VERSION = 20;
+const BOARD_VERSION = 21;
 const HISTORY_LIMIT = 300;
 const GRID_SIZE = 32;
 const MIN_SHAPE_SIZE = 16;
@@ -209,10 +191,6 @@ const MAX_PDF_PAGE_DIMENSION = 1440;
 const VERTEX_TOUCH_TOLERANCE = 0.01;
 const VERTEX_DROP_MERGE_RADIUS = 10;
 const INSERTABLE_LINE_TYPES = new Set(["line", "connector"]);
-const ANIMATION_PANEL_WIDTH_KEY = "visual-board-animation-panel-width";
-const ANIMATION_PREVIEW_HEIGHT_KEY = "visual-board-animation-preview-height";
-const MIN_ANIMATION_PANEL_WIDTH = 300;
-const MIN_ANIMATION_PREVIEW_HEIGHT = 120;
 const DASH_PATTERNS = new Set(["solid", "dashed", "dotted", "dash-dot", "long-dash"]);
 const ARCHITECTURE_PATTERNS = new Set(ARCHITECTURE_FILL_PATTERNS);
 const TEXT_FONT_FAMILIES = Object.freeze({
@@ -272,7 +250,6 @@ const gridToggle = document.querySelector("#toggle-grid");
 const snapToggle = document.querySelector("#toggle-snap");
 const saveStatus = document.querySelector("#save-status");
 const toolWorkspace = document.querySelector("#tool-main");
-const animationToggleButton = document.querySelector("#toggle-animation");
 const boardLibraryToggleButton = document.querySelector("#toggle-board-library");
 const boardLibraryPanel = document.querySelector("#board-library-panel");
 const boardLibraryCloseButton = document.querySelector("#close-board-library");
@@ -287,41 +264,6 @@ const boardLibraryNameInput = document.querySelector("#board-library-name");
 const boardLibrarySaveError = document.querySelector("#board-library-save-error");
 const boardLibrarySaveCancelButton = document.querySelector("#cancel-board-library-save");
 const boardLibrarySaveCloseButton = document.querySelector("#close-board-library-save");
-const animationPanel = document.querySelector("#animation-panel");
-const animationPanelResizeHandle = document.querySelector("#animation-panel-resize");
-const animationPreview = document.querySelector("#animation-preview");
-const animationPreviewImage = document.querySelector("#animation-preview-image");
-const animationPreviewEmpty = document.querySelector("#animation-preview-empty");
-const animationPreviewCount = document.querySelector("#animation-preview-count");
-const animationPreviewPlayButton = document.querySelector("#animation-preview-play");
-const animationPreviewFullscreenButton = document.querySelector("#animation-preview-fullscreen");
-const animationPreviewResizeHandle = document.querySelector("#animation-preview-resize");
-const animationFrameTotal = document.querySelector("#animation-frame-total");
-const animationFrameList = document.querySelector("#animation-frame-list");
-const animationPlayButton = document.querySelector("#animation-play");
-const animationDurationInput = document.querySelector("#animation-frame-duration");
-const animationFpsOutput = document.querySelector("#animation-fps");
-const duplicateAnimationFrameButton = document.querySelector("#duplicate-animation-frame");
-const deleteAnimationFrameButton = document.querySelector("#delete-animation-frame");
-const animationExportFormat = document.querySelector("#animation-export-format");
-const animationExportButton = document.querySelector("#export-animation");
-const animationExportProgress = document.querySelector("#animation-export-progress");
-const animationExportProgressLabel = document.querySelector("#animation-export-progress-label");
-const animationExportProgressValue = document.querySelector("#animation-export-progress-value");
-const animationExportProgressBar = document.querySelector("#animation-export-progress-bar");
-const animationExportCancelButton = document.querySelector("#cancel-animation-export");
-const animationExportError = document.querySelector("#animation-export-error");
-const interpolationDialog = document.querySelector("#interpolation-dialog");
-const interpolationForm = document.querySelector("#interpolation-form");
-const interpolationPairLabel = document.querySelector("#interpolation-pair-label");
-const interpolationCountInput = document.querySelector("#interpolation-frame-count");
-const interpolationProgress = document.querySelector("#interpolation-progress");
-const interpolationProgressLabel = document.querySelector("#interpolation-progress-label");
-const interpolationProgressValue = document.querySelector("#interpolation-progress-value");
-const interpolationProgressBar = document.querySelector("#interpolation-progress-bar");
-const interpolationError = document.querySelector("#interpolation-error");
-const confirmInterpolationButton = document.querySelector("#confirm-interpolation");
-const cancelInterpolationButton = document.querySelector("#cancel-interpolation");
 const aiCommandsButton = document.querySelector("#open-ai-commands");
 const aiCommandsDialog = document.querySelector("#ai-commands-dialog");
 const aiCommandsEditor = document.querySelector("#ai-commands-editor");
@@ -398,18 +340,8 @@ let textColorChangeActive = false;
 let traceInProgress = false;
 let objectClipboard = [];
 let pasteGeneration = 0;
-let animationPanelOpen = false;
 let boardLibraryPanelOpen = false;
 let boardLibraryDialogReturnFocus = null;
-let selectedAnimationFrameId = board.animation.frames[0]?.id ?? null;
-let animationPlaybackTimer = null;
-let animationPlaybackIndex = 0;
-let animationExportAbortController = null;
-let animationExportInProgress = false;
-let interpolationRequest = null;
-let interpolationAbortController = null;
-let interpolationInProgress = false;
-let interpolationReturnFocus = null;
 let floorPlanPanelOpen = Boolean(board.settings.floorPlan?.enabled);
 let activeFloorPlanTab = "structures";
 let floorPlanTemplateDialogState = null;
@@ -507,7 +439,6 @@ function getBoardContentSignature(candidate) {
     objects: candidate.objects,
     assets: candidate.assets,
     rig: candidate.rig,
-    animation: candidate.animation,
     settings: candidate.settings,
   });
 }
@@ -561,7 +492,6 @@ function loadBoard() {
         ? savedBoard.assets
         : {},
       rig: normalizeRig(savedBoard?.rig, objects),
-      animation: normalizeAnimation(savedBoard?.animation),
       settings: normalizeBoardSettings(savedBoard?.settings),
       view: {
         x: finiteNumber(savedBoard?.view?.x, 0),
@@ -582,7 +512,6 @@ function createEmptyBoard() {
     objects: [],
     assets: {},
     rig: createEmptyRig(),
-    animation: normalizeAnimation(),
     settings: {
       grid: true,
       snap: false,
@@ -3270,30 +3199,8 @@ function handleWheel(event) {
   drawBoard();
 }
 
-function toggleAnimationPanel(forceOpen = !animationPanelOpen) {
-  animationPanelOpen = Boolean(forceOpen);
-  if (animationPanelOpen && boardLibraryPanelOpen) toggleBoardLibraryPanel(false);
-  if (animationPanelOpen && floorPlanPanelOpen) toggleFloorPlanPanel(false);
-  if (!animationPanelOpen) {
-    stopAnimationPlayback();
-    exitAnimationPreviewFullscreen();
-  }
-  toolWorkspace.classList.toggle("is-animation-open", animationPanelOpen);
-  animationPanel.classList.toggle("is-open", animationPanelOpen);
-  animationPanel.setAttribute("aria-hidden", String(!animationPanelOpen));
-  animationPanel.inert = !animationPanelOpen;
-  animationToggleButton.setAttribute("aria-expanded", String(animationPanelOpen));
-  animationToggleButton.classList.toggle("is-active", animationPanelOpen);
-  if (animationPanelOpen) {
-    ensureSelectedAnimationFrame();
-    renderAnimationPanel();
-    animationPreview.focus({ preventScroll: true });
-  }
-}
-
 function toggleBoardLibraryPanel(forceOpen = !boardLibraryPanelOpen) {
   boardLibraryPanelOpen = Boolean(forceOpen);
-  if (boardLibraryPanelOpen && animationPanelOpen) toggleAnimationPanel(false);
   if (boardLibraryPanelOpen && floorPlanPanelOpen) toggleFloorPlanPanel(false);
   toolWorkspace.classList.toggle("is-library-open", boardLibraryPanelOpen);
   boardLibraryPanel.setAttribute("aria-hidden", String(!boardLibraryPanelOpen));
@@ -3421,7 +3328,6 @@ function handleLayerDesignatorAction(object, action) {
 
 function toggleFloorPlanPanel(forceOpen = !floorPlanPanelOpen) {
   floorPlanPanelOpen = Boolean(forceOpen);
-  if (floorPlanPanelOpen && animationPanelOpen) toggleAnimationPanel(false);
   if (floorPlanPanelOpen && boardLibraryPanelOpen) toggleBoardLibraryPanel(false);
   board.settings.floorPlan = normalizeFloorPlanSettings({
     ...board.settings.floorPlan,
@@ -4511,7 +4417,7 @@ function insertBoardLibraryItem(itemId) {
 function downloadBoardLibraryItem(itemId) {
   const item = boardLibrary.items.find((candidate) => candidate.id === itemId);
   if (!item) return;
-  downloadAnimationBlob(
+  downloadBlob(
     new Blob([JSON.stringify(item.character, null, 2)], { type: "application/json" }),
     createCharacterFilename(item.name),
   );
@@ -4544,517 +4450,7 @@ function handleBoardLibraryAction(event) {
   else if (libraryAction === "delete") deleteBoardLibraryItem(libraryItemId);
 }
 
-function restoreAnimationLayout() {
-  applyAnimationPanelWidth(readLayoutPreference(ANIMATION_PANEL_WIDTH_KEY, 360));
-  applyAnimationPreviewHeight(readLayoutPreference(ANIMATION_PREVIEW_HEIGHT_KEY, 210));
-}
-
-function readLayoutPreference(key, fallback) {
-  try {
-    const savedValue = localStorage.getItem(key);
-    return savedValue === null || savedValue === ""
-      ? fallback
-      : finiteNumber(savedValue, fallback);
-  } catch {
-    return fallback;
-  }
-}
-
-function saveLayoutPreference(key, value) {
-  try {
-    localStorage.setItem(key, String(Math.round(value)));
-  } catch {
-    // The board remains usable when private browsing blocks local preferences.
-  }
-}
-
-function applyAnimationPanelWidth(value, persist = false) {
-  const maximum = Math.max(1, Math.floor(toolWorkspace.getBoundingClientRect().width));
-  const minimum = Math.min(MIN_ANIMATION_PANEL_WIDTH, maximum);
-  const width = clamp(finiteNumber(value, 360), minimum, maximum);
-  toolWorkspace.style.setProperty("--animation-panel-width", `${Math.round(width)}px`);
-  animationPanelResizeHandle.setAttribute("aria-valuemax", String(maximum));
-  animationPanelResizeHandle.setAttribute("aria-valuenow", String(Math.round(width)));
-  if (persist) saveLayoutPreference(ANIMATION_PANEL_WIDTH_KEY, width);
-  return width;
-}
-
-function applyAnimationPreviewHeight(value, persist = false) {
-  const panelHeight = Math.floor(animationPanel.getBoundingClientRect().height);
-  const maximum = Math.max(
-    MIN_ANIMATION_PREVIEW_HEIGHT,
-    panelHeight > 0 ? panelHeight - 210 : 420,
-  );
-  const height = clamp(
-    finiteNumber(value, 210),
-    MIN_ANIMATION_PREVIEW_HEIGHT,
-    maximum,
-  );
-  animationPanel.style.setProperty("--animation-preview-height", `${Math.round(height)}px`);
-  animationPreviewResizeHandle.setAttribute("aria-valuemax", String(maximum));
-  animationPreviewResizeHandle.setAttribute("aria-valuenow", String(Math.round(height)));
-  if (persist) saveLayoutPreference(ANIMATION_PREVIEW_HEIGHT_KEY, height);
-  return height;
-}
-
-function getCurrentAnimationPanelWidth() {
-  return animationPanel.getBoundingClientRect().width
-    || finiteNumber(animationPanelResizeHandle.getAttribute("aria-valuenow"), 360);
-}
-
-function getCurrentAnimationPreviewHeight() {
-  return animationPreview.getBoundingClientRect().height
-    || finiteNumber(animationPreviewResizeHandle.getAttribute("aria-valuenow"), 210);
-}
-
-function beginAnimationPanelResize(event) {
-  if (event.button !== 0) return;
-  event.preventDefault();
-  const startX = event.clientX;
-  const startWidth = getCurrentAnimationPanelWidth();
-  toolWorkspace.classList.add("is-resizing-animation-panel");
-  animationPanelResizeHandle.classList.add("is-resizing");
-  animationPanelResizeHandle.setPointerCapture?.(event.pointerId);
-
-  const resize = (moveEvent) => {
-    applyAnimationPanelWidth(startWidth + startX - moveEvent.clientX);
-  };
-  const finish = (upEvent) => {
-    const finalWidth = finiteNumber(
-      animationPanelResizeHandle.getAttribute("aria-valuenow"),
-      startWidth,
-    );
-    saveLayoutPreference(ANIMATION_PANEL_WIDTH_KEY, finalWidth);
-    toolWorkspace.classList.remove("is-resizing-animation-panel");
-    animationPanelResizeHandle.classList.remove("is-resizing");
-    window.removeEventListener("pointermove", resize);
-    window.removeEventListener("pointerup", finish);
-    window.removeEventListener("pointercancel", finish);
-    window.removeEventListener("mouseup", finish);
-    if (
-      Number.isInteger(upEvent.pointerId)
-      && animationPanelResizeHandle.hasPointerCapture?.(upEvent.pointerId)
-    ) {
-      animationPanelResizeHandle.releasePointerCapture(upEvent.pointerId);
-    }
-  };
-  window.addEventListener("pointermove", resize);
-  window.addEventListener("pointerup", finish);
-  window.addEventListener("pointercancel", finish);
-  window.addEventListener("mouseup", finish);
-}
-
-function beginAnimationPreviewResize(event) {
-  if (event.button !== 0) return;
-  event.preventDefault();
-  const startY = event.clientY;
-  const startHeight = getCurrentAnimationPreviewHeight();
-  animationPreviewResizeHandle.classList.add("is-resizing");
-  animationPreviewResizeHandle.setPointerCapture?.(event.pointerId);
-
-  const resize = (moveEvent) => {
-    applyAnimationPreviewHeight(startHeight + moveEvent.clientY - startY);
-  };
-  const finish = (upEvent) => {
-    animationPreviewResizeHandle.classList.remove("is-resizing");
-    window.removeEventListener("pointermove", resize);
-    window.removeEventListener("pointerup", finish);
-    window.removeEventListener("pointercancel", finish);
-    window.removeEventListener("mouseup", finish);
-    if (
-      Number.isInteger(upEvent.pointerId)
-      && animationPreviewResizeHandle.hasPointerCapture?.(upEvent.pointerId)
-    ) {
-      animationPreviewResizeHandle.releasePointerCapture(upEvent.pointerId);
-    }
-    applyAnimationPreviewHeight(getCurrentAnimationPreviewHeight(), true);
-  };
-  window.addEventListener("pointermove", resize);
-  window.addEventListener("pointerup", finish);
-  window.addEventListener("pointercancel", finish);
-  window.addEventListener("mouseup", finish);
-}
-
-function resizeAnimationPanelWithKeyboard(event) {
-  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-  event.preventDefault();
-  const direction = event.key === "ArrowLeft" ? 1 : -1;
-  applyAnimationPanelWidth(getCurrentAnimationPanelWidth() + direction * 24, true);
-}
-
-function resizeAnimationPreviewWithKeyboard(event) {
-  if (!["ArrowUp", "ArrowDown"].includes(event.key)) return;
-  event.preventDefault();
-  const direction = event.key === "ArrowDown" ? 1 : -1;
-  applyAnimationPreviewHeight(getCurrentAnimationPreviewHeight() + direction * 20, true);
-}
-
-async function toggleAnimationPreviewFullscreen() {
-  if (
-    document.fullscreenElement === animationPreview
-    || animationPreview.classList.contains("is-preview-maximized")
-  ) {
-    exitAnimationPreviewFullscreen();
-    return;
-  }
-
-  try {
-    if (typeof animationPreview.requestFullscreen === "function") {
-      await animationPreview.requestFullscreen();
-    } else {
-      animationPreview.classList.add("is-preview-maximized");
-      updateAnimationFullscreenButton();
-    }
-  } catch {
-    animationPreview.classList.add("is-preview-maximized");
-    updateAnimationFullscreenButton();
-  }
-}
-
-function exitAnimationPreviewFullscreen() {
-  animationPreview.classList.remove("is-preview-maximized");
-  if (document.fullscreenElement === animationPreview) {
-    document.exitFullscreen?.()?.catch?.(() => {});
-  }
-  updateAnimationFullscreenButton();
-}
-
-function updateAnimationFullscreenButton() {
-  const isFullscreen = document.fullscreenElement === animationPreview
-    || animationPreview.classList.contains("is-preview-maximized");
-  animationPreviewFullscreenButton.textContent = isFullscreen ? "×" : "⛶";
-  animationPreviewFullscreenButton.setAttribute(
-    "aria-label",
-    isFullscreen ? "Exit fullscreen preview" : "View preview fullscreen",
-  );
-  animationPreviewFullscreenButton.title = isFullscreen
-    ? "Exit fullscreen preview"
-    : "View preview fullscreen";
-}
-
-function ensureSelectedAnimationFrame() {
-  if (board.animation.frames.some((frame) => frame.id === selectedAnimationFrameId)) return;
-  selectedAnimationFrameId = board.animation.frames[0]?.id ?? null;
-}
-
-function getSelectedAnimationFrame() {
-  return board.animation.frames.find((frame) => frame.id === selectedAnimationFrameId) ?? null;
-}
-
-function renderAnimationPanel() {
-  ensureSelectedAnimationFrame();
-  renderAnimationTimeline();
-  showAnimationPreview(getSelectedAnimationFrame());
-
-  const frameCount = board.animation.frames.length;
-  const playableFrames = getPlayableFrames(board.animation.frames);
-  animationFrameTotal.textContent = `${frameCount} frame${frameCount === 1 ? "" : "s"}`;
-  animationDurationInput.value = String(board.animation.frameDurationMs);
-  animationFpsOutput.textContent = `${formatFramesPerSecond(board.animation.frameDurationMs)} FPS`;
-  animationPlayButton.disabled = playableFrames.length < 2;
-  animationPreviewPlayButton.disabled = playableFrames.length < 2;
-  animationExportButton.disabled = animationExportInProgress || playableFrames.length < 2;
-  duplicateAnimationFrameButton.disabled = !getSelectedAnimationFrame()
-    || frameCount >= MAX_ANIMATION_FRAMES;
-  deleteAnimationFrameButton.disabled = !getSelectedAnimationFrame();
-}
-
-function renderAnimationTimeline() {
-  animationFrameList.replaceChildren();
-  board.animation.frames.forEach((frame, index) => {
-    const item = document.createElement("li");
-    item.className = "animation-frame-item";
-    item.dataset.frameId = frame.id;
-    item.classList.toggle("is-selected", frame.id === selectedAnimationFrameId);
-
-    const button = document.createElement("button");
-    button.className = "animation-frame-select";
-    button.type = "button";
-    button.dataset.frameId = frame.id;
-    button.setAttribute("aria-label", `Select frame ${index + 1}: ${frame.name}`);
-    if (frame.id === selectedAnimationFrameId) button.setAttribute("aria-current", "true");
-
-    const number = document.createElement("span");
-    number.className = "animation-frame-number";
-    number.textContent = String(index + 1).padStart(2, "0");
-
-    const thumbnail = document.createElement("span");
-    thumbnail.className = "animation-frame-thumbnail";
-    if (frame.dataUrl) {
-      const image = document.createElement("img");
-      image.src = frame.dataUrl;
-      image.alt = "";
-      thumbnail.append(image);
-    } else {
-      const empty = document.createElement("span");
-      empty.textContent = "EMPTY";
-      thumbnail.append(empty);
-    }
-
-    const name = document.createElement("span");
-    name.className = "animation-frame-name";
-    name.textContent = frame.name;
-    button.append(number, thumbnail, name);
-    item.append(button);
-    animationFrameList.append(item);
-
-    const nextFrame = board.animation.frames[index + 1];
-    if (nextFrame) {
-      animationFrameList.append(createInterpolationGap(frame, nextFrame, index));
-    }
-  });
-}
-
-function createInterpolationGap(startFrame, endFrame, startIndex) {
-  const gap = document.createElement("li");
-  gap.className = "animation-frame-gap";
-
-  const button = document.createElement("button");
-  button.className = "animation-chain-button";
-  button.type = "button";
-  button.textContent = "⛓";
-  button.dataset.interpolationStart = startFrame.id;
-  button.dataset.interpolationEnd = endFrame.id;
-  button.setAttribute(
-    "aria-label",
-    `Generate in-between frames between frame ${startIndex + 1} and ${startIndex + 2}`,
-  );
-
-  const framesAvailable = MAX_ANIMATION_FRAMES - board.animation.frames.length;
-  const sourcesReady = Boolean(startFrame.dataUrl && endFrame.dataUrl);
-  button.disabled = interpolationInProgress || !sourcesReady || framesAvailable < 1;
-  if (!sourcesReady) {
-    button.title = "Both adjacent frames need images";
-  } else if (framesAvailable < 1) {
-    button.title = "Animation frame limit reached";
-  } else {
-    button.title = "Generate in-between frames";
-  }
-  gap.append(button);
-  return gap;
-}
-
-function showAnimationPreview(frame) {
-  const frameIndex = frame
-    ? board.animation.frames.findIndex((candidate) => candidate.id === frame.id)
-    : -1;
-  if (frame?.dataUrl) {
-    animationPreviewImage.src = frame.dataUrl;
-    animationPreviewImage.alt = frame.name;
-    animationPreviewImage.hidden = false;
-    animationPreviewEmpty.hidden = true;
-  } else {
-    animationPreviewImage.removeAttribute("src");
-    animationPreviewImage.alt = "Selected animation frame";
-    animationPreviewImage.hidden = true;
-    animationPreviewEmpty.hidden = false;
-    animationPreviewEmpty.textContent = frame ? "Empty frame" : "No frames";
-  }
-  animationPreview.dataset.frameId = frame?.id ?? "";
-  animationPreviewCount.textContent = frameIndex >= 0
-    ? `${frameIndex + 1} / ${board.animation.frames.length}`
-    : `0 / ${board.animation.frames.length}`;
-}
-
-function formatFramesPerSecond(frameDurationMs) {
-  const framesPerSecond = 1000 / frameDurationMs;
-  return framesPerSecond >= 10
-    ? String(Math.round(framesPerSecond))
-    : framesPerSecond.toFixed(1);
-}
-
-function addBlankAnimationFrame() {
-  if (board.animation.frames.length >= MAX_ANIMATION_FRAMES) {
-    announceStatus(`Animation is limited to ${MAX_ANIMATION_FRAMES} frames`);
-    return;
-  }
-  stopAnimationPlayback();
-  const frame = createAnimationFrame(
-    createId(),
-    board.animation.frames.length,
-  );
-  board.animation.frames.push(frame);
-  selectedAnimationFrameId = frame.id;
-  saveBoard();
-  renderAnimationPanel();
-}
-
-function duplicateSelectedAnimationFrame() {
-  const selectedFrame = getSelectedAnimationFrame();
-  if (!selectedFrame || board.animation.frames.length >= MAX_ANIMATION_FRAMES) return;
-  stopAnimationPlayback();
-  const selectedIndex = board.animation.frames.indexOf(selectedFrame);
-  const duplicate = {
-    ...selectedFrame,
-    id: createId(),
-    name: `${selectedFrame.name} copy`,
-  };
-  board.animation.frames.splice(selectedIndex + 1, 0, duplicate);
-  selectedAnimationFrameId = duplicate.id;
-  saveBoard();
-  renderAnimationPanel();
-}
-
-function deleteSelectedAnimationFrame() {
-  const selectedIndex = board.animation.frames.findIndex(
-    (frame) => frame.id === selectedAnimationFrameId,
-  );
-  if (selectedIndex < 0) return;
-  stopAnimationPlayback();
-  board.animation.frames.splice(selectedIndex, 1);
-  selectedAnimationFrameId = board.animation.frames[
-    Math.min(selectedIndex, board.animation.frames.length - 1)
-  ]?.id ?? null;
-  saveBoard();
-  renderAnimationPanel();
-}
-
-function selectAnimationFrame(frameId) {
-  if (!board.animation.frames.some((frame) => frame.id === frameId)) return;
-  stopAnimationPlayback();
-  selectedAnimationFrameId = frameId;
-  renderAnimationPanel();
-}
-
-function toggleAnimationPlayback() {
-  if (animationPlaybackTimer !== null) {
-    stopAnimationPlayback();
-    return;
-  }
-  const playableFrames = getPlayableFrames(board.animation.frames);
-  if (playableFrames.length < 2) return;
-  const selectedIndex = playableFrames.findIndex(
-    (frame) => frame.id === selectedAnimationFrameId,
-  );
-  animationPlaybackIndex = selectedIndex >= 0 ? selectedIndex : 0;
-  setAnimationPlaybackButtonState(true);
-  showAnimationPreview(playableFrames[animationPlaybackIndex]);
-  scheduleAnimationPlayback();
-}
-
-function scheduleAnimationPlayback() {
-  window.clearTimeout(animationPlaybackTimer);
-  animationPlaybackTimer = window.setTimeout(() => {
-    const playableFrames = getPlayableFrames(board.animation.frames);
-    if (playableFrames.length < 2) {
-      stopAnimationPlayback();
-      return;
-    }
-    animationPlaybackIndex = (animationPlaybackIndex + 1) % playableFrames.length;
-    showAnimationPreview(playableFrames[animationPlaybackIndex]);
-    scheduleAnimationPlayback();
-  }, board.animation.frameDurationMs);
-}
-
-function stopAnimationPlayback() {
-  window.clearTimeout(animationPlaybackTimer);
-  animationPlaybackTimer = null;
-  setAnimationPlaybackButtonState(false);
-  showAnimationPreview(getSelectedAnimationFrame());
-}
-
-function setAnimationPlaybackButtonState(isPlaying) {
-  for (const button of [animationPlayButton, animationPreviewPlayButton]) {
-    button.textContent = isPlaying ? "■" : "▶";
-    button.setAttribute("aria-label", isPlaying ? "Stop animation" : "Play animation");
-    button.title = isPlaying ? "Stop animation" : "Play animation";
-    button.setAttribute("aria-pressed", String(isPlaying));
-  }
-}
-
-function setAnimationFrameDuration(value) {
-  board.animation.frameDurationMs = normalizeFrameDuration(value);
-  animationDurationInput.value = String(board.animation.frameDurationMs);
-  animationFpsOutput.textContent = `${formatFramesPerSecond(board.animation.frameDurationMs)} FPS`;
-  saveBoard();
-  if (animationPlaybackTimer !== null) scheduleAnimationPlayback();
-}
-
-async function exportAnimation() {
-  if (animationExportInProgress) return;
-  const playableFrames = getPlayableFrames(board.animation.frames);
-  if (playableFrames.length < 2) {
-    showAnimationExportError("Add at least two image frames before saving an animation.");
-    return;
-  }
-
-  stopAnimationPlayback();
-  animationExportInProgress = true;
-  animationExportAbortController = new AbortController();
-  animationExportError.hidden = true;
-  animationExportProgress.hidden = false;
-  animationExportProgressLabel.textContent = "Preparing frames";
-  animationExportProgressValue.textContent = "";
-  animationExportProgressBar.removeAttribute("value");
-  setAnimationExportBusy(true);
-  renderAnimationPanel();
-
-  try {
-    const result = await recordAnimationVideo({
-      frames: playableFrames,
-      frameDurationMs: board.animation.frameDurationMs,
-      format: animationExportFormat.value,
-      signal: animationExportAbortController.signal,
-      onProgress: updateAnimationExportProgress,
-    });
-    downloadAnimationBlob(
-      result.blob,
-      createAnimationExportFilename(result.extension),
-    );
-    animationExportProgress.hidden = true;
-    announceStatus(`${result.extension.toUpperCase()} animation saved`);
-  } catch (error) {
-    if (error instanceof AnimationExportError && error.code === "CANCELLED") {
-      animationExportProgress.hidden = true;
-      announceStatus("Animation export cancelled");
-    } else {
-      console.error("Unable to export animation.", error);
-      animationExportProgress.hidden = true;
-      showAnimationExportError(
-        error instanceof AnimationExportError
-          ? error.message
-          : "The animation could not be saved. Try WebM or reduce the frame size.",
-      );
-    }
-  } finally {
-    animationExportInProgress = false;
-    animationExportAbortController = null;
-    setAnimationExportBusy(false);
-    renderAnimationPanel();
-  }
-}
-
-function updateAnimationExportProgress(progress) {
-  animationExportProgress.hidden = false;
-  animationExportProgressLabel.textContent = progress.phase === "loading"
-    ? "Preparing frames"
-    : "Rendering video";
-  animationExportProgressBar.max = progress.total;
-  animationExportProgressBar.value = progress.completed;
-  animationExportProgressValue.textContent = `${progress.completed} / ${progress.total}`;
-}
-
-function setAnimationExportBusy(isBusy) {
-  animationExportFormat.disabled = isBusy;
-  animationExportButton.textContent = isBusy ? "Saving…" : "Save animation";
-  animationExportCancelButton.disabled = !isBusy;
-}
-
-function cancelAnimationExport() {
-  if (!animationExportInProgress) return;
-  animationExportProgressLabel.textContent = "Cancelling";
-  animationExportProgressValue.textContent = "";
-  animationExportProgressBar.removeAttribute("value");
-  animationExportCancelButton.disabled = true;
-  animationExportAbortController?.abort();
-}
-
-function showAnimationExportError(message) {
-  animationExportError.textContent = message;
-  animationExportError.hidden = false;
-}
-
-function downloadAnimationBlob(blob, filename) {
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -5098,7 +4494,7 @@ async function exportBoardArtwork() {
         ? await createBoardPdfBlob(pngBlob, viewBounds)
         : pngBlob;
     }
-    downloadAnimationBlob(blob, createBoardArtworkFilename(format));
+    downloadBlob(blob, createBoardArtworkFilename(format));
     announceStatus(`${format.toUpperCase()} saved`);
   } catch (error) {
     console.error("Unable to export the Visual Board.", error);
@@ -5203,7 +4599,7 @@ function exportSelectedCharacter() {
       selectedObjects.map((object) => object.id),
       characterName,
     );
-    downloadAnimationBlob(
+    downloadBlob(
       new Blob([JSON.stringify(character, null, 2)], { type: "application/json" }),
       createCharacterFilename(character.name),
     );
@@ -5213,288 +4609,6 @@ function exportSelectedCharacter() {
     announceStatus(
       error instanceof CharacterFileError ? error.message : "Character could not be saved",
     );
-  }
-}
-
-async function addAnimationImageFiles(files, targetFrameId = selectedAnimationFrameId) {
-  const imageFiles = files.filter((file) => file?.type?.startsWith("image/"));
-  if (!imageFiles.length) return;
-  const availableSlots = MAX_ANIMATION_FRAMES - board.animation.frames.length;
-  const canReplace = board.animation.frames.some((frame) => frame.id === targetFrameId);
-  const maximumImages = Math.max(0, availableSlots + (canReplace ? 1 : 0));
-  if (!maximumImages) {
-    announceStatus(`Animation is limited to ${MAX_ANIMATION_FRAMES} frames`);
-    return;
-  }
-
-  const preparedImages = [];
-  for (const file of imageFiles.slice(0, maximumImages)) {
-    try {
-      preparedImages.push(await prepareImage(file));
-    } catch (error) {
-      console.error(`Unable to read ${file.name}.`, error);
-    }
-  }
-  if (!preparedImages.length) {
-    announceStatus("Animation frame could not be read");
-    return;
-  }
-
-  stopAnimationPlayback();
-  const previousFrames = cloneValue(board.animation.frames);
-  let addedFrameCount = 0;
-  let insertionIndex = board.animation.frames.findIndex((frame) => frame.id === targetFrameId);
-  if (insertionIndex >= 0) {
-    board.animation.frames = replaceAnimationFrame(
-      board.animation.frames,
-      targetFrameId,
-      preparedImages.shift(),
-    );
-    selectedAnimationFrameId = targetFrameId;
-    insertionIndex += 1;
-    addedFrameCount += 1;
-  } else {
-    insertionIndex = board.animation.frames.length;
-  }
-
-  const newFrames = preparedImages.map((image, offset) => createAnimationFrame(
-    createId(),
-    insertionIndex + offset,
-    image,
-  ));
-  board.animation.frames.splice(insertionIndex, 0, ...newFrames);
-  addedFrameCount += newFrames.length;
-  if (newFrames.length) selectedAnimationFrameId = newFrames.at(-1).id;
-
-  if (!saveBoard()) {
-    board.animation.frames = previousFrames;
-    ensureSelectedAnimationFrame();
-  } else {
-    announceStatus(`${addedFrameCount} animation frame${addedFrameCount === 1 ? "" : "s"} added`);
-  }
-  renderAnimationPanel();
-}
-
-async function handleAnimationDrop(event) {
-  event.preventDefault();
-  event.stopPropagation();
-  animationPanel.classList.remove("is-drop-target");
-  const files = [...(event.dataTransfer?.files ?? [])];
-  const target = event.target instanceof Element
-    ? event.target.closest("[data-frame-id]")
-    : null;
-  await addAnimationImageFiles(files, target?.dataset.frameId || selectedAnimationFrameId);
-}
-
-function openInterpolationDialog(startFrameId, endFrameId, returnFocus) {
-  if (interpolationInProgress) return;
-  const startIndex = board.animation.frames.findIndex(
-    (frame) => frame.id === startFrameId,
-  );
-  const startFrame = board.animation.frames[startIndex];
-  const endFrame = board.animation.frames[startIndex + 1];
-  if (
-    startIndex < 0
-    || endFrame?.id !== endFrameId
-    || !startFrame.dataUrl
-    || !endFrame.dataUrl
-  ) {
-    announceStatus("Both adjacent frames need images");
-    return;
-  }
-
-  const framesAvailable = MAX_ANIMATION_FRAMES - board.animation.frames.length;
-  if (framesAvailable < 1) {
-    announceStatus("Animation frame limit reached");
-    return;
-  }
-
-  stopAnimationPlayback();
-  interpolationRequest = { startFrameId, endFrameId };
-  interpolationReturnFocus = returnFocus;
-  interpolationPairLabel.textContent = `Between frame ${startIndex + 1} and ${startIndex + 2}`;
-  interpolationCountInput.max = String(framesAvailable);
-  interpolationCountInput.value = String(Math.min(3, framesAvailable));
-  interpolationCountInput.disabled = false;
-  confirmInterpolationButton.disabled = false;
-  cancelInterpolationButton.disabled = false;
-  interpolationProgress.hidden = true;
-  interpolationError.hidden = true;
-  interpolationError.textContent = "";
-  interpolationDialog.showModal();
-  requestAnimationFrame(() => {
-    interpolationCountInput.focus();
-    interpolationCountInput.select();
-  });
-}
-
-async function generateRequestedIntermediateFrames() {
-  if (!interpolationRequest || interpolationInProgress) return;
-  interpolationError.hidden = true;
-  const startIndex = board.animation.frames.findIndex(
-    (frame) => frame.id === interpolationRequest.startFrameId,
-  );
-  const startFrame = board.animation.frames[startIndex];
-  const endFrame = board.animation.frames[startIndex + 1];
-  const framesAvailable = MAX_ANIMATION_FRAMES - board.animation.frames.length;
-
-  let count;
-  try {
-    if (
-      startIndex < 0
-      || endFrame?.id !== interpolationRequest.endFrameId
-      || !startFrame.dataUrl
-      || !endFrame.dataUrl
-    ) {
-      throw new FrameInterpolationError(
-        "FRAME_PAIR_CHANGED",
-        "Those source frames are no longer available. Choose the pair again.",
-      );
-    }
-    count = normalizeIntermediateFrameCount(
-      interpolationCountInput.value,
-      framesAvailable,
-    );
-  } catch (error) {
-    showInterpolationError(error);
-    return;
-  }
-
-  interpolationInProgress = true;
-  interpolationAbortController = new AbortController();
-  setInterpolationBusy(true);
-  renderAnimationTimeline();
-
-  try {
-    const { interpolateRifeFrames } = await import("./visual-board-rife.mjs?v=1");
-    const images = await interpolateRifeFrames({
-      startFrame,
-      endFrame,
-      count,
-      signal: interpolationAbortController.signal,
-      onProgress: updateInterpolationProgress,
-    });
-    if (images.length !== count) {
-      throw new FrameInterpolationError(
-        "INVALID_GENERATED_FRAME",
-        `RIFE returned ${images.length} of ${count} requested frames.`,
-      );
-    }
-
-    const intermediateFrames = images.map((image, index) => createAnimationFrame(
-      createId(),
-      startIndex + index + 1,
-      image,
-    ));
-    const previousFrames = board.animation.frames;
-    board.animation.frames = insertIntermediateFrames(
-      previousFrames,
-      interpolationRequest.startFrameId,
-      interpolationRequest.endFrameId,
-      intermediateFrames,
-    );
-    selectedAnimationFrameId = intermediateFrames.at(-1).id;
-    if (!saveBoard()) {
-      board.animation.frames = previousFrames;
-      selectedAnimationFrameId = startFrame.id;
-      throw new FrameInterpolationError(
-        "STORAGE_FULL",
-        "The frames were generated, but browser storage is full. No frames were inserted.",
-      );
-    }
-
-    renderAnimationPanel();
-    announceStatus(`${count} in-between frame${count === 1 ? "" : "s"} generated`);
-    interpolationDialog.close("generated");
-  } catch (error) {
-    if (error?.code === "CANCELLED") {
-      announceStatus("Frame generation cancelled");
-      interpolationDialog.close("cancelled");
-    } else {
-      console.error("Unable to generate intermediate frames.", error);
-      showInterpolationError(error);
-    }
-  } finally {
-    interpolationInProgress = false;
-    interpolationAbortController = null;
-    if (interpolationDialog.open) setInterpolationBusy(false);
-    renderAnimationPanel();
-  }
-}
-
-function updateInterpolationProgress(progress) {
-  interpolationProgress.hidden = false;
-  interpolationProgressLabel.textContent = progress.message
-    || "Generating intermediate frames";
-
-  if (progress.phase === "model-download") {
-    if (progress.total > 0) {
-      const percent = Math.min(100, Math.round((progress.loaded / progress.total) * 100));
-      interpolationProgressBar.max = progress.total;
-      interpolationProgressBar.value = progress.loaded;
-      interpolationProgressValue.textContent = `${percent}%`;
-    } else {
-      interpolationProgressBar.removeAttribute("value");
-      interpolationProgressValue.textContent = progress.loaded > 0
-        ? `${(progress.loaded / (1024 * 1024)).toFixed(1)} MB`
-        : "";
-    }
-    return;
-  }
-  if (progress.phase === "model-ready") {
-    interpolationProgressBar.max = 1;
-    interpolationProgressBar.value = 1;
-    interpolationProgressValue.textContent = "Ready";
-    return;
-  }
-  if (progress.phase === "interpolation") {
-    interpolationProgressLabel.textContent = "Generating intermediate frames";
-    interpolationProgressBar.max = progress.total;
-    interpolationProgressBar.value = progress.completed;
-    interpolationProgressValue.textContent = `${progress.completed} / ${progress.total}`;
-    return;
-  }
-
-  interpolationProgressBar.removeAttribute("value");
-  interpolationProgressValue.textContent = "";
-}
-
-function setInterpolationBusy(isBusy) {
-  interpolationCountInput.disabled = isBusy;
-  confirmInterpolationButton.disabled = isBusy;
-  cancelInterpolationButton.disabled = false;
-  cancelInterpolationButton.textContent = "Cancel";
-}
-
-function cancelFrameInterpolation() {
-  if (!interpolationInProgress) {
-    interpolationDialog.close("cancelled");
-    return;
-  }
-  interpolationAbortController?.abort();
-  interpolationProgress.hidden = false;
-  interpolationProgressLabel.textContent = "Cancelling after current frame";
-  interpolationProgressValue.textContent = "";
-  interpolationProgressBar.removeAttribute("value");
-  cancelInterpolationButton.disabled = true;
-}
-
-function showInterpolationError(error) {
-  interpolationProgress.hidden = true;
-  interpolationError.textContent = error instanceof FrameInterpolationError
-    ? error.message
-    : "The interpolation tools could not be loaded. Check your connection and try again.";
-  interpolationError.hidden = false;
-}
-
-function restoreInterpolationFocus() {
-  const returnFocus = interpolationReturnFocus;
-  interpolationRequest = null;
-  interpolationReturnFocus = null;
-  if (returnFocus?.isConnected) {
-    returnFocus.focus({ preventScroll: true });
-  } else if (animationPanelOpen) {
-    animationPreview.focus({ preventScroll: true });
   }
 }
 
@@ -6711,25 +5825,7 @@ function isEditingControl(target) {
 
 function handleKeyDown(event) {
   if (textEditorSession) return;
-  if (interpolationDialog.open) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      cancelFrameInterpolation();
-    }
-    return;
-  }
   if (boardLibrarySaveDialog.open) return;
-  if (event.key === "Escape" && animationPreview.classList.contains("is-preview-maximized")) {
-    event.preventDefault();
-    exitAnimationPreviewFullscreen();
-    animationPreview.focus({ preventScroll: true });
-    return;
-  }
-  if (event.key === "Escape" && animationExportInProgress) {
-    event.preventDefault();
-    cancelAnimationExport();
-    return;
-  }
   const commandKey = event.metaKey || event.ctrlKey;
   if (event.key === "Escape") {
     event.preventDefault();
@@ -6739,11 +5835,6 @@ function handleKeyDown(event) {
       updateCanvasCursor();
       addCurveVertexButton.focus({ preventScroll: true });
       announceStatus("Point insertion cancelled");
-      return;
-    }
-    if (animationPanelOpen) {
-      toggleAnimationPanel(false);
-      animationToggleButton.focus({ preventScroll: true });
       return;
     }
     if (boardLibraryPanelOpen) {
@@ -6871,14 +5962,9 @@ async function handleClipboardPaste(event) {
     .filter(Boolean);
   if (imageFiles.length) {
     event.preventDefault();
-    if (animationPanelOpen) {
-      await addAnimationImageFiles(imageFiles);
-    } else {
-      await addImageFiles(imageFiles, getCanvasCenterWorldPoint());
-    }
+    await addImageFiles(imageFiles, getCanvasCenterWorldPoint());
     return;
   }
-  if (animationPanelOpen) return;
   if (objectClipboard.length) {
     event.preventDefault();
     pasteSelection();
@@ -7006,8 +6092,6 @@ function getVisualBoardAiBusyReason() {
   if (interaction || workingObject) return "the active drawing or pointer action";
   if (textEditorSession) return "editing the current textbox";
   if (traceInProgress) return "the current image trace";
-  if (interpolationInProgress) return "the current frame interpolation";
-  if (animationExportInProgress) return "the current animation export";
   if (colorChangeActive || fillChangeActive || widthChangeActive || textColorChangeActive) {
     return "the active style adjustment";
   }
@@ -7237,11 +6321,6 @@ document.querySelector("#undo-board").addEventListener("click", undo);
 document.querySelector("#redo-board").addEventListener("click", redo);
 document.querySelector("#zoom-in").addEventListener("click", () => setZoom(viewport.zoom * 1.25));
 document.querySelector("#zoom-out").addEventListener("click", () => setZoom(viewport.zoom * 0.8));
-animationToggleButton.addEventListener("click", () => toggleAnimationPanel());
-document.querySelector("#close-animation").addEventListener("click", () => {
-  toggleAnimationPanel(false);
-  animationToggleButton.focus({ preventScroll: true });
-});
 boardLibraryToggleButton.addEventListener("click", () => toggleBoardLibraryPanel());
 boardLibraryCloseButton.addEventListener("click", () => {
   toggleBoardLibraryPanel(false);
@@ -7318,82 +6397,6 @@ boardLibrarySaveForm.addEventListener("submit", saveSelectionToBoardLibrary);
 boardLibrarySaveCancelButton.addEventListener("click", closeBoardLibrarySaveDialog);
 boardLibrarySaveCloseButton.addEventListener("click", closeBoardLibrarySaveDialog);
 boardLibrarySaveDialog.addEventListener("close", restoreBoardLibraryDialogFocus);
-document.querySelector("#add-animation-frame").addEventListener("click", addBlankAnimationFrame);
-duplicateAnimationFrameButton.addEventListener("click", duplicateSelectedAnimationFrame);
-deleteAnimationFrameButton.addEventListener("click", deleteSelectedAnimationFrame);
-animationPlayButton.addEventListener("click", toggleAnimationPlayback);
-animationPreviewPlayButton.addEventListener("click", toggleAnimationPlayback);
-animationPreviewFullscreenButton.addEventListener("click", toggleAnimationPreviewFullscreen);
-animationPanelResizeHandle.addEventListener("pointerdown", beginAnimationPanelResize);
-animationPanelResizeHandle.addEventListener("keydown", resizeAnimationPanelWithKeyboard);
-animationPreviewResizeHandle.addEventListener("pointerdown", beginAnimationPreviewResize);
-animationPreviewResizeHandle.addEventListener("keydown", resizeAnimationPreviewWithKeyboard);
-animationExportButton.addEventListener("click", exportAnimation);
-animationExportCancelButton.addEventListener("click", cancelAnimationExport);
-animationDurationInput.addEventListener("change", () => {
-  setAnimationFrameDuration(animationDurationInput.value);
-});
-document.querySelector("#animation-slower").addEventListener("click", () => {
-  setAnimationFrameDuration(board.animation.frameDurationMs + 25);
-});
-document.querySelector("#animation-faster").addEventListener("click", () => {
-  setAnimationFrameDuration(board.animation.frameDurationMs - 25);
-});
-animationFrameList.addEventListener("click", (event) => {
-  const target = event.target instanceof Element ? event.target : null;
-  const interpolationButton = target?.closest("[data-interpolation-start]");
-  if (interpolationButton) {
-    openInterpolationDialog(
-      interpolationButton.dataset.interpolationStart,
-      interpolationButton.dataset.interpolationEnd,
-      interpolationButton,
-    );
-    return;
-  }
-  const button = target
-    ? target.closest("[data-frame-id]")
-    : null;
-  if (button) selectAnimationFrame(button.dataset.frameId);
-});
-interpolationForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  generateRequestedIntermediateFrames();
-});
-cancelInterpolationButton.addEventListener("click", cancelFrameInterpolation);
-document.querySelector("#close-interpolation-dialog").addEventListener(
-  "click",
-  cancelFrameInterpolation,
-);
-interpolationDialog.addEventListener("cancel", (event) => {
-  if (!interpolationInProgress) return;
-  event.preventDefault();
-  cancelFrameInterpolation();
-});
-interpolationDialog.addEventListener("close", restoreInterpolationFocus);
-animationPreview.addEventListener("keydown", (event) => {
-  if (event.target !== animationPreview || event.code !== "Space") return;
-  event.preventDefault();
-  event.stopPropagation();
-  toggleAnimationPlayback();
-});
-document.addEventListener("fullscreenchange", updateAnimationFullscreenButton);
-animationPanel.addEventListener("dragenter", (event) => {
-  if ([...(event.dataTransfer?.items ?? [])].some((item) => item.type.startsWith("image/"))) {
-    event.preventDefault();
-    animationPanel.classList.add("is-drop-target");
-  }
-});
-animationPanel.addEventListener("dragover", (event) => {
-  event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
-  animationPanel.classList.add("is-drop-target");
-});
-animationPanel.addEventListener("dragleave", (event) => {
-  if (!animationPanel.contains(event.relatedTarget)) {
-    animationPanel.classList.remove("is-drop-target");
-  }
-});
-animationPanel.addEventListener("drop", handleAnimationDrop);
 copySelectionButton.addEventListener("click", copySelection);
 pasteSelectionButton.addEventListener("click", pasteSelection);
 deleteSelectionButton.addEventListener("click", deleteSelection);
@@ -7518,13 +6521,9 @@ document.querySelector("#clear-board").addEventListener("click", () => {
   checkpoint();
   board.objects = [];
   board.rig = createEmptyRig();
-  board.animation = normalizeAnimation();
-  selectedAnimationFrameId = null;
   selectedObjects = [];
-  stopAnimationPlayback();
   closeTextEditor();
   saveBoard();
-  renderAnimationPanel();
   updateSelectionControls();
   drawBoard();
 });
@@ -7533,8 +6532,6 @@ document.addEventListener("keydown", handleKeyDown);
 document.addEventListener("keyup", handleKeyUp);
 document.addEventListener("paste", handleClipboardPaste);
 window.addEventListener("resize", () => {
-  applyAnimationPanelWidth(getCurrentAnimationPanelWidth());
-  applyAnimationPreviewHeight(getCurrentAnimationPreviewHeight());
   updateImageCropBox();
   resizeCanvas();
 });
@@ -7549,12 +6546,7 @@ floorPlanPanel.setAttribute("aria-hidden", String(!floorPlanPanelOpen));
 floorPlanPanel.inert = !floorPlanPanelOpen;
 floorPlanToggleButton.setAttribute("aria-expanded", String(floorPlanPanelOpen));
 floorPlanToggleButton.classList.toggle("is-active", floorPlanPanelOpen);
-restoreAnimationLayout();
-animationPanel.inert = true;
 boardLibraryPanel.inert = true;
-setAnimationExportBusy(false);
-updateAnimationFullscreenButton();
-renderAnimationPanel();
 renderBoardLibrary();
 updateHistoryControls();
 updateSelectionControls();

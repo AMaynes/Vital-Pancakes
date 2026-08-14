@@ -27,6 +27,11 @@ test("selection toolbar uses consolidated contextual actions", async () => {
   assert.doesNotMatch(markup, /id="reinitialize-curve-vertices"/);
   assert.doesNotMatch(markup, /id="explode-selection"/);
   assert.doesNotMatch(markup, /id="reassemble-selection"/);
+  assert.doesNotMatch(markup, /toggle-animation|animation-panel|interpolation-dialog|>Animate</);
+  assert.doesNotMatch(
+    controller,
+    /board\.animation|animationPanel|AnimationExport|FrameInterpolation|interpolateRifeFrames/,
+  );
   assert.match(
     markup,
     /id="add-curve-vertex"[\s\S]*?>\s*-\+-\s*<span class="tool-button-label">Add vertex<\/span>/,

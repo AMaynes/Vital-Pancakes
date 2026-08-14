@@ -142,7 +142,6 @@ function readVisualBoardDocuments(value, storageKey) {
     value: {
       text: collectVisualBoardText(value?.objects),
       assetNames: Object.values(value?.assets ?? {}).map((asset) => asset?.name).filter(Boolean),
-      animationFrames: (value?.animation?.frames ?? []).map((frame) => frame?.name).filter(Boolean),
     },
     kind: "board",
     source,

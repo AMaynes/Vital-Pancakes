@@ -4,7 +4,7 @@ import test from "node:test";
 import { getWorkspace, isCoreSectionId } from "./store.js";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
-const EVERYDAY_SECTION_IDS = ["how-to-cook", "recipes", "workouts", "cleaning"];
+const EVERYDAY_SECTION_IDS = ["how-to-cook", "recipes", "workouts", "cleaning", "everyday-other"];
 const STUDIES_SECTION_IDS = [
   "studies",
   "idea-playground",
@@ -41,7 +41,7 @@ function useStorage(initialWorkspace = null) {
   }
 }
 
-test("a new workspace starts with ten permanent libraries and editable examples", () => {
+test("a new workspace starts with eleven permanent libraries and editable examples", () => {
   useStorage();
 
   const workspace = getWorkspace();
@@ -51,7 +51,7 @@ test("a new workspace starts with ten permanent libraries and editable examples"
   ));
   const sampleIds = coreSections.flatMap((section) => section.items.map((item) => item.id));
 
-  assert.equal(workspace.version, 15);
+  assert.equal(workspace.version, 16);
   assert.deepEqual(everydaySections.map((section) => section.id), EVERYDAY_SECTION_IDS);
   assert.deepEqual(
     workspace.sections.filter((section) => section.area !== "everyday").map((section) => section.id),
@@ -64,6 +64,15 @@ test("a new workspace starts with ten permanent libraries and editable examples"
   assert.equal(workspace.sections.find((section) => section.id === "studies").type, "study");
   assert.equal(workspace.sections.find((section) => section.id === "idea-playground").playground, true);
   assert.equal(workspace.sections.find((section) => section.id === "questions-ideas").type, "idea");
+  assert.equal(workspace.sections.find((section) => section.id === "everyday-other").type, "howto");
+  assert.ok(workspace.sections.find((section) => section.id === "everyday-other").items.every((item) => item.steps.length));
+  assert.ok([
+    "An overview of how the economy works",
+    "What is Entropy? What is Cross Entropy?",
+    "Shannon Information Theory",
+    "Neural Networks",
+    "How to write technical papers effectively",
+  ].every((title) => workspace.sections.find((section) => section.id === "studies").items.some((item) => item.title === title)));
   assert.ok(workspace.sections.find((section) => section.id === "how-to-cook").items.length >= 16);
   assert.ok(workspace.sections.find((section) => section.id === "how-to-cook").items.every((item) => item.tags?.length));
   const algorithms = workspace.sections.find((section) => section.id === "algorithms");
@@ -186,7 +195,7 @@ test("existing workspaces gain examples in empty libraries without losing saved 
   const workspace = getWorkspace();
   const questionsAndIdeas = workspace.sections.find((section) => section.id === "questions-ideas");
 
-  assert.equal(workspace.version, 15);
+  assert.equal(workspace.version, 16);
   const migratedStudy = workspace.sections.find((section) => section.id === "studies").items[0];
   assert.equal(migratedStudy.id, savedStudy.id);
   assert.equal(migratedStudy.notes, savedStudy.notes);
@@ -222,7 +231,7 @@ test("version 11 workspaces receive the expanded cooking guide samples", () => {
 
   const cooking = getWorkspace().sections.find((section) => section.id === "how-to-cook");
 
-  assert.equal(getWorkspace().version, 15);
+  assert.equal(getWorkspace().version, 16);
   assert.ok(cooking.items.some((item) => item.id === "user-cook-note"));
   assert.ok(cooking.items.some((item) => item.id === "sample-cook-knife-prep"));
   assert.ok(cooking.items.some((item) => item.tags?.includes("heat control")));
@@ -324,7 +333,7 @@ test("version 13 language, algorithm, and project records gain the new structure
   const project = workspace.sections.find((section) => section.id === "projects")
     .items.find((item) => item.id === "user-project");
 
-  assert.equal(workspace.version, 15);
+  assert.equal(workspace.version, 16);
   assert.deepEqual(language.quickFacts, [
     "Best for | Systems work",
     "Watch for | Borrowing rules are explicit.",
@@ -419,7 +428,7 @@ test("version 9 workout libraries receive Pull and Legs samples without losing u
 
   const workouts = getWorkspace().sections.find((section) => section.id === "workouts");
 
-  assert.equal(getWorkspace().version, 15);
+  assert.equal(getWorkspace().version, 16);
   const migratedExercise = workouts.items.find((item) => item.id === savedExercise.id);
   assert.equal(migratedExercise.id, savedExercise.id);
   assert.equal(migratedExercise.title, savedExercise.title);

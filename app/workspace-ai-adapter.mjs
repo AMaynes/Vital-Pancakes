@@ -86,6 +86,15 @@ const SECTION_SCHEMAS = Object.freeze({
     schedule: field("string-list"),
     tags: field("tags", { lowercase: true }),
   }),
+  howto: sectionSchema({
+    folderPath: field("string"),
+    purpose: field("string"),
+    checklist: field("string-list"),
+    steps: field("string-list"),
+    warnings: field("string"),
+    notes: field("string"),
+    tags: field("tags"),
+  }),
   routine: sectionSchema({
     trigger: field("string"),
     steps: field("string-list"),

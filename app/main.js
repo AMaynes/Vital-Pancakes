@@ -26,7 +26,7 @@ import {
   isCoreSectionId,
   saveWorkspace,
   updateItem,
-} from "./store.js?v=15";
+} from "./store.js?v=16";
 import { installAiPageHost } from "./ai-page-host.mjs";
 import { createWorkspaceAiAdapter } from "./workspace-ai-adapter.mjs";
 import {
@@ -67,6 +67,7 @@ const SECTION_LABELS = {
   recipe: "RECIPE",
   workout: "WORKOUT",
   cleaning: "CLEANING ROUTINE",
+  howto: "HOW-TO",
   routine: "ROUTINE",
   study: "STUDY",
   language: "LANGUAGE",
@@ -82,6 +83,7 @@ const SECTION_ACCENTS = {
   recipe: "coral",
   workout: "blue",
   cleaning: "sage",
+  howto: "coral",
   routine: "violet",
   study: "coral",
   language: "blue",
@@ -275,6 +277,16 @@ const ALGORITHM_CATEGORIES = Object.freeze([
     id: "analysis",
     title: "Algorithm Analysis",
     description: "Special lessons on comparison, time and space complexity, cases, recurrences, and benchmarking.",
+  },
+  howto: {
+    mode: "howto-manual",
+    kicker: "PERSONAL HOW-TO MANUAL",
+    introduction: "Keep random practical procedures short, specific, and easy to follow when you do not want to rely on memory.",
+    stages: [
+      ["1", "Prepare", "List what must be ready before the task begins."],
+      ["2", "Do", "Preserve the verified sequence in plain language."],
+      ["3", "Confirm", "Record how to know the task is actually complete."],
+    ],
   },
 ]);
 const IDEA_CATEGORIES = Object.freeze([
@@ -647,16 +659,39 @@ function renderStudiesDashboard(workspace) {
   const hero = createAreaHero(
     "STUDIES & PROJECTS",
     "Develop ideas and preserve what you learn.",
-    "Form working ideas, build foldered and experimental studies, map project systems, and keep programming references and notecards connected.",
+    "Move from unproven thoughts to foldered studies and mapped projects without separating definitions, notecards, algorithms, or programming references from the work they support.",
+  );
+  const sectionsById = new Map(
+    getSectionsForArea(workspace, AREA_STUDIES).map((section) => [section.id, section]),
   );
   const sectionHeading = createSectionHeading(
-    "Studies and project libraries",
-    "Begin with the editable examples, then reshape or remove them as this becomes your own working archive.",
+    "Knowledge areas",
+    "Notecards, Studies, Ideas, and Projects are the only top-level areas here.",
   );
-  const libraryGrid = createElement("div", "library-grid");
-  getSectionsForArea(workspace, AREA_STUDIES).forEach((section) => libraryGrid.append(createLibraryCard(section)));
+  const libraryGrid = createElement("div", "library-grid studies-hub-grid");
 
-  const notecardHeading = createSectionHeading("Notecards", "Practice existing collections or open the full educational archive.");
+  const notecardsCard = createLibraryCard({
+    id: "notecards",
+    title: "Notecards",
+    description: "Open the separate notecard archive for practice, review, and subject collections.",
+    icon: "▤",
+    type: "custom",
+    items: [{}, {}, {}],
+  });
+  notecardsCard.href = "educational_resources/";
+  libraryGrid.append(notecardsCard);
+
+  ["studies", "questions-ideas", "projects"]
+    .map((sectionId) => sectionsById.get(sectionId))
+    .filter(Boolean)
+    .forEach((section) => libraryGrid.append(createLibraryCard(section)));
+
+  const notecardSection = createElement("section", "notecard-collections");
+  notecardSection.id = "notecard-collections";
+  const notecardHeading = createSectionHeading(
+    "Notecards",
+    "Practice existing collections or open the complete educational archive.",
+  );
   const notecardGrid = createElement("div", "tool-grid");
   [
     {
@@ -674,19 +709,23 @@ function renderStudiesDashboard(workspace) {
       accent: "ochre",
     },
     {
-      title: "Study Library",
+      title: "All Notecards",
       copy: "Open mathematics, neuroscience, computer science, and arts resources.",
       href: "educational_resources/",
       icon: "▤",
       accent: "violet",
     },
   ].forEach((resource) => notecardGrid.append(createToolCard(resource)));
+  notecardSection.append(notecardHeading, notecardGrid);
 
-  appMain.append(hero, sectionHeading, libraryGrid, notecardHeading, notecardGrid);
+  appMain.append(hero, sectionHeading, libraryGrid, notecardSection);
 }
 
+function getRouteKnowledgeSubsection() {
+  return new URLSearchParams(location.hash.slice(1)).get("subsection");
+}
 /**
- * Renders the Everyday Life dashboard as three distinct practical domains.
+ * Renders the Everyday Life dashboard as distinct practical domains.
  *
  * @param {{sections: Array<object>}} workspace Workspace data.
  */
@@ -694,7 +733,7 @@ function renderEverydayDashboard(workspace) {
   const hero = createAreaHero(
     "EVERYDAY LIFE",
     "Keep ordinary life clear, capable, and manageable.",
-    "Cooking, training, and house care stay here—separate from studies, research, projects, and work tools.",
+    "Cooking, training, house care, and random practical how-tos stay here—separate from studies, research, projects, and work tools.",
   );
   const sections = getSectionsForArea(workspace, AREA_EVERYDAY);
   const sectionsById = new Map(sections.map((section) => [section.id, section]));
@@ -718,6 +757,12 @@ function renderEverydayDashboard(workspace) {
       copy: "Keep house care and personal hygiene organized as clear, repeatable routines.",
       sectionIds: ["cleaning"],
     },
+    {
+      label: "04",
+      title: "Other",
+      copy: "Save random how-to instructions you do not want to forget or figure out again.",
+      sectionIds: ["everyday-other"],
+    },
   ].forEach((domain) => {
     const domainSection = createElement("section", "everyday-domain");
     const domainHeading = createElement("div", "everyday-domain-heading");
@@ -735,7 +780,13 @@ function renderEverydayDashboard(workspace) {
     domainGrid.append(domainSection);
   });
 
-  const displayedSectionIds = new Set(["how-to-cook", "recipes", "workouts", "cleaning"]);
+  const displayedSectionIds = new Set([
+    "how-to-cook",
+    "recipes",
+    "workouts",
+    "cleaning",
+    "everyday-other",
+  ]);
   const additionalSections = sections.filter((section) => !displayedSectionIds.has(section.id));
   appMain.append(hero, domainGrid);
   if (additionalSections.length) {
@@ -756,18 +807,9 @@ function renderToolsDashboard() {
   const hero = createAreaHero(
     "WORKSPACE",
     "Tools for doing the work.",
-    "Draw, sign, plan, analyze, and design without mixing tools into your personal knowledge sections.",
+    "Keep the four tools you use most in reach, with every other specialized tool available when you need it.",
   );
-  const toolsHeading = createSectionHeading("Workspace tools", "Choose the surface that matches the task.");
-  const toolsGrid = createElement("div", "tool-grid");
-  [
-    {
-      title: "Visual Board",
-      copy: "A freeform canvas with rigging, animation, image controls, reusable objects, and floor-plan templates.",
-      href: "tools/visual-board.html",
-      icon: "✣",
-      accent: "blue",
-    },
+  const mainTools = [
     {
       title: "Overhead",
       copy: "Capture thoughts, manage priorities and tasks, encrypt private records, track routines, and maintain inventory.",
@@ -775,6 +817,29 @@ function renderToolsDashboard() {
       icon: "OH",
       accent: "coral",
     },
+    {
+      title: "Visual Board",
+      copy: "A freeform canvas with drawing, rigging, image controls, reusable objects, and floor-plan templates.",
+      href: "tools/visual-board.html",
+      icon: "✣",
+      accent: "blue",
+    },
+    {
+      title: "PDF Tool",
+      copy: "Sign PDFs, add genuine fillable text fields and vector marks, then download the edited copy.",
+      href: "tools/pdf-signer.html",
+      icon: "⌁",
+      accent: "ochre",
+    },
+    {
+      title: "Master Lesson Builder",
+      copy: "Process textbooks locally, approve their outline, generate editable lessons, and chat with checked page citations.",
+      href: "tools/master-lesson-builder.html",
+      icon: "▥",
+      accent: "coral",
+    },
+  ];
+  const otherTools = [
     {
       title: "Graphing Tool",
       copy: "Import or enter data, build statistical charts, inspect summaries, and export reproducible graph projects.",
@@ -818,25 +883,11 @@ function renderToolsDashboard() {
       accent: "ochre",
     },
     {
-      title: "PDF Tool",
-      copy: "Sign PDFs, add genuine fillable text fields and vector marks, then download the edited copy.",
-      href: "tools/pdf-signer.html",
-      icon: "⌁",
-      accent: "ochre",
-    },
-    {
       title: "Literature Analyzer",
       copy: "Highlight PDFs or webpages, attach comments, and export an annotated record.",
       href: "tools/literature-analyzer.html",
       icon: "⌑",
       accent: "sage",
-    },
-    {
-      title: "Master Lesson Builder",
-      copy: "Process textbooks locally, approve their outline, generate editable lessons, and chat with checked page citations.",
-      href: "tools/master-lesson-builder.html",
-      icon: "▥",
-      accent: "coral",
     },
     {
       title: "Caption Relay",
@@ -854,7 +905,7 @@ function renderToolsDashboard() {
     },
     {
       title: "Travel Planner",
-      copy: "Build multi-day itineraries with 24-hour timelines and linked places.",
+      copy: "Start a trip, complete its travel brief, and build a linked day-by-day itinerary.",
       href: "tools/travel-planner.html",
       icon: "✈",
       accent: "coral",
@@ -887,11 +938,34 @@ function renderToolsDashboard() {
       icon: "$",
       accent: "ochre",
     },
-  ].forEach((tool) => toolsGrid.append(createToolCard(tool)));
+  ];
 
-  appMain.append(hero, toolsHeading, toolsGrid);
+  const mainHeading = createSectionHeading("Main", "These four tools stay visible.");
+  const mainGrid = createElement("div", "tool-grid");
+  mainTools.forEach((tool) => mainGrid.append(createToolCard(tool)));
+
+  const otherSection = createElement("details", "other-tools-section");
+  const otherSummary = createElement("summary", "other-tools-summary");
+  const otherSummaryCopy = createElement("span");
+  otherSummaryCopy.append(
+    createElement("strong", "", "Other tools"),
+    createElement("small", "", `${otherTools.length} specialized tools`),
+  );
+  otherSummary.append(
+    otherSummaryCopy,
+    createElement("span", "other-tools-toggle", "Show tools"),
+  );
+  const otherGrid = createElement("div", "tool-grid other-tools-grid");
+  otherTools.forEach((tool) => otherGrid.append(createToolCard(tool)));
+  otherSection.addEventListener("toggle", () => {
+    otherSection.querySelector(".other-tools-toggle").textContent = otherSection.open
+      ? "Hide tools"
+      : "Show tools";
+  });
+  otherSection.append(otherSummary, otherGrid);
+
+  appMain.append(hero, mainHeading, mainGrid, otherSection);
 }
-
 /**
  * Builds a reusable section heading row.
  *
@@ -1036,16 +1110,19 @@ function renderSection(section) {
   const workoutFilters = section.workoutCategory
     ? createWorkoutMuscleFilterBar(section, section.items)
     : null;
-  const sectionFilters = ["cooking-guide", "algorithm", "study", "idea"].includes(section.type)
+  const sectionFilters = ["cooking-guide", "algorithm", "study", "idea", "howto"].includes(section.type)
     ? createTagSearchFilterBar(section, workoutFilters?.filteredItems ?? section.items)
     : null;
   const cleaningFilters = section.cleaningCategory
     ? createCleaningTagFilters(section)
     : null;
-  const visibleItems = cleaningFilters?.items
+  let visibleItems = cleaningFilters?.items
     ?? sectionFilters?.filteredItems
     ?? workoutFilters?.filteredItems
     ?? section.items;
+  if (section.id === "questions-ideas" && getRouteKnowledgeSubsection() === "working-ideas") {
+    visibleItems = visibleItems.filter((item) => (item.stage ?? "Working") === "Working");
+  }
   const heading = createElement("section", "page-heading section-page-heading");
   const headingCopy = createElement("div");
   headingCopy.append(
@@ -1097,7 +1174,7 @@ function renderSection(section) {
       empty.append(emptyButton);
     }
     grid.append(empty);
-  } else if (["study", "idea"].includes(section.type)) {
+  } else if (["study", "idea", "howto"].includes(section.type)) {
     groupEntriesByFolder(visibleItems).forEach(({ folder, entries }) => {
       const folderPanel = createElement("details", "study-folder");
       folderPanel.open = true;
@@ -1122,11 +1199,70 @@ function renderSection(section) {
       .forEach((item, index) => grid.append(createEntryIndexCard(section, item, index)));
   }
 
+  const subsectionPanel = createKnowledgeSubsectionPanel(section);
   appMain.append(heading);
+  if (subsectionPanel) appMain.append(subsectionPanel);
   if (workoutFilters?.element) appMain.append(workoutFilters.element);
   if (sectionFilters?.element) appMain.append(sectionFilters.element);
   if (cleaningFilters?.element) appMain.append(cleaningFilters.element);
   appMain.append(meta, grid);
+}
+
+/**
+ * Shows the child libraries that belong inside Studies or Ideas without
+ * promoting them to top-level Studies & Projects areas.
+ *
+ * @param {object} section Active parent section.
+ * @returns {HTMLElement|null} Subsection links and the current entry heading.
+ */
+function createKnowledgeSubsectionPanel(section) {
+  if (!["studies", "questions-ideas"].includes(section.id)) return null;
+
+  const workspace = getWorkspace();
+  const panel = createElement("section", "knowledge-subsection-panel");
+  const heading = createSectionHeading(
+    "Subsections",
+    section.id === "studies"
+      ? "Algorithms and Programming Languages live inside Studies."
+      : "Working Ideas holds unfinished personal thinking; Idea Playground holds experiments that begin testing it.",
+  );
+  const grid = createElement("div", "library-grid knowledge-subsection-grid");
+
+  if (section.id === "studies") {
+    ["algorithms", "programming-languages"]
+      .map((sectionId) => workspace.sections.find((candidate) => candidate.id === sectionId))
+      .filter(Boolean)
+      .forEach((subsection) => grid.append(createLibraryCard(subsection)));
+  } else {
+    const workingIdeas = createLibraryCard({
+      id: section.id,
+      title: "Working Ideas",
+      description: "Ideas still being formulated: provisional, unfinished, and explicitly unproven.",
+      icon: "?",
+      type: "idea",
+      items: section.items.filter((item) => (item.stage ?? "Working") === "Working"),
+    });
+    workingIdeas.href = "#section=questions-ideas&subsection=working-ideas";
+    grid.append(workingIdeas);
+    const playground = workspace.sections.find((candidate) => candidate.id === "idea-playground");
+    if (playground) grid.append(createLibraryCard(playground));
+  }
+
+  const entryHeading = createSectionHeading(
+    section.id === "studies"
+      ? "Study entries"
+      : getRouteKnowledgeSubsection() === "working-ideas"
+        ? "Working Ideas"
+        : "Idea entries",
+    section.id === "studies"
+      ? "Use folders to group related studies while keeping each study independently linkable."
+      : getRouteKnowledgeSubsection() === "working-ideas"
+        ? "Use folders inside Working Ideas to group related thoughts while their uncertainty remains visible."
+        : "Use folders to group your unproven personal thinking; open Working Ideas when you want only unfinished formulations.",
+  );
+  entryHeading.classList.add("knowledge-entry-heading");
+  panel.append(heading, grid, entryHeading);
+  return panel;
 }
 
 /**
@@ -1172,6 +1308,8 @@ function createTagSearchFilterBar(section, entries) {
       ? "Search studies and folders"
       : section.type === "idea"
         ? "Search working ideas"
+        : section.type === "howto"
+          ? "Search personal how-tos and folders"
         : "Search cooking methods";
   searchInput.value = searchText;
   searchInput.addEventListener("input", () => {
@@ -1527,7 +1665,7 @@ function createEntryVisual(section, item, compact) {
   const frame = createElement("div", "subject-visual-frame");
   const symbol = createElement("div", "subject-visual-symbol");
   const type = section.type;
-  if (type === "workout" || type === "cooking-guide" || type === "cleaning") {
+  if (type === "workout" || type === "cooking-guide" || type === "cleaning" || type === "howto") {
     visual.classList.add("is-blank");
     visual.append(frame);
     return visual;
@@ -1642,6 +1780,7 @@ function getEmptyMessage(section) {
     recipe: "Add a recipe you want to make, improve, and return to.",
     workout: "Add a type of workout with its purpose, frequency, and exercise structure.",
     cleaning: "Add a house-care or self-care routine with its frequency, supplies, ordered steps, and tags.",
+    howto: "Add a random practical procedure when you want the exact preparation, steps, and warnings available later.",
     routine: "Turn a recurring task into a clear trigger and a checklist you can follow without re-planning it.",
     study: "Frame a question, decide what evidence matters, record the method, and keep limitations beside the findings.",
     idea: "Start in Working Ideas, make the unproven thought explicit, and record assumptions and open questions as it develops.",
@@ -1666,6 +1805,7 @@ function getSingularLabel(section) {
     recipe: "recipe",
     workout: "exercise",
     cleaning: "cleaning routine",
+    howto: "how-to",
     routine: "routine",
     study: "study",
     idea: "idea",
@@ -1732,6 +1872,7 @@ function createEntryBody(section, item) {
   if (section.type === "recipe") return createRecipeBody(section, item);
   if (section.type === "workout") return createWorkoutBody(section, item);
   if (section.type === "cleaning") return createCleaningBody(section, item);
+  if (section.type === "howto") return createHowToBody(section, item);
   if (section.type === "routine") return createRoutineBody(section, item);
   if (section.type === "study") return createStudyBody(section, item);
   if (section.type === "language") return createLanguageBody(item);
@@ -1755,6 +1896,26 @@ function createRoutineBody(section, item) {
     body.append(createDefinition("Trigger", item.trigger));
   }
   appendPersistentChecklist(body, section, item, "Steps", item.steps, "checkedSteps");
+  return body;
+}
+
+/**
+ * Renders one practical reminder from Everyday Life / Other.
+ *
+ * @param {object} section Parent section.
+ * @param {object} item How-to record.
+ * @returns {HTMLElement} Practical how-to content.
+ */
+function createHowToBody(section, item) {
+  const body = createElement("div", "entry-body howto-body");
+  if (item.purpose) body.append(createDefinition("Why this is saved", item.purpose));
+  if (item.checklist?.length) {
+    body.append(createStructuredCardSection("Before you start", item.checklist, "howto-checklist"));
+  }
+  appendPersistentChecklist(body, section, item, "Steps", item.steps, "checkedSteps");
+  if (item.warnings) body.append(createDefinition("Warnings and limits", item.warnings));
+  if (item.notes) body.append(createDefinition("Personal notes", item.notes));
+  appendTagGroup(body, "Tags", item.tags);
   return body;
 }
 
@@ -2876,6 +3037,16 @@ function createItemFields(section, item) {
       createField("Trigger", "trigger", "textarea", item?.trigger ?? "", false, "When should you use this routine?"),
       createField("Steps · one per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write only the steps you actually need"),
     );
+  } else if (section.type === "howto") {
+    fields.push(
+      createField("Folder path", "folderPath", "text", item?.folderPath ?? "", false, "Appointments / VA or Car / Battery"),
+      createField("Why this is saved", "purpose", "textarea", item?.purpose ?? "", false, "What should this card save you from having to remember or research again?"),
+      createField("Before you start · one item per line", "checklist", "textarea", (item?.checklist ?? []).join("\n"), false, "Contacts, equipment, documents, or prerequisites"),
+      createField("How to do it · one step per line", "steps", "textarea", (item?.steps ?? []).join("\n"), false, "Write the verified sequence in order"),
+      createField("Warnings and limits", "warnings", "textarea", item?.warnings ?? "", false, "When to stop, get help, or use a different procedure"),
+      createField("Personal notes", "notes", "textarea", item?.notes ?? "", false, "Exact numbers, contacts, links, or details that apply to you"),
+      createField("Tags · comma separated", "tags", "text", (item?.tags ?? []).join(", "), false, "appointments, car, home, administration"),
+    );
   } else if (section.type === "study") {
     fields.push(
       createField("Abstract summary", "abstract", "textarea", item?.abstract ?? item?.summary ?? "", false, "A concise orientation to the study"),
@@ -2904,7 +3075,7 @@ function createItemFields(section, item) {
     fields.push(
       createSelectField("Idea stage", "stage", item?.stage ?? "Working", ["Working", "Formed", "Parked"]),
       createField("Abstract summary", "abstract", "textarea", item?.abstract ?? item?.summary ?? "", false, "What this unproven idea is about"),
-      createField("Folder path", "folderPath", "text", item?.folderPath ?? "Working Ideas", false, "Working Ideas / Economics"),
+      createField("Folder path", "folderPath", "text", item?.folderPath ?? "", false, "Economics / Systems"),
       createField("Current formulation", "thesis", "textarea", item?.thesis ?? item?.currentPosition ?? "", false, "What you presently think, without claiming proof"),
       createField("Reasoning so far", "reasoning", "textarea", item?.reasoning ?? item?.context ?? "", false, "Why the idea currently seems plausible"),
       createField("Assumptions · one per line", "assumptions", "textarea", (item?.assumptions ?? []).join("\n"), false, "Assumptions the idea depends on"),
@@ -3318,6 +3489,18 @@ function readItemForm(section) {
   if (section.type === "routine") {
     return { ...base, trigger: String(formData.get("trigger") ?? "").trim(), steps: lineList("steps") };
   }
+  if (section.type === "howto") {
+    return {
+      ...base,
+      folderPath: String(formData.get("folderPath") ?? "").trim(),
+      purpose: String(formData.get("purpose") ?? "").trim(),
+      checklist: lineList("checklist"),
+      steps: lineList("steps"),
+      warnings: String(formData.get("warnings") ?? "").trim(),
+      notes: String(formData.get("notes") ?? "").trim(),
+      tags: commaList("tags"),
+    };
+  }
   if (section.type === "study") {
     if (formData.get("format") === "lesson") {
       const existing = editingItemId
@@ -3367,7 +3550,7 @@ function readItemForm(section) {
         ? String(formData.get("stage"))
         : "Working",
       abstract: String(formData.get("abstract") ?? "").trim(),
-      folderPath: String(formData.get("folderPath") ?? "Working Ideas").trim(),
+      folderPath: String(formData.get("folderPath") ?? "").trim(),
       thesis: String(formData.get("thesis") ?? "").trim(),
       reasoning: String(formData.get("reasoning") ?? "").trim(),
       assumptions: lineList("assumptions"),

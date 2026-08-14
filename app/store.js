@@ -17,7 +17,7 @@ import { ALGORITHM_ANALYSIS_SAMPLES } from "./algorithm-analysis-samples.mjs?v=1
 import { ALGORITHM_SAMPLES } from "./algorithm-samples.mjs?v=2";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
-const CURRENT_WORKSPACE_VERSION = 15;
+const CURRENT_WORKSPACE_VERSION = 16;
 const EVERYDAY_AREA = "everyday";
 const SAMPLE_DATE = "2026-07-28T12:00:00.000Z";
 const LEGACY_WORKOUT_SAMPLE_IDS = new Set([
@@ -1519,6 +1519,56 @@ const DEFAULT_SECTIONS = [
     ],
   },
   {
+    id: "everyday-other",
+    title: "Other",
+    description: "Random practical how-to notes for tasks you do not want to figure out again.",
+    icon: "⋯",
+    type: "howto",
+    area: EVERYDAY_AREA,
+    items: [
+      createSample("sample-howto-va-scheduling", {
+        title: "Schedule an appointment with the VA",
+        summary: "A personal reference for the exact scheduling route, contact details, and preparation that work for you.",
+        folderPath: "Appointments",
+        purpose: "Keep your facility-specific scheduling steps and confirmation details in one place.",
+        checklist: [
+          "Preferred clinic or service",
+          "Current contact or portal route",
+          "Reason for the appointment and availability",
+          "Questions, referrals, or records to have ready",
+        ],
+        steps: [
+          "Record the current scheduling method you use for your VA facility.",
+          "Add the exact contact, portal path, or extension after you verify it.",
+          "Write down the appointment details and any preparation instructions when confirmed.",
+        ],
+        warnings: "Keep urgent-care and emergency instructions separate from routine scheduling notes.",
+        notes: "Replace this editable example with the facility-specific process you actually use.",
+        tags: ["appointments", "VA", "health administration"],
+      }),
+      createSample("sample-howto-jump-car", {
+        title: "Jump-start a car",
+        summary: "A place to preserve the vehicle-specific safety checks and sequence from the owner's manual.",
+        folderPath: "Car",
+        purpose: "Avoid relying on memory when battery and connection details vary by vehicle.",
+        checklist: [
+          "Owner's manual procedure for both vehicles",
+          "Correctly rated jump leads or approved jump pack",
+          "Safe positioning away from traffic",
+          "Roadside assistance contact if conditions are unsafe",
+        ],
+        steps: [
+          "Confirm that the vehicle manuals allow the planned jump-start method.",
+          "Record the exact terminal, ground-point, connection, and disconnection sequence for your vehicle here.",
+          "Use roadside assistance instead when the battery is damaged, leaking, frozen, inaccessible, or otherwise unsafe.",
+        ],
+        warnings: "This card is a personal reminder, not a replacement for the vehicle manuals or trained roadside help.",
+        notes: "Replace the generic placeholders with the verified procedure for the vehicles you use.",
+        tags: ["car", "battery", "roadside"],
+      }),
+    ],
+  },
+  {
     id: "studies",
     title: "Studies",
     description: "Foldered knowledge studies with rich sections, equations, media, definitions, nested studies, and linked notecards.",
@@ -1557,6 +1607,56 @@ const DEFAULT_SECTIONS = [
         findings: "Sample entry: this is a study design, not a conclusion.",
         limitations: "Cue quality varies, prior familiarity differs, and repeated testing itself strengthens memory.",
         nextSteps: "Define a simple scoring rubric and pilot the method with three ideas before expanding it.",
+      }),
+      createSample("sample-study-economy-overview", {
+        title: "An overview of how the economy works",
+        summary: "A system-level study of households, firms, governments, banks, markets, money, production, and trade.",
+        abstract: "Trace how resources, labor, goods, services, payments, credit, policy, and expectations move through an economy.",
+        folderPath: "Economics / Foundations",
+        content: "::section Big picture\nDescribe the economy as connected flows rather than isolated statistics.\n\n::subsection Main participants\nHouseholds, firms, governments, financial institutions, and external trade each exchange resources and obligations.\n\n::diagram Working system map\nHouseholds > labor and demand > firms > wages and goods > households\nGovernment > taxes and spending > households and firms\nBanks > savings and credit > investment and consumption\n\n::section Questions to develop\nHow do prices coordinate choices, where do feedback loops appear, and which measurements hide distributional differences?",
+        definitions: "Economy | The connected system through which resources, labor, goods, services, money, and obligations are produced and exchanged. |\nGross domestic product | A measure of the market value of final goods and services produced within a country over a period. |",
+        notecardLinks: "",
+        tags: ["economics", "systems", "foundations"],
+      }),
+      createSample("sample-study-entropy-cross-entropy", {
+        title: "What is Entropy? What is Cross Entropy?",
+        summary: "A study of uncertainty in a distribution and the expected coding cost when one distribution is used to represent another.",
+        abstract: "Separate entropy, cross entropy, and divergence so their roles in information theory and machine learning remain clear.",
+        folderPath: "Information Theory / Foundations",
+        content: "::section Entropy\nEntropy summarizes expected information or uncertainty under a probability distribution.\n\n::equation Shannon entropy\nH(P) = -\\sum_x P(x) \\log P(x)\n\n::section Cross entropy\nCross entropy measures the expected negative log probability assigned by model Q when outcomes actually follow P.\n\n::equation Cross entropy\nH(P,Q) = -\\sum_x P(x) \\log Q(x)\n\n::section Relationship\nCross entropy can be decomposed into the entropy of P plus the divergence from P to Q.",
+        definitions: "Entropy | Expected information or uncertainty under a probability distribution. | sample-study-shannon-information\nCross entropy | Expected negative log probability assigned by one distribution to outcomes generated by another. | sample-study-shannon-information\nKullback-Leibler divergence | The additional expected coding cost caused by using Q instead of the true distribution P. |",
+        notecardLinks: "",
+        tags: ["entropy", "cross entropy", "information theory", "machine learning"],
+      }),
+      createSample("sample-study-shannon-information", {
+        title: "Shannon Information Theory",
+        summary: "A foundation for reasoning about information, uncertainty, coding, communication channels, and limits on reliable transmission.",
+        abstract: "Connect surprise, entropy, codes, compression, channel noise, and capacity in one navigable study.",
+        folderPath: "Information Theory / Foundations",
+        content: "::section Information and surprise\nLess probable outcomes carry more self-information when they occur.\n\n::equation Self-information\nI(x) = -\\log P(x)\n\n::section Entropy and coding\nExpected information sets a lower-bound intuition for average lossless code length under the chosen logarithm base.\n\n::section Channels\nA communication channel changes the relationship between sent and received symbols; mutual information measures shared information.\n\n::section Capacity\nChannel capacity describes the highest reliable information rate allowed by the channel model.",
+        definitions: "Self-information | The negative logarithm of an outcome's probability. |\nMutual information | The reduction in uncertainty about one variable provided by observing another. |\nChannel capacity | The supremum of reliable information rates for a specified channel model. |",
+        notecardLinks: "",
+        tags: ["information theory", "Shannon", "coding", "communication"],
+      }),
+      createSample("sample-study-neural-networks", {
+        title: "Neural Networks",
+        summary: "A layered study of representations, weighted transformations, nonlinear activation, loss, gradients, and learning.",
+        abstract: "Build the topic from one artificial neuron through multilayer networks, training, evaluation, and common failure modes.",
+        folderPath: "Machine Learning / Foundations",
+        content: "::section Big picture\nA neural network composes parameterized transformations to map inputs to outputs.\n\n::subsection Forward pass\nEach layer combines inputs with learned weights and biases, then applies an activation or other transformation.\n\n::equation Dense layer\nz = Wx + b\n\n::subsection Learning\nA loss function evaluates predictions; backpropagation applies the chain rule to compute gradients used by an optimizer.\n\n::section Topics to branch into\nRepresentations, architectures, optimization, regularization, generalization, interpretability, and evaluation.",
+        definitions: "Activation function | A transformation applied within a network layer, often introducing nonlinearity. |\nBackpropagation | Efficient application of the chain rule for computing loss gradients through a computational graph. |\nLoss function | A scalar objective that scores model predictions against the training target. |",
+        notecardLinks: "",
+        tags: ["neural networks", "machine learning", "deep learning"],
+      }),
+      createSample("sample-study-technical-papers", {
+        title: "How to write technical papers effectively",
+        summary: "A practical study of argument, evidence, structure, notation, figures, revision, and reader navigation in technical writing.",
+        abstract: "Treat a technical paper as a guided proof of why a question matters, what was done, what was found, and what the result does and does not support.",
+        folderPath: "Communication / Technical Writing",
+        content: "::section Core argument\nState the problem, contribution, evidence, and limitations in language that remains consistent from abstract through conclusion.\n\n::section Reader path\nUse headings, topic sentences, definitions, figures, and transitions to show where the reader is and why each part exists.\n\n::section Evidence and methods\nDescribe decisions precisely enough for a qualified reader to evaluate or reproduce the work.\n\n::section Revision passes\nRevise separately for argument, structure, technical correctness, figures and notation, paragraph flow, and sentence clarity.",
+        definitions: "Abstract | A compact account of the problem, approach, principal result, and significance. |\nContribution | The specific new result, method, artifact, analysis, or synthesis the paper provides. |\nReproducibility | The degree to which the reported process and evidence can be checked or repeated. |",
+        notecardLinks: "",
+        tags: ["technical writing", "papers", "communication", "research"],
       }),
     ],
   },
@@ -1833,10 +1933,22 @@ function cloneDefaultSection(section) {
 }
 
 /**
- * Adds the version-15 knowledge-system fields without replacing any saved
- * values. This also shapes brand-new starter entries before first storage.
+ * Aligns current subject-specific fields without replacing saved values. This
+ * also shapes brand-new starter entries before first storage.
  */
 function alignEntryFields(section, item) {
+  if (section.type === "howto") {
+    return {
+      ...item,
+      folderPath: item.folderPath ?? "",
+      purpose: item.purpose ?? item.summary ?? "",
+      checklist: item.checklist ?? [],
+      steps: item.steps ?? [],
+      warnings: item.warnings ?? "",
+      notes: item.notes ?? "",
+      tags: item.tags ?? [],
+    };
+  }
   if (section.type === "study") {
     const lessonDefinitions = item.lesson?.keyConcepts
       ?.map(({ term, explanation }) => `${term} | ${explanation} |`)
@@ -1857,7 +1969,7 @@ function alignEntryFields(section, item) {
       ...item,
       stage: item.stage ?? "Working",
       abstract: item.abstract ?? item.summary ?? "",
-      folderPath: item.folderPath ?? "Working Ideas",
+      folderPath: item.folderPath === "Working Ideas" ? "" : (item.folderPath ?? ""),
       thesis: item.thesis ?? item.currentPosition ?? "",
       reasoning: item.reasoning ?? item.context ?? "",
       assumptions: item.assumptions ?? [],
@@ -2393,6 +2505,31 @@ function migrateWorkspace(workspace) {
         item.cardType && item.cardType !== "Brief" && !existingIds.has(item.id)
       ));
       cleaningSection.items.push(...newMasterCards);
+    }
+    changed = true;
+  }
+
+  if (previousVersion < 16) {
+    workspace.sections.forEach((section) => {
+      section.items = (section.items ?? []).map((item) => alignEntryFields(section, item));
+    });
+
+    const studiesSection = workspace.sections.find((section) => section.id === "studies");
+    const defaultStudiesSection = DEFAULT_SECTIONS.find((section) => section.id === "studies");
+    if (studiesSection && defaultStudiesSection) {
+      const requestedExampleIds = new Set([
+        "sample-study-economy-overview",
+        "sample-study-entropy-cross-entropy",
+        "sample-study-shannon-information",
+        "sample-study-neural-networks",
+        "sample-study-technical-papers",
+      ]);
+      const existingIds = new Set(studiesSection.items.map((item) => item.id));
+      studiesSection.items.push(
+        ...cloneDefaultSection(defaultStudiesSection).items.filter((item) => (
+          requestedExampleIds.has(item.id) && !existingIds.has(item.id)
+        )),
+      );
     }
     changed = true;
   }
