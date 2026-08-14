@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v95";
+const CACHE_NAME = "vital-pancakes-app-v96";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
 ]);
@@ -158,6 +158,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/pdf-signer.js?v=7",
   "./tools/pdf-signer.js?v=8",
   "./tools/pdf-signer.js?v=9",
+  "./tools/pdf-signer.js?v=16",
   "./tools/pdf-signer-placements.mjs",
   "./tools/pdf-signer-placements.mjs?v=2",
   "./tools/pdf-signer-placements.mjs?v=3",
@@ -165,6 +166,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./tools/pdf-signer-placements.mjs?v=5",
   "./tools/pdf-tool-export.mjs?v=1",
   "./tools/pdf-tool-export.mjs?v=2",
+  "./tools/pdf-tool-export.mjs?v=4",
   "./tools/literature-analyzer.html",
   "./tools/literature-analyzer.css?v=2",
   "./tools/literature-analyzer.js?v=3",

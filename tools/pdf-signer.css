@@ -79,12 +79,33 @@
 }
 
 .pdf-placement.mark-stamp {
-  border-color: transparent;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
   background: transparent;
 }
 
 .pdf-placement.mark-stamp.is-selected {
   background: transparent;
+}
+
+.pdf-vector-mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: #17241f;
+  pointer-events: none;
+}
+
+.pdf-placement.whiteout-stamp {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
 }
 
 .pdf-placement.text-field-stamp {

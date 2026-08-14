@@ -11,7 +11,20 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import test from "node:test";
 
-import { addFillableTextField, drawVectorMark, drawWhiteout, flattenPdfForm } from "./pdf-tool-export.mjs";
+import { addFillableTextField, drawVectorMark, drawWhiteout, flattenPdfForm, getVectorMarkGeometry } from "./pdf-tool-export.mjs";
+
+test("vector mark geometry scales to the exact placement box", () => {
+  const circle = getVectorMarkGeometry("circle", 100, 60);
+  const check = getVectorMarkGeometry("checkmark", 100, 60);
+  const xMark = getVectorMarkGeometry("x-mark", 100, 60);
+
+  assert.deepEqual(circle.ellipse, { cx: 50, cy: 30, rx: 41.6, ry: 21.6 });
+  assert.equal(circle.thickness, 4.8);
+  assert.deepEqual(check.lines[0].start, { x: 12, y: 30 });
+  assert.deepEqual(check.lines[1].end, { x: 90, y: 50.4 });
+  assert.equal(xMark.lines.length, 2);
+  assert.deepEqual(xMark.lines[0], { start: { x: 8.4, y: 8.4 }, end: { x: 91.6, y: 51.6 } });
+});
 
 const require = createRequire(import.meta.url);
 const {

@@ -25,7 +25,7 @@ import {
   removePlacementById,
   updatePlacementById,
 } from "./pdf-signer-placements.mjs?v=7";
-import { addFillableTextField, drawVectorMark, drawWhiteout, flattenPdfForm } from "./pdf-tool-export.mjs?v=3";
+import { addFillableTextField, drawVectorMark, drawWhiteout, flattenPdfForm, getVectorMarkGeometry } from "./pdf-tool-export.mjs?v=4";
 import {
   installCurrentToolAiHost,
   requireCommandRecord,
@@ -281,6 +281,12 @@ function renderPlacements() {
         return moveEdge;
       });
       stamp.append(...moveEdges);
+    } else if (isMarkPlacement(placement)) {
+      const preview = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      preview.classList.add("pdf-vector-mark");
+      preview.setAttribute("aria-hidden", "true");
+      updateVectorMarkPreview(preview, placement);
+      stamp.append(preview);
     } else {
       const content = document.createElement("span");
       content.className = "pdf-placement-content";
@@ -535,6 +541,33 @@ function isMarkPlacement(placement) {
   return ["checkmark", "circle", "x-mark"].includes(placement.kind);
 }
 
+function updateVectorMarkPreview(preview, placement) {
+  const width = Math.max(1, placement.widthRatio * pageStage.clientWidth);
+  const height = Math.max(1, placement.heightRatio * pageStage.clientHeight);
+  const geometry = getVectorMarkGeometry(placement.kind, width, height);
+  preview.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  preview.replaceChildren();
+  if (geometry.ellipse) {
+    const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+    ellipse.setAttribute("cx", String(geometry.ellipse.cx));
+    ellipse.setAttribute("cy", String(geometry.ellipse.cy));
+    ellipse.setAttribute("rx", String(geometry.ellipse.rx));
+    ellipse.setAttribute("ry", String(geometry.ellipse.ry));
+    ellipse.setAttribute("stroke-width", String(geometry.thickness));
+    preview.append(ellipse);
+    return;
+  }
+  geometry.lines.forEach((segment) => {
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", String(segment.start.x));
+    line.setAttribute("y1", String(height - segment.start.y));
+    line.setAttribute("x2", String(segment.end.x));
+    line.setAttribute("y2", String(height - segment.end.y));
+    line.setAttribute("stroke-width", String(geometry.thickness));
+    preview.append(line);
+  });
+}
+
 /**
  * Formats a date input value without converting it through UTC.
  *
@@ -642,6 +675,8 @@ function movePlacement(event) {
     activeDrag.stamp.style.width = `${placement.widthRatio * 100}%`;
     activeDrag.stamp.style.height = `${placement.heightRatio * 100}%`;
     activeDrag.stamp.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
+    const vectorPreview = activeDrag.stamp.querySelector(".pdf-vector-mark");
+    if (vectorPreview) updateVectorMarkPreview(vectorPreview, placement);
     const dimensions = activeDrag.stamp.querySelector(".pdf-placement-dimensions");
     if (dimensions) dimensions.textContent = formatPlacementDimensions(placement);
     if (placement.kind === "text-field") {

@@ -138,6 +138,42 @@ export function drawWhiteout(page, placement, pageWidth, pageHeight, rgb) {
   });
 }
 
+/** Returns local vector geometry shared by the editor preview and PDF export. */
+export function getVectorMarkGeometry(kind, width, height) {
+  const inset = Math.max(1, Math.min(width, height) * 0.14);
+  const thickness = Math.max(1.25, Math.min(width, height) * 0.08);
+  if (kind === "circle") {
+    return {
+      thickness,
+      ellipse: {
+        cx: width / 2,
+        cy: height / 2,
+        rx: Math.max(1, (width / 2) - inset),
+        ry: Math.max(1, (height / 2) - inset),
+      },
+      lines: [],
+    };
+  }
+  if (kind === "x-mark") {
+    return {
+      thickness,
+      ellipse: null,
+      lines: [
+        { start: { x: inset, y: inset }, end: { x: width - inset, y: height - inset } },
+        { start: { x: inset, y: height - inset }, end: { x: width - inset, y: inset } },
+      ],
+    };
+  }
+  return {
+    thickness,
+    ellipse: null,
+    lines: [
+      { start: { x: width * 0.12, y: height * 0.5 }, end: { x: width * 0.4, y: height * 0.18 } },
+      { start: { x: width * 0.4, y: height * 0.18 }, end: { x: width * 0.9, y: height * 0.84 } },
+    ],
+  };
+}
+
 /**
  * Draws a check, circle, or X without relying on unsupported font glyphs.
  *
@@ -152,48 +188,27 @@ export function drawVectorMark(page, placement, pageWidth, pageHeight, rgb) {
   const width = pageWidth * placement.widthRatio;
   const height = pageHeight * placement.heightRatio;
   const y = pageHeight - (pageHeight * placement.yRatio) - height;
-  const inset = Math.max(1, Math.min(width, height) * 0.14);
-  const thickness = Math.max(1.25, Math.min(width, height) * 0.08);
+  const geometry = getVectorMarkGeometry(placement.kind, width, height);
   const color = rgb(0.09, 0.14, 0.12);
 
-  if (placement.kind === "circle") {
+  if (geometry.ellipse) {
     page.drawEllipse({
-      x: x + (width / 2),
-      y: y + (height / 2),
-      xScale: Math.max(1, (width / 2) - inset),
-      yScale: Math.max(1, (height / 2) - inset),
+      x: x + geometry.ellipse.cx,
+      y: y + geometry.ellipse.cy,
+      xScale: geometry.ellipse.rx,
+      yScale: geometry.ellipse.ry,
       borderColor: color,
-      borderWidth: thickness,
+      borderWidth: geometry.thickness,
     });
     return;
   }
 
-  if (placement.kind === "x-mark") {
+  geometry.lines.forEach((line) => {
     page.drawLine({
-      start: { x: x + inset, y: y + inset },
-      end: { x: x + width - inset, y: y + height - inset },
+      start: { x: x + line.start.x, y: y + line.start.y },
+      end: { x: x + line.end.x, y: y + line.end.y },
       color,
-      thickness,
+      thickness: geometry.thickness,
     });
-    page.drawLine({
-      start: { x: x + inset, y: y + height - inset },
-      end: { x: x + width - inset, y: y + inset },
-      color,
-      thickness,
-    });
-    return;
-  }
-
-  page.drawLine({
-    start: { x: x + (width * 0.12), y: y + (height * 0.5) },
-    end: { x: x + (width * 0.4), y: y + (height * 0.18) },
-    color,
-    thickness,
-  });
-  page.drawLine({
-    start: { x: x + (width * 0.4), y: y + (height * 0.18) },
-    end: { x: x + (width * 0.9), y: y + (height * 0.84) },
-    color,
-    thickness,
   });
 }

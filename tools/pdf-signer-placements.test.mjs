@@ -23,11 +23,15 @@ const signerStyles = await readFile(new URL("./pdf-signer.css", import.meta.url)
 test("check, circle, and X placements stay transparent when idle", () => {
   assert.match(
     signerStyles,
-    /\.pdf-placement\.mark-stamp\s*\{[^}]*border-color:\s*transparent;[^}]*background:\s*transparent;/s,
+    /\.pdf-placement\.mark-stamp\s*\{[^}]*border:\s*0;[^}]*background:\s*transparent;/s,
   );
   assert.match(
     signerStyles,
     /\.pdf-placement\.mark-stamp\.is-selected\s*\{[^}]*background:\s*transparent;/s,
+  );
+  assert.match(
+    signerStyles,
+    /\.pdf-placement\.whiteout-stamp\s*\{[^}]*border:\s*0;/s,
   );
 });
 
