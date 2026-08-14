@@ -19,11 +19,12 @@ import { createId } from "../app/store.js";
 import {
   createPdfPlacement,
   duplicatePlacementById,
+  MIN_PLACEMENT_RATIO,
   PDF_FIELD_BACKGROUND_COLORS,
   PDF_PLACEMENT_KINDS,
   removePlacementById,
   updatePlacementById,
-} from "./pdf-signer-placements.mjs?v=6";
+} from "./pdf-signer-placements.mjs?v=7";
 import { addFillableTextField, drawVectorMark, drawWhiteout, flattenPdfForm } from "./pdf-tool-export.mjs?v=3";
 import {
   installCurrentToolAiHost,
@@ -456,16 +457,6 @@ function fitFillablePreviewText(editor, placement) {
   editor.style.padding = fieldHeight < 12 ? "0 1px" : "0 5px";
   editor.style.height = "0px";
   editor.style.height = `${editor.scrollHeight}px`;
-  const requiredHeight = editor.scrollHeight + 6;
-  if (requiredHeight > fieldHeight + 0.5) {
-    placement.heightRatio = Math.min(requiredHeight / pageStage.clientHeight, 1);
-    placement.yRatio = Math.min(placement.yRatio, 1 - placement.heightRatio);
-    const stamp = editor.closest(".pdf-placement");
-    stamp.style.top = `${placement.yRatio * 100}%`;
-    stamp.style.height = `${placement.heightRatio * 100}%`;
-    const dimensions = stamp.querySelector(".pdf-placement-dimensions");
-    if (dimensions) dimensions.textContent = formatPlacementDimensions(placement);
-  }
 }
 
 function updateFillableStyle(changes) {
@@ -525,7 +516,7 @@ function updateSelectedFillableDimension(dimension, pixelValue) {
   const positionRatio = dimension === "width" ? placement.xRatio : placement.yRatio;
   const ratioField = dimension === "width" ? "widthRatio" : "heightRatio";
   const pixels = Math.max(1, Math.round(Number(pixelValue) || 1));
-  const ratio = clamp(pixels / stagePixels, 0.008, 1 - positionRatio);
+  const ratio = clamp(pixels / stagePixels, Math.max(MIN_PLACEMENT_RATIO, 1 / stagePixels), 1 - positionRatio);
   const result = updatePlacementById(placements, placement.id, { [ratioField]: ratio });
   placements = result.placements;
   renderPlacements();
@@ -622,8 +613,8 @@ function movePlacement(event) {
   const { placement } = activeDrag;
 
   if (activeDrag.mode === "resize") {
-    const minimumWidth = 0.008;
-    const minimumHeight = 0.008;
+    const minimumWidth = Math.max(MIN_PLACEMENT_RATIO, 1 / pageStage.clientWidth);
+    const minimumHeight = Math.max(MIN_PLACEMENT_RATIO, 1 / pageStage.clientHeight);
     const startRight = activeDrag.startLeft + activeDrag.startWidth;
     const startBottom = activeDrag.startTop + activeDrag.startHeight;
     const resizeWest = activeDrag.corner.includes("w");
@@ -1193,8 +1184,8 @@ installCurrentToolAiHost({
               locked: { type: "boolean" },
               xRatio: { type: "number", minimum: 0, maximum: 0.98 },
               yRatio: { type: "number", minimum: 0, maximum: 0.98 },
-              widthRatio: { type: "number", minimum: 0.008, maximum: 1 },
-              heightRatio: { type: "number", minimum: 0.008, maximum: 1 },
+              widthRatio: { type: "number", minimum: MIN_PLACEMENT_RATIO, maximum: 1 },
+              heightRatio: { type: "number", minimum: MIN_PLACEMENT_RATIO, maximum: 1 },
               fontSizeRatio: { type: "number", minimum: 0.008, maximum: 0.2 },
             },
             additionalProperties: false,
@@ -1287,8 +1278,8 @@ installCurrentToolAiHost({
               locked: { type: "boolean" },
               xRatio: { type: "number", minimum: 0, maximum: 0.98 },
               yRatio: { type: "number", minimum: 0, maximum: 0.98 },
-              widthRatio: { type: "number", minimum: 0.008, maximum: 1 },
-              heightRatio: { type: "number", minimum: 0.008, maximum: 1 },
+              widthRatio: { type: "number", minimum: MIN_PLACEMENT_RATIO, maximum: 1 },
+              heightRatio: { type: "number", minimum: MIN_PLACEMENT_RATIO, maximum: 1 },
               fontSizeRatio: { type: "number", minimum: 0.008, maximum: 0.2 },
             },
             additionalProperties: false,

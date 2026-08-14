@@ -53,8 +53,8 @@ test("creates styled fillable fields and small white-out areas", () => {
     italic: true,
     underline: true,
     backgroundColor: "yellow",
-    widthRatio: 0.008,
-    heightRatio: 0.008,
+    widthRatio: 0.001,
+    heightRatio: 0.001,
   });
   const whiteout = createPdfPlacement({ id: "whiteout", kind: "whiteout", pageNumber: 1 });
 
@@ -63,7 +63,8 @@ test("creates styled fillable fields and small white-out areas", () => {
   assert.equal(field.italic, true);
   assert.equal(field.underline, true);
   assert.equal(field.backgroundColor, "yellow");
-  assert.equal(field.widthRatio, 0.008);
+  assert.equal(field.widthRatio, 0.001);
+  assert.equal(field.heightRatio, 0.001);
   assert.equal(whiteout.text, "");
 });
 

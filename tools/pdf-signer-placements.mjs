@@ -22,6 +22,7 @@ export const PDF_PLACEMENT_KINDS = Object.freeze([
 ]);
 
 export const PDF_FIELD_BACKGROUND_COLORS = Object.freeze(["blue", "yellow", "red", "transparent"]);
+export const MIN_PLACEMENT_RATIO = 0.0001;
 
 const PLACEMENT_DEFAULTS = Object.freeze({
   signature: Object.freeze({
@@ -137,8 +138,8 @@ export function createPdfPlacement(input) {
     font: normalizePlacementFont(kind, input.font ?? defaults.font),
     xRatio: normalizeRatio(input.xRatio, defaults.xRatio, 0, 0.98, "xRatio"),
     yRatio: normalizeRatio(input.yRatio, defaults.yRatio, 0, 0.98, "yRatio"),
-    widthRatio: normalizeRatio(input.widthRatio, defaults.widthRatio, 0.008, 1, "widthRatio"),
-    heightRatio: normalizeRatio(input.heightRatio, defaults.heightRatio, 0.008, 1, "heightRatio"),
+    widthRatio: normalizeRatio(input.widthRatio, defaults.widthRatio, MIN_PLACEMENT_RATIO, 1, "widthRatio"),
+    heightRatio: normalizeRatio(input.heightRatio, defaults.heightRatio, MIN_PLACEMENT_RATIO, 1, "heightRatio"),
     fontSizeRatio: normalizeRatio(
       input.fontSizeRatio,
       defaults.fontSizeRatio,

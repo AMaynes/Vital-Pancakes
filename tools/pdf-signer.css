@@ -79,8 +79,17 @@
 }
 
 .pdf-placement.text-field-stamp {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
   border-color: transparent;
   background: transparent;
+}
+
+.pdf-placement.text-field-stamp .pdf-fillable-editor-frame {
+  inset: 0;
+  overflow: visible;
 }
 
 .pdf-placement.text-field-stamp.is-selected {
