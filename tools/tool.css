@@ -1852,15 +1852,24 @@
   pointer-events: none;
 }
 
+.pdf-fillable-editor-frame {
+  position: absolute;
+  inset: 3px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: rgb(220 241 251 / 72%);
+}
+
 .pdf-fillable-editor {
   width: 100%;
-  height: 100%;
+  height: auto;
   min-height: 0;
-  padding: 3px 5px;
+  padding: 0 5px;
   overflow: hidden;
   border: 0;
   outline: 0;
-  background: rgb(220 241 251 / 72%);
+  background: transparent;
   color: #17231f;
   font: inherit;
   line-height: 1.25;

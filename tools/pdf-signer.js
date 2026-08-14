@@ -241,12 +241,15 @@ function renderPlacements() {
     let fillableEditor = null;
 
     if (placement.kind === "text-field") {
+      const editorFrame = document.createElement("div");
+      editorFrame.className = "pdf-fillable-editor-frame";
       const editor = document.createElement("textarea");
       fillableEditor = editor;
       editor.className = "pdf-fillable-editor";
       editor.value = placement.text;
       editor.placeholder = "Fillable text";
       editor.maxLength = 500;
+      editor.rows = 1;
       editor.setAttribute("aria-label", "Fillable field text");
       editor.style.fontFamily = FORM_FONT_STYLES[placement.fontFamily];
       editor.style.fontWeight = placement.bold ? "700" : "400";
@@ -258,7 +261,8 @@ function renderPlacements() {
       });
       editor.addEventListener("focus", () => selectPlacement(placement.id));
       editor.addEventListener("input", () => updateFillableText(placement.id, editor.value));
-      stamp.append(editor);
+      editorFrame.append(editor);
+      stamp.append(editorFrame);
 
       const moveEdges = ["top", "right", "bottom", "left"].map((edge) => {
         const moveEdge = document.createElement("span");
@@ -441,8 +445,10 @@ function updateFillableText(placementId, text) {
 
 function fitFillablePreviewText(editor, placement) {
   const fieldHeight = placement.heightRatio * pageStage.clientHeight;
-  editor.style.padding = fieldHeight < 12 ? "0 1px" : "3px 5px";
   editor.style.fontSize = `${placement.fontSizeRatio * pageStage.clientWidth}px`;
+  editor.style.padding = fieldHeight < 12 ? "0 1px" : "0 5px";
+  editor.style.height = "0px";
+  editor.style.height = `${editor.scrollHeight}px`;
 }
 
 function updateFillableStyle(changes) {
