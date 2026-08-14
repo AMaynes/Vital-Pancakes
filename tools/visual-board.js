@@ -167,12 +167,7 @@ import {
   getVisualBoardExportBounds,
 } from "./visual-board-static-export.mjs?v=7";
 import { installAiPageHost } from "../app/ai-page-host.mjs";
-import { AI_PERMISSION_LEVELS } from "../app/ai-command-protocol.mjs";
-import {
-  createVisualBoardAiAdapter,
-  getVisualBoardAiCapabilities,
-  getVisualBoardAiExamples,
-} from "./visual-board-ai-adapter.mjs?v=19";
+import { createVisualBoardAiAdapter } from "./visual-board-ai-adapter.mjs?v=19";
 
 const BOARD_KEY = "artificially-neuroscience-visual-board-v1";
 const BOARD_LIBRARY_KEY = "artificially-neuroscience-visual-board-library-v1";
@@ -264,12 +259,6 @@ const boardLibraryNameInput = document.querySelector("#board-library-name");
 const boardLibrarySaveError = document.querySelector("#board-library-save-error");
 const boardLibrarySaveCancelButton = document.querySelector("#cancel-board-library-save");
 const boardLibrarySaveCloseButton = document.querySelector("#close-board-library-save");
-const aiCommandsButton = document.querySelector("#open-ai-commands");
-const aiCommandsDialog = document.querySelector("#ai-commands-dialog");
-const aiCommandsEditor = document.querySelector("#ai-commands-editor");
-const aiCommandsStatus = document.querySelector("#ai-commands-status");
-const aiCommandsResult = document.querySelector("#ai-commands-result");
-const aiCommandsExample = document.querySelector("#ai-commands-example");
 const flipHorizontalButton = document.querySelector("#flip-horizontal");
 const flipVerticalButton = document.querySelector("#flip-vertical");
 const toggleArrowStartButton = document.querySelector("#toggle-arrow-start");
@@ -6177,7 +6166,7 @@ function exportVisualBoardForAi(options = {}) {
   };
 }
 
-const visualBoardAiApi = installAiPageHost(createVisualBoardAiAdapter({
+installAiPageHost(createVisualBoardAiAdapter({
   getState: getVisualBoardAiState,
   getRevision: getAiContextRevision,
   isBusy: getVisualBoardAiBusyReason,
@@ -6195,72 +6184,6 @@ const visualBoardAiApi = installAiPageHost(createVisualBoardAiAdapter({
   },
   exportBoard: exportVisualBoardForAi,
 }));
-
-function createAiCommandExampleEnvelope(command = getVisualBoardAiExamples()[0].command) {
-  return {
-    protocolVersion: 1,
-    requestId: `visual-board-${Date.now().toString(36)}`,
-    tool: "visual-board",
-    mode: "preview",
-    expectedRevision: getAiContextRevision(),
-    commands: [command],
-  };
-}
-
-function openAiCommandsDialog() {
-  if (!aiCommandsEditor.value.trim()) {
-    aiCommandsEditor.value = JSON.stringify(createAiCommandExampleEnvelope(), null, 2);
-  }
-  aiCommandsStatus.textContent = "Commands are validated before they can change the board.";
-  aiCommandsResult.textContent = "";
-  aiCommandsDialog.showModal();
-  aiCommandsEditor.focus();
-}
-
-function parseAiCommandEditor() {
-  try {
-    return JSON.parse(aiCommandsEditor.value);
-  } catch (error) {
-    throw new Error(`Invalid JSON: ${error.message}`);
-  }
-}
-
-async function runAiCommandEditor(mode) {
-  try {
-    const envelope = parseAiCommandEditor();
-    envelope.mode = mode;
-    if (mode === "apply" && envelope.commands.some((command) => (
-      ["objects.delete", "objects.disconnect"].includes(command.type)
-    ))) {
-      const confirmed = window.confirm("Apply this destructive AI command?");
-      if (!confirmed) return;
-    }
-    aiCommandsStatus.textContent = mode === "preview" ? "Preparing preview…" : "Applying…";
-    const receipt = await visualBoardAiApi.dispatch(envelope, {
-      grantedPermissions: AI_PERMISSION_LEVELS,
-    });
-    aiCommandsResult.textContent = JSON.stringify(receipt, null, 2);
-    aiCommandsStatus.textContent = receipt.ok
-      ? mode === "preview"
-        ? `Preview ready · ${receipt.result?.summary ?? "valid command"}`
-        : `Applied · ${receipt.result?.summary ?? "board updated"}`
-      : `${receipt.error.code}: ${receipt.error.message}`;
-  } catch (error) {
-    aiCommandsStatus.textContent = error.message || "Unable to read this command.";
-    aiCommandsResult.textContent = "";
-  }
-}
-
-function loadSelectedAiExample() {
-  const examples = getVisualBoardAiExamples();
-  const example = examples[Number(aiCommandsExample.value)] ?? examples[0];
-  aiCommandsEditor.value = JSON.stringify(
-    createAiCommandExampleEnvelope(example.command),
-    null,
-    2,
-  );
-  aiCommandsStatus.textContent = `${example.name} example loaded.`;
-}
 
 drawingTools.addEventListener("click", (event) => {
   const button = event.target.closest("[data-tool]");
@@ -6450,7 +6373,6 @@ snapToggle.addEventListener("click", () => {
   saveBoard();
   drawBoard();
 });
-aiCommandsButton.addEventListener("click", openAiCommandsDialog);
 imageEditForm.addEventListener("submit", applyImageEdits);
 document.querySelector("#cancel-image-edit").addEventListener("click", closeImageEditDialog);
 document.querySelector("#close-image-edit").addEventListener("click", closeImageEditDialog);
@@ -6478,42 +6400,6 @@ imageEditDialog.addEventListener("click", (event) => {
     : null;
   if (button) handleImageEditAction(button.dataset.imageAction);
 });
-document.querySelector("#load-ai-command-example").addEventListener(
-  "click",
-  loadSelectedAiExample,
-);
-document.querySelector("#copy-ai-command-schema").addEventListener("click", async () => {
-  const capabilities = getVisualBoardAiCapabilities();
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(capabilities, null, 2));
-    aiCommandsStatus.textContent = "Capabilities copied.";
-  } catch {
-    aiCommandsResult.textContent = JSON.stringify(capabilities, null, 2);
-    aiCommandsStatus.textContent = "Clipboard access was unavailable; capabilities are shown below.";
-  }
-});
-document.querySelector("#format-ai-commands").addEventListener("click", () => {
-  try {
-    aiCommandsEditor.value = JSON.stringify(parseAiCommandEditor(), null, 2);
-    aiCommandsStatus.textContent = "Command JSON formatted.";
-  } catch (error) {
-    aiCommandsStatus.textContent = error.message;
-  }
-});
-document.querySelector("#clear-ai-commands").addEventListener("click", () => {
-  aiCommandsEditor.value = "";
-  aiCommandsResult.textContent = "";
-  aiCommandsStatus.textContent = "Command editor cleared.";
-});
-document.querySelector("#preview-ai-commands").addEventListener(
-  "click",
-  () => runAiCommandEditor("preview"),
-);
-document.querySelector("#apply-ai-commands").addEventListener(
-  "click",
-  () => runAiCommandEditor("apply"),
-);
-
 document.querySelector("#clear-board").addEventListener("click", () => {
   const confirmed = window.confirm("Clear the entire board? This cannot be undone.");
   if (!confirmed) return;

@@ -28,10 +28,12 @@ test("selection toolbar uses consolidated contextual actions", async () => {
   assert.doesNotMatch(markup, /id="explode-selection"/);
   assert.doesNotMatch(markup, /id="reassemble-selection"/);
   assert.doesNotMatch(markup, /toggle-animation|animation-panel|interpolation-dialog|>Animate</);
+  assert.doesNotMatch(markup, /AI Commands|open-ai-commands|ai-commands-dialog|visual-board-ai\.css/);
   assert.doesNotMatch(
     controller,
-    /board\.animation|animationPanel|AnimationExport|FrameInterpolation|interpolateRifeFrames/,
+    /board\.animation|animationPanel|AnimationExport|FrameInterpolation|interpolateRifeFrames|aiCommandsEditor|openAiCommandsDialog|runAiCommandEditor/,
   );
+  assert.match(controller, /installAiPageHost\(createVisualBoardAiAdapter\(/);
   assert.match(
     markup,
     /id="add-curve-vertex"[\s\S]*?>\s*-\+-\s*<span class="tool-button-label">Add vertex<\/span>/,

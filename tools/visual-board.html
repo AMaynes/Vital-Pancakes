@@ -10,7 +10,6 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=25">
   <link rel="stylesheet" href="tool.css?v=35">
-  <link rel="stylesheet" href="visual-board-ai.css?v=1">
   <link rel="stylesheet" href="visual-board-advanced.css?v=6">
   <link rel="stylesheet" href="../site-navigation.css?v=22">
   <script type="module" src="../site-navigation.js?v=18"></script>
@@ -42,13 +41,6 @@
       </div>
       <div class="tool-topbar-actions">
         <span class="tool-save-status" id="save-status">Saved locally</span>
-        <button
-          class="button button-quiet"
-          id="open-ai-commands"
-          type="button"
-          aria-haspopup="dialog"
-          aria-controls="ai-commands-dialog"
-        >AI Commands</button>
         <button class="button button-quiet" id="clear-board" type="button">Clear</button>
         <button
           class="button button-quiet"
@@ -691,48 +683,6 @@
       </footer>
     </form>
   </dialog>
-  <dialog class="ai-commands-dialog" id="ai-commands-dialog" aria-labelledby="ai-commands-title">
-    <form method="dialog" class="ai-commands-shell">
-      <header class="ai-commands-header">
-        <div>
-          <span class="tool-kicker">PROVIDER-INDEPENDENT COMMAND API</span>
-          <h2 id="ai-commands-title">AI Commands</h2>
-          <p>Paste one validated command package to build or edit the board without slow UI automation.</p>
-        </div>
-        <button class="tool-button" value="cancel" type="submit" aria-label="Close AI Commands">×</button>
-      </header>
-
-      <div class="ai-commands-example-row">
-        <label for="ai-commands-example">Example</label>
-        <select id="ai-commands-example">
-          <option value="0">Mind map</option>
-          <option value="1">Flowchart</option>
-          <option value="2">Bedroom floor plan</option>
-          <option value="3">Exact furnished room</option>
-        </select>
-        <button class="button button-quiet" id="load-ai-command-example" type="button">Load</button>
-        <button class="button button-quiet" id="copy-ai-command-schema" type="button">Copy capabilities</button>
-      </div>
-
-      <label class="ai-commands-editor-label" for="ai-commands-editor">Command package</label>
-      <textarea
-        id="ai-commands-editor"
-        spellcheck="false"
-        autocomplete="off"
-        aria-describedby="ai-commands-status"
-      ></textarea>
-      <p id="ai-commands-status" class="ai-commands-status" role="status"></p>
-      <pre id="ai-commands-result" class="ai-commands-result" aria-label="Command result"></pre>
-
-      <footer class="ai-commands-actions">
-        <button class="button button-quiet" id="format-ai-commands" type="button">Format</button>
-        <button class="button button-quiet" id="clear-ai-commands" type="button">Clear</button>
-        <span></span>
-        <button class="button button-quiet" id="preview-ai-commands" type="button">Preview</button>
-        <button class="button button-primary" id="apply-ai-commands" type="button">Apply</button>
-      </footer>
-    </form>
-  </dialog>
-  <script type="module" src="visual-board.js?v=56"></script>
+  <script type="module" src="visual-board.js?v=57"></script>
 </body>
 </html>
