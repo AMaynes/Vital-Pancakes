@@ -56,3 +56,15 @@ test("Studies and Projects orders three knowledge areas above Notecards", () => 
   assert.match(controller, /Algorithms and Programming Languages live inside Studies/);
   assert.match(controller, /Working Ideas holds unfinished personal thinking; Idea Playground/);
 });
+
+test("Notecards keeps the archive action beside the heading and subjects in the grid", () => {
+  const dashboard = controller.match(
+    /function renderStudiesDashboard\(workspace\) \{([\s\S]*?)\n\}\n\nfunction getRouteKnowledgeSubsection/,
+  )?.[1] ?? "";
+
+  assert.match(dashboard, /createElement\("a", "button button-small", "All notecards"\)/);
+  assert.match(dashboard, /notecardTitleRow\.append\(createElement\("h2", "", "Notecards"\), allNotecardsLink\)/);
+  assert.match(dashboard, /title: "Mathematics Notecards"/);
+  assert.match(dashboard, /title: "Arts Notecards"/);
+  assert.doesNotMatch(dashboard, /title: "All Notecards"/);
+});

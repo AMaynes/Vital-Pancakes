@@ -817,6 +817,22 @@ h3 {
   margin-top: 20px;
 }
 
+.notecard-title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.notecard-title-row h2 {
+  margin: 0;
+}
+
+.notecard-title-row .button-small {
+  min-height: 24px;
+  padding: 3px 8px;
+  font-size: 8px;
+}
+
 .legacy-strip {
   display: flex;
   align-items: center;

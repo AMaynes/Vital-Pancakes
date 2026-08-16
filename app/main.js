@@ -665,8 +665,8 @@ function createAreaHero(eyebrow, title, subtitle) {
 function renderStudiesDashboard(workspace) {
   const hero = createAreaHero(
     "STUDIES & PROJECTS",
-    "Develop ideas and preserve what you learn.",
-    "Move from unproven thoughts to foldered studies and mapped projects without separating definitions, notecards, algorithms, or programming references from the work they support.",
+    "A library of resources, topics, and maps.",
+    "A central hub of my ideas and official knowledge that I can come back to if I forget something.",
   );
   const sectionsById = new Map(
     getSectionsForArea(workspace, AREA_STUDIES).map((section) => [section.id, section]),
@@ -684,10 +684,17 @@ function renderStudiesDashboard(workspace) {
 
   const notecardSection = createElement("section", "notecard-collections");
   notecardSection.id = "notecard-collections";
-  const notecardHeading = createSectionHeading(
-    "Notecards",
-    "Practice existing collections or open the complete educational archive.",
+  const notecardHeading = createElement("div", "content-heading-row notecard-heading");
+  const notecardHeadingCopy = createElement("div");
+  const notecardTitleRow = createElement("div", "notecard-title-row");
+  const allNotecardsLink = createElement("a", "button button-small", "All notecards");
+  allNotecardsLink.href = "educational_resources/";
+  notecardTitleRow.append(createElement("h2", "", "Notecards"), allNotecardsLink);
+  notecardHeadingCopy.append(
+    notecardTitleRow,
+    createElement("p", "", "Practice a subject collection or open the complete educational archive."),
   );
+  notecardHeading.append(notecardHeadingCopy);
   const notecardGrid = createElement("div", "tool-grid");
   [
     {
@@ -703,13 +710,6 @@ function renderStudiesDashboard(workspace) {
       href: "educational_resources/arts/flashcard-practice.html",
       icon: "✦",
       accent: "ochre",
-    },
-    {
-      title: "All Notecards",
-      copy: "Open mathematics, neuroscience, computer science, and arts resources.",
-      href: "educational_resources/",
-      icon: "▤",
-      accent: "violet",
     },
   ].forEach((resource) => notecardGrid.append(createToolCard(resource)));
   notecardSection.append(notecardHeading, notecardGrid);
