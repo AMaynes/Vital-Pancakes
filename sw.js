@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v99";
+const CACHE_NAME = "vital-pancakes-app-v100";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
 ]);
