@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  addFolder,
   addStudyFolder,
   getWorkspace,
   isCoreSectionId,
+  moveEntryToFolder,
+  moveFolder,
   moveStudyEntry,
   moveStudyFolder,
   removeStudyFolder,
+  removeFolder,
 } from "./store.js";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
@@ -69,6 +73,25 @@ test("study folders can be added, nested, populated, and removed without deletin
   savedStudies = getWorkspace().sections.find((section) => section.id === "studies");
   assert.equal(savedStudies.folders.some((folder) => folder.startsWith("Archive")), false);
   assert.equal(savedStudies.items.find((item) => item.id === entry.id).folderPath, "");
+});
+
+test("every entry library supports recursive folder mutations", () => {
+  useStorage();
+  const initial = getWorkspace();
+  const recipes = initial.sections.find((section) => section.id === "recipes");
+  const recipe = recipes.items[0];
+
+  assert.equal(addFolder("recipes", "Meals / Weeknight"), true);
+  assert.equal(moveEntryToFolder("recipes", recipe.id, "Meals / Weeknight"), true);
+  assert.equal(moveFolder("recipes", "Meals / Weeknight", ""), true);
+
+  let savedRecipes = getWorkspace().sections.find((section) => section.id === "recipes");
+  assert.ok(savedRecipes.folders.includes("Weeknight"));
+  assert.equal(savedRecipes.items.find((item) => item.id === recipe.id).folderPath, "Weeknight");
+
+  assert.equal(removeFolder("recipes", "Weeknight"), true);
+  savedRecipes = getWorkspace().sections.find((section) => section.id === "recipes");
+  assert.equal(savedRecipes.items.find((item) => item.id === recipe.id).folderPath, "");
 });
 
 test("a new workspace starts with eleven permanent libraries and editable examples", () => {

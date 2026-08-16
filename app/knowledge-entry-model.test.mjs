@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildKnowledgeOutline,
+  buildEntryFileTree,
   buildProjectMapTree,
   groupEntriesByFolder,
   normalizeFolderCatalog,
@@ -51,19 +52,33 @@ test("study folders are normalized and grouped without flattening entries", () =
     { id: "a", folderPath: "Information/Theory" },
     { id: "b", folderPath: "" },
   ]);
-  assert.equal(groups[0].folder, "Information / Theory");
-  assert.equal(groups[1].folder, "Unfiled");
+  assert.equal(groups[0].folder, "Information");
+  assert.equal(groups[0].entries.length, 0);
+  assert.equal(groups[1].folder, "Information / Theory");
+  assert.equal(groups[2].folder, "Unfiled");
 });
 
 test("explicit study folders remain visible when empty", () => {
   const entries = [{ id: "a", folderPath: "Information/Theory" }];
   assert.deepEqual(normalizeFolderCatalog(entries, ["Drafts", "Information / Theory"]), [
     "Drafts",
+    "Information",
     "Information / Theory",
   ]);
   assert.deepEqual(
     groupEntriesByFolder(entries, ["Drafts"], { includeUnfiled: true })
       .map(({ folder, entries: folderEntries }) => [folder, folderEntries.length]),
-    [["Drafts", 0], ["Information / Theory", 1], ["Unfiled", 0]],
+    [["Drafts", 0], ["Information", 0], ["Information / Theory", 1], ["Unfiled", 0]],
   );
+});
+
+test("entry file trees materialize recursive directories and retain root files", () => {
+  const rootEntry = { id: "root", folderPath: "" };
+  const nestedEntry = { id: "nested", folderPath: "Programming / Web / Browser" };
+  const tree = buildEntryFileTree([rootEntry, nestedEntry], ["Empty / Child"]);
+
+  assert.deepEqual(tree.entries, [rootEntry]);
+  assert.deepEqual(tree.folders.map(({ name }) => name), ["Empty", "Programming"]);
+  assert.equal(tree.folders[0].children[0].name, "Child");
+  assert.equal(tree.folders[1].children[0].children[0].entries[0], nestedEntry);
 });

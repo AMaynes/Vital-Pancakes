@@ -141,13 +141,46 @@ export function normalizeFolderPath(value) {
 }
 
 export function normalizeFolderCatalog(entries, folders = []) {
-  const normalized = [
+  const normalizedPaths = [
     ...(Array.isArray(folders) ? folders : []),
     ...(Array.isArray(entries) ? entries.map((entry) => entry?.folderPath) : []),
   ]
     .map(normalizeFolderPath)
     .filter(Boolean);
+  const normalized = normalizedPaths.flatMap((path) => {
+    const parts = path.split(" / ");
+    return parts.map((_, index) => parts.slice(0, index + 1).join(" / "));
+  });
   return [...new Set(normalized)].sort((left, right) => left.localeCompare(right));
+}
+
+export function buildEntryFileTree(entries, folders = []) {
+  const catalog = normalizeFolderCatalog(entries, folders);
+  const nodesByPath = new Map(catalog.map((path) => [path, {
+    name: path.split(" / ").at(-1),
+    path,
+    entries: [],
+    children: [],
+  }]));
+  const rootFolders = [];
+  catalog.forEach((path) => {
+    const node = nodesByPath.get(path);
+    const parentPath = path.split(" / ").slice(0, -1).join(" / ");
+    const parent = nodesByPath.get(parentPath);
+    if (parent) parent.children.push(node);
+    else rootFolders.push(node);
+  });
+  const rootEntries = [];
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    const folderPath = normalizeFolderPath(entry?.folderPath);
+    const folder = nodesByPath.get(folderPath);
+    if (folder) folder.entries.push(entry);
+    else rootEntries.push(entry);
+  });
+  const sortNodes = (nodes) => nodes
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((node) => ({ ...node, children: sortNodes(node.children) }));
+  return { folders: sortNodes(rootFolders), entries: rootEntries };
 }
 
 export function groupEntriesByFolder(entries, folders = [], options = {}) {

@@ -15,7 +15,7 @@
 
 import { ALGORITHM_ANALYSIS_SAMPLES } from "./algorithm-analysis-samples.mjs?v=1";
 import { ALGORITHM_SAMPLES } from "./algorithm-samples.mjs?v=2";
-import { normalizeFolderCatalog, normalizeFolderPath } from "./knowledge-entry-model.mjs?v=2";
+import { normalizeFolderCatalog, normalizeFolderPath } from "./knowledge-entry-model.mjs?v=3";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const CURRENT_WORKSPACE_VERSION = 16;
@@ -1930,7 +1930,7 @@ function createInitialWorkspace() {
 function cloneDefaultSection(section) {
   const clone = JSON.parse(JSON.stringify(section));
   clone.items = clone.items.map((item) => alignEntryFields(clone, item));
-  if (clone.type === "study") clone.folders = normalizeFolderCatalog(clone.items, clone.folders);
+  clone.folders = normalizeFolderCatalog(clone.items, clone.folders);
   return clone;
 }
 
@@ -2541,7 +2541,6 @@ function migrateWorkspace(workspace) {
     changed = true;
   }
   workspace.sections.forEach((section) => {
-    if (section.type !== "study") return;
     const folders = normalizeFolderCatalog(section.items, section.folders);
     if (JSON.stringify(section.folders ?? []) !== JSON.stringify(folders)) {
       section.folders = folders;
@@ -2644,6 +2643,7 @@ export function addItem(sectionId, itemInput) {
     updatedAt: new Date().toISOString(),
   };
   section.items.push(item);
+  section.folders = normalizeFolderCatalog(section.items, section.folders);
   saveWorkspace(workspace);
   return item;
 }
@@ -2672,16 +2672,17 @@ export function updateItem(sectionId, itemId, itemInput) {
     updatedAt: new Date().toISOString(),
   };
   section.items[itemIndex] = updatedItem;
+  section.folders = normalizeFolderCatalog(section.items, section.folders);
   saveWorkspace(workspace);
   return updatedItem;
 }
 
-export function addStudyFolder(sectionId, folderInput) {
+export function addFolder(sectionId, folderInput) {
   const folderPath = normalizeFolderPath(folderInput);
   if (!folderPath) return false;
   const workspace = getWorkspace();
   const section = workspace.sections.find((candidate) => candidate.id === sectionId);
-  if (section?.type !== "study") return false;
+  if (!section || !Array.isArray(section.items)) return false;
   const folders = normalizeFolderCatalog(section.items, section.folders);
   if (folders.includes(folderPath)) return false;
   section.folders = [...folders, folderPath].sort((left, right) => left.localeCompare(right));
@@ -2689,11 +2690,11 @@ export function addStudyFolder(sectionId, folderInput) {
   return true;
 }
 
-export function moveStudyEntry(sectionId, itemId, folderInput) {
+export function moveEntryToFolder(sectionId, itemId, folderInput) {
   const workspace = getWorkspace();
   const section = workspace.sections.find((candidate) => candidate.id === sectionId);
   const item = section?.items.find((candidate) => candidate.id === itemId);
-  if (section?.type !== "study" || !item) return false;
+  if (!section || !item) return false;
   const folderPath = normalizeFolderPath(folderInput);
   if (normalizeFolderPath(item.folderPath) === folderPath) return false;
   item.folderPath = folderPath;
@@ -2703,13 +2704,13 @@ export function moveStudyEntry(sectionId, itemId, folderInput) {
   return true;
 }
 
-export function moveStudyFolder(sectionId, sourceInput, targetInput) {
+export function moveFolder(sectionId, sourceInput, targetInput) {
   const sourcePath = normalizeFolderPath(sourceInput);
   const targetPath = normalizeFolderPath(targetInput);
   if (!sourcePath || targetPath === sourcePath || targetPath.startsWith(`${sourcePath} / `)) return false;
   const workspace = getWorkspace();
   const section = workspace.sections.find((candidate) => candidate.id === sectionId);
-  if (section?.type !== "study") return false;
+  if (!section || !Array.isArray(section.items)) return false;
   const folders = normalizeFolderCatalog(section.items, section.folders);
   if (!folders.includes(sourcePath)) return false;
   const leafName = sourcePath.split(" / ").at(-1);
@@ -2733,12 +2734,12 @@ export function moveStudyFolder(sectionId, sourceInput, targetInput) {
   return true;
 }
 
-export function removeStudyFolder(sectionId, folderInput) {
+export function removeFolder(sectionId, folderInput) {
   const folderPath = normalizeFolderPath(folderInput);
   if (!folderPath) return false;
   const workspace = getWorkspace();
   const section = workspace.sections.find((candidate) => candidate.id === sectionId);
-  if (section?.type !== "study") return false;
+  if (!section || !Array.isArray(section.items)) return false;
   const folders = normalizeFolderCatalog(section.items, section.folders);
   if (!folders.includes(folderPath)) return false;
   const belongsToFolder = (pathInput) => {
@@ -2751,6 +2752,22 @@ export function removeStudyFolder(sectionId, folderInput) {
   });
   saveWorkspace(workspace);
   return true;
+}
+
+export function addStudyFolder(sectionId, folderInput) {
+  return addFolder(sectionId, folderInput);
+}
+
+export function moveStudyEntry(sectionId, itemId, folderInput) {
+  return moveEntryToFolder(sectionId, itemId, folderInput);
+}
+
+export function moveStudyFolder(sectionId, sourceInput, targetInput) {
+  return moveFolder(sectionId, sourceInput, targetInput);
+}
+
+export function removeStudyFolder(sectionId, folderInput) {
+  return removeFolder(sectionId, folderInput);
 }
 
 /**

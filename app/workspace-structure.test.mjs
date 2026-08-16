@@ -68,3 +68,15 @@ test("Notecards keeps the archive action beside the heading and subjects in the 
   assert.match(dashboard, /title: "Arts Notecards"/);
   assert.doesNotMatch(dashboard, /title: "All Notecards"/);
 });
+
+test("every entry library renders through one recursive file explorer", () => {
+  const sectionRenderer = controller.match(
+    /function renderSection\(section\) \{([\s\S]*?)\n\}\n\n\/\*\*/,
+  )?.[1] ?? "";
+
+  assert.match(sectionRenderer, /createEntryFileExplorer\(section, visibleItems\)/);
+  assert.doesNotMatch(sectionRenderer, /createEntryIndexCard|groupEntriesByFolder|CONTENT_VIEWS/);
+  assert.match(controller, /function createFileTreeFolder\(section, folder, depth\)/);
+  assert.match(controller, /folder\.children\.forEach\(\(child\) => children\.append\(createFileTreeFolder/);
+  assert.match(controller, /row\.draggable = true/);
+});

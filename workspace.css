@@ -134,6 +134,234 @@
   width: min(430px, calc(100vw - 28px));
 }
 
+.entry-file-index {
+  display: block;
+}
+
+.file-explorer {
+  overflow: auto;
+  border: 1px solid var(--line-strong);
+  background: rgb(251 250 246 / 68%);
+  box-shadow: var(--shadow-sm);
+}
+
+.file-explorer-root,
+.file-tree-folder-row,
+.file-tree-entry {
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.file-explorer-root {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  background: var(--paper-deep);
+}
+
+.file-explorer-root-copy,
+.file-tree-folder-label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.file-explorer-root small,
+.file-tree-folder-label small {
+  color: var(--ink-faint);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.file-explorer-root-hint {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.file-tree-contents {
+  margin-left: 17px;
+  border-left: 1px solid var(--line);
+}
+
+.file-tree-root-contents {
+  margin-left: 0;
+  border-left: 0;
+}
+
+.file-tree-folder-row {
+  display: flex;
+  min-height: 35px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 8px;
+  background: rgb(241 238 230 / 72%);
+  cursor: pointer;
+  list-style: none;
+}
+
+.file-tree-folder-row::-webkit-details-marker {
+  display: none;
+}
+
+.file-tree-folder-row::before {
+  width: 10px;
+  flex: 0 0 10px;
+  color: var(--ink-faint);
+  content: ">";
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.file-tree-folder[open] > .file-tree-folder-row::before {
+  content: "v";
+}
+
+.file-tree-folder-actions,
+.file-tree-entry-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-left: auto;
+}
+
+.file-tree-action,
+.file-tree-drag-handle {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  min-height: 25px;
+  place-items: center;
+  border-radius: 0;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.file-tree-drag-handle,
+.file-tree-entry,
+.file-tree-entry-handle {
+  cursor: grab;
+}
+
+.file-tree-drag-handle:active,
+.file-tree-entry:active {
+  cursor: grabbing;
+}
+
+.file-tree-entry {
+  display: grid;
+  min-height: 38px;
+  grid-template-columns: 17px 22px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 5px 3px 8px;
+  background: rgb(255 255 255 / 34%);
+}
+
+.file-tree-entry:hover {
+  background: var(--card);
+}
+
+.file-tree-entry-handle {
+  color: var(--ink-faint);
+  font-size: 10px;
+}
+
+.file-tree-icon {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  place-items: center;
+  color: var(--coral);
+  font-size: 13px;
+}
+
+.file-tree-file-icon {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.file-tree-entry-link {
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.file-tree-entry-copy,
+.file-tree-entry-copy strong,
+.file-tree-entry-copy small {
+  display: block;
+  min-width: 0;
+}
+
+.file-tree-entry-copy strong,
+.file-tree-entry-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-tree-entry-copy strong {
+  font-size: 10px;
+}
+
+.file-tree-entry-copy small {
+  margin-top: 1px;
+  color: var(--ink-faint);
+  font: italic 8px/1.2 var(--font-display);
+}
+
+.file-tree-entry-type {
+  color: var(--ink-faint);
+  font-size: 7px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.file-explorer-root.is-drop-target,
+.file-tree-folder-row.is-drop-target {
+  background: var(--coral-soft);
+  box-shadow: inset 3px 0 0 var(--coral);
+}
+
+.file-tree-entry.is-dragging,
+.file-tree-drag-handle.is-dragging {
+  opacity: 0.38;
+}
+
+@media (max-width: 640px) {
+  .file-explorer-root-hint,
+  .file-tree-entry-copy small,
+  .file-tree-entry-type {
+    display: none;
+  }
+
+  .file-tree-contents {
+    margin-left: 12px;
+  }
+
+  .file-tree-root-contents {
+    margin-left: 0;
+  }
+
+  .file-tree-entry {
+    grid-template-columns: 14px 19px minmax(0, 1fr) auto;
+  }
+
+  .file-tree-entry-actions .file-tree-action,
+  .file-tree-folder-actions .file-tree-action,
+  .file-tree-folder-actions .file-tree-drag-handle {
+    width: 27px;
+    height: 27px;
+  }
+}
+
 .knowledge-entry-layout,
 .project-system-layout {
   display: grid;

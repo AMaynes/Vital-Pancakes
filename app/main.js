@@ -17,7 +17,7 @@
  */
 
 import {
-  addStudyFolder,
+  addFolder,
   addItem,
   createId,
   deleteItem,
@@ -25,20 +25,15 @@ import {
   getSection,
   getWorkspace,
   isCoreSectionId,
-  moveStudyEntry,
-  moveStudyFolder,
-  removeStudyFolder,
+  moveEntryToFolder,
+  moveFolder,
+  removeFolder,
   saveWorkspace,
   updateItem,
-} from "./store.js?v=17";
+} from "./store.js?v=18";
 import { installAiPageHost } from "./ai-page-host.mjs";
 import { createWorkspaceAiAdapter } from "./workspace-ai-adapter.mjs";
-import {
-  buildContentHash,
-  CONTENT_VIEWS,
-  getContentViewStorageKey,
-  normalizeContentView,
-} from "./content-view.mjs";
+import { buildContentHash } from "./content-view.mjs";
 import {
   collectEntryTags,
   filterItemsByTags,
@@ -46,12 +41,13 @@ import {
 } from "./tag-filter.mjs?v=1";
 import {
   buildKnowledgeOutline,
+  buildEntryFileTree,
   buildProjectMapTree,
-  groupEntriesByFolder,
+  normalizeFolderPath,
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
-} from "./knowledge-entry-model.mjs?v=2";
+} from "./knowledge-entry-model.mjs?v=3";
 import { listGlossaryEntries, saveGlossaryEntry } from "./knowledge-db.mjs";
 
 const appMain = document.querySelector("#app-main");
@@ -64,6 +60,7 @@ const animationTimers = new Set();
 
 let activeSectionId = null;
 let editingItemId = null;
+let activeFolderParentPath = "";
 const activeSectionSearchFilters = new Map();
 const activeSectionTagFilters = new Map();
 const activeWorkoutMuscleFilters = new Map();
@@ -1134,24 +1131,13 @@ function renderSection(section) {
     createElement("p", "page-description", section.description || "A flexible space for your notes."),
   );
   const actions = createElement("div", "page-actions");
-  const view = getSavedContentView(section.id);
-  const viewSwitcher = createElement("div", "view-switcher");
-  viewSwitcher.setAttribute("role", "group");
-  viewSwitcher.setAttribute("aria-label", "Entry layout");
-  viewSwitcher.append(
-    createContentViewButton(section, CONTENT_VIEWS.LIST, view),
-    createContentViewButton(section, CONTENT_VIEWS.GRID, view),
-  );
   const addButton = createElement("button", "button button-primary", `+ Add ${getSingularLabel(section)}`);
   addButton.type = "button";
   addButton.addEventListener("click", () => openItemDialog(section));
-  actions.append(viewSwitcher);
-  if (section.type === "study") {
-    const addFolderButton = createElement("button", "button button-quiet folder-add-button", "+ Folder");
-    addFolderButton.type = "button";
-    addFolderButton.addEventListener("click", () => openFolderDialog(section));
-    actions.append(addFolderButton);
-  }
+  const addFolderButton = createElement("button", "button button-quiet folder-add-button", "+ Folder");
+  addFolderButton.type = "button";
+  addFolderButton.addEventListener("click", () => openFolderDialog(section));
+  actions.append(addFolderButton);
   actions.append(addButton);
   if (!isCoreSectionId(section.id)) {
     const deleteButton = createElement("button", "button button-quiet", "Delete section");
@@ -1171,8 +1157,8 @@ function renderSection(section) {
     meta.prepend(createElement("span", "", `${visibleItems.length} of ${section.items.length} shown`));
   }
 
-  const grid = createElement("div", `entry-index entry-index-${view}`);
-  if (!visibleItems.length && !(section.type === "study" && section.folders?.length)) {
+  const grid = createElement("div", "entry-index entry-file-index");
+  if (!visibleItems.length && !section.folders?.length) {
     const empty = createEmptyState(
       section.items.length ? "No entries match those filters" : `No ${section.title.toLocaleLowerCase()} yet`,
       section.items.length ? "Try another search or clear a tag filter." : getEmptyMessage(section),
@@ -1184,58 +1170,8 @@ function renderSection(section) {
       empty.append(emptyButton);
     }
     grid.append(empty);
-  } else if (["study", "idea", "howto"].includes(section.type)) {
-    groupEntriesByFolder(
-      visibleItems,
-      section.type === "study" ? section.folders : [],
-      { includeUnfiled: section.type === "study" },
-    ).forEach(({ folder, entries }) => {
-      const folderPanel = createElement("details", "study-folder");
-      folderPanel.open = true;
-      const summary = createElement("summary", "study-folder-heading");
-      const isStudyFolder = section.type === "study";
-      const folderPath = folder === "Unfiled" ? "" : folder;
-      summary.append(
-        createElement("span", "study-folder-icon", "▱"),
-        createElement("strong", "", folder),
-        createElement("small", "", `${entries.length} ${entries.length === 1 ? "entry" : "entries"}`),
-      );
-      if (isStudyFolder && folderPath) {
-        const dragHandle = createElement("span", "study-folder-drag-handle", "⠿");
-        dragHandle.draggable = true;
-        dragHandle.title = `Move ${folder}`;
-        dragHandle.setAttribute("aria-label", `Move ${folder}`);
-        dragHandle.addEventListener("dragstart", (event) => startStudyDrag(event, {
-          type: "folder",
-          sectionId: section.id,
-          folderPath,
-        }));
-        dragHandle.addEventListener("dragend", clearStudyDragState);
-        const removeButton = createElement("button", "icon-button study-folder-remove", "×");
-        removeButton.type = "button";
-        removeButton.title = `Remove ${folder}`;
-        removeButton.setAttribute("aria-label", `Remove ${folder}`);
-        removeButton.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          confirmStudyFolderRemove(section, folderPath, entries.length);
-        });
-        summary.append(dragHandle, removeButton);
-      }
-      const folderGrid = createElement("div", `study-folder-entries entry-index-${view}`);
-      entries
-        .slice()
-        .sort((left, right) => String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? "")))
-        .forEach((item, index) => folderGrid.append(createEntryIndexCard(section, item, index)));
-      if (isStudyFolder) enableStudyFolderDrop(folderPanel, section, folderPath);
-      folderPanel.append(summary, folderGrid);
-      grid.append(folderPanel);
-    });
   } else {
-    visibleItems
-      .slice()
-      .sort((left, right) => String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? "")))
-      .forEach((item, index) => grid.append(createEntryIndexCard(section, item, index)));
+    grid.append(createEntryFileExplorer(section, visibleItems));
   }
 
   const subsectionPanel = createKnowledgeSubsectionPanel(section);
@@ -1516,103 +1452,138 @@ function renderAlgorithmCategoryIndex(section) {
   appMain.append(heading, categoryGrid);
 }
 
-/**
- * Reads a collection's retained list/grid preference.
- *
- * @param {string} sectionId Collection identifier.
- * @returns {"list"|"grid"} Retained view.
- */
-function getSavedContentView(sectionId) {
-  try {
-    return normalizeContentView(localStorage.getItem(getContentViewStorageKey(sectionId)));
-  } catch {
-    return CONTENT_VIEWS.LIST;
-  }
+function createEntryFileExplorer(section, visibleItems) {
+  const tree = buildEntryFileTree(visibleItems, section.folders);
+  const explorer = createElement("section", "file-explorer");
+  explorer.setAttribute("aria-label", `${section.title} file explorer`);
+  const rootRow = createElement("div", "file-explorer-root");
+  const rootCopy = createElement("div", "file-explorer-root-copy");
+  rootCopy.append(
+    createElement("span", "file-tree-icon", "▰"),
+    createElement("strong", "", section.title),
+    createElement("small", "", `${visibleItems.length} ${visibleItems.length === 1 ? "file" : "files"}`),
+  );
+  const rootHint = createElement("span", "file-explorer-root-hint", "Drop here for root");
+  rootRow.append(rootCopy, rootHint);
+  enableFolderDrop(rootRow, section, "");
+
+  const contents = createElement("div", "file-tree-contents file-tree-root-contents");
+  tree.folders.forEach((folder) => contents.append(createFileTreeFolder(section, folder, 0)));
+  sortExplorerEntries(tree.entries).forEach((item) => contents.append(createFileTreeEntry(section, item)));
+  explorer.append(rootRow, contents);
+  return explorer;
 }
 
-/**
- * Creates one button in the collection view switcher.
- *
- * @param {object} section Collection model.
- * @param {"list"|"grid"} targetView View selected by the button.
- * @param {"list"|"grid"} activeView Current view.
- * @returns {HTMLButtonElement} View button.
- */
-function createContentViewButton(section, targetView, activeView) {
-  const label = targetView === CONTENT_VIEWS.LIST ? "☷ List" : "⊞ Grid";
-  const button = createElement("button", "view-button", label);
-  button.type = "button";
-  button.setAttribute("aria-pressed", String(targetView === activeView));
-  button.addEventListener("click", () => {
-    try {
-      localStorage.setItem(getContentViewStorageKey(section.id), targetView);
-    } catch {
-      // The view still changes for this render when storage is unavailable.
-    }
-    renderSection(section);
+function createFileTreeFolder(section, folder, depth) {
+  const panel = createElement("details", "file-tree-folder");
+  panel.open = depth === 0;
+  panel.dataset.folderPath = folder.path;
+  const summary = createElement("summary", "file-tree-folder-row");
+  summary.title = folder.path;
+  const count = countFileTreeEntries(folder);
+  const label = createElement("span", "file-tree-folder-label");
+  label.append(
+    createElement("span", "file-tree-icon", "▱"),
+    createElement("strong", "", folder.name),
+    createElement("small", "", `${count} ${count === 1 ? "file" : "files"}`),
+  );
+  const actions = createElement("span", "file-tree-folder-actions");
+  const addButton = createElement("button", "icon-button file-tree-action", "+");
+  addButton.type = "button";
+  addButton.title = `Add subfolder to ${folder.name}`;
+  addButton.setAttribute("aria-label", `Add subfolder to ${folder.name}`);
+  addButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openFolderDialog(section, folder.path);
   });
-  return button;
+  const dragHandle = createElement("span", "file-tree-drag-handle", "⠿");
+  dragHandle.draggable = true;
+  dragHandle.title = `Move ${folder.name}`;
+  dragHandle.setAttribute("aria-label", `Move ${folder.name}`);
+  dragHandle.addEventListener("dragstart", (event) => startEntryDrag(event, {
+    type: "folder",
+    sectionId: section.id,
+    folderPath: folder.path,
+  }));
+  dragHandle.addEventListener("dragend", clearEntryDragState);
+  const removeButton = createElement("button", "icon-button file-tree-action", "×");
+  removeButton.type = "button";
+  removeButton.title = `Remove ${folder.name}`;
+  removeButton.setAttribute("aria-label", `Remove ${folder.name}`);
+  removeButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    confirmFolderRemove(section, folder.path);
+  });
+  actions.append(addButton, dragHandle, removeButton);
+  summary.append(label, actions);
+  enableFolderDrop(summary, section, folder.path);
+
+  const children = createElement("div", "file-tree-contents");
+  folder.children.forEach((child) => children.append(createFileTreeFolder(section, child, depth + 1)));
+  sortExplorerEntries(folder.entries).forEach((item) => children.append(createFileTreeEntry(section, item)));
+  panel.append(summary, children);
+  return panel;
 }
 
-/**
- * Creates one collapsed entry preview for list or grid collection layouts.
- *
- * @param {object} section Parent collection.
- * @param {object} item Entry model.
- * @param {number} index Entry position in the current sort.
- * @returns {HTMLElement} Linked preview card.
- */
-function createEntryIndexCard(section, item, index) {
-  const card = createElement("article", `entry-index-card entry-${section.type}`);
-  const marker = createElement("span", "entry-index-marker", String(index + 1).padStart(2, "0"));
-  const link = createElement("a", "entry-index-link");
-  link.href = section.workoutCategory
+function createFileTreeEntry(section, item) {
+  const row = createElement("article", `file-tree-entry entry-${section.type}`);
+  row.draggable = true;
+  row.title = `Drag ${item.title} into a folder`;
+  row.addEventListener("dragstart", (event) => startEntryDrag(event, {
+    type: "entry",
+    sectionId: section.id,
+    itemId: item.id,
+  }));
+  row.addEventListener("dragend", clearEntryDragState);
+  const handle = createElement("span", "file-tree-entry-handle", "⠿");
+  handle.setAttribute("aria-hidden", "true");
+  const icon = createElement("span", "file-tree-icon file-tree-file-icon", "▤");
+  const link = createElement("a", "file-tree-entry-link");
+  link.draggable = false;
+  link.href = getEntryRoute(section, item);
+  link.setAttribute("aria-label", `Open ${item.title}`);
+  const copy = createElement("span", "file-tree-entry-copy");
+  copy.append(
+    createElement("strong", "", item.title),
+    createElement("small", "", item.summary || getEntryTypeLabel(section, item)),
+  );
+  link.append(copy);
+  const type = createElement("span", "file-tree-entry-type", getEntryTypeLabel(section, item));
+  const actions = createElement("div", "file-tree-entry-actions");
+  const editButton = createElement("button", "icon-button file-tree-action", "✎");
+  editButton.type = "button";
+  editButton.title = `Edit ${item.title}`;
+  editButton.setAttribute("aria-label", `Edit ${item.title}`);
+  editButton.addEventListener("click", () => openItemDialog(section, item));
+  const deleteButton = createElement("button", "icon-button file-tree-action", "×");
+  deleteButton.type = "button";
+  deleteButton.title = `Delete ${item.title}`;
+  deleteButton.setAttribute("aria-label", `Delete ${item.title}`);
+  deleteButton.addEventListener("click", () => confirmItemDelete(section, item));
+  actions.append(editButton, deleteButton);
+  row.append(handle, icon, link, type, actions);
+  return row;
+}
+
+function getEntryRoute(section, item) {
+  return section.workoutCategory
     ? buildWorkoutHash(section.workoutCategory, item.id)
     : section.cleaningCategory
       ? buildCleaningHash(section.cleaningCategory, item.id)
       : section.algorithmCategory
         ? buildAlgorithmHash(section.algorithmCategory, item.id)
         : buildContentHash(section.id, item.id);
-  link.setAttribute("aria-label", `Open ${item.title}`);
-  if (section.type === "study") {
-    link.draggable = false;
-    card.draggable = true;
-    card.title = `Drag ${item.title} to another folder`;
-    card.addEventListener("dragstart", (event) => startStudyDrag(event, {
-      type: "entry",
-      sectionId: section.id,
-      itemId: item.id,
-    }));
-    card.addEventListener("dragend", clearStudyDragState);
-  }
+}
 
-  const copy = createElement("div", "entry-index-copy");
-  copy.append(
-    createElement(
-      "span",
-      "card-kicker",
-      `${item.isSample ? "EDITABLE EXAMPLE · " : ""}${getEntryTypeLabel(section, item)}`,
-    ),
-    createElement("h2", "", item.title),
-    createElement("p", "", item.summary || "Open this entry to view its complete record."),
-  );
-  appendTagGroup(copy, "Tags", (item.tags ?? []).slice(0, 5));
-  link.append(copy, createEntryVisual(section, item, true));
+function countFileTreeEntries(folder) {
+  return folder.entries.length
+    + folder.children.reduce((total, child) => total + countFileTreeEntries(child), 0);
+}
 
-  const actions = createElement("div", "entry-index-actions");
-  const editButton = createElement("button", "icon-button", "✎");
-  editButton.type = "button";
-  editButton.title = `Edit ${item.title}`;
-  editButton.setAttribute("aria-label", `Edit ${item.title}`);
-  editButton.addEventListener("click", () => openItemDialog(section, item));
-  const deleteButton = createElement("button", "icon-button", "×");
-  deleteButton.type = "button";
-  deleteButton.title = `Delete ${item.title}`;
-  deleteButton.setAttribute("aria-label", `Delete ${item.title}`);
-  deleteButton.addEventListener("click", () => confirmItemDelete(section, item));
-  actions.append(editButton, deleteButton);
-  card.append(marker, link, actions);
-  return card;
+function sortExplorerEntries(entries) {
+  return entries.slice().sort((left, right) => String(left.title ?? "").localeCompare(String(right.title ?? "")));
 }
 
 /**
@@ -3735,58 +3706,63 @@ function parseLessonSections(value, existingSections = []) {
     });
 }
 
-const STUDY_DRAG_TYPE = "application/x-vital-pancakes-study";
+const ENTRY_DRAG_TYPE = "application/x-vital-pancakes-entry";
 
-function openFolderDialog(section) {
+function openFolderDialog(section, parentPath = "") {
   activeSectionId = section.id;
+  activeFolderParentPath = normalizeFolderPath(parentPath);
   folderForm.reset();
+  document.querySelector("#folder-dialog-title").textContent = activeFolderParentPath
+    ? `Add subfolder to ${activeFolderParentPath.split(" / ").at(-1)}`
+    : "Add folder";
+  folderNameInput.placeholder = activeFolderParentPath ? "Subfolder name" : "Example: Reference / Archived";
   folderDialog.showModal();
   window.setTimeout(() => folderNameInput.focus(), 0);
 }
 
-function startStudyDrag(event, payload) {
+function startEntryDrag(event, payload) {
   event.stopPropagation();
   event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData(STUDY_DRAG_TYPE, JSON.stringify(payload));
+  event.dataTransfer.setData(ENTRY_DRAG_TYPE, JSON.stringify(payload));
   event.dataTransfer.setData("text/plain", payload.type === "folder" ? payload.folderPath : payload.itemId);
   event.currentTarget.classList.add("is-dragging");
-  document.body.classList.add("study-drag-active");
+  document.body.classList.add("entry-drag-active");
 }
 
-function clearStudyDragState() {
-  document.body.classList.remove("study-drag-active");
+function clearEntryDragState() {
+  document.body.classList.remove("entry-drag-active");
   document.querySelectorAll(".is-dragging, .is-drop-target").forEach((element) => {
     element.classList.remove("is-dragging", "is-drop-target");
   });
 }
 
-function readStudyDrag(event) {
+function readEntryDrag(event) {
   try {
-    return JSON.parse(event.dataTransfer.getData(STUDY_DRAG_TYPE));
+    return JSON.parse(event.dataTransfer.getData(ENTRY_DRAG_TYPE));
   } catch {
     return null;
   }
 }
 
-function enableStudyFolderDrop(folderPanel, section, folderPath) {
-  folderPanel.dataset.folderPath = folderPath;
-  folderPanel.addEventListener("dragover", (event) => {
+function enableFolderDrop(dropTarget, section, folderPath) {
+  dropTarget.dataset.folderPath = folderPath;
+  dropTarget.addEventListener("dragover", (event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
-    folderPanel.classList.add("is-drop-target");
+    dropTarget.classList.add("is-drop-target");
   });
-  folderPanel.addEventListener("dragleave", (event) => {
-    if (!folderPanel.contains(event.relatedTarget)) folderPanel.classList.remove("is-drop-target");
+  dropTarget.addEventListener("dragleave", (event) => {
+    if (!dropTarget.contains(event.relatedTarget)) dropTarget.classList.remove("is-drop-target");
   });
-  folderPanel.addEventListener("drop", (event) => {
+  dropTarget.addEventListener("drop", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    const payload = readStudyDrag(event);
-    clearStudyDragState();
+    const payload = readEntryDrag(event);
+    clearEntryDragState();
     if (!payload || payload.sectionId !== section.id) return;
     const moved = payload.type === "entry"
-      ? moveStudyEntry(section.id, payload.itemId, folderPath)
-      : moveStudyFolder(section.id, payload.folderPath, folderPath);
+      ? moveEntryToFolder(section.id, payload.itemId, folderPath)
+      : moveFolder(section.id, payload.folderPath, folderPath);
     if (!moved) {
       showToast(payload.type === "folder" ? "That folder cannot be moved there." : "Entry is already in this folder.");
       return;
@@ -3796,15 +3772,17 @@ function enableStudyFolderDrop(folderPanel, section, folderPath) {
   });
 }
 
-function confirmStudyFolderRemove(section, folderPath) {
-  const affectedEntries = section.items.filter((item) => (
-    item.folderPath === folderPath || item.folderPath?.startsWith(`${folderPath} / `)
+function confirmFolderRemove(section, folderPath) {
+  const fullSection = getSection(section.id) ?? section;
+  const affectedEntries = fullSection.items.filter((item) => (
+    normalizeFolderPath(item.folderPath) === folderPath
+    || normalizeFolderPath(item.folderPath).startsWith(`${folderPath} / `)
   )).length;
   const entryMessage = affectedEntries
-    ? ` ${affectedEntries} ${affectedEntries === 1 ? "entry" : "entries"} will move to Unfiled.`
+    ? ` ${affectedEntries} ${affectedEntries === 1 ? "entry" : "entries"} will move to the root.`
     : "";
   if (!window.confirm(`Remove “${folderPath}”?${entryMessage}`)) return;
-  if (!removeStudyFolder(section.id, folderPath)) return;
+  if (!removeFolder(section.id, folderPath)) return;
   renderWorkspace();
   showToast("Folder removed.");
 }
@@ -3858,8 +3836,11 @@ function showToast(message) {
 
 folderForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const folderName = folderNameInput.value;
-  if (!addStudyFolder(activeSectionId, folderName)) {
+  const enteredName = normalizeFolderPath(folderNameInput.value);
+  const folderName = activeFolderParentPath
+    ? `${activeFolderParentPath} / ${enteredName}`
+    : enteredName;
+  if (!enteredName || !addFolder(activeSectionId, folderName)) {
     folderNameInput.setCustomValidity("Enter a new folder name.");
     folderNameInput.reportValidity();
     return;
