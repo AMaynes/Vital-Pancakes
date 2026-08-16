@@ -728,8 +728,8 @@ function getRouteKnowledgeSubsection() {
 function renderEverydayDashboard(workspace) {
   const hero = createAreaHero(
     "EVERYDAY LIFE",
-    "Keep ordinary life clear, capable, and manageable.",
-    "Cooking, training, house care, and random practical how-tos stay here—separate from studies, research, projects, and work tools.",
+    "A dedicated place for the maintenance of everyday.",
+    "A separate location for the mundane in life that often occupy overhead, hoping to reduce the time it consumes.",
   );
   const sections = getSectionsForArea(workspace, AREA_EVERYDAY);
   const sectionsById = new Map(sections.map((section) => [section.id, section]));
