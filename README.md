@@ -35,7 +35,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 - **Everyday Life** — Study-shaped cooking methods, recipe references, condensed exercise guides, house-cleaning and self-care systems, and an Other library for random practical how-tos.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Four top-level areas: Notecards, Studies, Ideas, and Projects. Algorithms and Programming Languages live under Studies; Working Ideas and Idea Playground live under Ideas.
-- **Workspace** — An always-visible Main shelf for Overhead, Visual Board, PDF Tool, and Master Lesson Builder, followed by a collapsed Other tools grid.
+- **Workspace** — An always-visible Main shelf for Overhead, Visual Board, PDF Tool, and Software Architect, followed by a collapsed Other tools grid.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
 The interface uses an archival visual system based on warm paper, black ink, oxblood annotations, antique-brass details, sharp rules, engraved typography, and the forest-and-circuit *Vital Pancakes* skull.
@@ -88,7 +88,7 @@ Unified Vault exports local settings, discovered user IndexedDB schemas and reco
 
 ## Workspace Tools
 
-The Workspace page keeps **Overhead**, **Visual Board**, **PDF Tool**, and **Master Lesson Builder** visible under Main in that order. Every remaining tool stays available in the collapsed **Other tools** grid.
+The Workspace page keeps **Overhead**, **Visual Board**, **PDF Tool**, and **Software Architect** visible under Main in that order. Other surfaced tools stay available in the collapsed **Other tools** grid, while Budget & Finance is linked as a mini tool inside Overhead.
 
 ### Visual Board
 

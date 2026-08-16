@@ -18,14 +18,10 @@ export const CURRENT_AI_TOOLS = Object.freeze([
   current("randomized-picker", "Randomized Picker", "tools/randomized-picker.html", "tools/current-tool-ai-adapter.mjs"),
   current("pdf-signer", "PDF Tool", "tools/pdf-signer.html", "tools/current-tool-ai-adapter.mjs"),
   current("literature-analyzer", "Literature Analyzer", "tools/literature-analyzer.html", "tools/current-tool-ai-adapter.mjs"),
-  current("master-lesson-builder", "Master Lesson Builder", "tools/master-lesson-builder.html", "tools/current-tool-ai-adapter.mjs"),
-  current("literature-curator", "Literature Curation", "tools/literature-curator.html", "tools/current-tool-ai-adapter.mjs"),
   current("travel-planner", "Travel Planner", "tools/travel-planner.html", "tools/current-tool-ai-adapter.mjs"),
   current("software-architect", "Software Architect", "tools/architecture.html", "tools/current-tool-ai-adapter.mjs"),
   current("file-converter", "File Converter", "tools/file-converter.html", "tools/current-tool-ai-adapter.mjs"),
   current("scientific-calculator", "Scientific Calculator", "tools/scientific-calculator.html", "tools/current-tool-ai-adapter.mjs"),
-  current("budget-finance", "Budget & Finance", "tools/budget-finance.html", "tools/current-tool-ai-adapter.mjs"),
-  current("caption-relay", "Caption Relay", "tools/caption-relay.html", "tools/caption-relay-ai-adapter.mjs"),
 ]);
 
 export const PLANNED_AI_TOOL_CONTRACTS = Object.freeze([]);

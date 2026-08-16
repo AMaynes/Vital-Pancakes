@@ -802,8 +802,8 @@ function renderEverydayDashboard(workspace) {
 function renderToolsDashboard() {
   const hero = createAreaHero(
     "WORKSPACE",
-    "Tools for doing the work.",
-    "Keep the four tools you use most in reach, with every other specialized tool available when you need it.",
+    "A toolbox of sorts.",
+    "To make random things I am trying to do just a little easier with a dedicated tool.",
   );
   const mainTools = [
     {
@@ -828,11 +828,11 @@ function renderToolsDashboard() {
       accent: "ochre",
     },
     {
-      title: "Master Lesson Builder",
-      copy: "Process textbooks locally, approve their outline, generate editable lessons, and chat with checked page citations.",
-      href: "tools/master-lesson-builder.html",
-      icon: "▥",
-      accent: "coral",
+      title: "Software Architect",
+      copy: "Design a draggable software file and folder tree with aligned implementation notes.",
+      href: "tools/architecture.html",
+      icon: "⌘",
+      accent: "violet",
     },
   ];
   const otherTools = [
@@ -886,32 +886,11 @@ function renderToolsDashboard() {
       accent: "sage",
     },
     {
-      title: "Caption Relay",
-      copy: "Capture English tab-audio captions, translate them locally into Vietnamese, and display a synchronized overlay.",
-      href: "tools/caption-relay.html",
-      icon: "CC",
-      accent: "ochre",
-    },
-    {
-      title: "Literature Curation",
-      copy: "Organize literature analyses around an idea, claim, or hypothesis and compare how each source relates.",
-      href: "tools/literature-curator.html",
-      icon: "∵",
-      accent: "blue",
-    },
-    {
       title: "Travel Planner",
       copy: "Start a trip, complete its travel brief, and build a linked day-by-day itinerary.",
       href: "tools/travel-planner.html",
       icon: "✈",
       accent: "coral",
-    },
-    {
-      title: "Software Architect",
-      copy: "Design a draggable software file and folder tree with aligned implementation notes.",
-      href: "tools/architecture.html",
-      icon: "⌘",
-      accent: "violet",
     },
     {
       title: "File Converter",
@@ -927,56 +906,8 @@ function renderToolsDashboard() {
       icon: "∑",
       accent: "sage",
     },
-    {
-      title: "Budget & Finance",
-      copy: "Project recurring cash flow, model investment growth and loan payoff, and find official tax sources.",
-      href: "tools/budget-finance.html",
-      icon: "$",
-      accent: "ochre",
-    },
   ];
-  const externalTools = [
-    {
-      title: "Excalidraw",
-      copy: "Sketch collaborative diagrams and whiteboards in a fast hand-drawn visual style.",
-      href: "https://excalidraw.com/",
-    },
-    {
-      title: "Mermaid Live Editor",
-      copy: "Write text-based flowcharts, sequence diagrams, timelines, and other technical diagrams with a live preview.",
-      href: "https://mermaid.live/",
-    },
-    {
-      title: "diagrams.net",
-      copy: "Build detailed flowcharts, architecture diagrams, UML, network maps, and database schemas in the browser.",
-      href: "https://app.diagrams.net/",
-    },
-    {
-      title: "PDF24 Tools",
-      copy: "Use a broad collection of online PDF tools for merging, splitting, compressing, converting, OCR, and redaction.",
-      href: "https://tools.pdf24.org/en/",
-    },
-    {
-      title: "Hugging Face Spaces",
-      copy: "Browse and run community-built AI applications for text, images, audio, video, code, and data tasks.",
-      href: "https://huggingface.co/spaces",
-    },
-    {
-      title: "OpenAI Playground",
-      copy: "Test OpenAI API models, prompts, tools, and generation settings in an interactive development environment.",
-      href: "https://platform.openai.com/playground",
-    },
-    {
-      title: "Awesome Self-Hosted",
-      copy: "Explore a maintained GitHub directory of free software and web applications that can run on your own server.",
-      href: "https://github.com/awesome-selfhosted/awesome-selfhosted",
-    },
-    {
-      title: "Public APIs",
-      copy: "Find public APIs by category in a community-maintained GitHub directory for prototypes and software projects.",
-      href: "https://github.com/public-apis/public-apis",
-    },
-  ];
+  const externalTools = [];
 
   const mainHeading = createSectionHeading("Main", "These four tools stay visible.");
   const mainGrid = createElement("div", "tool-grid");

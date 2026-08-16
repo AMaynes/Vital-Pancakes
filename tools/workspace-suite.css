@@ -96,6 +96,63 @@
   border-left: 4px solid var(--coral);
 }
 
+.overhead-mini-tools {
+  margin-top: 22px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line);
+}
+
+.overhead-mini-tools h2 {
+  margin: 0 0 7px;
+  color: var(--ink-faint);
+  font: 800 9px/1.2 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.overhead-mini-tool {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ochre);
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.overhead-mini-tool > span:first-child {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.overhead-mini-tool strong,
+.overhead-mini-tool small {
+  display: block;
+}
+
+.overhead-mini-tool strong {
+  font-size: 10px;
+}
+
+.overhead-mini-tool small {
+  margin-top: 2px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  line-height: 1.3;
+}
+
+.overhead-mini-tool:hover {
+  border-color: var(--line-strong);
+}
+
 .suite-main {
   min-width: 0;
   padding: clamp(16px, 2.4vw, 34px);
@@ -462,6 +519,23 @@
   .suite-tabs button[aria-selected="true"] {
     border-left: 1px solid var(--line);
     border-bottom: 3px solid var(--coral);
+  }
+
+  .overhead-mini-tools {
+    min-width: 205px;
+    margin: 0 0 0 8px;
+    padding: 0 0 0 8px;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+
+  .overhead-mini-tools h2 {
+    display: none;
+  }
+
+  .overhead-mini-tool {
+    min-height: 39px;
+    padding: 5px 8px;
   }
 
   .suite-main {

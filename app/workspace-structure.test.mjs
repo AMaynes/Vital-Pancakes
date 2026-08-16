@@ -26,18 +26,18 @@ test("Workspace keeps exactly four ordered Main tools before collapsed Other too
     "Overhead",
     "Visual Board",
     "PDF Tool",
-    "Master Lesson Builder",
+    "Software Architect",
   ]);
   assert.match(controller, /createElement\("details", "other-tools-section"\)/);
   assert.match(controller, /createElement\("strong", "", "Other tools"\)/);
 });
 
-test("Workspace places a collapsed external resource list below Other tools", () => {
+test("Workspace leaves a zero-count external resource list below Other tools", () => {
   const dashboard = controller.match(
     /function renderToolsDashboard\(\) \{([\s\S]*?)\n\}\n\/\*\*/,
   )?.[1] ?? "";
 
-  assert.match(dashboard, /const externalTools = \[/);
+  assert.match(dashboard, /const externalTools = \[\];/);
   assert.match(dashboard, /createElement\("strong", "", "External tools"\)/);
   assert.match(dashboard, /createElement\("ul", "external-tools-list"\)/);
   assert.match(dashboard, /link\.target = "_blank"/);
