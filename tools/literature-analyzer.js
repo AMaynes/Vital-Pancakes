@@ -1,6 +1,6 @@
 /**
  * Overview & Purpose
- * Loads PDFs or embedded webpages, manages normalized highlights and attached
+ * Loads PDFs, manages normalized highlights and attached
  * comments, persists annotations locally, and exports annotated PNG/PDF records.
  *
  * Architectural Relationships
@@ -12,9 +12,7 @@
  * and literature-analyzer-model.mjs.
  *
  * Notes
- * PDF bytes never leave the browser. Cross-origin browser security prevents
- * client code from copying pixels out of an embedded third-party webpage, so
- * webpage exports preserve the URL, highlight map, and comments instead.
+ * PDF bytes never leave the browser.
  */
 
 import { createId } from "../app/store.js";
@@ -45,32 +43,19 @@ const COMMENT_HISTORY_IDLE_MS = 700;
 
 const fileInput = document.querySelector("#analysis-pdf-file");
 const pdfDropZone = document.querySelector("#analysis-pdf-drop-zone");
-const websiteForm = document.querySelector("#website-source-form");
-const websiteInput = document.querySelector("#website-url");
-const webFrame = document.querySelector("#analyzer-web-frame");
-const openWebSource = document.querySelector("#open-web-source");
-const emptyState = document.querySelector("#analyzer-empty");
+const emptyState = pdfDropZone;
 const pdfStage = document.querySelector("#analyzer-pdf-stage");
-const webStage = document.querySelector("#analyzer-web-stage");
 const pdfCanvas = document.querySelector("#analyzer-pdf-canvas");
 const pdfContext = pdfCanvas.getContext("2d");
 const pdfHighlightLayer = document.querySelector("#pdf-highlight-layer");
-const webHighlightLayer = document.querySelector("#web-highlight-layer");
-const commentPanel = document.querySelector("#analyzer-comment-panel");
-const commentInput = document.querySelector("#highlight-comment");
-const deleteHighlightButton = document.querySelector("#delete-highlight");
-const annotationList = document.querySelector("#annotation-list");
-const highlightCount = document.querySelector("#highlight-count");
 const clearButton = document.querySelector("#clear-highlights");
 const exportPngButton = document.querySelector("#export-analysis-png");
 const exportPdfButton = document.querySelector("#export-analysis-pdf");
 const previousPageButton = document.querySelector("#analysis-previous-page");
 const nextPageButton = document.querySelector("#analysis-next-page");
 const pageCount = document.querySelector("#analysis-page-count");
-const sourceName = document.querySelector("#analysis-source-name");
+const pageControls = document.querySelector(".analyzer-page-controls");
 const status = document.querySelector("#analyzer-status");
-const undoButton = document.querySelector("#undo-analysis");
-const redoButton = document.querySelector("#redo-analysis");
 const commentRail = document.querySelector("#analyzer-comment-rail");
 const commentRailList = document.querySelector("#analyzer-comment-rail-list");
 
@@ -81,7 +66,7 @@ let currentPageNumber = 1;
 let annotations = [];
 let selectedAnnotationId = null;
 let activeColor = DEFAULT_HIGHLIGHT_COLOR;
-let activeMode = "highlight";
+let editingCommentId = null;
 let activeDraft = null;
 let renderSequence = 0;
 let annotationHistory = createAnnotationHistory([], DEFAULT_ANNOTATION_HISTORY_LIMIT);
@@ -115,12 +100,12 @@ async function loadPdf(file) {
       type: "pdf",
       key: `pdf:${file.name}:${file.size}:${file.lastModified}`,
       name: file.name,
-      url: "",
     };
     annotations = restoreAnnotations(source.key);
     resetAnnotationHistory();
     selectedAnnotationId = null;
-    showSource("pdf");
+    editingCommentId = null;
+    showSource();
     await renderPdfPage();
     setStatus(`${file.name} · kept local`);
   } catch (error) {
@@ -131,52 +116,11 @@ async function loadPdf(file) {
 }
 
 /**
- * Validates and opens a website inside the constrained reading frame.
- *
- * @param {string} value User-entered URL.
+ * Replaces the empty drop target with the active PDF surface.
  */
-function loadWebsite(value) {
-  let url;
-  try {
-    url = new URL(value);
-  } catch {
-    window.alert("Enter a complete website URL beginning with http:// or https://.");
-    return;
-  }
-  if (!["http:", "https:"].includes(url.protocol)) {
-    window.alert("Only http:// and https:// website addresses can be opened.");
-    return;
-  }
-
-  source = {
-    type: "web",
-    key: `url:${url.href}`,
-    name: url.hostname,
-    url: url.href,
-  };
-  pdfBytes = null;
-  pdfDocument = null;
-  currentPageNumber = 1;
-  annotations = restoreAnnotations(source.key);
-  resetAnnotationHistory();
-  selectedAnnotationId = null;
-  webFrame.src = url.href;
-  openWebSource.href = url.href;
-  showSource("web");
-  renderAnnotations();
-  setStatus("Loading webpage…");
-}
-
-/**
- * Switches the viewer between its empty, PDF, and webpage surfaces.
- *
- * @param {"pdf"|"web"} sourceType Active source type.
- */
-function showSource(sourceType) {
+function showSource() {
   emptyState.hidden = true;
-  pdfStage.hidden = sourceType !== "pdf";
-  webStage.hidden = sourceType !== "web";
-  openWebSource.hidden = sourceType !== "web";
+  pdfStage.hidden = false;
   updateControls();
 }
 
@@ -208,18 +152,19 @@ async function renderPdfPage() {
 }
 
 /**
- * Rebuilds highlights on the active source and the sidebar index.
+ * Rebuilds highlights and floating margin comments on the active PDF page.
  */
 function renderAnnotations() {
   const layer = getActiveLayer();
   if (layer) {
     layer.replaceChildren();
     getVisibleAnnotations().forEach((annotation) => {
-      const mark = document.createElement("button");
+      const mark = document.createElement("div");
       const index = annotations.indexOf(annotation) + 1;
-      mark.type = "button";
       mark.className = "highlight-mark";
       mark.dataset.annotationId = annotation.id;
+      mark.tabIndex = 0;
+      mark.setAttribute("role", "button");
       mark.setAttribute("aria-label", `Highlight ${index}${annotation.comment ? `: ${annotation.comment}` : ""}`);
       applyNormalizedRectangle(mark, annotation);
       applyHighlightColor(mark, annotation.color);
@@ -228,71 +173,44 @@ function renderAnnotations() {
         event.stopPropagation();
         selectAnnotation(annotation.id);
       });
+      mark.addEventListener("keydown", (event) => {
+        if (!["Enter", " "].includes(event.key)) return;
+        event.preventDefault();
+        selectAnnotation(annotation.id);
+      });
 
       const badge = document.createElement("span");
       badge.className = "highlight-badge";
       badge.textContent = String(index);
-      mark.append(badge);
+      const commentButton = document.createElement("button");
+      commentButton.type = "button";
+      commentButton.className = "highlight-comment-button";
+      commentButton.textContent = annotation.comment.trim() ? "·" : "+";
+      commentButton.title = annotation.comment.trim() ? "Show comment" : "Add comment";
+      commentButton.setAttribute("aria-label", commentButton.title);
+      commentButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (annotation.comment.trim()) {
+          selectAnnotation(annotation.id);
+          return;
+        }
+        beginCommentEdit(annotation.id);
+      });
+      mark.append(badge, commentButton);
       layer.append(mark);
-
     });
   }
-  renderAnnotationIndex();
   renderCommentRail();
-  renderSelectedAnnotation();
   updateControls();
 }
 
 /**
- * Returns annotations visible on the active PDF page or webpage frame.
+ * Returns annotations visible on the active PDF page.
  *
  * @returns {Array<object>} Visible highlights.
  */
 function getVisibleAnnotations() {
-  if (source?.type === "pdf") {
-    return annotations.filter((annotation) => annotation.pageNumber === currentPageNumber);
-  }
-  return annotations;
-}
-
-/**
- * Rebuilds the ordered highlight/comment index for the complete source.
- */
-function renderAnnotationIndex() {
-  highlightCount.textContent = String(annotations.length);
-  if (!annotations.length) {
-    const empty = document.createElement("p");
-    empty.className = "annotation-empty";
-    empty.textContent = "Highlights and comments will be indexed here.";
-    annotationList.replaceChildren(empty);
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-  annotations.forEach((annotation, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "annotation-list-button";
-    button.dataset.annotationId = annotation.id;
-    button.style.setProperty("--annotation-color", annotation.color);
-    button.classList.toggle("is-selected", annotation.id === selectedAnnotationId);
-
-    const number = document.createElement("span");
-    number.className = "annotation-list-number";
-    number.textContent = String(index + 1);
-    const copy = document.createElement("span");
-    copy.className = "annotation-list-copy";
-    const location = document.createElement("strong");
-    location.textContent = source?.type === "pdf" ? `Page ${annotation.pageNumber}` : "Visible webpage";
-    const comment = document.createElement("span");
-    comment.className = "annotation-list-comment";
-    comment.textContent = annotation.comment || "No comment yet";
-    copy.append(location, comment);
-    button.append(number, copy);
-    button.addEventListener("click", () => navigateToAnnotation(annotation.id));
-    fragment.append(button);
-  });
-  annotationList.replaceChildren(fragment);
+  return annotations.filter((annotation) => annotation.pageNumber === currentPageNumber);
 }
 
 /**
@@ -305,7 +223,7 @@ function renderCommentRail() {
     return;
   }
   const commentedAnnotations = getVisibleAnnotations()
-    .filter((annotation) => annotation.comment.trim())
+    .filter((annotation) => annotation.comment.trim() || annotation.id === editingCommentId)
     .sort((left, right) => left.y - right.y);
   if (!commentedAnnotations.length) {
     commentRail.hidden = true;
@@ -318,32 +236,64 @@ function renderCommentRail() {
   const fragment = document.createDocumentFragment();
   commentedAnnotations.forEach((annotation) => {
     const index = annotations.indexOf(annotation) + 1;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "analyzer-comment-rail-card";
-    button.dataset.commentAnnotationId = annotation.id;
-    button.dataset.anchorY = String(annotation.y);
-    button.style.top = `${annotation.y * 100}%`;
-    button.style.setProperty("--annotation-color", annotation.color);
-    button.classList.toggle("is-selected", annotation.id === selectedAnnotationId);
+    const card = document.createElement("article");
+    card.className = "analyzer-comment-rail-card";
+    card.dataset.commentAnnotationId = annotation.id;
+    card.dataset.anchorY = String(annotation.y);
+    card.style.top = `${annotation.y * 100}%`;
+    card.style.setProperty("--annotation-color", annotation.color);
+    card.classList.toggle("is-selected", annotation.id === selectedAnnotationId);
+    card.tabIndex = 0;
 
     const heading = document.createElement("span");
     heading.className = "analyzer-comment-rail-heading";
     const number = document.createElement("strong");
     number.textContent = String(index);
     const location = document.createElement("span");
-    location.textContent = source.type === "pdf" ? `Page ${annotation.pageNumber}` : "Web highlight";
+    location.textContent = `Page ${annotation.pageNumber}`;
     heading.append(number, location);
 
-    const comment = document.createElement("span");
-    comment.className = "analyzer-comment-rail-copy";
-    comment.textContent = annotation.comment;
-    button.append(heading, comment);
-    button.addEventListener("click", () => navigateToAnnotation(annotation.id));
-    fragment.append(button);
+    card.append(heading);
+    if (annotation.id === editingCommentId) {
+      const editor = document.createElement("textarea");
+      editor.className = "analyzer-comment-editor";
+      editor.maxLength = 4000;
+      editor.value = annotation.comment;
+      editor.placeholder = "Write a comment…";
+      editor.setAttribute("aria-label", `Edit comment for highlight ${index}`);
+      editor.addEventListener("click", (event) => event.stopPropagation());
+      editor.addEventListener("dblclick", (event) => event.stopPropagation());
+      editor.addEventListener("input", () => updateAnnotationComment(annotation.id, editor.value));
+      editor.addEventListener("blur", finishInlineCommentEdit);
+      editor.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        editor.blur();
+      });
+      card.append(editor);
+    } else {
+      const comment = document.createElement("span");
+      comment.className = "analyzer-comment-rail-copy";
+      comment.textContent = annotation.comment;
+      card.append(comment);
+    }
+    card.addEventListener("click", () => selectAnnotationInPlace(annotation.id));
+    card.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      beginCommentEdit(annotation.id);
+    });
+    card.addEventListener("keydown", (event) => {
+      if (!["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      selectAnnotationInPlace(annotation.id);
+    });
+    fragment.append(card);
   });
   commentRailList.replaceChildren(fragment);
-  window.requestAnimationFrame(positionFloatingComments);
+  window.requestAnimationFrame(() => {
+    positionFloatingComments();
+    commentRailList.querySelector(".analyzer-comment-editor")?.focus();
+  });
 }
 
 /**
@@ -364,63 +314,42 @@ function positionFloatingComments() {
   commentRailList.style.minHeight = `${Math.max(railHeight, nextTop)}px`;
 }
 
-/**
- * Shows the selected highlight's comment editor.
- */
-function renderSelectedAnnotation() {
-  const selected = getSelectedAnnotation();
-  const canEditComment = Boolean(selected) && activeMode === "comment";
-  commentPanel.classList.toggle("is-disabled", !canEditComment);
-  commentInput.disabled = !canEditComment;
-  deleteHighlightButton.disabled = !selected;
-  if (!selected) {
-    commentInput.value = "";
-    return;
-  }
-  if (commentInput.value !== selected.comment) {
-    commentInput.value = selected.comment;
-  }
+function beginCommentEdit(annotationId) {
+  if (!annotations.some((annotation) => annotation.id === annotationId)) return;
+  if (editingCommentId !== annotationId) finishCommentHistoryTransaction();
+  selectedAnnotationId = annotationId;
+  editingCommentId = annotationId;
+  renderAnnotations();
 }
 
-/**
- * Updates visible comment copies without rebuilding the focused editor.
- *
- * @param {string} annotationId Highlight identifier.
- * @param {string} comment Updated comment text.
- */
-function updateRenderedCommentCopies(annotationId, comment) {
-  const escapedId = CSS.escape(annotationId);
-  const listComment = annotationList.querySelector(
-    `[data-annotation-id="${escapedId}"] .annotation-list-comment`,
-  );
-  if (listComment) listComment.textContent = comment || "No comment yet";
-
-  const floatingComment = commentRailList.querySelector(
-    `[data-comment-annotation-id="${escapedId}"]`,
-  );
-  if (floatingComment) {
-    floatingComment.querySelector(".analyzer-comment-rail-copy").textContent = comment;
-    floatingComment.setAttribute("aria-label", `Comment: ${comment || "Empty comment"}`);
-  }
-  renderCommentRail();
-}
-
-/**
- * Navigates to a highlight's PDF page, then selects it.
- *
- * @param {string} annotationId Highlight identifier.
- */
-async function navigateToAnnotation(annotationId) {
-  const annotation = annotations.find((candidate) => candidate.id === annotationId);
-  if (!annotation) return;
-  if (source?.type === "pdf" && annotation.pageNumber !== currentPageNumber) {
+function selectAnnotationInPlace(annotationId) {
+  if (annotationId !== selectedAnnotationId) {
     finishCommentHistoryTransaction();
-    currentPageNumber = annotation.pageNumber;
-    selectedAnnotationId = annotationId;
-    await renderPdfPage();
-    return;
+    editingCommentId = null;
   }
-  selectAnnotation(annotationId);
+  selectedAnnotationId = annotationId;
+  document.querySelectorAll("[data-annotation-id]").forEach((mark) => {
+    mark.classList.toggle("is-selected", mark.dataset.annotationId === annotationId);
+  });
+  commentRailList.querySelectorAll("[data-comment-annotation-id]").forEach((card) => {
+    card.classList.toggle("is-selected", card.dataset.commentAnnotationId === annotationId);
+  });
+}
+
+function updateAnnotationComment(annotationId, comment) {
+  beginCommentHistoryTransaction();
+  annotations = annotations.map((annotation) => (
+    annotation.id === annotationId ? { ...annotation, comment } : annotation
+  ));
+  persistAnnotations();
+  updateControls();
+}
+
+function finishInlineCommentEdit() {
+  if (!editingCommentId) return;
+  finishCommentHistoryTransaction();
+  editingCommentId = null;
+  renderAnnotations();
 }
 
 /**
@@ -429,12 +358,12 @@ async function navigateToAnnotation(annotationId) {
  * @param {string|null} annotationId Highlight identifier.
  */
 function selectAnnotation(annotationId) {
-  if (annotationId !== selectedAnnotationId) finishCommentHistoryTransaction();
+  if (annotationId !== selectedAnnotationId) {
+    finishCommentHistoryTransaction();
+    editingCommentId = null;
+  }
   selectedAnnotationId = annotationId;
   renderAnnotations();
-  if (activeMode === "comment" && annotationId) {
-    window.requestAnimationFrame(() => commentInput.focus());
-  }
 }
 
 /**
@@ -443,7 +372,7 @@ function selectAnnotation(annotationId) {
  * @param {PointerEvent} event Pointer-down event.
  */
 function startHighlight(event) {
-  if (!source || activeMode !== "highlight" || event.target !== event.currentTarget) return;
+  if (!source || event.target !== event.currentTarget) return;
   event.preventDefault();
   const layer = event.currentTarget;
   layer.setPointerCapture(event.pointerId);
@@ -495,7 +424,7 @@ function endHighlight(event) {
   if (!rectangle) return;
   const annotation = {
     id: createId(),
-    pageNumber: source.type === "pdf" ? currentPageNumber : 1,
+    pageNumber: currentPageNumber,
     ...rectangle,
     color: activeColor,
     comment: "",
@@ -534,33 +463,12 @@ function applyHighlightColor(element, color) {
 }
 
 /**
- * Changes browse/highlight interaction without interfering with existing marks.
- *
- * @param {"browse"|"highlight"|"comment"} mode Requested interaction mode.
- */
-function setMode(mode) {
-  activeMode = ["browse", "highlight", "comment"].includes(mode) ? mode : "browse";
-  document.querySelectorAll("[data-analyzer-mode]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.analyzerMode === activeMode);
-  });
-  [pdfHighlightLayer, webHighlightLayer].forEach((layer) => {
-    layer.classList.toggle("is-drawing-mode", activeMode === "highlight");
-  });
-  renderSelectedAnnotation();
-  if (activeMode === "comment" && selectedAnnotationId) {
-    window.requestAnimationFrame(() => commentInput.focus());
-  }
-}
-
-/**
  * Returns the active annotation layer.
  *
- * @returns {HTMLElement|null} PDF or website layer.
+ * @returns {HTMLElement|null} PDF highlight layer.
  */
 function getActiveLayer() {
-  if (source?.type === "pdf") return pdfHighlightLayer;
-  if (source?.type === "web") return webHighlightLayer;
-  return null;
+  return source ? pdfHighlightLayer : null;
 }
 
 function getSelectedAnnotation() {
@@ -627,6 +535,7 @@ function commitAnnotationChange(nextAnnotations) {
  */
 function undoAnnotations() {
   finishCommentHistoryTransaction();
+  editingCommentId = null;
   const nextHistory = undoAnnotationHistory(annotationHistory);
   if (nextHistory === annotationHistory) return;
   annotationHistory = nextHistory;
@@ -642,6 +551,7 @@ function undoAnnotations() {
  */
 function redoAnnotations() {
   finishCommentHistoryTransaction();
+  editingCommentId = null;
   const nextHistory = redoAnnotationHistory(annotationHistory);
   if (nextHistory === annotationHistory) return;
   annotationHistory = nextHistory;
@@ -680,7 +590,6 @@ function persistAnnotations() {
     sources[source.key] = {
       type: source.type,
       name: source.name,
-      url: source.url,
       annotations,
       updatedAt: new Date().toISOString(),
     };
@@ -699,21 +608,18 @@ function persistAnnotations() {
 }
 
 /**
- * Downloads the active PDF page or website annotation map as a PNG.
+ * Downloads the active annotated PDF page as a PNG.
  */
 async function exportPng() {
   if (!source) return;
   try {
     exportPngButton.disabled = true;
     exportPngButton.textContent = "Preparing…";
-    const outputCanvas = source.type === "pdf"
-      ? createPdfPageExportCanvas()
-      : createWebAnnotationExportCanvas();
+    const outputCanvas = createPdfPageExportCanvas();
     const blob = await new Promise((resolve) => outputCanvas.toBlob(resolve, "image/png"));
     if (!blob) throw new Error("The browser could not create the PNG.");
-    const suffix = source.type === "pdf" ? `-page-${currentPageNumber}` : "-web";
-    downloadBlob(blob, `${safeBaseName(source.name)}${suffix}-annotated.png`);
-    setStatus(source.type === "pdf" ? "Annotated PNG downloaded" : "Web annotation map downloaded");
+    downloadBlob(blob, `${safeBaseName(source.name)}-page-${currentPageNumber}-annotated.png`);
+    setStatus("Annotated PNG downloaded");
   } catch (error) {
     console.error("Unable to export the annotated PNG.", error);
     window.alert("The annotated PNG could not be created.");
@@ -744,58 +650,20 @@ function createPdfPageExportCanvas() {
 }
 
 /**
- * Creates a browser-safe webpage annotation map. The live frame's URL and
- * comments are retained, but cross-origin page pixels are intentionally absent.
- *
- * @returns {HTMLCanvasElement} Composed canvas.
- */
-function createWebAnnotationExportCanvas() {
-  const baseWidth = 1200;
-  const baseHeight = 800;
-  const output = createCanvasWithCommentColumn(baseWidth, baseHeight, annotations);
-  const context = output.getContext("2d");
-  context.fillStyle = "#f1eee6";
-  context.fillRect(0, 0, baseWidth, baseHeight);
-  context.fillStyle = "#171613";
-  context.font = "600 34px Georgia";
-  context.fillText("Annotated webpage", 42, 55);
-  context.font = "18px sans-serif";
-  context.fillStyle = "#5a554c";
-  drawWrappedCanvasText(context, source.url, 42, 90, baseWidth - 84, 25);
-
-  const mapBounds = { x: 42, y: 135, width: baseWidth - 84, height: baseHeight - 177 };
-  context.fillStyle = "#fbfaf6";
-  context.fillRect(mapBounds.x, mapBounds.y, mapBounds.width, mapBounds.height);
-  context.strokeStyle = "#81796d";
-  context.lineWidth = 2;
-  context.strokeRect(mapBounds.x, mapBounds.y, mapBounds.width, mapBounds.height);
-  context.fillStyle = "#81796d";
-  context.font = "16px sans-serif";
-  context.textAlign = "center";
-  context.fillText("Highlight map of the visible webpage frame", baseWidth / 2, mapBounds.y + 32);
-  context.textAlign = "left";
-  drawCanvasHighlights(context, annotations, mapBounds);
-  drawCanvasComments(context, annotations, baseWidth, output.width - baseWidth, output.height);
-  return output;
-}
-
-/**
- * Exports highlights into the original PDF or creates a webpage analysis PDF.
+ * Exports highlights into a copy of the original PDF.
  */
 async function exportPdf() {
   if (!source) return;
   try {
     exportPdfButton.disabled = true;
     exportPdfButton.textContent = "Preparing…";
-    const outputDocument = source.type === "pdf"
-      ? await createAnnotatedPdf()
-      : await createWebAnnotationPdf();
+    const outputDocument = await createAnnotatedPdf();
     const outputBytes = await outputDocument.save();
     downloadBlob(
       new Blob([outputBytes], { type: "application/pdf" }),
       `${safeBaseName(source.name)}-annotated.pdf`,
     );
-    setStatus(source.type === "pdf" ? "Annotated PDF downloaded" : "Web analysis PDF downloaded");
+    setStatus("Annotated PDF downloaded");
   } catch (error) {
     console.error("Unable to export the annotated PDF.", error);
     window.alert("The annotated PDF could not be created. The source has not been changed.");
@@ -833,77 +701,6 @@ async function createAnnotatedPdf() {
   });
 
   appendCommentPages(outputDocument, regularFont, boldFont, source.name);
-  return outputDocument;
-}
-
-/**
- * Builds a standalone PDF record for a webpage URL, its highlight map, and
- * attached comments.
- *
- * @returns {Promise<PDFDocument>} Web analysis document.
- */
-async function createWebAnnotationPdf() {
-  const outputDocument = await PDFDocument.create();
-  const regularFont = await outputDocument.embedFont(StandardFonts.Helvetica);
-  const boldFont = await outputDocument.embedFont(StandardFonts.HelveticaBold);
-  const page = outputDocument.addPage([612, 792]);
-  page.drawText("Annotated webpage", {
-    x: 45,
-    y: 738,
-    size: 22,
-    font: boldFont,
-    color: rgb(0.09, 0.08, 0.07),
-  });
-  const urlLines = wrapPdfText(toPdfSafeText(source.url), regularFont, 9, 522);
-  urlLines.slice(0, 4).forEach((line, index) => {
-    page.drawText(line, {
-      x: 45,
-      y: 714 - (index * 13),
-      size: 9,
-      font: regularFont,
-      color: rgb(0.35, 0.33, 0.3),
-    });
-  });
-
-  const map = { x: 45, y: 310, width: 522, height: 350 };
-  page.drawRectangle({
-    ...map,
-    color: rgb(0.98, 0.97, 0.94),
-    borderColor: rgb(0.5, 0.47, 0.43),
-    borderWidth: 1,
-  });
-  page.drawText("Highlight map of the visible webpage frame", {
-    x: 168,
-    y: 640,
-    size: 9,
-    font: regularFont,
-    color: rgb(0.45, 0.42, 0.38),
-  });
-  annotations.forEach((annotation, index) => {
-    const color = hexToRgb(annotation.color);
-    const bounds = {
-      x: map.x + (annotation.x * map.width),
-      y: map.y + map.height - ((annotation.y + annotation.height) * map.height),
-      width: annotation.width * map.width,
-      height: annotation.height * map.height,
-    };
-    page.drawRectangle({
-      ...bounds,
-      color: rgb(color.r, color.g, color.b),
-      borderColor: rgb(color.r * 0.65, color.g * 0.65, color.b * 0.65),
-      borderWidth: 0.6,
-      opacity: 0.35,
-    });
-    drawPdfMarker(page, index + 1, bounds, boldFont);
-  });
-  page.drawText("Webpage pixels are protected by browser cross-origin security; this file preserves the source URL and annotation map.", {
-    x: 45,
-    y: 288,
-    size: 7,
-    font: regularFont,
-    color: rgb(0.45, 0.42, 0.38),
-  });
-  appendCommentPages(outputDocument, regularFont, boldFont, source.url);
   return outputDocument;
 }
 
@@ -967,7 +764,7 @@ function appendCommentPages(document, regularFont, boldFont, sourceTitle) {
       font: boldFont,
       color: rgb(0.09, 0.08, 0.07),
     });
-    const location = source?.type === "pdf" ? `Page ${annotation.pageNumber}` : "Visible webpage";
+    const location = `Page ${annotation.pageNumber}`;
     page.drawText(location, {
       x: 72,
       y: y + 3,
@@ -1088,7 +885,7 @@ function drawCanvasComments(context, sourceAnnotations, startX, width, height) {
     context.fillStyle = "#171613";
     context.font = `700 ${Math.max(11, width * 0.032)}px sans-serif`;
     context.fillText(String(index), startX + padding + 7, y);
-    const location = source?.type === "pdf" ? `Page ${annotation.pageNumber}` : "Visible webpage";
+    const location = `Page ${annotation.pageNumber}`;
     context.fillText(location, startX + padding + 34, y);
     y += 24;
     context.fillStyle = "#5a554c";
@@ -1143,33 +940,18 @@ function wrapPdfText(text, font, size, maximumWidth) {
 
 function updateControls() {
   const hasSource = Boolean(source);
-  const hasPdf = source?.type === "pdf" && Boolean(pdfDocument);
+  const hasPdf = hasSource && Boolean(pdfDocument);
   clearButton.disabled = !annotations.length;
   exportPngButton.disabled = !hasSource;
   exportPdfButton.disabled = !hasSource;
-  undoButton.disabled = !hasSource
-    || (!annotationHistory.past.length && !isCommentHistoryTransactionOpen);
-  redoButton.disabled = !hasSource
-    || !annotationHistory.future.length
-    || isCommentHistoryTransactionOpen;
   previousPageButton.disabled = !hasPdf || currentPageNumber <= 1;
   nextPageButton.disabled = !hasPdf || currentPageNumber >= pdfDocument.numPages;
+  pageControls.hidden = !hasPdf;
   pageCount.textContent = hasPdf ? `Page ${currentPageNumber} / ${pdfDocument.numPages}` : "Page 0 / 0";
-  sourceName.textContent = source?.name || "Choose a PDF or website";
 }
 
 function setStatus(message) {
   status.textContent = message;
-}
-
-function deleteSelectedHighlight() {
-  if (!selectedAnnotationId) return;
-  commitAnnotationChange(
-    annotations.filter((annotation) => annotation.id !== selectedAnnotationId),
-  );
-  selectedAnnotationId = null;
-  persistAnnotations();
-  renderAnnotations();
 }
 
 function clearHighlights() {
@@ -1178,6 +960,7 @@ function clearHighlights() {
   if (!confirmed) return;
   commitAnnotationChange([]);
   selectedAnnotationId = null;
+  editingCommentId = null;
   persistAnnotations();
   renderAnnotations();
 }
@@ -1232,17 +1015,6 @@ fileInput.addEventListener("change", () => loadPdf(fileInput.files[0]));
 });
 pdfDropZone.addEventListener("drop", (event) => loadPdf(event.dataTransfer.files[0]));
 
-websiteForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  loadWebsite(websiteInput.value.trim());
-});
-webFrame.addEventListener("load", () => {
-  if (source?.type === "web") setStatus(`${source.name} · embedded view loaded`);
-});
-
-document.querySelectorAll("[data-analyzer-mode]").forEach((button) => {
-  button.addEventListener("click", () => setMode(button.dataset.analyzerMode));
-});
 document.querySelectorAll("[data-highlight-color]").forEach((button) => {
   button.addEventListener("click", () => {
     activeColor = button.dataset.highlightColor;
@@ -1266,33 +1038,15 @@ document.querySelectorAll("[data-highlight-color]").forEach((button) => {
   });
 });
 
-commentInput.addEventListener("input", () => {
-  const selected = getSelectedAnnotation();
-  if (!selected) return;
-  beginCommentHistoryTransaction();
-  annotations = annotations.map((annotation) => (
-    annotation.id === selected.id
-      ? { ...annotation, comment: commentInput.value }
-      : annotation
-  ));
-  persistAnnotations();
-  updateRenderedCommentCopies(selected.id, commentInput.value);
-  updateControls();
-});
-commentInput.addEventListener("blur", () => {
-  finishCommentHistoryTransaction();
-});
-deleteHighlightButton.addEventListener("click", deleteSelectedHighlight);
 clearButton.addEventListener("click", clearHighlights);
 exportPngButton.addEventListener("click", exportPng);
 exportPdfButton.addEventListener("click", exportPdf);
-undoButton.addEventListener("click", undoAnnotations);
-redoButton.addEventListener("click", redoAnnotations);
 previousPageButton.addEventListener("click", async () => {
   if (currentPageNumber <= 1) return;
   finishCommentHistoryTransaction();
   currentPageNumber -= 1;
   selectedAnnotationId = null;
+  editingCommentId = null;
   await renderPdfPage();
 });
 nextPageButton.addEventListener("click", async () => {
@@ -1300,15 +1054,14 @@ nextPageButton.addEventListener("click", async () => {
   finishCommentHistoryTransaction();
   currentPageNumber += 1;
   selectedAnnotationId = null;
+  editingCommentId = null;
   await renderPdfPage();
 });
 
-[pdfHighlightLayer, webHighlightLayer].forEach((layer) => {
-  layer.addEventListener("pointerdown", startHighlight);
-  layer.addEventListener("pointermove", moveHighlight);
-  layer.addEventListener("pointerup", endHighlight);
-  layer.addEventListener("pointercancel", endHighlight);
-});
+pdfHighlightLayer.addEventListener("pointerdown", startHighlight);
+pdfHighlightLayer.addEventListener("pointermove", moveHighlight);
+pdfHighlightLayer.addEventListener("pointerup", endHighlight);
+pdfHighlightLayer.addEventListener("pointercancel", endHighlight);
 
 document.addEventListener("keydown", (event) => {
   const hasCommandModifier = event.metaKey || event.ctrlKey;
@@ -1328,7 +1081,6 @@ document.addEventListener("keydown", (event) => {
 });
 window.addEventListener("resize", positionFloatingComments);
 
-setMode("highlight");
 updateControls();
 
 installCurrentToolAiHost({
@@ -1336,12 +1088,12 @@ installCurrentToolAiHost({
   title: "Literature Analyzer",
   description: "Reads the active source and its locally stored annotation record.",
   limitations: [
-    "AI commands cannot choose a local PDF or bypass embedded-site restrictions.",
+    "AI commands cannot choose a local PDF.",
     "Highlight geometry editing and annotated-file export remain explicit page actions.",
   ],
   getSnapshot: () => ({
     source: source ? { ...source } : null,
-    currentPage: source?.type === "pdf" ? currentPageNumber : null,
+    currentPage: source ? currentPageNumber : null,
     pageCount: pdfDocument?.numPages ?? null,
     annotations: annotations.map((annotation) => ({ ...annotation })),
     selectedAnnotationId,
@@ -1358,7 +1110,7 @@ installCurrentToolAiHost({
   commands: [
     {
       type: "source.describe",
-      description: "Describe the active PDF or website source.",
+      description: "Describe the active PDF source.",
       permissions: ["read-content"],
       execute(state, command, { commandIndex }) {
         rejectUnknownCommandFields(command, [], commandIndex);

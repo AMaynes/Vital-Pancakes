@@ -10,7 +10,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=17">
   <link rel="stylesheet" href="tool.css?v=23">
-  <link rel="stylesheet" href="literature-analyzer.css?v=4">
+  <link rel="stylesheet" href="literature-analyzer.css?v=5">
   <link rel="stylesheet" href="../site-navigation.css?v=24">
   <script type="module" src="../site-navigation.js?v=18"></script>
 </head>
@@ -48,103 +48,25 @@
     </header>
 
     <main class="literature-analyzer-workspace" id="tool-main">
-      <section class="analyzer-top-tools" aria-label="Literature analyzer tools">
-        <section class="panel-section">
-          <h2>Open source</h2>
-          <p>PDF files remain in this browser and are never uploaded.</p>
-          <label class="drop-zone" id="analysis-pdf-drop-zone">
-            <input id="analysis-pdf-file" type="file" accept="application/pdf,.pdf">
-            <span>
-              <strong>Drop PDF here</strong>
-              <small>or tap to browse</small>
-            </span>
-          </label>
-
-          <form class="website-source-form" id="website-source-form">
-            <label for="website-url">Website URL</label>
-            <div>
-              <input
-                class="tool-input"
-                id="website-url"
-                type="url"
-                inputmode="url"
-                placeholder="https://example.com/article"
-                autocomplete="url"
-              >
-              <button class="button button-primary" type="submit">Open</button>
-            </div>
-          </form>
-          <p class="analyzer-constraint-note">
-            Some websites block embedded viewing. Web highlights attach to the visible browser frame; exports preserve
-            the URL, highlight map, and comments because browsers do not expose another website's pixels.
-          </p>
-        </section>
-
-        <section class="panel-section">
-          <h2>Highlight ink</h2>
-          <p>Drag across the document after switching to Highlight mode.</p>
-          <div class="highlight-color-row" id="highlight-color-row" role="radiogroup" aria-label="Highlight color">
+      <section class="analyzer-viewer">
+        <div class="tool-toolbar analyzer-toolbar">
+          <div class="analyzer-ink-tools" role="radiogroup" aria-label="Highlight ink color">
+            <span>Highlight ink</span>
             <button class="highlight-color is-active" type="button" data-highlight-color="#f6d84a" aria-label="Yellow" aria-checked="true" role="radio"></button>
             <button class="highlight-color" type="button" data-highlight-color="#f29ca3" aria-label="Rose" aria-checked="false" role="radio"></button>
             <button class="highlight-color" type="button" data-highlight-color="#8ecae6" aria-label="Blue" aria-checked="false" role="radio"></button>
             <button class="highlight-color" type="button" data-highlight-color="#9ed6a5" aria-label="Green" aria-checked="false" role="radio"></button>
           </div>
-        </section>
-
-        <section class="panel-section analyzer-comment-panel is-disabled" id="analyzer-comment-panel">
-          <h2>Comment editor</h2>
-          <label for="highlight-comment">Comment</label>
-          <textarea
-            class="tool-input"
-            id="highlight-comment"
-            rows="6"
-            maxlength="4000"
-            placeholder="Write what this passage means, challenges, or connects to…"
-            disabled
-          ></textarea>
-          <button class="button button-danger-quiet" id="delete-highlight" type="button" disabled>Delete selected highlight</button>
-        </section>
-
-        <section class="panel-section analyzer-index-panel">
-          <div class="analyzer-index-heading">
-            <h2>Highlights</h2>
-            <span id="highlight-count">0</span>
-          </div>
-          <div class="annotation-list" id="annotation-list">
-            <p class="annotation-empty">Highlights and comments will be indexed here.</p>
-          </div>
-        </section>
-      </section>
-
-      <section class="analyzer-viewer">
-        <div class="tool-toolbar analyzer-toolbar">
-          <div class="toolbar-group" role="toolbar" aria-label="Annotation mode">
-            <button class="tool-button" data-analyzer-mode="browse" type="button">↖ Browse</button>
-            <button class="tool-button is-active" data-analyzer-mode="highlight" type="button">▰ Highlight</button>
-            <button class="tool-button" data-analyzer-mode="comment" type="button">▤ Comment</button>
-          </div>
-          <div class="toolbar-group" role="toolbar" aria-label="Annotation history">
-            <button class="tool-button" id="undo-analysis" type="button" title="Undo (Command/Ctrl+Z)" disabled>↶ Undo</button>
-            <button class="tool-button" id="redo-analysis" type="button" title="Redo (Command/Ctrl+Shift+Z)" disabled>↷ Redo</button>
-          </div>
-          <div class="toolbar-group analyzer-page-controls">
-            <button class="tool-button" id="analysis-previous-page" type="button" disabled>← Previous</button>
-            <span class="zoom-value" id="analysis-page-count">Page 0 / 0</span>
-            <button class="tool-button" id="analysis-next-page" type="button" disabled>Next →</button>
-          </div>
-          <div class="toolbar-group analyzer-source-meta">
-            <a id="open-web-source" href="#" target="_blank" rel="noopener noreferrer" hidden>Open original ↗</a>
-            <span id="analysis-source-name">Choose a PDF or website</span>
-          </div>
         </div>
 
         <div class="analyzer-reading-area" id="analyzer-reading-area">
           <div class="analyzer-stage-scroll">
-            <div class="pdf-empty analyzer-empty" id="analyzer-empty">
+            <label class="pdf-empty analyzer-empty" id="analysis-pdf-drop-zone">
+              <input id="analysis-pdf-file" type="file" accept="application/pdf,.pdf">
               <span>⌑</span>
-              <h2>Open something worth reading closely</h2>
-              <p>Drop in a PDF or enter a website URL, then drag highlights and attach your own comments.</p>
-            </div>
+              <h2>Drop a PDF here</h2>
+              <p>or click anywhere in this area to browse</p>
+            </label>
 
             <div class="analyzer-document-layout">
               <div class="analyzer-pdf-stage" id="analyzer-pdf-stage" hidden>
@@ -152,20 +74,15 @@
                 <div class="highlight-layer is-drawing-mode" id="pdf-highlight-layer" aria-label="PDF highlight layer"></div>
               </div>
 
-              <div class="analyzer-web-stage" id="analyzer-web-stage" hidden>
-                <iframe
-                  id="analyzer-web-frame"
-                  title="Website being analyzed"
-                  referrerpolicy="no-referrer"
-                  sandbox="allow-downloads allow-forms allow-popups allow-same-origin allow-scripts"
-                ></iframe>
-                <div class="highlight-layer is-drawing-mode" id="web-highlight-layer" aria-label="Website highlight layer"></div>
-              </div>
-
               <aside class="analyzer-comment-rail" id="analyzer-comment-rail" aria-label="Comments beside the document" hidden>
                 <div class="analyzer-comment-rail-list" id="analyzer-comment-rail-list"></div>
               </aside>
             </div>
+          </div>
+          <div class="analyzer-page-controls" aria-label="PDF page navigation" hidden>
+            <button class="tool-button" id="analysis-previous-page" type="button" disabled>← Previous</button>
+            <span class="zoom-value" id="analysis-page-count">Page 0 / 0</span>
+            <button class="tool-button" id="analysis-next-page" type="button" disabled>Next →</button>
           </div>
         </div>
       </section>
@@ -174,6 +91,6 @@
 
   <script src="../vendor/pdf.min.js"></script>
   <script src="../vendor/pdf-lib.min.js"></script>
-  <script type="module" src="literature-analyzer.js?v=4"></script>
+  <script type="module" src="literature-analyzer.js?v=5"></script>
 </body>
 </html>

@@ -1,85 +1,48 @@
 /**
  * Overview & Purpose
- * Defines the top-tool reading, annotation, comment, and export interface for
- * the Literature Analyzer.
- *
- * Architectural Relationships
- * Called by: literature-analyzer.html.
- * Calls: Shared workspace and tool design tokens.
- *
- * External Resources
- * tool.css and ../workspace.css.
- *
- * Notes
- * The webpage frame remains interactive in Browse mode. Highlight mode gives
- * the transparent annotation layer pointer control instead.
+ * Defines the PDF reading, highlighting, margin-comment, and export interface.
+ * The empty reader is the PDF picker and highlight ink is the only persistent
+ * annotation toolbar.
  */
 
-.literature-analyzer-workspace {
+.literature-analyzer-workspace,
+.analyzer-viewer {
   display: grid;
+  min-width: 0;
   min-height: 0;
+}
+
+.literature-analyzer-workspace {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.analyzer-viewer {
   grid-template-rows: auto minmax(0, 1fr);
 }
 
-.analyzer-top-tools {
-  display: grid;
-  grid-template-columns: minmax(310px, 1.55fr) auto minmax(250px, 1fr) minmax(220px, 0.85fr);
-  border-bottom: 1px solid var(--line-strong);
-  background: var(--card);
+.analyzer-toolbar {
+  min-height: 34px;
+  justify-content: flex-start;
+  padding: 3px 9px;
 }
 
-.analyzer-top-tools .panel-section {
-  min-width: 0;
-  padding: 11px;
-  border-right: 1px solid var(--line);
-}
-
-.analyzer-top-tools .panel-section:last-child {
-  border-right: 0;
-}
-
-.analyzer-top-tools .panel-section h2 {
-  margin-bottom: 5px;
-  font-size: 13px;
-}
-
-.analyzer-top-tools .panel-section > p,
-.analyzer-top-tools label {
-  color: var(--ink-faint);
-  font-size: 9px;
-  line-height: 1.4;
-}
-
-.website-source-form {
-  display: grid;
-  gap: 5px;
-  margin-top: 10px;
-}
-
-.website-source-form > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 5px;
-}
-
-.website-source-form .tool-input {
-  min-width: 0;
-}
-
-.analyzer-constraint-note {
-  margin: 8px 0 0;
-  padding-left: 8px;
-  border-left: 2px solid var(--ochre);
-}
-
-.highlight-color-row {
+.analyzer-ink-tools {
   display: flex;
-  gap: 7px;
+  align-items: center;
+  gap: 6px;
+}
+
+.analyzer-ink-tools > span {
+  margin-right: 3px;
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .highlight-color {
-  width: 30px;
-  height: 23px;
+  width: 25px;
+  height: 20px;
   padding: 0;
   border: 1px solid var(--line-strong);
   background: var(--highlight-color);
@@ -107,133 +70,10 @@
   outline-offset: 2px;
 }
 
-.analyzer-comment-panel {
-  display: grid;
-  gap: 6px;
-}
-
-.analyzer-comment-panel.is-disabled textarea {
-  background: var(--surface-soft);
-  color: var(--ink-faint);
-}
-
-.analyzer-comment-panel textarea {
-  min-height: 92px;
-  resize: vertical;
-  line-height: 1.45;
-}
-
-.analyzer-index-panel {
-  min-height: 0;
-}
-
-.analyzer-index-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.analyzer-index-heading span {
-  color: var(--ink-faint);
-  font-size: 9px;
-}
-
-.annotation-list {
-  display: grid;
-  gap: 5px;
-  max-height: 142px;
-  overflow-y: auto;
-}
-
-.annotation-empty {
-  margin: 0;
-  padding: 8px;
-  background: var(--surface-soft);
-}
-
-.annotation-list-button {
-  display: grid;
-  width: 100%;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 7px;
-  align-items: start;
-  padding: 7px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink);
-  text-align: left;
-}
-
-.annotation-list-button.is-selected {
-  border-color: var(--ink);
-  box-shadow: inset 3px 0 0 var(--annotation-color);
-}
-
-.annotation-list-number {
-  display: grid;
-  width: 20px;
-  height: 20px;
-  place-items: center;
-  background: var(--annotation-color);
-  border: 1px solid rgb(23 22 19 / 35%);
-  font-size: 8px;
-  font-weight: 800;
-}
-
-.annotation-list-copy {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.annotation-list-copy strong {
-  font-size: 9px;
-}
-
-.annotation-list-comment {
-  overflow: hidden;
-  color: var(--ink-faint);
-  font-size: 8px;
-  line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.analyzer-viewer {
-  display: grid;
-  min-width: 0;
-  min-height: 0;
-  grid-template-rows: auto 1fr;
-}
-
 .analyzer-reading-area {
+  position: relative;
   min-width: 0;
   min-height: 0;
-}
-
-.analyzer-toolbar {
-  gap: 12px;
-}
-
-.analyzer-page-controls {
-  margin-left: auto;
-}
-
-.analyzer-source-meta {
-  min-width: 0;
-  color: var(--ink-faint);
-  font-size: 8px;
-}
-
-.analyzer-source-meta a {
-  color: var(--ink);
-}
-
-#analysis-source-name {
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .analyzer-stage-scroll {
@@ -249,6 +89,27 @@
     #d7d1c6;
 }
 
+.analyzer-empty {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  cursor: pointer;
+}
+
+.analyzer-empty input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.analyzer-empty:hover,
+.analyzer-empty:focus-within,
+.analyzer-empty.is-over {
+  background: rgb(255 255 255 / 35%);
+}
+
 .analyzer-document-layout {
   display: flex;
   width: max-content;
@@ -257,6 +118,87 @@
   align-items: flex-start;
   justify-content: center;
   margin: 22px;
+}
+
+.analyzer-pdf-stage {
+  position: relative;
+  flex: 0 0 auto;
+  background: #fff;
+  box-shadow: 0 12px 35px rgb(23 22 19 / 22%);
+}
+
+#analyzer-pdf-canvas {
+  display: block;
+}
+
+.highlight-layer {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  overflow: hidden;
+  cursor: crosshair;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.highlight-mark {
+  position: absolute;
+  display: block;
+  padding: 0;
+  border: 1px solid var(--highlight-stroke);
+  background: var(--highlight-fill);
+  pointer-events: auto;
+  mix-blend-mode: multiply;
+}
+
+.highlight-mark:hover,
+.highlight-mark.is-selected {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.highlight-mark.is-draft {
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+.highlight-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  color: #fff;
+  background: var(--ink);
+  border: 1px solid #fff;
+  border-radius: 50%;
+  font-size: 7px;
+  font-weight: 800;
+  mix-blend-mode: normal;
+}
+
+.highlight-comment-button {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  display: none;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  mix-blend-mode: normal;
+}
+
+.highlight-mark.is-selected .highlight-comment-button {
+  display: grid;
 }
 
 .analyzer-comment-rail {
@@ -330,146 +272,35 @@
   white-space: pre-wrap;
 }
 
-.analyzer-empty {
-  position: absolute;
-  inset: 0;
-}
-
-.analyzer-pdf-stage {
-  position: relative;
-  flex: 0 0 auto;
-  background: #fff;
-  box-shadow: 0 12px 35px rgb(23 22 19 / 22%);
-}
-
-#analyzer-pdf-canvas {
-  display: block;
-}
-
-.analyzer-web-stage {
-  position: relative;
-  width: max(680px, calc(100vw - 90px));
-  height: max(480px, calc(100vh - 280px));
-  flex: 0 0 auto;
-  min-width: 680px;
-  min-height: 480px;
-  overflow: hidden;
-  background: #fff;
-  border: 1px solid var(--line-strong);
-  box-shadow: 0 12px 35px rgb(23 22 19 / 22%);
-}
-
-.analyzer-web-stage iframe {
-  display: block;
+.analyzer-comment-editor {
   width: 100%;
-  height: 100%;
-  border: 0;
+  min-height: 86px;
+  padding: 7px;
+  resize: vertical;
+  border: 1px solid var(--line-strong);
   background: #fff;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.4;
 }
 
-.highlight-layer {
+.analyzer-page-controls {
   position: absolute;
-  inset: 0;
-  z-index: 5;
-  overflow: hidden;
-  pointer-events: none;
-  touch-action: none;
-}
-
-.highlight-layer.is-drawing-mode {
-  cursor: crosshair;
-  pointer-events: auto;
-}
-
-.highlight-mark {
-  position: absolute;
-  display: block;
-  padding: 0;
-  border: 1px solid var(--highlight-stroke);
-  background: var(--highlight-fill);
-  pointer-events: auto;
-  mix-blend-mode: multiply;
-}
-
-.highlight-mark:hover,
-.highlight-mark.is-selected {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-}
-
-.highlight-mark.is-draft {
-  pointer-events: none;
-  opacity: 0.72;
-}
-
-.highlight-badge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  display: grid;
-  width: 17px;
-  height: 17px;
-  place-items: center;
-  color: #fff;
-  background: var(--ink);
-  border: 1px solid #fff;
-  border-radius: 50%;
-  font-size: 7px;
-  font-weight: 800;
-  mix-blend-mode: normal;
-}
-
-@media (max-width: 760px) {
-  .analyzer-top-tools {
-    display: flex;
-    max-height: 242px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
-  }
-
-  .analyzer-top-tools .panel-section {
-    width: 280px;
-    flex: 0 0 280px;
-    overflow-y: auto;
-    border-right: 1px solid var(--line);
-    border-bottom: 0;
-  }
-
-  .analyzer-top-tools .panel-section:first-child {
-    width: 330px;
-    flex-basis: 330px;
-  }
-
-  .analyzer-source-meta {
-    display: none;
-  }
-
-  .analyzer-web-stage {
-    min-width: 560px;
-  }
-
+  z-index: 12;
+  bottom: 10px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border: 1px solid var(--line-strong);
+  background: rgb(249 247 241 / 94%);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(-50%);
+  backdrop-filter: blur(8px);
 }
 
 @media (max-width: 560px) {
-  .analyzer-top-tools .panel-section {
-    width: 260px;
-    flex-basis: 260px;
-  }
-
-  .analyzer-top-tools .panel-section:first-child {
-    width: 320px;
-    flex-basis: 320px;
-  }
-
-  .analyzer-toolbar {
-    justify-content: flex-start;
-  }
-
-  .analyzer-page-controls {
-    margin-left: 0;
-  }
-
   .analyzer-document-layout {
     justify-content: flex-start;
   }
@@ -477,5 +308,9 @@
   .analyzer-comment-rail {
     width: 220px;
     flex-basis: 220px;
+  }
+
+  .analyzer-ink-tools > span {
+    display: none;
   }
 }
