@@ -51,6 +51,7 @@ const pdfCanvas = document.querySelector("#analyzer-pdf-canvas");
 const pdfContext = pdfCanvas.getContext("2d");
 const pdfHighlightLayer = document.querySelector("#pdf-highlight-layer");
 const clearButton = document.querySelector("#clear-highlights");
+const deleteHighlightButton = document.querySelector("#delete-highlight");
 const exportPngButton = document.querySelector("#export-analysis-png");
 const exportPdfButton = document.querySelector("#export-analysis-pdf");
 const previousPageButton = document.querySelector("#analysis-previous-page");
@@ -93,6 +94,7 @@ let drawingColor = drawingColorInput.value;
 let drawingSize = Number(drawingSizeInput.value);
 let drawingStrokes = [];
 let activeDrawingStroke = null;
+let drawingPanelSized = false;
 
 /**
  * Loads and renders a local PDF while restoring any saved annotations for the
@@ -402,6 +404,7 @@ function selectAnnotationInPlace(annotationId) {
   commentRailList.querySelectorAll("[data-comment-annotation-id]").forEach((card) => {
     card.classList.toggle("is-selected", card.dataset.commentAnnotationId === annotationId);
   });
+  updateControls();
 }
 
 function updateAnnotationComment(annotationId, comment) {
@@ -1029,11 +1032,23 @@ function wrapPdfText(text, font, size, maximumWidth) {
 }
 
 function sizeDrawingCanvas(height) {
+  if (!drawingPanelSized) {
+    drawingPanel.style.height = `${height}px`;
+    drawingPanelSized = true;
+  }
+  window.requestAnimationFrame(syncDrawingCanvasSize);
+}
+
+function syncDrawingCanvasSize() {
+  if (drawingPanel.hidden || !drawingCanvas.clientWidth || !drawingCanvas.clientHeight) return;
   const pixelRatio = window.devicePixelRatio || 1;
-  const width = 268;
-  drawingCanvas.width = Math.floor(width * pixelRatio);
-  drawingCanvas.height = Math.floor(height * pixelRatio);
-  drawingCanvas.style.height = `${height}px`;
+  const width = drawingCanvas.clientWidth;
+  const height = drawingCanvas.clientHeight;
+  const nextWidth = Math.max(1, Math.floor(width * pixelRatio));
+  const nextHeight = Math.max(1, Math.floor(height * pixelRatio));
+  if (drawingCanvas.width === nextWidth && drawingCanvas.height === nextHeight) return;
+  drawingCanvas.width = nextWidth;
+  drawingCanvas.height = nextHeight;
   drawingContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   renderDrawing();
 }
@@ -1129,6 +1144,7 @@ function updateControls() {
   const hasSource = Boolean(source);
   const hasPdf = hasSource && Boolean(pdfDocument);
   clearButton.disabled = !annotations.length;
+  deleteHighlightButton.disabled = !getSelectedAnnotation();
   exportPngButton.disabled = !hasSource;
   exportPdfButton.disabled = !hasSource;
   previousPageButton.disabled = !hasPdf || currentPageNumber <= 1;
@@ -1242,6 +1258,17 @@ function setHighlightMode(color) {
   }
 }
 
+function deleteSelectedHighlight() {
+  const selected = getSelectedAnnotation();
+  if (!selected) return;
+  commitAnnotationChange(annotations.filter((annotation) => annotation.id !== selected.id));
+  selectedAnnotationId = null;
+  editingCommentId = null;
+  persistAnnotations();
+  renderAnnotations();
+  setStatus("Deleted selected highlight and comment");
+}
+
 commentDisplayToggle.addEventListener("click", () => {
   commentDisplayMode = commentDisplayMode === "side" ? "hover" : "side";
   const isSideMode = commentDisplayMode === "side";
@@ -1264,6 +1291,7 @@ drawingVisibilityToggle.addEventListener("click", () => {
   drawingPanel.hidden = !drawingPanelVisible;
   drawingVisibilityToggle.textContent = drawingPanelVisible ? "Hide drawing" : "Show drawing";
   drawingVisibilityToggle.setAttribute("aria-expanded", String(drawingPanelVisible));
+  if (drawingPanelVisible) window.requestAnimationFrame(syncDrawingCanvasSize);
 });
 
 document.querySelectorAll("[data-drawing-tool]").forEach((button) => {
@@ -1300,6 +1328,7 @@ drawingCanvas.addEventListener("pointerup", finishDrawing);
 drawingCanvas.addEventListener("pointercancel", finishDrawing);
 
 clearButton.addEventListener("click", clearHighlights);
+deleteHighlightButton.addEventListener("click", deleteSelectedHighlight);
 exportPngButton.addEventListener("click", exportPng);
 exportPdfButton.addEventListener("click", exportPdf);
 previousPageButton.addEventListener("click", async () => {
@@ -1325,6 +1354,14 @@ pdfHighlightLayer.addEventListener("pointerup", endHighlight);
 pdfHighlightLayer.addEventListener("pointercancel", endHighlight);
 
 document.addEventListener("keydown", (event) => {
+  const editingText = event.target instanceof HTMLElement
+    && event.target.matches("input, textarea, [contenteditable='true']");
+  const isDeleteShortcut = event.key === "Delete" || event.key === "Backspace";
+  if (isDeleteShortcut && selectedAnnotationId && !editingText) {
+    event.preventDefault();
+    deleteSelectedHighlight();
+    return;
+  }
   const hasCommandModifier = event.metaKey || event.ctrlKey;
   const key = event.key.toLocaleLowerCase();
   const isUndoShortcut = hasCommandModifier && key === "z" && !event.shiftKey;
@@ -1342,6 +1379,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 window.addEventListener("resize", positionFloatingComments);
+new ResizeObserver(syncDrawingCanvasSize).observe(drawingPanel);
 
 updateControls();
 

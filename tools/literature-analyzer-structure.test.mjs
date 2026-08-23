@@ -24,6 +24,13 @@ test("highlights toggle selection and escape clears the active selection", () =>
   assert.doesNotMatch(styles, /\.highlight-mark:hover,\s*\.highlight-mark\.is-selected/);
 });
 
+test("selected highlights and comments can be deleted from the toolbar or keyboard", () => {
+  assert.match(markup, /id="delete-highlight"/);
+  assert.match(controller, /deleteHighlightButton\.addEventListener\("click", deleteSelectedHighlight\)/);
+  assert.match(controller, /event\.key === "Delete" \|\| event\.key === "Backspace"/);
+  assert.match(controller, /function deleteSelectedHighlight\(\)/);
+});
+
 test("comments switch between a selectable side rail and hover display", () => {
   assert.match(markup, /id="side-comments-visibility"/);
   assert.match(controller, /commentDisplayMode === "hover"/);
@@ -38,6 +45,8 @@ test("a collapsible finite drawing canvas provides pen and eraser controls", () 
   assert.match(markup, /data-drawing-tool="eraser"/);
   assert.match(controller, /function renderDrawing\(\)/);
   assert.match(controller, /drawingCanvas\.addEventListener\("pointerdown"/);
+  assert.match(styles, /\.analyzer-drawing-panel\s*\{[\s\S]*resize: both/);
+  assert.match(controller, /new ResizeObserver\(syncDrawingCanvasSize\)/);
 });
 
 test("the full empty reader is the only PDF browse and drop target", () => {

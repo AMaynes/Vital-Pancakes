@@ -10,7 +10,7 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=17">
   <link rel="stylesheet" href="tool.css?v=23">
-  <link rel="stylesheet" href="literature-analyzer.css?v=7">
+  <link rel="stylesheet" href="literature-analyzer.css?v=8">
   <link rel="stylesheet" href="../site-navigation.css?v=24">
   <script type="module" src="../site-navigation.js?v=18"></script>
 </head>
@@ -50,12 +50,15 @@
     <main class="literature-analyzer-workspace" id="tool-main">
       <section class="analyzer-viewer">
         <div class="tool-toolbar analyzer-toolbar">
-          <div class="analyzer-ink-tools" role="radiogroup" aria-label="Highlight ink color">
-            <span>Highlight ink</span>
-            <button class="highlight-color is-active" type="button" data-highlight-color="#f6d84a" aria-label="Yellow" aria-checked="true" role="radio"></button>
-            <button class="highlight-color" type="button" data-highlight-color="#f29ca3" aria-label="Rose" aria-checked="false" role="radio"></button>
-            <button class="highlight-color" type="button" data-highlight-color="#8ecae6" aria-label="Blue" aria-checked="false" role="radio"></button>
-            <button class="highlight-color" type="button" data-highlight-color="#9ed6a5" aria-label="Green" aria-checked="false" role="radio"></button>
+          <div class="analyzer-ink-tools">
+            <div class="analyzer-ink-colors" role="radiogroup" aria-label="Highlight ink color">
+              <span>Highlight ink</span>
+              <button class="highlight-color is-active" type="button" data-highlight-color="#f6d84a" aria-label="Yellow" aria-checked="true" role="radio"></button>
+              <button class="highlight-color" type="button" data-highlight-color="#f29ca3" aria-label="Rose" aria-checked="false" role="radio"></button>
+              <button class="highlight-color" type="button" data-highlight-color="#8ecae6" aria-label="Blue" aria-checked="false" role="radio"></button>
+              <button class="highlight-color" type="button" data-highlight-color="#9ed6a5" aria-label="Green" aria-checked="false" role="radio"></button>
+            </div>
+            <button class="tool-button highlight-delete" id="delete-highlight" type="button" title="Delete selected highlight and comment" aria-label="Delete selected highlight and comment" disabled>&#128465;</button>
           </div>
           <button class="tool-button analyzer-comment-mode-toggle" id="comment-display-toggle" type="button" title="Show comments only while hovering over highlights">Comments: Side</button>
         </div>
@@ -108,6 +111,6 @@
 
   <script src="../vendor/pdf.min.js"></script>
   <script src="../vendor/pdf-lib.min.js"></script>
-  <script type="module" src="literature-analyzer.js?v=7"></script>
+  <script type="module" src="literature-analyzer.js?v=8"></script>
 </body>
 </html>
