@@ -1,6 +1,6 @@
 /**
  * Overview & Purpose
- * Defines the two-column reading, annotation, comment, and export interface for
+ * Defines the top-tool reading, annotation, comment, and export interface for
  * the Literature Analyzer.
  *
  * Architectural Relationships
@@ -18,28 +18,33 @@
 .literature-analyzer-workspace {
   display: grid;
   min-height: 0;
-  grid-template-columns: 265px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
-.analyzer-sidebar {
-  min-height: 0;
-  overflow-y: auto;
-  border-right: 1px solid var(--line-strong);
+.analyzer-top-tools {
+  display: grid;
+  grid-template-columns: minmax(310px, 1.55fr) auto minmax(250px, 1fr) minmax(220px, 0.85fr);
+  border-bottom: 1px solid var(--line-strong);
   background: var(--card);
 }
 
-.analyzer-sidebar .panel-section {
+.analyzer-top-tools .panel-section {
+  min-width: 0;
   padding: 11px;
-  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
 }
 
-.analyzer-sidebar .panel-section h2 {
+.analyzer-top-tools .panel-section:last-child {
+  border-right: 0;
+}
+
+.analyzer-top-tools .panel-section h2 {
   margin-bottom: 5px;
   font-size: 13px;
 }
 
-.analyzer-sidebar .panel-section > p,
-.analyzer-sidebar label {
+.analyzer-top-tools .panel-section > p,
+.analyzer-top-tools label {
   color: var(--ink-faint);
   font-size: 9px;
   line-height: 1.4;
@@ -107,6 +112,11 @@
   gap: 6px;
 }
 
+.analyzer-comment-panel.is-disabled textarea {
+  background: var(--surface-soft);
+  color: var(--ink-faint);
+}
+
 .analyzer-comment-panel textarea {
   min-height: 92px;
   resize: vertical;
@@ -114,7 +124,7 @@
 }
 
 .analyzer-index-panel {
-  min-height: 145px;
+  min-height: 0;
 }
 
 .analyzer-index-heading {
@@ -131,6 +141,8 @@
 .annotation-list {
   display: grid;
   gap: 5px;
+  max-height: 142px;
+  overflow-y: auto;
 }
 
 .annotation-empty {
@@ -195,14 +207,8 @@
 }
 
 .analyzer-reading-area {
-  display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.analyzer-reading-area.is-comment-rail-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(225px, 285px);
 }
 
 .analyzer-toolbar {
@@ -232,59 +238,48 @@
 
 .analyzer-stage-scroll {
   position: relative;
-  display: grid;
+  display: block;
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow: auto;
-  place-items: center;
   background:
     linear-gradient(45deg, rgb(23 22 19 / 2%) 25%, transparent 25%) 0 0 / 18px 18px,
     linear-gradient(-45deg, rgb(23 22 19 / 2%) 25%, transparent 25%) 0 9px / 18px 18px,
     #d7d1c6;
 }
 
-.analyzer-comment-rail {
-  min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
-  border-left: 1px solid var(--line-strong);
-  background: var(--card);
-}
-
-.analyzer-comment-rail > header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+.analyzer-document-layout {
   display: flex;
-  min-height: 51px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-  background: rgb(249 247 241 / 95%);
-  backdrop-filter: blur(8px);
+  width: max-content;
+  min-width: calc(100% - 44px);
+  min-height: calc(100% - 44px);
+  align-items: flex-start;
+  justify-content: center;
+  margin: 22px;
 }
 
-.analyzer-comment-rail > header span {
-  color: var(--ink-faint);
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.analyzer-comment-rail > header h2 {
-  margin: 2px 0 0;
-  font-size: 12px;
+.analyzer-comment-rail {
+  position: relative;
+  width: 245px;
+  min-height: 100%;
+  flex: 0 0 245px;
+  align-self: stretch;
+  margin-left: 14px;
+  pointer-events: none;
 }
 
 .analyzer-comment-rail-list {
-  display: grid;
-  gap: 7px;
-  padding: 10px;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
 }
 
 .analyzer-comment-rail-card {
+  position: absolute;
+  left: 0;
+  z-index: 2;
   display: grid;
   width: 100%;
   gap: 7px;
@@ -295,6 +290,8 @@
   background: var(--surface);
   color: var(--ink);
   text-align: left;
+  box-shadow: 0 4px 14px rgb(23 22 19 / 14%);
+  pointer-events: auto;
 }
 
 .analyzer-comment-rail-card:hover,
@@ -340,7 +337,7 @@
 
 .analyzer-pdf-stage {
   position: relative;
-  margin: 22px;
+  flex: 0 0 auto;
   background: #fff;
   box-shadow: 0 12px 35px rgb(23 22 19 / 22%);
 }
@@ -351,11 +348,11 @@
 
 .analyzer-web-stage {
   position: relative;
-  width: calc(100% - 28px);
-  height: calc(100% - 28px);
+  width: max(680px, calc(100vw - 90px));
+  height: max(480px, calc(100vh - 280px));
+  flex: 0 0 auto;
   min-width: 680px;
   min-height: 480px;
-  margin: 14px;
   overflow: hidden;
   background: #fff;
   border: 1px solid var(--line-strong);
@@ -422,63 +419,17 @@
   mix-blend-mode: normal;
 }
 
-.highlight-inline-comment {
-  position: absolute;
-  z-index: 8;
-  display: grid;
-  min-width: 135px;
-  max-height: 104px;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 6px;
-  align-items: start;
-  padding: 7px 8px;
-  overflow: auto;
-  border: 1px solid var(--line-strong);
-  border-top: 3px solid var(--annotation-color);
-  border-radius: 7px;
-  background: rgb(255 254 250 / 96%);
-  color: var(--ink);
-  text-align: left;
-  transform: translateY(calc(-100% - 7px));
-  box-shadow: 0 5px 16px rgb(23 22 19 / 18%);
-  mix-blend-mode: normal;
-  pointer-events: auto;
-}
-
-.highlight-inline-comment.is-below {
-  transform: translateY(7px);
-}
-
-.highlight-inline-comment:hover,
-.highlight-inline-comment.is-selected {
-  border-color: var(--ink);
-  border-top-color: var(--annotation-color);
-  outline: 1px solid rgb(23 22 19 / 22%);
-  outline-offset: 1px;
-}
-
-.highlight-inline-comment-number {
-  display: grid;
-  width: 18px;
-  height: 18px;
-  place-items: center;
-  border: 1px solid rgb(23 22 19 / 28%);
-  background: var(--annotation-color);
-  font-size: 7px;
-  font-weight: 800;
-}
-
-.highlight-inline-comment-text {
-  overflow-wrap: anywhere;
-  color: var(--ink-soft);
-  font-size: 9px;
-  line-height: 1.35;
-  white-space: pre-wrap;
-}
-
 @media (max-width: 760px) {
-  .literature-analyzer-workspace {
-    grid-template-columns: 210px minmax(0, 1fr);
+  .analyzer-top-tools {
+    grid-template-columns: minmax(280px, 1.4fr) minmax(220px, 1fr);
+  }
+
+  .analyzer-top-tools .panel-section:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .analyzer-top-tools .panel-section:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
   }
 
   .analyzer-source-meta {
@@ -489,20 +440,17 @@
     min-width: 560px;
   }
 
-  .analyzer-reading-area.is-comment-rail-layout {
-    grid-template-columns: minmax(0, 1fr) 220px;
-  }
 }
 
 @media (max-width: 560px) {
-  .literature-analyzer-workspace {
+  .analyzer-top-tools {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(170px, 34vh) minmax(0, 1fr);
   }
 
-  .analyzer-sidebar {
+  .analyzer-top-tools .panel-section,
+  .analyzer-top-tools .panel-section:nth-child(2n) {
     border-right: 0;
-    border-bottom: 1px solid var(--line-strong);
+    border-bottom: 1px solid var(--line);
   }
 
   .analyzer-toolbar {
@@ -513,13 +461,12 @@
     margin-left: 0;
   }
 
-  .analyzer-reading-area.is-comment-rail-layout {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) minmax(150px, 30vh);
+  .analyzer-document-layout {
+    justify-content: flex-start;
   }
 
   .analyzer-comment-rail {
-    border-top: 1px solid var(--line-strong);
-    border-left: 0;
+    width: 220px;
+    flex-basis: 220px;
   }
 }

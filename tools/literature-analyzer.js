@@ -39,7 +39,6 @@ const { PDFDocument, StandardFonts, rgb } = globalThis.PDFLib;
 globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc = "../vendor/pdf.worker.min.js";
 
 const STORAGE_KEY = "pinakes-vitae-literature-analyzer-v1";
-const COMMENT_LAYOUT_KEY = "pinakes-vitae-literature-analyzer-comment-layout-v1";
 const MAX_PDF_BYTES = 100 * 1024 * 1024;
 const MAX_SAVED_SOURCES = 50;
 const COMMENT_HISTORY_IDLE_MS = 700;
@@ -72,9 +71,6 @@ const sourceName = document.querySelector("#analysis-source-name");
 const status = document.querySelector("#analyzer-status");
 const undoButton = document.querySelector("#undo-analysis");
 const redoButton = document.querySelector("#redo-analysis");
-const commentLayoutButton = document.querySelector("#comment-layout-toggle");
-const commentsBackOnPageButton = document.querySelector("#comments-back-on-page");
-const readingArea = document.querySelector("#analyzer-reading-area");
 const commentRail = document.querySelector("#analyzer-comment-rail");
 const commentRailList = document.querySelector("#analyzer-comment-rail-list");
 
@@ -85,13 +81,12 @@ let currentPageNumber = 1;
 let annotations = [];
 let selectedAnnotationId = null;
 let activeColor = DEFAULT_HIGHLIGHT_COLOR;
-let isHighlightMode = true;
+let activeMode = "highlight";
 let activeDraft = null;
 let renderSequence = 0;
 let annotationHistory = createAnnotationHistory([], DEFAULT_ANNOTATION_HISTORY_LIMIT);
 let isCommentHistoryTransactionOpen = false;
 let commentHistoryTimer = null;
-let commentLayout = restoreCommentLayout();
 
 /**
  * Loads and renders a local PDF while restoring any saved annotations for the
@@ -182,7 +177,6 @@ function showSource(sourceType) {
   pdfStage.hidden = sourceType !== "pdf";
   webStage.hidden = sourceType !== "web";
   openWebSource.hidden = sourceType !== "web";
-  applyCommentLayout();
   updateControls();
 }
 
@@ -241,53 +235,12 @@ function renderAnnotations() {
       mark.append(badge);
       layer.append(mark);
 
-      if (commentLayout === "inline") {
-        layer.append(createInlineComment(annotation, index));
-      }
     });
   }
   renderAnnotationIndex();
   renderCommentRail();
   renderSelectedAnnotation();
   updateControls();
-}
-
-/**
- * Creates a comment card positioned immediately above its highlight.
- *
- * @param {object} annotation Highlight annotation.
- * @param {number} index One-based global annotation number.
- * @returns {HTMLButtonElement} Positioned comment card.
- */
-function createInlineComment(annotation, index) {
-  const card = document.createElement("button");
-  const widthRatio = Math.min(0.38, Math.max(0.22, annotation.width + 0.12));
-  const leftRatio = Math.min(Math.max(annotation.x, 0.01), 0.99 - widthRatio);
-  const placeBelow = annotation.y < 0.18;
-  card.type = "button";
-  card.className = "highlight-inline-comment";
-  card.dataset.commentAnnotationId = annotation.id;
-  card.hidden = !annotation.comment.trim();
-  card.style.left = `${leftRatio * 100}%`;
-  card.style.top = `${(placeBelow ? annotation.y + annotation.height : annotation.y) * 100}%`;
-  card.style.width = `${widthRatio * 100}%`;
-  card.style.setProperty("--annotation-color", annotation.color);
-  card.classList.toggle("is-below", placeBelow);
-  card.classList.toggle("is-selected", annotation.id === selectedAnnotationId);
-  card.setAttribute("aria-label", `Comment for highlight ${index}: ${annotation.comment || "Empty comment"}`);
-
-  const number = document.createElement("span");
-  number.className = "highlight-inline-comment-number";
-  number.textContent = String(index);
-  const text = document.createElement("span");
-  text.className = "highlight-inline-comment-text";
-  text.textContent = annotation.comment;
-  card.append(number, text);
-  card.addEventListener("click", (event) => {
-    event.stopPropagation();
-    selectAnnotation(annotation.id, true);
-  });
-  return card;
 }
 
 /**
@@ -343,25 +296,25 @@ function renderAnnotationIndex() {
 }
 
 /**
- * Rebuilds the optional right-side comment rail for the visible page.
+ * Rebuilds Word-style comments floating beside the visible document page.
  */
 function renderCommentRail() {
-  if (commentLayout !== "rail" || !source) {
+  if (!source) {
+    commentRail.hidden = true;
     commentRailList.replaceChildren();
     return;
   }
   const commentedAnnotations = getVisibleAnnotations()
-    .filter((annotation) => annotation.comment.trim());
+    .filter((annotation) => annotation.comment.trim())
+    .sort((left, right) => left.y - right.y);
   if (!commentedAnnotations.length) {
-    const empty = document.createElement("p");
-    empty.className = "annotation-empty";
-    empty.textContent = source.type === "pdf"
-      ? "No comments on this page."
-      : "No comments on this source.";
-    commentRailList.replaceChildren(empty);
+    commentRail.hidden = true;
+    commentRailList.replaceChildren();
     return;
   }
 
+  commentRail.hidden = false;
+  commentRailList.style.minHeight = "100%";
   const fragment = document.createDocumentFragment();
   commentedAnnotations.forEach((annotation) => {
     const index = annotations.indexOf(annotation) + 1;
@@ -369,6 +322,8 @@ function renderCommentRail() {
     button.type = "button";
     button.className = "analyzer-comment-rail-card";
     button.dataset.commentAnnotationId = annotation.id;
+    button.dataset.anchorY = String(annotation.y);
+    button.style.top = `${annotation.y * 100}%`;
     button.style.setProperty("--annotation-color", annotation.color);
     button.classList.toggle("is-selected", annotation.id === selectedAnnotationId);
 
@@ -384,10 +339,29 @@ function renderCommentRail() {
     comment.className = "analyzer-comment-rail-copy";
     comment.textContent = annotation.comment;
     button.append(heading, comment);
-    button.addEventListener("click", () => navigateToAnnotation(annotation.id, true));
+    button.addEventListener("click", () => navigateToAnnotation(annotation.id));
     fragment.append(button);
   });
   commentRailList.replaceChildren(fragment);
+  window.requestAnimationFrame(positionFloatingComments);
+}
+
+/**
+ * Prevents nearby margin comments from covering one another while retaining
+ * their top-to-bottom relationship with the highlighted text.
+ */
+function positionFloatingComments() {
+  if (commentRail.hidden) return;
+  const cards = [...commentRailList.querySelectorAll(".analyzer-comment-rail-card")];
+  const railHeight = commentRailList.clientHeight;
+  let nextTop = 0;
+  cards.forEach((card) => {
+    const desiredTop = Number(card.dataset.anchorY || 0) * railHeight;
+    const top = Math.max(desiredTop, nextTop);
+    card.style.top = `${top}px`;
+    nextTop = top + card.offsetHeight + 8;
+  });
+  commentRailList.style.minHeight = `${Math.max(railHeight, nextTop)}px`;
 }
 
 /**
@@ -395,7 +369,10 @@ function renderCommentRail() {
  */
 function renderSelectedAnnotation() {
   const selected = getSelectedAnnotation();
-  commentPanel.hidden = !selected;
+  const canEditComment = Boolean(selected) && activeMode === "comment";
+  commentPanel.classList.toggle("is-disabled", !canEditComment);
+  commentInput.disabled = !canEditComment;
+  deleteHighlightButton.disabled = !selected;
   if (!selected) {
     commentInput.value = "";
     return;
@@ -418,24 +395,22 @@ function updateRenderedCommentCopies(annotationId, comment) {
   );
   if (listComment) listComment.textContent = comment || "No comment yet";
 
-  const inlineComment = getActiveLayer()?.querySelector(
+  const floatingComment = commentRailList.querySelector(
     `[data-comment-annotation-id="${escapedId}"]`,
   );
-  if (inlineComment) {
-    inlineComment.hidden = !comment.trim();
-    inlineComment.querySelector(".highlight-inline-comment-text").textContent = comment;
-    inlineComment.setAttribute("aria-label", `Comment: ${comment || "Empty comment"}`);
+  if (floatingComment) {
+    floatingComment.querySelector(".analyzer-comment-rail-copy").textContent = comment;
+    floatingComment.setAttribute("aria-label", `Comment: ${comment || "Empty comment"}`);
   }
-  if (commentLayout === "rail") renderCommentRail();
+  renderCommentRail();
 }
 
 /**
  * Navigates to a highlight's PDF page, then selects it.
  *
  * @param {string} annotationId Highlight identifier.
- * @param {boolean} focusComment Whether to focus the comment editor.
  */
-async function navigateToAnnotation(annotationId, focusComment = false) {
+async function navigateToAnnotation(annotationId) {
   const annotation = annotations.find((candidate) => candidate.id === annotationId);
   if (!annotation) return;
   if (source?.type === "pdf" && annotation.pageNumber !== currentPageNumber) {
@@ -443,23 +418,21 @@ async function navigateToAnnotation(annotationId, focusComment = false) {
     currentPageNumber = annotation.pageNumber;
     selectedAnnotationId = annotationId;
     await renderPdfPage();
-    if (focusComment) window.requestAnimationFrame(() => commentInput.focus());
     return;
   }
-  selectAnnotation(annotationId, focusComment);
+  selectAnnotation(annotationId);
 }
 
 /**
  * Selects one highlight and optionally focuses its comment field.
  *
  * @param {string|null} annotationId Highlight identifier.
- * @param {boolean} focusComment Whether to move focus into the comment editor.
  */
-function selectAnnotation(annotationId, focusComment = false) {
+function selectAnnotation(annotationId) {
   if (annotationId !== selectedAnnotationId) finishCommentHistoryTransaction();
   selectedAnnotationId = annotationId;
   renderAnnotations();
-  if (focusComment && annotationId) {
+  if (activeMode === "comment" && annotationId) {
     window.requestAnimationFrame(() => commentInput.focus());
   }
 }
@@ -470,7 +443,7 @@ function selectAnnotation(annotationId, focusComment = false) {
  * @param {PointerEvent} event Pointer-down event.
  */
 function startHighlight(event) {
-  if (!source || !isHighlightMode || event.target !== event.currentTarget) return;
+  if (!source || activeMode !== "highlight" || event.target !== event.currentTarget) return;
   event.preventDefault();
   const layer = event.currentTarget;
   layer.setPointerCapture(event.pointerId);
@@ -534,7 +507,6 @@ function endHighlight(event) {
   selectedAnnotationId = annotation.id;
   persistAnnotations();
   renderAnnotations();
-  window.requestAnimationFrame(() => commentInput.focus());
 }
 
 /**
@@ -564,16 +536,20 @@ function applyHighlightColor(element, color) {
 /**
  * Changes browse/highlight interaction without interfering with existing marks.
  *
- * @param {"browse"|"highlight"} mode Requested interaction mode.
+ * @param {"browse"|"highlight"|"comment"} mode Requested interaction mode.
  */
 function setMode(mode) {
-  isHighlightMode = mode === "highlight";
+  activeMode = ["browse", "highlight", "comment"].includes(mode) ? mode : "browse";
   document.querySelectorAll("[data-analyzer-mode]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.analyzerMode === mode);
+    button.classList.toggle("is-active", button.dataset.analyzerMode === activeMode);
   });
   [pdfHighlightLayer, webHighlightLayer].forEach((layer) => {
-    layer.classList.toggle("is-drawing-mode", isHighlightMode);
+    layer.classList.toggle("is-drawing-mode", activeMode === "highlight");
   });
+  renderSelectedAnnotation();
+  if (activeMode === "comment" && selectedAnnotationId) {
+    window.requestAnimationFrame(() => commentInput.focus());
+  }
 }
 
 /**
@@ -674,53 +650,6 @@ function redoAnnotations() {
   persistAnnotations();
   renderAnnotations();
   setStatus("Redid annotation change");
-}
-
-/**
- * Restores the preferred comment layout from local browser storage.
- *
- * @returns {"inline"|"rail"} Saved layout.
- */
-function restoreCommentLayout() {
-  try {
-    return localStorage.getItem(COMMENT_LAYOUT_KEY) === "rail" ? "rail" : "inline";
-  } catch {
-    return "inline";
-  }
-}
-
-/**
- * Applies and persists the inline or right-side comment layout.
- *
- * @param {"inline"|"rail"} layout Requested layout.
- */
-function setCommentLayout(layout) {
-  commentLayout = layout === "rail" ? "rail" : "inline";
-  try {
-    localStorage.setItem(COMMENT_LAYOUT_KEY, commentLayout);
-  } catch (error) {
-    console.error("Unable to save the Literature Analyzer comment layout.", error);
-  }
-  applyCommentLayout();
-  renderAnnotations();
-  setStatus(commentLayout === "rail" ? "Comments moved to the right" : "Comments placed above highlights");
-}
-
-/**
- * Updates the reading-area grid and layout toggle without rebuilding marks.
- */
-function applyCommentLayout() {
-  const isRailLayout = commentLayout === "rail" && Boolean(source);
-  readingArea.classList.toggle("is-comment-rail-layout", isRailLayout);
-  commentRail.hidden = !isRailLayout;
-  commentLayoutButton.classList.toggle("is-active", commentLayout === "rail");
-  commentLayoutButton.setAttribute("aria-pressed", String(commentLayout === "rail"));
-  commentLayoutButton.textContent = commentLayout === "rail"
-    ? "⇤ Comments above"
-    : "⇥ Comments right";
-  commentLayoutButton.title = commentLayout === "rail"
-    ? "Put comments back above their highlights"
-    : "Move highlight comments to the right side";
 }
 
 /**
@@ -1223,7 +1152,6 @@ function updateControls() {
   redoButton.disabled = !hasSource
     || !annotationHistory.future.length
     || isCommentHistoryTransactionOpen;
-  commentLayoutButton.disabled = !hasSource;
   previousPageButton.disabled = !hasPdf || currentPageNumber <= 1;
   nextPageButton.disabled = !hasPdf || currentPageNumber >= pdfDocument.numPages;
   pageCount.textContent = hasPdf ? `Page ${currentPageNumber} / ${pdfDocument.numPages}` : "Page 0 / 0";
@@ -1360,11 +1288,6 @@ exportPngButton.addEventListener("click", exportPng);
 exportPdfButton.addEventListener("click", exportPdf);
 undoButton.addEventListener("click", undoAnnotations);
 redoButton.addEventListener("click", redoAnnotations);
-commentLayoutButton.addEventListener("click", () => {
-  setCommentLayout(commentLayout === "inline" ? "rail" : "inline");
-});
-commentsBackOnPageButton.addEventListener("click", () => setCommentLayout("inline"));
-
 previousPageButton.addEventListener("click", async () => {
   if (currentPageNumber <= 1) return;
   finishCommentHistoryTransaction();
@@ -1403,9 +1326,9 @@ document.addEventListener("keydown", (event) => {
     selectAnnotation(null);
   }
 });
+window.addEventListener("resize", positionFloatingComments);
 
 setMode("highlight");
-applyCommentLayout();
 updateControls();
 
 installCurrentToolAiHost({
@@ -1422,7 +1345,7 @@ installCurrentToolAiHost({
     pageCount: pdfDocument?.numPages ?? null,
     annotations: annotations.map((annotation) => ({ ...annotation })),
     selectedAnnotationId,
-    commentLayout,
+    commentLayout: "margin",
   }),
   getContext: (_options, snapshot) => ({
     source: snapshot.source ? { loaded: true, type: snapshot.source.type } : null,

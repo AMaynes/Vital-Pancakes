@@ -10,8 +10,8 @@
   <link rel="icon" href="../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../workspace.css?v=17">
   <link rel="stylesheet" href="tool.css?v=23">
-  <link rel="stylesheet" href="literature-analyzer.css?v=2">
-  <link rel="stylesheet" href="../site-navigation.css?v=22">
+  <link rel="stylesheet" href="literature-analyzer.css?v=3">
+  <link rel="stylesheet" href="../site-navigation.css?v=24">
   <script type="module" src="../site-navigation.js?v=18"></script>
 </head>
 <body class="tool-body">
@@ -48,9 +48,9 @@
     </header>
 
     <main class="literature-analyzer-workspace" id="tool-main">
-      <aside class="analyzer-sidebar">
+      <section class="analyzer-top-tools" aria-label="Literature analyzer tools">
         <section class="panel-section">
-          <h2>1. Open a source</h2>
+          <h2>Open source</h2>
           <p>PDF files remain in this browser and are never uploaded.</p>
           <label class="drop-zone" id="analysis-pdf-drop-zone">
             <input id="analysis-pdf-file" type="file" accept="application/pdf,.pdf">
@@ -81,7 +81,7 @@
         </section>
 
         <section class="panel-section">
-          <h2>2. Choose highlight ink</h2>
+          <h2>Highlight ink</h2>
           <p>Drag across the document after switching to Highlight mode.</p>
           <div class="highlight-color-row" id="highlight-color-row" role="radiogroup" aria-label="Highlight color">
             <button class="highlight-color is-active" type="button" data-highlight-color="#f6d84a" aria-label="Yellow" aria-checked="true" role="radio"></button>
@@ -91,8 +91,8 @@
           </div>
         </section>
 
-        <section class="panel-section analyzer-comment-panel" id="analyzer-comment-panel" hidden>
-          <h2>3. Comment on selection</h2>
+        <section class="panel-section analyzer-comment-panel is-disabled" id="analyzer-comment-panel">
+          <h2>Comment editor</h2>
           <label for="highlight-comment">Comment</label>
           <textarea
             class="tool-input"
@@ -100,8 +100,9 @@
             rows="6"
             maxlength="4000"
             placeholder="Write what this passage means, challenges, or connects to…"
+            disabled
           ></textarea>
-          <button class="button button-danger-quiet" id="delete-highlight" type="button">Delete selected highlight</button>
+          <button class="button button-danger-quiet" id="delete-highlight" type="button" disabled>Delete selected highlight</button>
         </section>
 
         <section class="panel-section analyzer-index-panel">
@@ -113,29 +114,18 @@
             <p class="annotation-empty">Highlights and comments will be indexed here.</p>
           </div>
         </section>
-      </aside>
+      </section>
 
       <section class="analyzer-viewer">
         <div class="tool-toolbar analyzer-toolbar">
           <div class="toolbar-group" role="toolbar" aria-label="Annotation mode">
             <button class="tool-button" data-analyzer-mode="browse" type="button">↖ Browse</button>
             <button class="tool-button is-active" data-analyzer-mode="highlight" type="button">▰ Highlight</button>
+            <button class="tool-button" data-analyzer-mode="comment" type="button">▤ Comment</button>
           </div>
           <div class="toolbar-group" role="toolbar" aria-label="Annotation history">
             <button class="tool-button" id="undo-analysis" type="button" title="Undo (Command/Ctrl+Z)" disabled>↶ Undo</button>
             <button class="tool-button" id="redo-analysis" type="button" title="Redo (Command/Ctrl+Shift+Z)" disabled>↷ Redo</button>
-          </div>
-          <div class="toolbar-group">
-            <button
-              class="tool-button"
-              id="comment-layout-toggle"
-              type="button"
-              aria-pressed="false"
-              title="Move highlight comments to the right side"
-              disabled
-            >
-              ⇥ Comments right
-            </button>
           </div>
           <div class="toolbar-group analyzer-page-controls">
             <button class="tool-button" id="analysis-previous-page" type="button" disabled>← Previous</button>
@@ -156,34 +146,27 @@
               <p>Drop in a PDF or enter a website URL, then drag highlights and attach your own comments.</p>
             </div>
 
-            <div class="analyzer-pdf-stage" id="analyzer-pdf-stage" hidden>
-              <canvas id="analyzer-pdf-canvas"></canvas>
-              <div class="highlight-layer is-drawing-mode" id="pdf-highlight-layer" aria-label="PDF highlight layer"></div>
-            </div>
+            <div class="analyzer-document-layout">
+              <div class="analyzer-pdf-stage" id="analyzer-pdf-stage" hidden>
+                <canvas id="analyzer-pdf-canvas"></canvas>
+                <div class="highlight-layer is-drawing-mode" id="pdf-highlight-layer" aria-label="PDF highlight layer"></div>
+              </div>
 
-            <div class="analyzer-web-stage" id="analyzer-web-stage" hidden>
-              <iframe
-                id="analyzer-web-frame"
-                title="Website being analyzed"
-                referrerpolicy="no-referrer"
-                sandbox="allow-downloads allow-forms allow-popups allow-same-origin allow-scripts"
-              ></iframe>
-              <div class="highlight-layer is-drawing-mode" id="web-highlight-layer" aria-label="Website highlight layer"></div>
+              <div class="analyzer-web-stage" id="analyzer-web-stage" hidden>
+                <iframe
+                  id="analyzer-web-frame"
+                  title="Website being analyzed"
+                  referrerpolicy="no-referrer"
+                  sandbox="allow-downloads allow-forms allow-popups allow-same-origin allow-scripts"
+                ></iframe>
+                <div class="highlight-layer is-drawing-mode" id="web-highlight-layer" aria-label="Website highlight layer"></div>
+              </div>
+
+              <aside class="analyzer-comment-rail" id="analyzer-comment-rail" aria-label="Comments beside the document" hidden>
+                <div class="analyzer-comment-rail-list" id="analyzer-comment-rail-list"></div>
+              </aside>
             </div>
           </div>
-
-          <aside class="analyzer-comment-rail" id="analyzer-comment-rail" aria-label="Highlight comments" hidden>
-            <header>
-              <div>
-                <span>COMMENTS</span>
-                <h2>Beside the source</h2>
-              </div>
-              <button class="tool-button" id="comments-back-on-page" type="button" title="Put comments back above highlights">
-                ⇤ Above marks
-              </button>
-            </header>
-            <div class="analyzer-comment-rail-list" id="analyzer-comment-rail-list"></div>
-          </aside>
         </div>
       </section>
     </main>
@@ -191,6 +174,6 @@
 
   <script src="../vendor/pdf.min.js"></script>
   <script src="../vendor/pdf-lib.min.js"></script>
-  <script type="module" src="literature-analyzer.js?v=3"></script>
+  <script type="module" src="literature-analyzer.js?v=4"></script>
 </body>
 </html>
