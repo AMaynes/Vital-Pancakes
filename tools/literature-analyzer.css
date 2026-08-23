@@ -215,9 +215,13 @@
   z-index: 5;
   inset: 0;
   overflow: hidden;
-  cursor: crosshair;
+  cursor: default;
   pointer-events: auto;
   touch-action: none;
+}
+
+.highlight-layer.is-drawing-mode {
+  cursor: crosshair;
 }
 
 .highlight-mark {
@@ -230,7 +234,6 @@
   mix-blend-mode: multiply;
 }
 
-.highlight-mark:hover,
 .highlight-mark.is-selected {
   outline: 2px solid var(--ink);
   outline-offset: 1px;

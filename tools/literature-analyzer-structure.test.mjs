@@ -18,7 +18,10 @@ test("literature analyzer keeps ink and one comment view toggle in its compact t
 
 test("highlights toggle selection and escape clears the active selection", () => {
   assert.match(controller, /annotationId === selectedAnnotationId \? null : annotationId/);
-  assert.match(controller, /event\.key === "Escape"[\s\S]*selectAnnotation\(null\)/);
+  assert.match(controller, /event\.key === "Escape"[\s\S]*setHighlightMode\(null\)/);
+  assert.match(controller, /activeColor === button\.dataset\.highlightColor[\s\S]*\? null/);
+  assert.match(styles, /\.highlight-layer\.is-drawing-mode\s*\{[\s\S]*cursor: crosshair/);
+  assert.doesNotMatch(styles, /\.highlight-mark:hover,\s*\.highlight-mark\.is-selected/);
 });
 
 test("comments switch between a selectable side rail and hover display", () => {

@@ -441,7 +441,7 @@ function selectAnnotation(annotationId) {
  * @param {PointerEvent} event Pointer-down event.
  */
 function startHighlight(event) {
-  if (!source || event.target !== event.currentTarget) return;
+  if (!source || !activeColor || event.target !== event.currentTarget) return;
   event.preventDefault();
   const layer = event.currentTarget;
   layer.setPointerCapture(event.pointerId);
@@ -1207,18 +1207,16 @@ pdfDropZone.addEventListener("drop", (event) => loadPdf(event.dataTransfer.files
 
 document.querySelectorAll("[data-highlight-color]").forEach((button) => {
   button.addEventListener("click", () => {
-    activeColor = button.dataset.highlightColor;
-    document.querySelectorAll("[data-highlight-color]").forEach((candidate) => {
-      const isActive = candidate === button;
-      candidate.classList.toggle("is-active", isActive);
-      candidate.setAttribute("aria-checked", String(isActive));
-    });
+    const nextColor = activeColor === button.dataset.highlightColor
+      ? null
+      : button.dataset.highlightColor;
+    setHighlightMode(nextColor);
     const selected = getSelectedAnnotation();
-    if (selected) {
+    if (selected && nextColor) {
       commitAnnotationChange(
         annotations.map((annotation) => (
           annotation.id === selected.id
-            ? { ...annotation, color: activeColor }
+            ? { ...annotation, color: nextColor }
             : annotation
         )),
       );
@@ -1227,6 +1225,22 @@ document.querySelectorAll("[data-highlight-color]").forEach((button) => {
     }
   });
 });
+
+function setHighlightMode(color) {
+  activeColor = color;
+  document.querySelectorAll("[data-highlight-color]").forEach((candidate) => {
+    const isActive = candidate.dataset.highlightColor === activeColor;
+    candidate.classList.toggle("is-active", isActive);
+    candidate.setAttribute("aria-checked", String(isActive));
+  });
+  pdfHighlightLayer.classList.toggle("is-drawing-mode", Boolean(activeColor));
+  if (!activeColor) {
+    finishCommentHistoryTransaction();
+    selectedAnnotationId = null;
+    editingCommentId = null;
+    renderAnnotations();
+  }
+}
 
 commentDisplayToggle.addEventListener("click", () => {
   commentDisplayMode = commentDisplayMode === "side" ? "hover" : "side";
@@ -1322,8 +1336,9 @@ document.addEventListener("keydown", (event) => {
   } else if (isRedoShortcut && source) {
     event.preventDefault();
     redoAnnotations();
-  } else if (event.key === "Escape" && selectedAnnotationId) {
-    selectAnnotation(null);
+  } else if (event.key === "Escape" && (activeColor || selectedAnnotationId)) {
+    event.preventDefault();
+    setHighlightMode(null);
   }
 });
 window.addEventListener("resize", positionFloatingComments);
