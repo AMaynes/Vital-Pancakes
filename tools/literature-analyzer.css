@@ -155,8 +155,8 @@
 }
 
 .analyzer-drawing-column.is-collapsed {
-  width: 34px;
-  flex-basis: 34px;
+  width: max-content;
+  flex-basis: auto;
 }
 
 .analyzer-drawing-column.is-collapsed .analyzer-drawing-panel {
@@ -165,12 +165,13 @@
 
 .analyzer-drawing-toggle {
   justify-self: start;
+  white-space: nowrap;
 }
 
 .analyzer-drawing-panel {
   display: grid;
-  width: 270px;
-  height: 620px;
+  width: 320px;
+  height: 440px;
   min-width: 180px;
   min-height: 220px;
   grid-template-rows: auto minmax(0, 1fr);

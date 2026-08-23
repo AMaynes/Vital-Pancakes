@@ -166,7 +166,7 @@ async function renderPdfPage() {
   pdfCanvas.style.height = `${Math.floor(viewport.height)}px`;
   pdfStage.style.width = `${Math.floor(viewport.width)}px`;
   pdfStage.style.height = `${Math.floor(viewport.height)}px`;
-  sizeDrawingCanvas(Math.floor(viewport.height));
+  sizeDrawingCanvas(Math.floor(viewport.width), Math.floor(viewport.height));
 
   await page.render({
     canvasContext: pdfContext,
@@ -1031,9 +1031,10 @@ function wrapPdfText(text, font, size, maximumWidth) {
   return lines;
 }
 
-function sizeDrawingCanvas(height) {
+function sizeDrawingCanvas(pageWidth, pageHeight) {
   if (!drawingPanelSized) {
-    drawingPanel.style.height = `${height}px`;
+    drawingPanel.style.width = `${Math.floor(pageWidth / 2)}px`;
+    drawingPanel.style.height = `${Math.floor(pageHeight / 2)}px`;
     drawingPanelSized = true;
   }
   window.requestAnimationFrame(syncDrawingCanvasSize);

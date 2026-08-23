@@ -47,6 +47,9 @@ test("a collapsible finite drawing canvas provides pen and eraser controls", () 
   assert.match(controller, /drawingCanvas\.addEventListener\("pointerdown"/);
   assert.match(styles, /\.analyzer-drawing-panel\s*\{[\s\S]*resize: both/);
   assert.match(controller, /new ResizeObserver\(syncDrawingCanvasSize\)/);
+  assert.match(controller, /drawingPanel\.style\.width = `\$\{Math\.floor\(pageWidth \/ 2\)\}px`/);
+  assert.match(controller, /drawingPanel\.style\.height = `\$\{Math\.floor\(pageHeight \/ 2\)\}px`/);
+  assert.match(styles, /\.analyzer-drawing-column\.is-collapsed\s*\{[\s\S]*width: max-content/);
 });
 
 test("the full empty reader is the only PDF browse and drop target", () => {
