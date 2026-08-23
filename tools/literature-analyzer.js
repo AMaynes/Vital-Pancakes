@@ -40,6 +40,8 @@ const STORAGE_KEY = "pinakes-vitae-literature-analyzer-v1";
 const MAX_PDF_BYTES = 100 * 1024 * 1024;
 const MAX_SAVED_SOURCES = 50;
 const COMMENT_HISTORY_IDLE_MS = 700;
+const MAX_DRAWING_STROKES = 500;
+const MAX_DRAWING_POINTS = 1500;
 
 const fileInput = document.querySelector("#analysis-pdf-file");
 const pdfDropZone = document.querySelector("#analysis-pdf-drop-zone");
@@ -58,6 +60,17 @@ const pageControls = document.querySelector(".analyzer-page-controls");
 const status = document.querySelector("#analyzer-status");
 const commentRail = document.querySelector("#analyzer-comment-rail");
 const commentRailList = document.querySelector("#analyzer-comment-rail-list");
+const commentDisplayToggle = document.querySelector("#comment-display-toggle");
+const sideCommentsVisibility = document.querySelector("#side-comments-visibility");
+const drawingColumn = document.querySelector("#analyzer-drawing-column");
+const drawingPanel = document.querySelector("#analyzer-drawing-panel");
+const drawingVisibilityToggle = document.querySelector("#drawing-visibility-toggle");
+const drawingCanvas = document.querySelector("#analyzer-drawing-canvas");
+const drawingContext = drawingCanvas.getContext("2d");
+const drawingColorInput = document.querySelector("#drawing-color");
+const drawingSizeInput = document.querySelector("#drawing-size");
+const undoDrawingButton = document.querySelector("#undo-drawing");
+const clearDrawingButton = document.querySelector("#clear-drawing");
 
 let source = null;
 let pdfBytes = null;
@@ -72,6 +85,14 @@ let renderSequence = 0;
 let annotationHistory = createAnnotationHistory([], DEFAULT_ANNOTATION_HISTORY_LIMIT);
 let isCommentHistoryTransactionOpen = false;
 let commentHistoryTimer = null;
+let commentDisplayMode = "side";
+let sideCommentsVisible = true;
+let drawingPanelVisible = true;
+let drawingTool = "pen";
+let drawingColor = drawingColorInput.value;
+let drawingSize = Number(drawingSizeInput.value);
+let drawingStrokes = [];
+let activeDrawingStroke = null;
 
 /**
  * Loads and renders a local PDF while restoring any saved annotations for the
@@ -101,7 +122,9 @@ async function loadPdf(file) {
       key: `pdf:${file.name}:${file.size}:${file.lastModified}`,
       name: file.name,
     };
-    annotations = restoreAnnotations(source.key);
+    const restoredState = restoreSourceState(source.key);
+    annotations = restoredState.annotations;
+    drawingStrokes = restoredState.drawingStrokes;
     resetAnnotationHistory();
     selectedAnnotationId = null;
     editingCommentId = null;
@@ -121,6 +144,7 @@ async function loadPdf(file) {
 function showSource() {
   emptyState.hidden = true;
   pdfStage.hidden = false;
+  drawingColumn.hidden = false;
   updateControls();
 }
 
@@ -140,6 +164,7 @@ async function renderPdfPage() {
   pdfCanvas.style.height = `${Math.floor(viewport.height)}px`;
   pdfStage.style.width = `${Math.floor(viewport.width)}px`;
   pdfStage.style.height = `${Math.floor(viewport.height)}px`;
+  sizeDrawingCanvas(Math.floor(viewport.height));
 
   await page.render({
     canvasContext: pdfContext,
@@ -197,6 +222,9 @@ function renderAnnotations() {
         beginCommentEdit(annotation.id);
       });
       mark.append(badge, commentButton);
+      if (commentDisplayMode === "hover" && (annotation.comment.trim() || annotation.id === editingCommentId)) {
+        mark.append(createHoverComment(annotation, index));
+      }
       layer.append(mark);
     });
   }
@@ -217,7 +245,7 @@ function getVisibleAnnotations() {
  * Rebuilds Word-style comments floating beside the visible document page.
  */
 function renderCommentRail() {
-  if (!source) {
+  if (!source || commentDisplayMode !== "side") {
     commentRail.hidden = true;
     commentRailList.replaceChildren();
     return;
@@ -232,6 +260,9 @@ function renderCommentRail() {
   }
 
   commentRail.hidden = false;
+  commentRail.classList.toggle("are-comments-hidden", !sideCommentsVisible);
+  sideCommentsVisibility.textContent = sideCommentsVisible ? "Hide comments" : "Show comments";
+  sideCommentsVisibility.setAttribute("aria-pressed", String(sideCommentsVisible));
   commentRailList.style.minHeight = "100%";
   const fragment = document.createDocumentFragment();
   commentedAnnotations.forEach((annotation) => {
@@ -277,7 +308,10 @@ function renderCommentRail() {
       comment.textContent = annotation.comment;
       card.append(comment);
     }
-    card.addEventListener("click", () => selectAnnotationInPlace(annotation.id));
+    card.addEventListener("click", (event) => {
+      event.stopPropagation();
+      selectAnnotationInPlace(annotation.id);
+    });
     card.addEventListener("dblclick", (event) => {
       event.preventDefault();
       beginCommentEdit(annotation.id);
@@ -294,6 +328,40 @@ function renderCommentRail() {
     positionFloatingComments();
     commentRailList.querySelector(".analyzer-comment-editor")?.focus();
   });
+}
+
+function createHoverComment(annotation, index) {
+  const container = document.createElement("span");
+  container.className = "highlight-hover-comment";
+  container.addEventListener("click", (event) => {
+    event.stopPropagation();
+    selectAnnotationInPlace(annotation.id);
+  });
+  container.addEventListener("dblclick", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    beginCommentEdit(annotation.id);
+  });
+  if (annotation.id !== editingCommentId) {
+    container.textContent = annotation.comment;
+    return container;
+  }
+  const editor = document.createElement("textarea");
+  editor.className = "analyzer-comment-editor";
+  editor.maxLength = 4000;
+  editor.value = annotation.comment;
+  editor.placeholder = "Write a comment…";
+  editor.setAttribute("aria-label", `Edit comment for highlight ${index}`);
+  editor.addEventListener("input", () => updateAnnotationComment(annotation.id, editor.value));
+  editor.addEventListener("blur", finishInlineCommentEdit);
+  editor.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    editor.blur();
+  });
+  container.append(editor);
+  window.requestAnimationFrame(() => editor.focus());
+  return container;
 }
 
 /**
@@ -358,11 +426,12 @@ function finishInlineCommentEdit() {
  * @param {string|null} annotationId Highlight identifier.
  */
 function selectAnnotation(annotationId) {
-  if (annotationId !== selectedAnnotationId) {
+  const nextAnnotationId = annotationId === selectedAnnotationId ? null : annotationId;
+  if (nextAnnotationId !== selectedAnnotationId) {
     finishCommentHistoryTransaction();
     editingCommentId = null;
   }
-  selectedAnnotationId = annotationId;
+  selectedAnnotationId = nextAnnotationId;
   renderAnnotations();
 }
 
@@ -568,14 +637,34 @@ function redoAnnotations() {
  * @param {string} sourceKey Source identity.
  * @returns {Array<object>} Restored highlights.
  */
-function restoreAnnotations(sourceKey) {
+function restoreSourceState(sourceKey) {
   try {
     const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    return sanitizeAnnotations(state.sources?.[sourceKey]?.annotations);
+    const savedSource = state.sources?.[sourceKey] || {};
+    return {
+      annotations: sanitizeAnnotations(savedSource.annotations),
+      drawingStrokes: sanitizeDrawingStrokes(savedSource.drawingStrokes),
+    };
   } catch (error) {
     console.error("Unable to restore saved literature annotations.", error);
-    return [];
+    return { annotations: [], drawingStrokes: [] };
   }
+}
+
+function sanitizeDrawingStrokes(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(-MAX_DRAWING_STROKES).map((stroke) => ({
+    pageNumber: Math.max(1, Number.parseInt(stroke?.pageNumber, 10) || 1),
+    tool: stroke?.tool === "eraser" ? "eraser" : "pen",
+    color: /^#[0-9a-f]{6}$/i.test(stroke?.color) ? stroke.color : "#1b1d1a",
+    size: Math.min(24, Math.max(1, Number(stroke?.size) || 4)),
+    points: Array.isArray(stroke?.points)
+      ? stroke.points.slice(0, MAX_DRAWING_POINTS).map((point) => ({
+        x: Math.min(1, Math.max(0, Number(point?.x) || 0)),
+        y: Math.min(1, Math.max(0, Number(point?.y) || 0)),
+      }))
+      : [],
+  })).filter((stroke) => stroke.points.length);
 }
 
 /**
@@ -591,6 +680,7 @@ function persistAnnotations() {
       type: source.type,
       name: source.name,
       annotations,
+      drawingStrokes,
       updatedAt: new Date().toISOString(),
     };
 
@@ -938,6 +1028,103 @@ function wrapPdfText(text, font, size, maximumWidth) {
   return lines;
 }
 
+function sizeDrawingCanvas(height) {
+  const pixelRatio = window.devicePixelRatio || 1;
+  const width = 268;
+  drawingCanvas.width = Math.floor(width * pixelRatio);
+  drawingCanvas.height = Math.floor(height * pixelRatio);
+  drawingCanvas.style.height = `${height}px`;
+  drawingContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  renderDrawing();
+}
+
+function renderDrawing() {
+  const pixelRatio = window.devicePixelRatio || 1;
+  const width = drawingCanvas.width / pixelRatio;
+  const height = drawingCanvas.height / pixelRatio;
+  drawingContext.save();
+  drawingContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  drawingContext.clearRect(0, 0, width, height);
+  drawingStrokes
+    .filter((stroke) => stroke.pageNumber === currentPageNumber)
+    .forEach((stroke) => drawStroke(stroke, width, height));
+  if (activeDrawingStroke) drawStroke(activeDrawingStroke, width, height);
+  drawingContext.restore();
+}
+
+function drawStroke(stroke, width, height) {
+  if (!stroke.points.length) return;
+  drawingContext.save();
+  drawingContext.globalCompositeOperation = stroke.tool === "eraser" ? "destination-out" : "source-over";
+  drawingContext.strokeStyle = stroke.color;
+  drawingContext.lineWidth = stroke.tool === "eraser" ? stroke.size * 2.5 : stroke.size;
+  drawingContext.lineCap = "round";
+  drawingContext.lineJoin = "round";
+  drawingContext.beginPath();
+  stroke.points.forEach((point, index) => {
+    const x = point.x * width;
+    const y = point.y * height;
+    if (index === 0) drawingContext.moveTo(x, y);
+    else drawingContext.lineTo(x, y);
+  });
+  if (stroke.points.length === 1) {
+    const point = stroke.points[0];
+    drawingContext.lineTo(point.x * width + 0.01, point.y * height + 0.01);
+  }
+  drawingContext.stroke();
+  drawingContext.restore();
+}
+
+function getDrawingPoint(event) {
+  const bounds = drawingCanvas.getBoundingClientRect();
+  return {
+    x: Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width)),
+    y: Math.min(1, Math.max(0, (event.clientY - bounds.top) / bounds.height)),
+  };
+}
+
+function startDrawing(event) {
+  if (!source || event.button !== 0) return;
+  event.preventDefault();
+  drawingCanvas.setPointerCapture(event.pointerId);
+  activeDrawingStroke = {
+    pageNumber: currentPageNumber,
+    tool: drawingTool,
+    color: drawingColor,
+    size: drawingSize,
+    points: [getDrawingPoint(event)],
+  };
+  renderDrawing();
+}
+
+function continueDrawing(event) {
+  if (!activeDrawingStroke || !drawingCanvas.hasPointerCapture(event.pointerId)) return;
+  event.preventDefault();
+  if (activeDrawingStroke.points.length >= MAX_DRAWING_POINTS) return;
+  const point = getDrawingPoint(event);
+  const previousPoint = activeDrawingStroke.points.at(-1);
+  if (Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y) < 0.001) return;
+  activeDrawingStroke.points.push(point);
+  renderDrawing();
+}
+
+function finishDrawing(event) {
+  if (!activeDrawingStroke) return;
+  if (drawingCanvas.hasPointerCapture(event.pointerId)) drawingCanvas.releasePointerCapture(event.pointerId);
+  drawingStrokes.push(activeDrawingStroke);
+  drawingStrokes = drawingStrokes.slice(-MAX_DRAWING_STROKES);
+  activeDrawingStroke = null;
+  persistAnnotations();
+  renderDrawing();
+  updateDrawingControls();
+}
+
+function updateDrawingControls() {
+  const pageStrokes = drawingStrokes.some((stroke) => stroke.pageNumber === currentPageNumber);
+  undoDrawingButton.disabled = !pageStrokes;
+  clearDrawingButton.disabled = !pageStrokes;
+}
+
 function updateControls() {
   const hasSource = Boolean(source);
   const hasPdf = hasSource && Boolean(pdfDocument);
@@ -948,6 +1135,9 @@ function updateControls() {
   nextPageButton.disabled = !hasPdf || currentPageNumber >= pdfDocument.numPages;
   pageControls.hidden = !hasPdf;
   pageCount.textContent = hasPdf ? `Page ${currentPageNumber} / ${pdfDocument.numPages}` : "Page 0 / 0";
+  commentDisplayToggle.disabled = !hasSource;
+  drawingVisibilityToggle.disabled = !hasSource;
+  updateDrawingControls();
 }
 
 function setStatus(message) {
@@ -1038,6 +1228,63 @@ document.querySelectorAll("[data-highlight-color]").forEach((button) => {
   });
 });
 
+commentDisplayToggle.addEventListener("click", () => {
+  commentDisplayMode = commentDisplayMode === "side" ? "hover" : "side";
+  const isSideMode = commentDisplayMode === "side";
+  commentDisplayToggle.textContent = isSideMode ? "Comments: Side" : "Comments: Hover";
+  commentDisplayToggle.title = isSideMode
+    ? "Show comments only while hovering over highlights"
+    : "Show comments beside the document";
+  renderAnnotations();
+});
+
+sideCommentsVisibility.addEventListener("click", (event) => {
+  event.stopPropagation();
+  sideCommentsVisible = !sideCommentsVisible;
+  renderCommentRail();
+});
+
+drawingVisibilityToggle.addEventListener("click", () => {
+  drawingPanelVisible = !drawingPanelVisible;
+  drawingColumn.classList.toggle("is-collapsed", !drawingPanelVisible);
+  drawingPanel.hidden = !drawingPanelVisible;
+  drawingVisibilityToggle.textContent = drawingPanelVisible ? "Hide drawing" : "Show drawing";
+  drawingVisibilityToggle.setAttribute("aria-expanded", String(drawingPanelVisible));
+});
+
+document.querySelectorAll("[data-drawing-tool]").forEach((button) => {
+  button.addEventListener("click", () => {
+    drawingTool = button.dataset.drawingTool;
+    document.querySelectorAll("[data-drawing-tool]").forEach((candidate) => {
+      candidate.classList.toggle("is-active", candidate === button);
+    });
+  });
+});
+drawingColorInput.addEventListener("input", () => {
+  drawingColor = drawingColorInput.value;
+});
+drawingSizeInput.addEventListener("input", () => {
+  drawingSize = Number(drawingSizeInput.value);
+});
+undoDrawingButton.addEventListener("click", () => {
+  const index = drawingStrokes.findLastIndex((stroke) => stroke.pageNumber === currentPageNumber);
+  if (index < 0) return;
+  drawingStrokes.splice(index, 1);
+  persistAnnotations();
+  renderDrawing();
+  updateDrawingControls();
+});
+clearDrawingButton.addEventListener("click", () => {
+  drawingStrokes = drawingStrokes.filter((stroke) => stroke.pageNumber !== currentPageNumber);
+  persistAnnotations();
+  renderDrawing();
+  updateDrawingControls();
+});
+drawingCanvas.addEventListener("pointerdown", startDrawing);
+drawingCanvas.addEventListener("pointermove", continueDrawing);
+drawingCanvas.addEventListener("pointerup", finishDrawing);
+drawingCanvas.addEventListener("pointercancel", finishDrawing);
+
 clearButton.addEventListener("click", clearHighlights);
 exportPngButton.addEventListener("click", exportPng);
 exportPdfButton.addEventListener("click", exportPdf);
@@ -1097,7 +1344,8 @@ installCurrentToolAiHost({
     pageCount: pdfDocument?.numPages ?? null,
     annotations: annotations.map((annotation) => ({ ...annotation })),
     selectedAnnotationId,
-    commentLayout: "margin",
+    commentLayout: commentDisplayMode,
+    drawingStrokeCount: drawingStrokes.length,
   }),
   getContext: (_options, snapshot) => ({
     source: snapshot.source ? { loaded: true, type: snapshot.source.type } : null,

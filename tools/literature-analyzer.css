@@ -26,6 +26,10 @@
   padding: 3px 9px;
 }
 
+.analyzer-comment-mode-toggle {
+  margin-left: auto;
+}
+
 .analyzer-ink-tools {
   display: flex;
   align-items: center;
@@ -127,6 +131,81 @@
   box-shadow: 0 12px 35px rgb(23 22 19 / 22%);
 }
 
+.analyzer-drawing-column {
+  display: grid;
+  width: 270px;
+  flex: 0 0 270px;
+  gap: 6px;
+  margin-right: 14px;
+}
+
+.analyzer-drawing-column[hidden],
+.analyzer-drawing-panel[hidden] {
+  display: none;
+}
+
+.analyzer-drawing-column.is-collapsed {
+  width: 34px;
+  flex-basis: 34px;
+}
+
+.analyzer-drawing-column.is-collapsed .analyzer-drawing-panel {
+  display: none;
+}
+
+.analyzer-drawing-toggle {
+  justify-self: start;
+}
+
+.analyzer-drawing-panel {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid var(--line-strong);
+  background: rgb(249 247 241 / 96%);
+  box-shadow: 0 4px 14px rgb(23 22 19 / 12%);
+}
+
+.analyzer-drawing-tools {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.analyzer-drawing-tools .tool-button {
+  min-width: 0;
+  padding-inline: 6px;
+}
+
+.analyzer-drawing-tools .is-active {
+  color: #fff;
+  background: var(--ink);
+}
+
+#drawing-color {
+  width: 27px;
+  height: 24px;
+  padding: 1px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+}
+
+#drawing-size {
+  width: 54px;
+  min-width: 34px;
+}
+
+#analyzer-drawing-canvas {
+  display: block;
+  width: 100%;
+  background: #fff;
+  cursor: crosshair;
+  touch-action: none;
+}
+
 #analyzer-pdf-canvas {
   display: block;
 }
@@ -201,6 +280,30 @@
   display: grid;
 }
 
+.highlight-hover-comment {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 6px);
+  left: 0;
+  display: none;
+  width: min(230px, 70vw);
+  padding: 8px;
+  border: 1px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  mix-blend-mode: normal;
+}
+
+.highlight-mark:hover .highlight-hover-comment,
+.highlight-mark:focus-visible .highlight-hover-comment,
+.highlight-hover-comment:focus-within {
+  display: block;
+}
+
 .analyzer-comment-rail {
   position: relative;
   width: 245px;
@@ -209,6 +312,18 @@
   align-self: stretch;
   margin-left: 14px;
   pointer-events: none;
+}
+
+.analyzer-comment-visibility {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  margin-bottom: 6px;
+  pointer-events: auto;
+}
+
+.analyzer-comment-rail.are-comments-hidden .analyzer-comment-rail-list {
+  display: none;
 }
 
 .analyzer-comment-rail-list {

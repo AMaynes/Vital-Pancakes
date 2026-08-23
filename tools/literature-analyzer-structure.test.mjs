@@ -8,11 +8,33 @@ const [markup, styles, controller] = await Promise.all([
   readFile(new URL("./literature-analyzer.js", import.meta.url), "utf8"),
 ]);
 
-test("literature analyzer keeps only ink colors in its compact top tool strip", () => {
+test("literature analyzer keeps ink and one comment view toggle in its compact top tool strip", () => {
   const toolbar = markup.match(/<div class="tool-toolbar analyzer-toolbar">([\s\S]*?)<\/div>\s*<\/div>/)?.[1] ?? "";
   assert.match(toolbar, /class="analyzer-ink-tools"/);
+  assert.match(markup, /id="comment-display-toggle"/);
   assert.doesNotMatch(markup, /analyzer-top-tools|analyzer-comment-panel|annotation-list|data-analyzer-mode/);
   assert.match(styles, /\.analyzer-toolbar\s*\{[\s\S]*min-height: 34px/);
+});
+
+test("highlights toggle selection and escape clears the active selection", () => {
+  assert.match(controller, /annotationId === selectedAnnotationId \? null : annotationId/);
+  assert.match(controller, /event\.key === "Escape"[\s\S]*selectAnnotation\(null\)/);
+});
+
+test("comments switch between a selectable side rail and hover display", () => {
+  assert.match(markup, /id="side-comments-visibility"/);
+  assert.match(controller, /commentDisplayMode === "hover"/);
+  assert.match(controller, /className = "highlight-hover-comment"/);
+  assert.match(controller, /card\.addEventListener\("click", \(event\) =>[\s\S]*selectAnnotationInPlace/);
+});
+
+test("a collapsible finite drawing canvas provides pen and eraser controls", () => {
+  assert.match(markup, /id="drawing-visibility-toggle"/);
+  assert.match(markup, /id="analyzer-drawing-canvas"/);
+  assert.match(markup, /data-drawing-tool="pen"/);
+  assert.match(markup, /data-drawing-tool="eraser"/);
+  assert.match(controller, /function renderDrawing\(\)/);
+  assert.match(controller, /drawingCanvas\.addEventListener\("pointerdown"/);
 });
 
 test("the full empty reader is the only PDF browse and drop target", () => {
