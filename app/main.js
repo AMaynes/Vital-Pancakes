@@ -3353,19 +3353,6 @@ function showInlineStudyContentEditor(section, item) {
         const fields = createElement("div", "knowledge-direct-fields");
         const isHeading = ["section", "subsection"].includes(block.type);
         if (isHeading) fields.classList.add("is-heading-only");
-        const typeSelect = document.createElement("select");
-        typeSelect.setAttribute("aria-label", "Block type");
-        Object.entries(labels).filter(([type]) => !["section", "subsection"].includes(type)).forEach(([type, label]) => {
-          const option = document.createElement("option");
-          option.value = type;
-          option.textContent = label;
-          option.selected = type === block.type;
-          typeSelect.append(option);
-        });
-        typeSelect.addEventListener("change", () => {
-          block.type = typeSelect.value;
-          renderBlocks();
-        });
         const title = document.createElement("input");
         title.className = `knowledge-direct-title-input${isHeading ? ` is-${block.type}` : ""}`;
         title.value = block.title;
@@ -3380,7 +3367,7 @@ function showInlineStudyContentEditor(section, item) {
         body.setAttribute("aria-label", block.type === "equation" ? "Equation in LaTeX" : "Block content");
         body.addEventListener("input", () => { block.body = body.value; });
         if (isHeading) fields.append(title);
-        else fields.append(typeSelect, title, body);
+        else fields.append(title, body);
         [...element.children]
           .filter((child) => child !== handle && child !== controls)
           .forEach((child) => child.remove());
@@ -3556,23 +3543,6 @@ function createRichContentField(value) {
         const fields = createElement("div", "rich-content-block-fields");
         const isHeading = ["section", "subsection"].includes(block.type);
         if (isHeading) fields.classList.add("is-heading-only");
-        const typeLabel = createElement("label", "rich-content-block-type");
-        typeLabel.append(document.createTextNode("Block type"));
-        const typeSelect = document.createElement("select");
-        Object.entries(labels).filter(([type]) => !["section", "subsection"].includes(type)).forEach(([type, label]) => {
-          const option = document.createElement("option");
-          option.value = type;
-          option.textContent = label;
-          option.selected = type === block.type;
-          typeSelect.append(option);
-        });
-        typeSelect.addEventListener("change", () => {
-          block.type = typeSelect.value;
-          syncContent();
-          renderBlocks();
-        });
-        typeLabel.append(typeSelect);
-
         const titleLabel = createElement("label");
         titleLabel.append(document.createTextNode("Title"));
         const titleInput = document.createElement("input");
@@ -3605,7 +3575,7 @@ function createRichContentField(value) {
         });
         bodyLabel.append(bodyInput);
         if (isHeading) fields.append(titleLabel);
-        else fields.append(typeLabel, titleLabel, bodyLabel);
+        else fields.append(titleLabel, bodyLabel);
         row.append(fields);
       }
 

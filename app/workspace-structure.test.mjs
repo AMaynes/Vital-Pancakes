@@ -130,6 +130,7 @@ test("Study block types drag directly into the reading surface with inline contr
   assert.doesNotMatch(directEditor, /if \(!acceptHierarchy\(blocks\)\) return/);
   assert.match(directEditor, /const isHeading = \["section", "subsection"\]\.includes\(block\.type\)/);
   assert.match(directEditor, /if \(isHeading\) fields\.append\(title\)/);
+  assert.doesNotMatch(directEditor, /document\.createElement\("select"\)|Block type|typeSelect/);
 });
 
 test("the content builder edits draggable blocks instead of exposing its storage syntax", () => {
@@ -143,5 +144,6 @@ test("the content builder edits draggable blocks instead of exposing its storage
   assert.match(builder, /addEventListener\("drop"/);
   assert.match(builder, /rich-content-block-action", "✎"/);
   assert.match(builder, /rich-content-block-action", "×"/);
+  assert.doesNotMatch(builder, /document\.createElement\("select"\)|Block type|typeSelect/);
   assert.doesNotMatch(builder, /textarea\.rows = 14|setRangeText|::section Overview/);
 });

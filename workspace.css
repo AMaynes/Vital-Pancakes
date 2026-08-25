@@ -518,9 +518,8 @@
   cursor: pointer;
 }
 .knowledge-direct-control:hover { color: var(--coral); }
-.knowledge-direct-fields { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 7px; }
+.knowledge-direct-fields { display: grid; grid-template-columns: 1fr; gap: 7px; }
 .knowledge-direct-fields.is-heading-only { display: block; }
-.knowledge-direct-fields select,
 .knowledge-direct-title-input,
 .knowledge-direct-body-input { width: 100%; }
 .knowledge-direct-title-input { font: 700 18px/1.3 var(--font-display); }
@@ -546,12 +545,11 @@
 .rich-content-equation-preview { min-height: 24px; overflow-x: auto; color: var(--forest); text-align: center; }
 .rich-content-block-actions { display: flex; gap: 3px; }
 .rich-content-block-action { width: 25px; height: 25px; min-height: 25px; padding: 0; font-size: 12px; }
-.rich-content-block-fields { display: grid; grid-template-columns: minmax(105px, .35fr) minmax(160px, 1fr); gap: 8px; padding: 10px; border-top: 1px solid var(--line); background: var(--paper); }
+.rich-content-block-fields { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 10px; border-top: 1px solid var(--line); background: var(--paper); }
 .rich-content-block-fields.is-heading-only { grid-template-columns: 1fr; }
 .rich-content-block-fields label { display: grid; gap: 4px; }
 .rich-content-block-body { grid-column: 1 / -1; }
 .rich-content-block-fields input,
-.rich-content-block-fields select,
 .rich-content-block-fields textarea { width: 100%; }
 .rich-content-block-fields textarea { resize: vertical; line-height: 1.45; }
 
