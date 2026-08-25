@@ -518,10 +518,9 @@
   cursor: pointer;
 }
 .knowledge-direct-control:hover { color: var(--coral); }
-.knowledge-direct-fields { display: grid; grid-template-columns: 1fr; gap: 7px; }
-.knowledge-direct-fields.is-heading-only { display: block; }
-.knowledge-direct-title-input,
-.knowledge-direct-body-input {
+.knowledge-direct-rendered-content { display: contents; }
+.knowledge-direct-inline-edit,
+.knowledge-direct-source-input {
   width: 100%;
   padding: 0 0 4px;
   border: 0;
@@ -532,13 +531,13 @@
   box-shadow: none;
   color: inherit;
 }
-.knowledge-direct-title-input:focus,
-.knowledge-direct-body-input:focus { border-bottom-color: var(--coral); }
-.knowledge-direct-title-input { font: 700 18px/1.3 var(--font-display); }
-.knowledge-direct-title-input.is-section { padding-bottom: 7px; border-bottom-color: var(--line-strong); font-size: 28px; }
-.knowledge-direct-title-input.is-section:focus { border-bottom-color: var(--coral); }
-.knowledge-direct-title-input.is-subsection { font-size: 21px; }
-.knowledge-direct-body-input { grid-column: 1 / -1; min-height: 30px; overflow: hidden; resize: none; line-height: 1.55; }
+.knowledge-direct-inline-edit { cursor: text; }
+.knowledge-direct-inline-edit:focus,
+.knowledge-direct-source-input:focus { border-bottom-color: var(--coral); }
+.knowledge-direct-inline-edit[data-placeholder]:empty::before { color: var(--ink-faint); content: attr(data-placeholder); }
+.knowledge-direct-inline-body { min-height: 24px; white-space: pre-line; }
+.knowledge-direct-inline-body p:last-child { margin-bottom: 0; }
+.knowledge-direct-source-input { display: block; min-height: 28px; margin-top: 7px; overflow: hidden; resize: none; line-height: 1.55; }
 
 .rich-content-editor { display: grid; gap: 9px; padding: 12px; border: 1px solid var(--line-strong); background: var(--paper); }
 .rich-content-editor-label { font-weight: 800; }
@@ -573,8 +572,6 @@
   .knowledge-direct-toolbar { position: static; align-items: stretch; flex-direction: column; }
   .knowledge-direct-actions { justify-content: flex-end; }
   .knowledge-direct-block { margin-left: 18px; padding-right: 40px; }
-  .knowledge-direct-fields { grid-template-columns: 1fr; }
-  .knowledge-direct-body-input { grid-column: auto; }
 }
 
 .inline-content-editor {

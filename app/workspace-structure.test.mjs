@@ -130,15 +130,16 @@ test("Study block types drag directly into the reading surface with inline contr
   assert.match(directEditor, /A subsection must have a section before it/);
   assert.doesNotMatch(directEditor, /if \(!acceptHierarchy\(blocks\)\) return/);
   assert.match(directEditor, /const isHeading = \["section", "subsection"\]\.includes\(block\.type\)/);
-  assert.match(directEditor, /if \(isHeading\) fields\.append\(title\)/);
   assert.doesNotMatch(directEditor, /document\.createElement\("select"\)|Block type|typeSelect/);
-  assert.match(directEditor, /fitBodyToContent/);
+  assert.match(directEditor, /element\.addEventListener\("dblclick"/);
+  assert.match(directEditor, /titleNode\.contentEditable = "true"/);
+  assert.match(directEditor, /bodyEditor\.contentEditable = "true"/);
 });
 
 test("direct Study editing keeps fields visually embedded in the reading surface", () => {
-  assert.match(stylesheet, /\.knowledge-direct-title-input,[\s\S]*\.knowledge-direct-body-input\s*\{[\s\S]*background: transparent/);
+  assert.match(stylesheet, /\.knowledge-direct-inline-edit,[\s\S]*\.knowledge-direct-source-input\s*\{[\s\S]*background: transparent/);
   assert.match(stylesheet, /border-bottom: 1px solid transparent/);
-  assert.match(stylesheet, /\.knowledge-direct-body-input\s*\{[^}]*resize: none/);
+  assert.match(stylesheet, /\.knowledge-direct-source-input\s*\{[^}]*resize: none/);
 });
 
 test("the content builder edits draggable blocks instead of exposing its storage syntax", () => {

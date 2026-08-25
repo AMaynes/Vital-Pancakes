@@ -3285,7 +3285,9 @@ function showInlineStudyContentEditor(section, item) {
     blocks.splice(0, blocks.length, ...candidateBlocks);
     editingBlockId = block.editorId;
     renderBlocks();
-    queueMicrotask(() => canvas.querySelector(`[data-editor-block-id="${block.editorId}"] input`)?.select());
+    queueMicrotask(() => canvas
+      .querySelector(`[data-editor-block-id="${block.editorId}"] [contenteditable="true"], [data-editor-block-id="${block.editorId}"] textarea`)
+      ?.focus());
   };
 
   const moveOrInsertBlock = (targetBlock, insertAfter) => {
@@ -3317,8 +3319,11 @@ function showInlineStudyContentEditor(section, item) {
       const element = createKnowledgeBlock(block, definitions);
       element.classList.add("knowledge-direct-block");
       element.dataset.editorBlockId = block.editorId;
-      element.draggable = true;
+      element.draggable = block.editorId !== editingBlockId;
       if (block.editorId === editingBlockId) element.classList.add("is-editing");
+      const renderedContent = createElement("div", "knowledge-direct-rendered-content");
+      renderedContent.append(...element.childNodes);
+      element.append(renderedContent);
 
       const handle = createElement("span", "knowledge-direct-handle", "⋮⋮");
       handle.title = "Drag to reorder";
@@ -3331,7 +3336,9 @@ function showInlineStudyContentEditor(section, item) {
         editingBlockId = editingBlockId === block.editorId ? "" : block.editorId;
         renderBlocks();
         if (editingBlockId) {
-          queueMicrotask(() => canvas.querySelector(`[data-editor-block-id="${block.editorId}"] input`)?.focus());
+          queueMicrotask(() => canvas
+            .querySelector(`[data-editor-block-id="${block.editorId}"] [contenteditable="true"], [data-editor-block-id="${block.editorId}"] textarea`)
+            ?.focus());
         }
       });
       const remove = createElement("button", "knowledge-direct-control", "×");
@@ -3350,37 +3357,69 @@ function showInlineStudyContentEditor(section, item) {
       element.prepend(handle, controls);
 
       if (block.editorId === editingBlockId) {
-        const fields = createElement("div", "knowledge-direct-fields");
         const isHeading = ["section", "subsection"].includes(block.type);
-        if (isHeading) fields.classList.add("is-heading-only");
-        const title = document.createElement("input");
-        title.className = `knowledge-direct-title-input${isHeading ? ` is-${block.type}` : ""}`;
-        title.value = block.title;
-        title.placeholder = block.type === "text" ? "Optional title" : labels[block.type];
-        title.setAttribute("aria-label", "Block title");
-        title.addEventListener("input", () => { block.title = title.value; });
-        const body = document.createElement("textarea");
-        body.className = "knowledge-direct-body-input";
-        body.rows = ["section", "subsection", "text"].includes(block.type) ? 6 : 3;
-        body.value = block.body;
-        body.placeholder = block.type === "diagram" ? "Part A > Part B > Result" : "";
-        body.setAttribute("aria-label", block.type === "equation" ? "Equation in LaTeX" : "Block content");
-        const fitBodyToContent = () => {
-          body.style.height = "auto";
-          body.style.height = `${Math.max(body.scrollHeight, 30)}px`;
-        };
-        body.addEventListener("input", () => {
-          block.body = body.value;
-          fitBodyToContent();
-        });
-        if (isHeading) fields.append(title);
-        else fields.append(title, body);
-        [...element.children]
-          .filter((child) => child !== handle && child !== controls)
-          .forEach((child) => child.remove());
-        element.append(fields);
-        if (!isHeading) queueMicrotask(fitBodyToContent);
+        let titleNode = renderedContent.querySelector("h2, h3, .card-kicker, figcaption");
+        if (!titleNode && block.type !== "text") {
+          titleNode = createElement("h3", "knowledge-direct-optional-title");
+          renderedContent.prepend(titleNode);
+        }
+        if (titleNode) {
+          titleNode.contentEditable = "true";
+          titleNode.classList.add("knowledge-direct-inline-edit");
+          titleNode.dataset.placeholder = isHeading ? labels[block.type] : "Optional title";
+          titleNode.setAttribute("aria-label", `${labels[block.type]} title`);
+          titleNode.addEventListener("input", () => { block.title = titleNode.textContent.trim(); });
+          titleNode.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            titleNode.blur();
+          });
+        }
+
+        if (block.type === "text") {
+          const paragraphs = [...renderedContent.querySelectorAll(":scope > p")];
+          const bodyEditor = createElement("div", "knowledge-direct-inline-body knowledge-direct-inline-edit");
+          bodyEditor.contentEditable = "true";
+          bodyEditor.dataset.placeholder = "Write text";
+          bodyEditor.setAttribute("aria-label", "Text content");
+          bodyEditor.append(...paragraphs);
+          renderedContent.append(bodyEditor);
+          bodyEditor.addEventListener("input", () => {
+            block.body = bodyEditor.innerText.replace(/\r\n?/g, "\n").trim();
+          });
+        } else if (!isHeading) {
+          const source = document.createElement("textarea");
+          source.className = "knowledge-direct-source-input";
+          source.rows = 1;
+          source.value = block.body;
+          source.placeholder = block.type === "diagram"
+            ? "Part A > Part B > Result"
+            : block.type === "equation"
+              ? "Equation in LaTeX"
+              : "URL";
+          source.setAttribute("aria-label", `${labels[block.type]} source`);
+          const fitSourceToContent = () => {
+            source.style.height = "auto";
+            source.style.height = `${Math.max(source.scrollHeight, 28)}px`;
+          };
+          source.addEventListener("input", () => {
+            block.body = source.value;
+            fitSourceToContent();
+          });
+          element.append(source);
+          queueMicrotask(fitSourceToContent);
+        }
       }
+
+      element.addEventListener("dblclick", (event) => {
+        if (event.target.closest(".knowledge-direct-block-controls, .knowledge-direct-handle")) return;
+        if (editingBlockId === block.editorId) return;
+        editingBlockId = block.editorId;
+        renderBlocks();
+        queueMicrotask(() => canvas
+          .querySelector(`[data-editor-block-id="${block.editorId}"] [contenteditable="true"], [data-editor-block-id="${block.editorId}"] textarea`)
+          ?.focus());
+      });
 
       element.addEventListener("dragstart", (event) => {
         draggedBlockId = block.editorId;
