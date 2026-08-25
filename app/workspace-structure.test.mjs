@@ -134,6 +134,10 @@ test("Study block types drag directly into the reading surface with inline contr
   assert.match(directEditor, /element\.addEventListener\("dblclick"/);
   assert.match(directEditor, /titleNode\.contentEditable = "true"/);
   assert.match(directEditor, /bodyEditor\.contentEditable = "true"/);
+  assert.match(directEditor, /document\.addEventListener\("click"/);
+  assert.match(directEditor, /clickedBlock\?\.dataset\.editorBlockId === editingBlockId/);
+  assert.match(directEditor, /event\.key !== "Escape" \|\| !editingBlockId/);
+  assert.match(controller, /activeDirectEditorController\?\.abort\(\)/);
 });
 
 test("direct Study editing keeps fields visually embedded in the reading surface", () => {

@@ -65,6 +65,7 @@ let activeSectionId = null;
 let editingItemId = null;
 let activeFolderParentPath = "";
 let pendingInlineStudyEditor = null;
+let activeDirectEditorController = null;
 const activeSectionSearchFilters = new Map();
 const activeSectionTagFilters = new Map();
 const activeWorkoutMuscleFilters = new Map();
@@ -577,6 +578,8 @@ function createWorkoutMuscleFilterBar(section, entries) {
  * Clears timers and renders the active full-width workspace route.
  */
 function renderWorkspace() {
+  activeDirectEditorController?.abort();
+  activeDirectEditorController = null;
   animationTimers.forEach((timer) => window.clearInterval(timer));
   animationTimers.clear();
   const area = getRouteArea();
@@ -3239,6 +3242,9 @@ function showInlineStudyContentEditor(section, item) {
   const layout = detail.querySelector(".knowledge-entry-layout");
   const content = layout?.querySelector(".knowledge-entry-content");
   if (!layout || !content || layout.classList.contains("is-direct-editing")) return;
+  activeDirectEditorController?.abort();
+  activeDirectEditorController = new AbortController();
+  const editorSignal = activeDirectEditorController.signal;
   const abstract = content.querySelector(".knowledge-abstract");
 
   const labels = {
@@ -3486,6 +3492,19 @@ function showInlineStudyContentEditor(section, item) {
     draggedBlockId = "";
     draggedNewType = "";
   });
+  document.addEventListener("click", (event) => {
+    if (!editingBlockId || toolbar.contains(event.target)) return;
+    const clickedBlock = event.target.closest?.("[data-editor-block-id]");
+    if (clickedBlock?.dataset.editorBlockId === editingBlockId) return;
+    editingBlockId = "";
+    renderBlocks();
+  }, { signal: editorSignal });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !editingBlockId) return;
+    event.preventDefault();
+    editingBlockId = "";
+    renderBlocks();
+  }, { signal: editorSignal });
 
   layout.classList.add("is-direct-editing");
   content.replaceChildren(toolbar);
