@@ -80,3 +80,19 @@ test("every entry library renders through one recursive file explorer", () => {
   assert.match(controller, /folder\.children\.forEach\(\(child\) => children\.append\(createFileTreeFolder/);
   assert.match(controller, /row\.draggable = true/);
 });
+
+test("Study equations use the local KaTeX bundle instead of raw CDN-dependent source", async () => {
+  const markup = await readFile(new URL("../workspace.html", import.meta.url), "utf8");
+  assert.match(markup, /vendor\/katex\/katex\.min\.css/);
+  assert.match(controller, /import\("\.\.\/vendor\/katex\/katex\.mjs"\)\)\.default/);
+  assert.doesNotMatch(controller, /cdn\.jsdelivr\.net\/npm\/katex/);
+});
+
+test("Study editing reveals an inline content builder instead of the item dialog", () => {
+  assert.match(controller, /function openItemEditor\(section, item\)/);
+  assert.match(controller, /section\.type !== "study"[\s\S]*openItemDialog/);
+  assert.match(controller, /function showInlineStudyContentEditor\(section, item\)/);
+  assert.match(controller, /createElement\("form", "inline-content-editor"\)/);
+  assert.match(controller, /createRichContentField\(item\.content \?\? ""\)/);
+  assert.match(controller, /updateItem\(section\.id, item\.id, \{ content \}\)/);
+});

@@ -477,6 +477,26 @@
 .rich-content-toolbar { display: flex; flex-wrap: wrap; gap: 5px; }
 .rich-content-editor textarea { width: 100%; font-family: ui-monospace, monospace; line-height: 1.45; }
 
+.inline-content-editor {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 24px;
+  padding: 16px;
+  border-block: 1px solid var(--line-strong);
+  background: var(--paper);
+}
+
+.inline-content-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inline-content-editor-heading h2 { margin: 0; font-size: 18px; }
+.inline-content-editor .rich-content-editor { padding: 0; border: 0; }
+.inline-content-editor-actions { display: flex; justify-content: flex-end; gap: 7px; }
+
 .definition-dialog { width: min(560px, calc(100vw - 24px)); }
 .definition-dialog-shell { position: relative; padding: 22px; }
 .definition-dialog-shell > .icon-button { position: absolute; top: 8px; right: 8px; }

@@ -61,6 +61,7 @@ const animationTimers = new Set();
 let activeSectionId = null;
 let editingItemId = null;
 let activeFolderParentPath = "";
+let pendingInlineStudyEditor = null;
 const activeSectionSearchFilters = new Map();
 const activeSectionTagFilters = new Map();
 const activeWorkoutMuscleFilters = new Map();
@@ -1556,7 +1557,7 @@ function createFileTreeEntry(section, item) {
   editButton.type = "button";
   editButton.title = `Edit ${item.title}`;
   editButton.setAttribute("aria-label", `Edit ${item.title}`);
-  editButton.addEventListener("click", () => openItemDialog(section, item));
+  editButton.addEventListener("click", () => openItemEditor(section, item));
   const deleteButton = createElement("button", "icon-button file-tree-action", "×");
   deleteButton.type = "button";
   deleteButton.title = `Delete ${item.title}`;
@@ -1619,7 +1620,7 @@ function renderEntryDetail(section, item) {
   const actions = createElement("div", "page-actions entry-detail-actions");
   const editButton = createElement("button", "button button-primary", "Edit entry");
   editButton.type = "button";
-  editButton.addEventListener("click", () => openItemDialog(section, item));
+  editButton.addEventListener("click", () => openItemEditor(section, item));
   const deleteButton = createElement("button", "button button-quiet", "Delete");
   deleteButton.type = "button";
   deleteButton.addEventListener("click", () => confirmItemDelete(section, item));
@@ -1662,6 +1663,10 @@ function renderEntryDetail(section, item) {
   body.append(createEntryBody(section, item));
   detail.append(heading, lead, body);
   appMain.append(detail);
+  if (pendingInlineStudyEditor?.sectionId === section.id && pendingInlineStudyEditor?.itemId === item.id) {
+    pendingInlineStudyEditor = null;
+    queueMicrotask(() => showInlineStudyContentEditor(section, item));
+  }
 }
 
 function getEntryTypeLabel(section, item) {
@@ -1862,7 +1867,7 @@ function createEntryCard(section, item) {
   const editButton = createElement("button", "icon-button", "✎");
   editButton.type = "button";
   editButton.title = "Edit";
-  editButton.addEventListener("click", () => openItemDialog(section, item));
+  editButton.addEventListener("click", () => openItemEditor(section, item));
   const deleteButton = createElement("button", "icon-button", "×");
   deleteButton.type = "button";
   deleteButton.title = "Delete";
@@ -2431,14 +2436,7 @@ async function renderKnowledgeMath(root) {
   const nodes = [...root.querySelectorAll("[data-latex]")];
   if (!nodes.length) return;
   try {
-    if (!document.querySelector("link[data-knowledge-katex]")) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css";
-      link.dataset.knowledgeKatex = "true";
-      document.head.append(link);
-    }
-    knowledgeKatexModule ??= await import("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.mjs");
+    knowledgeKatexModule ??= (await import("../vendor/katex/katex.mjs")).default;
     nodes.forEach((node) => knowledgeKatexModule.render(node.dataset.latex, node, {
       displayMode: true,
       throwOnError: false,
@@ -2446,7 +2444,7 @@ async function renderKnowledgeMath(root) {
       trust: false,
     }));
   } catch {
-    // LaTeX source remains visible when the optional renderer is unavailable.
+    nodes.forEach((node) => node.classList.add("has-math-error"));
   }
 }
 
@@ -3217,6 +3215,52 @@ function createLessonStudyFields(item) {
     createField("Recap", "lessonRecap", "textarea", lesson.recap ?? "", false, "Closing summary"),
     createField("Tags · comma separated", "tags", "text", (item.tags ?? []).join(", "), false, "Chapter, subchapter, and subject labels"),
   ];
+}
+
+function openItemEditor(section, item) {
+  if (section.type !== "study") {
+    openItemDialog(section, item);
+    return;
+  }
+  if (getRouteSectionId() !== section.id || getRouteItemId() !== item.id) {
+    pendingInlineStudyEditor = { sectionId: section.id, itemId: item.id };
+    window.location.hash = getEntryRoute(section, item);
+    return;
+  }
+  showInlineStudyContentEditor(section, item);
+}
+
+function showInlineStudyContentEditor(section, item) {
+  const detail = appMain.querySelector(".entry-detail");
+  if (!detail) return;
+  detail.querySelector(".inline-content-editor")?.remove();
+
+  const form = createElement("form", "inline-content-editor");
+  const heading = createElement("div", "inline-content-editor-heading");
+  heading.append(
+    createElement("h2", "", "Edit content"),
+    createElement("span", "card-kicker", item.title),
+  );
+  const builder = createRichContentField(item.content ?? "");
+  const actions = createElement("div", "inline-content-editor-actions");
+  const cancel = createElement("button", "button button-quiet", "Cancel");
+  cancel.type = "button";
+  cancel.addEventListener("click", () => form.remove());
+  const save = createElement("button", "button button-primary", "Save changes");
+  save.type = "submit";
+  actions.append(cancel, save);
+  form.append(heading, builder, actions);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const content = String(new FormData(form).get("content") ?? "").trim();
+    updateItem(section.id, item.id, { content });
+    renderWorkspace();
+    showToast("Study content updated.");
+  });
+  const body = detail.querySelector(".entry-detail-content");
+  detail.insertBefore(form, body);
+  form.querySelector("textarea")?.focus();
+  form.scrollIntoView({ block: "nearest" });
 }
 
 function createRichContentField(value) {
