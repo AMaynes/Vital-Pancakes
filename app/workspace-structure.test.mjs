@@ -88,6 +88,17 @@ test("Study equations use the local KaTeX bundle instead of raw CDN-dependent so
   assert.doesNotMatch(controller, /cdn\.jsdelivr\.net\/npm\/katex/);
 });
 
+test("Study entries omit the inquiry dossier and subject view lead panel", () => {
+  const start = controller.indexOf("function renderEntryDetail(section, item)");
+  const end = controller.indexOf("function getEntryTypeLabel", start);
+  const detailRenderer = controller.slice(start, end);
+
+  assert.match(detailRenderer, /detail\.append\(heading\)/);
+  assert.match(detailRenderer, /if \(section\.type !== "study"\) detail\.append\(lead\)/);
+  assert.match(detailRenderer, /detail\.append\(body\)/);
+  assert.doesNotMatch(detailRenderer, /detail\.append\(heading, lead, body\)/);
+});
+
 test("Study editing turns the reading surface into the editor instead of opening a builder", () => {
   assert.match(controller, /function openItemEditor\(section, item\)/);
   assert.match(controller, /section\.type !== "study"[\s\S]*openItemDialog/);

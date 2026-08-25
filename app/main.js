@@ -1662,7 +1662,9 @@ function renderEntryDetail(section, item) {
 
   const body = createElement("section", "entry-detail-content");
   body.append(createEntryBody(section, item));
-  detail.append(heading, lead, body);
+  detail.append(heading);
+  if (section.type !== "study") detail.append(lead);
+  detail.append(body);
   appMain.append(detail);
   if (pendingInlineStudyEditor?.sectionId === section.id && pendingInlineStudyEditor?.itemId === item.id) {
     pendingInlineStudyEditor = null;
