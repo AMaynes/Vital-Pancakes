@@ -43,12 +43,13 @@ import {
   buildKnowledgeOutline,
   buildEntryFileTree,
   buildProjectMapTree,
+  hasValidKnowledgeHierarchy,
   normalizeFolderPath,
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
   serializeKnowledgeContent,
-} from "./knowledge-entry-model.mjs?v=4";
+} from "./knowledge-entry-model.mjs?v=5";
 import { listGlossaryEntries, saveGlossaryEntry } from "./knowledge-db.mjs";
 
 const appMain = document.querySelector("#app-main");
@@ -3269,9 +3270,19 @@ function showInlineStudyContentEditor(section, item) {
     body: "",
   });
 
+  const acceptHierarchy = (candidateBlocks) => {
+    if (hasValidKnowledgeHierarchy(candidateBlocks)) return true;
+    showToast("A subsection must have a section before it.");
+    return false;
+  };
+
   const addBlock = (type, index = blocks.length) => {
     const block = createNewBlock(type);
-    blocks.splice(index, 0, block);
+    const insertionIndex = Math.max(0, Math.min(index, blocks.length));
+    const candidateBlocks = [...blocks];
+    candidateBlocks.splice(insertionIndex, 0, block);
+    if (!acceptHierarchy(candidateBlocks)) return;
+    blocks.splice(0, blocks.length, ...candidateBlocks);
     editingBlockId = block.editorId;
     renderBlocks();
     queueMicrotask(() => canvas.querySelector(`[data-editor-block-id="${block.editorId}"] input`)?.select());
@@ -3287,11 +3298,14 @@ function showInlineStudyContentEditor(section, item) {
     }
     const fromIndex = blocks.findIndex(({ editorId }) => editorId === draggedBlockId);
     if (fromIndex < 0 || (targetBlock && fromIndex === targetIndex)) return;
-    const [moved] = blocks.splice(fromIndex, 1);
+    const candidateBlocks = [...blocks];
+    const [moved] = candidateBlocks.splice(fromIndex, 1);
     const adjustedTarget = targetBlock
-      ? blocks.findIndex(({ editorId }) => editorId === targetBlock.editorId)
-      : blocks.length;
-    blocks.splice(Math.max(0, adjustedTarget + (targetBlock && insertAfter ? 1 : 0)), 0, moved);
+      ? candidateBlocks.findIndex(({ editorId }) => editorId === targetBlock.editorId)
+      : candidateBlocks.length;
+    candidateBlocks.splice(Math.max(0, adjustedTarget + (targetBlock && insertAfter ? 1 : 0)), 0, moved);
+    if (!acceptHierarchy(candidateBlocks)) return;
+    blocks.splice(0, blocks.length, ...candidateBlocks);
     renderBlocks();
   };
 
@@ -3325,7 +3339,10 @@ function showInlineStudyContentEditor(section, item) {
       remove.setAttribute("aria-label", remove.title);
       remove.addEventListener("click", () => {
         const index = blocks.findIndex(({ editorId }) => editorId === block.editorId);
-        if (index >= 0) blocks.splice(index, 1);
+        if (index < 0) return;
+        const candidateBlocks = blocks.filter(({ editorId }) => editorId !== block.editorId);
+        if (!acceptHierarchy(candidateBlocks)) return;
+        blocks.splice(0, blocks.length, ...candidateBlocks);
         if (editingBlockId === block.editorId) editingBlockId = "";
         renderBlocks();
       });
@@ -3344,6 +3361,13 @@ function showInlineStudyContentEditor(section, item) {
           typeSelect.append(option);
         });
         typeSelect.addEventListener("change", () => {
+          const candidateBlocks = blocks.map((candidate) => (
+            candidate.editorId === block.editorId ? { ...candidate, type: typeSelect.value } : candidate
+          ));
+          if (!acceptHierarchy(candidateBlocks)) {
+            typeSelect.value = block.type;
+            return;
+          }
           block.type = typeSelect.value;
           renderBlocks();
         });
@@ -3416,6 +3440,7 @@ function showInlineStudyContentEditor(section, item) {
   const save = createElement("button", "button button-primary button-small", "Save");
   save.type = "button";
   save.addEventListener("click", () => {
+    if (!acceptHierarchy(blocks)) return;
     updateItem(section.id, item.id, { content: serializeKnowledgeContent(blocks) });
     renderWorkspace();
     showToast("Study content updated.");

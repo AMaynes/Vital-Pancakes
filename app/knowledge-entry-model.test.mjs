@@ -6,6 +6,7 @@ import {
   buildEntryFileTree,
   buildProjectMapTree,
   groupEntriesByFolder,
+  hasValidKnowledgeHierarchy,
   normalizeFolderCatalog,
   parseDefinitionLines,
   parseKnowledgeContent,
@@ -39,6 +40,20 @@ test("visual editor blocks serialize without changing their order or content", (
     parseKnowledgeContent(serializeKnowledgeContent([blocks[1], blocks[0]])).map(({ type, title }) => [type, title]),
     [["equation", "Entropy"], ["section", "Overview"]],
   );
+});
+
+test("subsections require an earlier section", () => {
+  assert.equal(hasValidKnowledgeHierarchy([
+    { type: "section" },
+    { type: "text" },
+    { type: "subsection" },
+  ]), true);
+  assert.equal(hasValidKnowledgeHierarchy([
+    { type: "text" },
+    { type: "subsection" },
+    { type: "section" },
+  ]), false);
+  assert.equal(hasValidKnowledgeHierarchy([{ type: "subsection" }]), false);
 });
 
 test("definitions and notecard links parse bounded pipe rows", () => {

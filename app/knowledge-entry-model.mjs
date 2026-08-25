@@ -79,6 +79,19 @@ export function serializeKnowledgeContent(blocks) {
     .join("\n\n");
 }
 
+/**
+ * A subsection belongs to the nearest section above it, so it cannot appear
+ * before the first section in an entry.
+ */
+export function hasValidKnowledgeHierarchy(blocks) {
+  let hasSection = false;
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    if (block?.type === "section") hasSection = true;
+    if (block?.type === "subsection" && !hasSection) return false;
+  }
+  return true;
+}
+
 export function buildKnowledgeOutline(source) {
   return parseKnowledgeContent(source)
     .filter((block) => ["section", "subsection"].includes(block.type) && block.title)
