@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const controller = await readFile(new URL("./main.js", import.meta.url), "utf8");
+const stylesheet = await readFile(new URL("../workspace.css", import.meta.url), "utf8");
 
 test("Everyday how-to presentation stays in the presentation map", () => {
   const presentations = controller.slice(
@@ -131,6 +132,13 @@ test("Study block types drag directly into the reading surface with inline contr
   assert.match(directEditor, /const isHeading = \["section", "subsection"\]\.includes\(block\.type\)/);
   assert.match(directEditor, /if \(isHeading\) fields\.append\(title\)/);
   assert.doesNotMatch(directEditor, /document\.createElement\("select"\)|Block type|typeSelect/);
+  assert.match(directEditor, /fitBodyToContent/);
+});
+
+test("direct Study editing keeps fields visually embedded in the reading surface", () => {
+  assert.match(stylesheet, /\.knowledge-direct-title-input,[\s\S]*\.knowledge-direct-body-input\s*\{[\s\S]*background: transparent/);
+  assert.match(stylesheet, /border-bottom: 1px solid transparent/);
+  assert.match(stylesheet, /\.knowledge-direct-body-input\s*\{[^}]*resize: none/);
 });
 
 test("the content builder edits draggable blocks instead of exposing its storage syntax", () => {

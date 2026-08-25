@@ -3365,13 +3365,21 @@ function showInlineStudyContentEditor(section, item) {
         body.value = block.body;
         body.placeholder = block.type === "diagram" ? "Part A > Part B > Result" : "";
         body.setAttribute("aria-label", block.type === "equation" ? "Equation in LaTeX" : "Block content");
-        body.addEventListener("input", () => { block.body = body.value; });
+        const fitBodyToContent = () => {
+          body.style.height = "auto";
+          body.style.height = `${Math.max(body.scrollHeight, 30)}px`;
+        };
+        body.addEventListener("input", () => {
+          block.body = body.value;
+          fitBodyToContent();
+        });
         if (isHeading) fields.append(title);
         else fields.append(title, body);
         [...element.children]
           .filter((child) => child !== handle && child !== controls)
           .forEach((child) => child.remove());
         element.append(fields);
+        if (!isHeading) queueMicrotask(fitBodyToContent);
       }
 
       element.addEventListener("dragstart", (event) => {
