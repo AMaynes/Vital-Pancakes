@@ -62,6 +62,23 @@ export function parseKnowledgeContent(source) {
   });
 }
 
+/**
+ * Serializes visual editor blocks into the compact format used by saved entries.
+ */
+export function serializeKnowledgeContent(blocks) {
+  return (Array.isArray(blocks) ? blocks : [])
+    .map((block) => {
+      const type = BLOCK_TYPE_SET.has(block?.type) ? block.type : "text";
+      const title = String(block?.title ?? "").replace(/\s+/g, " ").trim();
+      const body = String(block?.body ?? "").replace(/\r\n?/g, "\n").trim();
+      return [`::${type}${title ? ` ${title}` : ""}`, body]
+        .filter(Boolean)
+        .join("\n");
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 export function buildKnowledgeOutline(source) {
   return parseKnowledgeContent(source)
     .filter((block) => ["section", "subsection"].includes(block.type) && block.title)

@@ -47,7 +47,8 @@ import {
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
-} from "./knowledge-entry-model.mjs?v=3";
+  serializeKnowledgeContent,
+} from "./knowledge-entry-model.mjs?v=4";
 import { listGlossaryEntries, saveGlossaryEntry } from "./knowledge-db.mjs";
 
 const appMain = document.querySelector("#app-main");
@@ -3259,22 +3260,14 @@ function showInlineStudyContentEditor(section, item) {
   });
   const body = detail.querySelector(".entry-detail-content");
   detail.insertBefore(form, body);
-  form.querySelector("textarea")?.focus();
+  form.querySelector(".rich-content-add")?.focus();
   form.scrollIntoView({ block: "nearest" });
 }
 
 function createRichContentField(value) {
   const wrapper = createElement("section", "rich-content-editor");
-  wrapper.append(
-    createElement("span", "rich-content-editor-label", "Content builder"),
-    createElement("p", "field-hint", "Add blocks in reading order. Media blocks use a URL; diagram lines use > between nodes; equation bodies use LaTeX."),
-  );
+  wrapper.append(createElement("span", "rich-content-editor-label", "Content builder"));
   const toolbar = createElement("div", "rich-content-toolbar");
-  const textarea = document.createElement("textarea");
-  textarea.name = "content";
-  textarea.value = value;
-  textarea.rows = 14;
-  textarea.placeholder = "::section Overview\nWrite the section here.\n\n::equation Entropy\nH(X) = -\\sum_x p(x) \\log p(x)";
   const labels = {
     text: "Text",
     section: "Section",
@@ -3285,25 +3278,195 @@ function createRichContentField(value) {
     video: "Video",
     equation: "Equation",
   };
+  const blocks = parseKnowledgeContent(value).map((block) => ({
+    ...block,
+    editorId: createId(),
+  }));
+  const blockList = createElement("div", "rich-content-block-list");
+  const emptyState = createElement("p", "rich-content-empty", "No content blocks yet.");
+  const contentField = document.createElement("textarea");
+  contentField.name = "content";
+  contentField.hidden = true;
+  let editingBlockId = "";
+  let draggedBlockId = "";
+
+  const syncContent = () => {
+    contentField.value = serializeKnowledgeContent(blocks);
+  };
+
+  const populatePreview = (preview, block) => {
+    preview.replaceChildren();
+    preview.append(createElement("span", "rich-content-block-kind", labels[block.type] ?? "Text"));
+    if (block.title) {
+      const headingTag = block.type === "section" ? "h3" : block.type === "subsection" ? "h4" : "strong";
+      preview.append(createElement(headingTag, "rich-content-block-title", block.title));
+    }
+    if (block.body) {
+      if (block.type === "equation") {
+        const equation = createElement("div", "rich-content-equation-preview");
+        equation.dataset.latex = block.body;
+        preview.append(equation);
+        renderKnowledgeMath(preview);
+      } else {
+        const body = createElement("p", "rich-content-block-copy", block.body);
+        preview.append(body);
+      }
+    }
+  };
+
+  const renderBlocks = () => {
+    blockList.replaceChildren();
+    emptyState.hidden = blocks.length > 0;
+    blocks.forEach((block) => {
+      const row = createElement("article", "rich-content-block");
+      row.dataset.editorBlockId = block.editorId;
+      row.draggable = true;
+      if (block.editorId === editingBlockId) row.classList.add("is-editing");
+
+      const header = createElement("div", "rich-content-block-header");
+      const handle = createElement("span", "rich-content-drag-handle", "⋮⋮");
+      handle.title = "Drag to reorder";
+      const preview = createElement("div", "rich-content-block-preview");
+      populatePreview(preview, block);
+      const actions = createElement("div", "rich-content-block-actions");
+      const editButton = createElement("button", "icon-button rich-content-block-action", "✎");
+      editButton.type = "button";
+      editButton.title = `Edit ${labels[block.type] ?? "block"}`;
+      editButton.setAttribute("aria-label", editButton.title);
+      editButton.addEventListener("click", () => {
+        editingBlockId = editingBlockId === block.editorId ? "" : block.editorId;
+        renderBlocks();
+        if (editingBlockId) {
+          queueMicrotask(() => blockList.querySelector(`[data-editor-block-id="${block.editorId}"] input`)?.focus());
+        }
+      });
+      const deleteButton = createElement("button", "icon-button rich-content-block-action", "×");
+      deleteButton.type = "button";
+      deleteButton.title = `Delete ${labels[block.type] ?? "block"}`;
+      deleteButton.setAttribute("aria-label", deleteButton.title);
+      deleteButton.addEventListener("click", () => {
+        const index = blocks.findIndex(({ editorId }) => editorId === block.editorId);
+        if (index >= 0) blocks.splice(index, 1);
+        if (editingBlockId === block.editorId) editingBlockId = "";
+        syncContent();
+        renderBlocks();
+      });
+      actions.append(editButton, deleteButton);
+      header.append(handle, preview, actions);
+      row.append(header);
+
+      if (block.editorId === editingBlockId) {
+        const fields = createElement("div", "rich-content-block-fields");
+        const typeLabel = createElement("label", "rich-content-block-type");
+        typeLabel.append(document.createTextNode("Block type"));
+        const typeSelect = document.createElement("select");
+        Object.entries(labels).forEach(([type, label]) => {
+          const option = document.createElement("option");
+          option.value = type;
+          option.textContent = label;
+          option.selected = type === block.type;
+          typeSelect.append(option);
+        });
+        typeSelect.addEventListener("change", () => {
+          block.type = typeSelect.value;
+          syncContent();
+          renderBlocks();
+        });
+        typeLabel.append(typeSelect);
+
+        const titleLabel = createElement("label");
+        titleLabel.append(document.createTextNode("Title"));
+        const titleInput = document.createElement("input");
+        titleInput.value = block.title;
+        titleInput.placeholder = block.type === "text" ? "Optional" : labels[block.type];
+        titleInput.addEventListener("input", () => {
+          block.title = titleInput.value;
+          syncContent();
+          populatePreview(preview, block);
+        });
+        titleLabel.append(titleInput);
+
+        const bodyLabel = createElement("label", "rich-content-block-body");
+        const bodyNames = {
+          equation: "Equation (LaTeX)",
+          diagram: "Diagram paths",
+          image: "Image URL",
+          video: "Video URL",
+          interactable: "Interactable URL",
+        };
+        bodyLabel.append(document.createTextNode(bodyNames[block.type] ?? "Content"));
+        const bodyInput = document.createElement("textarea");
+        bodyInput.rows = block.type === "text" || block.type === "section" ? 5 : 3;
+        bodyInput.value = block.body;
+        bodyInput.placeholder = block.type === "diagram" ? "Part A > Part B > Result" : "";
+        bodyInput.addEventListener("input", () => {
+          block.body = bodyInput.value;
+          syncContent();
+          populatePreview(preview, block);
+        });
+        bodyLabel.append(bodyInput);
+        fields.append(typeLabel, titleLabel, bodyLabel);
+        row.append(fields);
+      }
+
+      row.addEventListener("dragstart", (event) => {
+        draggedBlockId = block.editorId;
+        row.classList.add("is-dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", block.editorId);
+        }
+      });
+      row.addEventListener("dragend", () => {
+        draggedBlockId = "";
+        row.classList.remove("is-dragging");
+        blockList.querySelectorAll(".is-drop-target").forEach((element) => element.classList.remove("is-drop-target"));
+      });
+      row.addEventListener("dragover", (event) => {
+        if (!draggedBlockId || draggedBlockId === block.editorId) return;
+        event.preventDefault();
+        row.classList.add("is-drop-target");
+      });
+      row.addEventListener("dragleave", () => row.classList.remove("is-drop-target"));
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        row.classList.remove("is-drop-target");
+        const fromIndex = blocks.findIndex(({ editorId }) => editorId === draggedBlockId);
+        const targetIndex = blocks.findIndex(({ editorId }) => editorId === block.editorId);
+        if (fromIndex < 0 || targetIndex < 0 || fromIndex === targetIndex) return;
+        const insertAfter = event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2;
+        const [moved] = blocks.splice(fromIndex, 1);
+        const adjustedTarget = blocks.findIndex(({ editorId }) => editorId === block.editorId);
+        blocks.splice(adjustedTarget + (insertAfter ? 1 : 0), 0, moved);
+        syncContent();
+        renderBlocks();
+      });
+      blockList.append(row);
+    });
+  };
+
   Object.entries(labels).forEach(([type, label]) => {
-    const button = createElement("button", "button button-small", `+ ${label}`);
+    const button = createElement("button", "button button-small rich-content-add", `+ ${label}`);
     button.type = "button";
     button.addEventListener("click", () => {
-      const title = ["text"].includes(type) ? "" : ` ${label}`;
-      const body = ["image", "video", "interactable"].includes(type)
-        ? "\nhttps://"
-        : type === "diagram"
-          ? "\nPart A > Part B > Result"
-          : type === "equation"
-            ? "\nE = mc^2"
-            : "\n";
-      const insertion = `${textarea.value.trim() ? "\n\n" : ""}::${type}${title}${body}`;
-      textarea.setRangeText(insertion, textarea.value.length, textarea.value.length, "end");
-      textarea.focus();
+      const block = {
+        editorId: createId(),
+        id: "",
+        type,
+        title: type === "text" ? "" : `New ${label.toLocaleLowerCase()}`,
+        body: "",
+      };
+      blocks.push(block);
+      editingBlockId = block.editorId;
+      syncContent();
+      renderBlocks();
+      queueMicrotask(() => blockList.querySelector(`[data-editor-block-id="${block.editorId}"] input`)?.select());
     });
     toolbar.append(button);
   });
-  wrapper.append(toolbar, textarea);
+  syncContent();
+  renderBlocks();
+  wrapper.append(toolbar, blockList, emptyState, contentField);
   return wrapper;
 }
 

@@ -96,3 +96,17 @@ test("Study editing reveals an inline content builder instead of the item dialog
   assert.match(controller, /createRichContentField\(item\.content \?\? ""\)/);
   assert.match(controller, /updateItem\(section\.id, item\.id, \{ content \}\)/);
 });
+
+test("the content builder edits draggable blocks instead of exposing its storage syntax", () => {
+  const builder = controller.match(
+    /function createRichContentField\(value\) \{([\s\S]*?)\n\}\n\nfunction createStudyParentSelect/,
+  )?.[1] ?? "";
+
+  assert.match(builder, /parseKnowledgeContent\(value\)/);
+  assert.match(builder, /serializeKnowledgeContent\(blocks\)/);
+  assert.match(builder, /row\.draggable = true/);
+  assert.match(builder, /addEventListener\("drop"/);
+  assert.match(builder, /rich-content-block-action", "✎"/);
+  assert.match(builder, /rich-content-block-action", "×"/);
+  assert.doesNotMatch(builder, /textarea\.rows = 14|setRangeText|::section Overview/);
+});

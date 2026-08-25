@@ -11,6 +11,7 @@ import {
   parseKnowledgeContent,
   parseNotecardLinks,
   parseProjectMap,
+  serializeKnowledgeContent,
 } from "./knowledge-entry-model.mjs";
 
 test("knowledge content keeps rich block types and stable unique anchors", () => {
@@ -28,6 +29,16 @@ test("knowledge content keeps rich block types and stable unique anchors", () =>
 
 test("legacy plain notes remain a text block", () => {
   assert.equal(parseKnowledgeContent("One old note")[0].body, "One old note");
+});
+
+test("visual editor blocks serialize without changing their order or content", () => {
+  const source = "::section Overview\nFirst paragraph\n\n::equation Entropy\nH(X) = -\\sum_x p(x) \\log p(x)";
+  const blocks = parseKnowledgeContent(source);
+  assert.equal(serializeKnowledgeContent(blocks), source);
+  assert.deepEqual(
+    parseKnowledgeContent(serializeKnowledgeContent([blocks[1], blocks[0]])).map(({ type, title }) => [type, title]),
+    [["equation", "Entropy"], ["section", "Overview"]],
+  );
 });
 
 test("definitions and notecard links parse bounded pipe rows", () => {
