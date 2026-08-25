@@ -46,12 +46,18 @@ import {
   canPlaceKnowledgeSubsection,
   normalizeFolderPath,
   normalizeKnowledgeHeaderBlocks,
+  numberKnowledgeBlocks,
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
   serializeKnowledgeContent,
-} from "./knowledge-entry-model.mjs?v=7";
-import { listGlossaryEntries, saveGlossaryEntry } from "./knowledge-db.mjs";
+} from "./knowledge-entry-model.mjs?v=8";
+import {
+  getKnowledgeMedia,
+  listGlossaryEntries,
+  saveGlossaryEntry,
+  saveKnowledgeMedia,
+} from "./knowledge-db.mjs?v=2";
 
 const appMain = document.querySelector("#app-main");
 const itemDialog = document.querySelector("#item-dialog");
@@ -60,6 +66,7 @@ const folderDialog = document.querySelector("#folder-dialog");
 const folderForm = document.querySelector("#folder-form");
 const folderNameInput = document.querySelector("#folder-name");
 const animationTimers = new Set();
+const activeKnowledgeMediaUrls = new Set();
 
 let activeSectionId = null;
 let editingItemId = null;
@@ -580,6 +587,7 @@ function createWorkoutMuscleFilterBar(section, entries) {
 function renderWorkspace() {
   activeDirectEditorController?.abort();
   activeDirectEditorController = null;
+  releaseKnowledgeMediaUrls();
   animationTimers.forEach((timer) => window.clearInterval(timer));
   animationTimers.clear();
   const area = getRouteArea();
@@ -2172,7 +2180,7 @@ function createKnowledgeEntryLayout(section, item, options = {}) {
   const layout = createElement("div", "knowledge-entry-layout");
   const sidebar = createElement("aside", "knowledge-entry-sidebar");
   const definitions = parseDefinitionLines(item.definitions);
-  const blocks = normalizeKnowledgeHeaderBlocks(parseKnowledgeContent(item.content));
+  const blocks = numberKnowledgeBlocks(normalizeKnowledgeHeaderBlocks(parseKnowledgeContent(item.content)));
   const outline = item.format === "lesson"
     ? (item.lesson?.sections ?? []).map((lessonSection, index) => ({
       id: `lesson-section-${index + 1}`,
@@ -2247,7 +2255,10 @@ function createKnowledgeEntryLayout(section, item, options = {}) {
   }
   appendTagGroup(content, "Tags", item.tags ?? []);
   layout.append(sidebar, content);
-  queueMicrotask(() => renderKnowledgeMath(layout));
+  queueMicrotask(() => {
+    renderKnowledgeMath(layout);
+    hydrateKnowledgeMedia(layout);
+  });
   return layout;
 }
 
@@ -2285,31 +2296,43 @@ function createStudyLink(study, label = study.title) {
   return link;
 }
 
+function createKnowledgeHeading(tagName, block, fallback, options = {}) {
+  const heading = createElement(tagName, options.className ?? "");
+  if (block.numberLabel) {
+    heading.append(createElement("span", "knowledge-auto-number", options.equation
+      ? block.numberLabel
+      : `${block.numberLabel}.`));
+  }
+  const title = createElement("span", `knowledge-block-title-text${options.equation ? " is-equation-title" : ""}`, block.title || fallback);
+  heading.append(title);
+  return heading;
+}
+
 function createKnowledgeBlock(block, definitions) {
   const element = createElement("section", `knowledge-block block-${block.type}`);
   element.id = block.id;
   if (block.type === "section") {
-    element.append(createElement("h2", "", block.title || "Section"));
+    element.append(createKnowledgeHeading("h2", block, "Section"));
     return element;
   }
   if (block.type === "subsection") {
-    element.append(createElement("h3", "", block.title || "Subsection"));
+    element.append(createKnowledgeHeading("h3", block, "Subsection"));
     return element;
   }
   if (block.type === "text") {
-    if (block.title) element.append(createElement("h3", "", block.title));
+    if (block.title) element.append(createKnowledgeHeading("h3", block, ""));
     appendDefinitionAwareText(element, block.body, definitions);
     return element;
   }
   if (block.type === "equation") {
-    if (block.title) element.append(createElement("span", "card-kicker", block.title));
+    element.append(createKnowledgeHeading("span", block, "", { className: "card-kicker", equation: true }));
     const equation = createElement("div", "knowledge-equation", block.body);
     equation.dataset.latex = block.body;
     element.append(equation);
     return element;
   }
   if (block.type === "diagram") {
-    if (block.title) element.append(createElement("h3", "", block.title));
+    if (block.title) element.append(createKnowledgeHeading("h3", block, ""));
     const diagram = createElement("div", "knowledge-diagram");
     block.body.split("\n").filter(Boolean).forEach((row) => {
       const path = createElement("div", "knowledge-diagram-path");
@@ -2323,28 +2346,32 @@ function createKnowledgeBlock(block, definitions) {
     return element;
   }
   if (block.type === "image") {
-    const url = normalizeEntryUrl(block.body, { allowImageData: true });
-    if (url) {
+    const mediaId = parseKnowledgeMediaReference(block.body);
+    const url = mediaId ? null : normalizeEntryUrl(block.body, { allowImageData: true });
+    if (url || mediaId) {
       const figure = createElement("figure", "knowledge-media");
       const image = document.createElement("img");
-      image.src = url;
+      if (url) image.src = url;
+      if (mediaId) image.dataset.knowledgeMediaId = mediaId;
       image.alt = block.title || "Study image";
       image.loading = "lazy";
       figure.append(image);
-      if (block.title) figure.append(createElement("figcaption", "", block.title));
+      if (block.title) figure.append(createKnowledgeHeading("figcaption", block, ""));
       element.append(figure);
     }
     return element;
   }
   if (["video", "interactable"].includes(block.type)) {
-    const url = normalizeEntryUrl(block.body);
-    if (block.title) element.append(createElement("h3", "", block.title));
-    if (!url) return element;
-    if (block.type === "video" && /\.(?:mp4|webm|ogg)(?:$|[?#])/i.test(url)) {
+    const mediaId = block.type === "video" ? parseKnowledgeMediaReference(block.body) : "";
+    const url = mediaId ? null : normalizeEntryUrl(block.body);
+    if (block.title) element.append(createKnowledgeHeading("h3", block, ""));
+    if (!url && !mediaId) return element;
+    if (block.type === "video" && (mediaId || /\.(?:mp4|webm|ogg)(?:$|[?#])/i.test(url))) {
       const video = document.createElement("video");
       video.controls = true;
       video.preload = "metadata";
-      video.src = url;
+      if (url) video.src = url;
+      if (mediaId) video.dataset.knowledgeMediaId = mediaId;
       element.append(video);
     } else {
       const frame = document.createElement("iframe");
@@ -2355,11 +2382,13 @@ function createKnowledgeBlock(block, definitions) {
       frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-presentation");
       element.append(frame);
     }
-    const open = createElement("a", "knowledge-media-open", "Open separately ↗");
-    open.href = url;
-    open.target = "_blank";
-    open.rel = "noopener noreferrer";
-    element.append(open);
+    if (url) {
+      const open = createElement("a", "knowledge-media-open", "Open separately ↗");
+      open.href = url;
+      open.target = "_blank";
+      open.rel = "noopener noreferrer";
+      element.append(open);
+    }
   }
   return element;
 }
@@ -2435,6 +2464,31 @@ function normalizeEntryUrl(value, options = {}) {
   } catch {
     return null;
   }
+}
+
+function parseKnowledgeMediaReference(value) {
+  return /^vp-media:([a-z0-9-]+)$/i.exec(String(value ?? "").trim())?.[1] ?? "";
+}
+
+async function hydrateKnowledgeMedia(root) {
+  const nodes = [...root.querySelectorAll("[data-knowledge-media-id]")];
+  await Promise.all(nodes.map(async (node) => {
+    try {
+      const record = await getKnowledgeMedia(node.dataset.knowledgeMediaId);
+      if (!record?.blob || !node.isConnected) return;
+      const url = URL.createObjectURL(record.blob);
+      activeKnowledgeMediaUrls.add(url);
+      node.src = url;
+      delete node.dataset.knowledgeMediaId;
+    } catch {
+      node.classList.add("has-media-error");
+    }
+  }));
+}
+
+function releaseKnowledgeMediaUrls() {
+  activeKnowledgeMediaUrls.forEach((url) => URL.revokeObjectURL(url));
+  activeKnowledgeMediaUrls.clear();
 }
 
 let knowledgeKatexModule = null;
@@ -3318,11 +3372,29 @@ function showInlineStudyContentEditor(section, item) {
     renderBlocks();
   };
 
+  const storeMediaFile = async (file, block) => {
+    const expectedType = block.type === "image" ? "image/" : "video/";
+    if (!(file instanceof Blob) || !file.type.startsWith(expectedType)) {
+      showToast(`Choose a${block.type === "image" ? "n" : ""} ${block.type} file.`);
+      return;
+    }
+    try {
+      const record = await saveKnowledgeMedia(file);
+      block.body = `vp-media:${record.id}`;
+      renderBlocks();
+      showToast(`${block.type === "image" ? "Image" : "Video"} added.`);
+    } catch (error) {
+      showToast(error?.message ?? "The media file could not be stored.");
+    }
+  };
+
   function renderBlocks() {
+    releaseKnowledgeMediaUrls();
     canvas.replaceChildren();
     if (!blocks.length) canvas.append(createElement("p", "knowledge-direct-empty", "Drag a content type here."));
-    blocks.forEach((block) => {
-      const element = createKnowledgeBlock(block, definitions);
+    const numberedBlocks = numberKnowledgeBlocks(blocks);
+    blocks.forEach((block, blockIndex) => {
+      const element = createKnowledgeBlock(numberedBlocks[blockIndex], definitions);
       element.classList.add("knowledge-direct-block");
       element.dataset.editorBlockId = block.editorId;
       element.draggable = block.editorId !== editingBlockId;
@@ -3364,7 +3436,7 @@ function showInlineStudyContentEditor(section, item) {
 
       if (block.editorId === editingBlockId) {
         const isHeading = ["section", "subsection"].includes(block.type);
-        let titleNode = renderedContent.querySelector("h2, h3, .card-kicker, figcaption");
+        let titleNode = renderedContent.querySelector(".knowledge-block-title-text");
         if (!titleNode && block.type !== "text") {
           titleNode = createElement("h3", "knowledge-direct-optional-title");
           renderedContent.prepend(titleNode);
@@ -3397,12 +3469,15 @@ function showInlineStudyContentEditor(section, item) {
           const source = document.createElement("textarea");
           source.className = "knowledge-direct-source-input";
           source.rows = 1;
-          source.value = block.body;
+          const storedMediaId = parseKnowledgeMediaReference(block.body);
+          source.value = storedMediaId ? "" : block.body;
           source.placeholder = block.type === "diagram"
             ? "Part A > Part B > Result"
             : block.type === "equation"
               ? "Equation in LaTeX"
-              : "URL";
+              : storedMediaId
+                ? "Uploaded file"
+                : "URL";
           source.setAttribute("aria-label", `${labels[block.type]} source`);
           const fitSourceToContent = () => {
             source.style.height = "auto";
@@ -3414,6 +3489,32 @@ function showInlineStudyContentEditor(section, item) {
           });
           element.append(source);
           queueMicrotask(fitSourceToContent);
+
+          if (["image", "video"].includes(block.type)) {
+            const mediaActions = createElement("div", "knowledge-direct-media-actions");
+            const upload = createElement("button", "button button-small button-quiet", "Upload");
+            upload.type = "button";
+            const picker = document.createElement("input");
+            picker.type = "file";
+            picker.accept = `${block.type}/*`;
+            picker.hidden = true;
+            upload.addEventListener("click", () => picker.click());
+            picker.addEventListener("change", () => {
+              const [file] = picker.files ?? [];
+              if (file) void storeMediaFile(file, block);
+            });
+            mediaActions.append(upload, picker);
+            element.append(mediaActions);
+            element.addEventListener("paste", (event) => {
+              const file = [...(event.clipboardData?.items ?? [])]
+                .filter((item) => item.kind === "file")
+                .map((item) => item.getAsFile())
+                .find((candidate) => candidate?.type.startsWith(`${block.type}/`));
+              if (!file) return;
+              event.preventDefault();
+              void storeMediaFile(file, block);
+            });
+          }
         }
       }
 
@@ -3454,6 +3555,7 @@ function showInlineStudyContentEditor(section, item) {
       canvas.append(element);
     });
     renderKnowledgeMath(canvas);
+    hydrateKnowledgeMedia(canvas);
   }
 
   Object.entries(labels).forEach(([type, label]) => {

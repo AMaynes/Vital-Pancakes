@@ -119,10 +119,40 @@ export function normalizeKnowledgeHeaderBlocks(blocks) {
   });
 }
 
+/**
+ * Adds display-only hierarchical numbers without changing saved titles.
+ */
+export function numberKnowledgeBlocks(blocks) {
+  let sectionNumber = 0;
+  let subsectionNumber = 0;
+  let equationNumber = 0;
+  return (Array.isArray(blocks) ? blocks : []).map((block) => {
+    if (block?.type === "section") {
+      sectionNumber += 1;
+      subsectionNumber = 0;
+      equationNumber = 0;
+      return { ...block, numberLabel: String(sectionNumber) };
+    }
+    if (block?.type === "subsection") {
+      subsectionNumber += 1;
+      return { ...block, numberLabel: `${sectionNumber}.${subsectionNumber}` };
+    }
+    if (block?.type === "equation") {
+      equationNumber += 1;
+      return { ...block, numberLabel: `Eq. ${sectionNumber}.${equationNumber}` };
+    }
+    return { ...block, numberLabel: "" };
+  });
+}
+
 export function buildKnowledgeOutline(source) {
-  return parseKnowledgeContent(source)
+  return numberKnowledgeBlocks(normalizeKnowledgeHeaderBlocks(parseKnowledgeContent(source)))
     .filter((block) => ["section", "subsection"].includes(block.type) && block.title)
-    .map(({ id, title, type }) => ({ id, title, level: type === "section" ? 2 : 3 }));
+    .map(({ id, title, type, numberLabel }) => ({
+      id,
+      title: `${numberLabel}. ${title}`,
+      level: type === "section" ? 2 : 3,
+    }));
 }
 
 /**

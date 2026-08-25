@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v122";
+const CACHE_NAME = "vital-pancakes-app-v123";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
 ]);
@@ -40,6 +40,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./workspace.css?v=37",
   "./workspace.css?v=38",
   "./workspace.css?v=39",
+  "./workspace.css?v=40",
   "./vendor/katex/katex.min.css?v=1",
   "./vendor/katex/katex.mjs",
   "./manifest.webmanifest",
@@ -70,6 +71,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./app/main.js?v=41",
   "./app/main.js?v=42",
   "./app/main.js?v=43",
+  "./app/main.js?v=44",
   "./app/ai-command-protocol.mjs",
   "./app/ai-command-registry.mjs",
   "./app/ai-page-host.mjs",
@@ -78,6 +80,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./app/home-knowledge-ai-adapter.mjs",
   "./app/glossary-ui.mjs?v=3",
   "./app/knowledge-db.mjs",
+  "./app/knowledge-db.mjs?v=2",
   "./app/knowledge-inference.mjs",
   "./app/knowledge-inference-ui.mjs",
   "./app/knowledge-inference-worker.js?v=1",
@@ -98,6 +101,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./app/knowledge-entry-model.mjs?v=5",
   "./app/knowledge-entry-model.mjs?v=6",
   "./app/knowledge-entry-model.mjs?v=7",
+  "./app/knowledge-entry-model.mjs?v=8",
   "./app/algorithm-samples.mjs?v=2",
   "./app/algorithm-analysis-samples.mjs?v=1",
   "./app/algorithm-code-examples.mjs?v=1",

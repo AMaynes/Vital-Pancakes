@@ -10,6 +10,7 @@ import {
   hasValidKnowledgeHierarchy,
   normalizeFolderCatalog,
   normalizeKnowledgeHeaderBlocks,
+  numberKnowledgeBlocks,
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
@@ -25,8 +26,8 @@ test("knowledge content keeps rich block types and stable unique anchors", () =>
     ["section", "overview-2"],
   ]);
   assert.deepEqual(buildKnowledgeOutline("::section A\nBody\n::subsection B\nBody"), [
-    { id: "a", title: "A", level: 2 },
-    { id: "b", title: "B", level: 3 },
+    { id: "a", title: "1. A", level: 2 },
+    { id: "b", title: "1.1. B", level: 3 },
   ]);
 });
 
@@ -80,6 +81,21 @@ test("section bodies become separate text blocks while headings stay header-only
     { id: "", type: "text", title: "", body: "Existing paragraph" },
     { id: "details", type: "subsection", title: "Details", body: "" },
   ]);
+});
+
+test("sections and equations receive derived hierarchical numbers", () => {
+  const numbered = numberKnowledgeBlocks([
+    { type: "section", title: "First" },
+    { type: "equation" },
+    { type: "subsection", title: "Detail" },
+    { type: "equation" },
+    { type: "section", title: "Second" },
+    { type: "equation" },
+  ]);
+  assert.deepEqual(numbered.map(({ numberLabel }) => numberLabel), [
+    "1", "Eq. 1.1", "1.1", "Eq. 1.2", "2", "Eq. 2.1",
+  ]);
+  assert.equal(numbered[0].title, "First");
 });
 
 test("definitions and notecard links parse bounded pipe rows", () => {

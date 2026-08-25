@@ -439,6 +439,8 @@
 .knowledge-block h2 { margin: 0 0 10px; padding-bottom: 7px; border-bottom: 1px solid var(--line-strong); }
 .knowledge-block h3 { margin: 0 0 8px; }
 .knowledge-block p { white-space: pre-line; }
+.knowledge-auto-number { margin-right: .45em; color: var(--coral); font-variant-numeric: tabular-nums; }
+.knowledge-block-title-text.is-equation-title:not(:empty)::before { margin-right: .45em; content: "·"; }
 
 .defined-term {
   padding: 0 2px;
@@ -538,6 +540,9 @@
 .knowledge-direct-inline-body { min-height: 24px; white-space: pre-line; }
 .knowledge-direct-inline-body p:last-child { margin-bottom: 0; }
 .knowledge-direct-source-input { display: block; min-height: 28px; margin-top: 7px; overflow: hidden; resize: none; line-height: 1.55; }
+.knowledge-direct-media-actions { display: flex; justify-content: flex-end; margin-top: 5px; }
+.knowledge-direct-media-actions .button { min-height: 26px; padding: 4px 8px; font-size: 9px; }
+.has-media-error { min-height: 80px; background: var(--paper); }
 
 .rich-content-editor { display: grid; gap: 9px; padding: 12px; border: 1px solid var(--line-strong); background: var(--paper); }
 .rich-content-editor-label { font-weight: 800; }

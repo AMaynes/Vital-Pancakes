@@ -11,12 +11,13 @@ import {
 import { validateKnowledgeInferenceSession } from "./knowledge-inference.mjs";
 
 const DATABASE_NAME = "vital-pancakes-knowledge";
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 const DOCUMENT_STORE = "documents";
 const LINK_STORE = "links";
 const GLOSSARY_STORE = "glossary";
 const INFERENCE_STORE = "inferenceSessions";
 const META_STORE = "meta";
+const MEDIA_STORE = "media";
 const LEGACY_TOOL_DATABASE = "vital-pancakes-local-tools";
 const LEGACY_INFERENCE_NAMESPACE = "inference-sessions";
 
@@ -54,9 +55,35 @@ export function openKnowledgeDatabase() {
       if (!database.objectStoreNames.contains(META_STORE)) {
         database.createObjectStore(META_STORE, { keyPath: "key" });
       }
+      if (!database.objectStoreNames.contains(MEDIA_STORE)) {
+        const media = database.createObjectStore(MEDIA_STORE, { keyPath: "id" });
+        media.createIndex("createdAt", "createdAt", { unique: false });
+        media.createIndex("mimeType", "mimeType", { unique: false });
+      }
     };
     request.onsuccess = () => resolve(request.result);
   });
+}
+
+export async function saveKnowledgeMedia(file) {
+  if (!(file instanceof Blob) || !/^(?:image|video)\//i.test(file.type)) {
+    throw new TypeError("Choose an image or video file.");
+  }
+  const id = globalThis.crypto?.randomUUID?.() ?? `media-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const record = {
+    id,
+    blob: file,
+    name: String(file.name ?? "Local media"),
+    mimeType: file.type,
+    size: file.size,
+    createdAt: new Date().toISOString(),
+  };
+  await putStoreValue(MEDIA_STORE, record);
+  return record;
+}
+
+export function getKnowledgeMedia(id) {
+  return getStoreValue(MEDIA_STORE, String(id));
 }
 
 export async function getKnowledgeState() {

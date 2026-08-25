@@ -4,6 +4,7 @@ import test from "node:test";
 
 const controller = await readFile(new URL("./main.js", import.meta.url), "utf8");
 const stylesheet = await readFile(new URL("../workspace.css", import.meta.url), "utf8");
+const knowledgeDatabase = await readFile(new URL("./knowledge-db.mjs", import.meta.url), "utf8");
 
 test("Everyday how-to presentation stays in the presentation map", () => {
   const presentations = controller.slice(
@@ -120,7 +121,7 @@ test("Study block types drag directly into the reading surface with inline contr
 
   assert.match(directEditor, /tool\.draggable = true/);
   assert.match(directEditor, /knowledge-direct-canvas/);
-  assert.match(directEditor, /createKnowledgeBlock\(block, definitions\)/);
+  assert.match(directEditor, /createKnowledgeBlock\(numberedBlocks\[blockIndex\], definitions\)/);
   assert.match(directEditor, /knowledge-direct-control", "✎"/);
   assert.match(directEditor, /knowledge-direct-control", "×"/);
   assert.match(directEditor, /controls\.append\(edit, remove\)/);
@@ -138,12 +139,24 @@ test("Study block types drag directly into the reading surface with inline contr
   assert.match(directEditor, /clickedBlock\?\.dataset\.editorBlockId === editingBlockId/);
   assert.match(directEditor, /event\.key !== "Escape" \|\| !editingBlockId/);
   assert.match(controller, /activeDirectEditorController\?\.abort\(\)/);
+  assert.match(directEditor, /numberKnowledgeBlocks\(blocks\)/);
+  assert.match(directEditor, /picker\.accept = `\$\{block\.type\}\/\*`/);
+  assert.match(directEditor, /event\.clipboardData\?\.items/);
+  assert.match(directEditor, /saveKnowledgeMedia\(file\)/);
 });
 
 test("direct Study editing keeps fields visually embedded in the reading surface", () => {
   assert.match(stylesheet, /\.knowledge-direct-inline-edit,[\s\S]*\.knowledge-direct-source-input\s*\{[\s\S]*background: transparent/);
   assert.match(stylesheet, /border-bottom: 1px solid transparent/);
   assert.match(stylesheet, /\.knowledge-direct-source-input\s*\{[^}]*resize: none/);
+});
+
+test("Study uploads persist image and video blobs outside localStorage", () => {
+  assert.match(knowledgeDatabase, /const DATABASE_VERSION = 3/);
+  assert.match(knowledgeDatabase, /const MEDIA_STORE = "media"/);
+  assert.match(knowledgeDatabase, /export async function saveKnowledgeMedia\(file\)/);
+  assert.match(knowledgeDatabase, /blob: file/);
+  assert.match(controller, /getKnowledgeMedia\(node\.dataset\.knowledgeMediaId\)/);
 });
 
 test("the content builder edits draggable blocks instead of exposing its storage syntax", () => {
