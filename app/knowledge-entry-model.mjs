@@ -93,6 +93,17 @@ export function hasValidKnowledgeHierarchy(blocks) {
 }
 
 /**
+ * Non-subsection blocks can move freely. A subsection's own destination is
+ * valid only when at least one section remains above that destination.
+ */
+export function canPlaceKnowledgeSubsection(blocks, index) {
+  const list = Array.isArray(blocks) ? blocks : [];
+  const block = list[index];
+  if (block?.type !== "subsection") return true;
+  return list.slice(0, index).some((candidate) => candidate?.type === "section");
+}
+
+/**
  * Section and subsection blocks are headings only. Older heading bodies become
  * ordinary text immediately after their heading so no saved writing is lost.
  */

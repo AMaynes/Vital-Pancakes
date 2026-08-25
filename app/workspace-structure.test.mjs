@@ -125,8 +125,9 @@ test("Study block types drag directly into the reading surface with inline contr
   assert.match(directEditor, /controls\.append\(edit, remove\)/);
   assert.match(directEditor, /element\.prepend\(handle, controls\)/);
   assert.match(directEditor, /moveOrInsertBlock/);
-  assert.match(directEditor, /hasValidKnowledgeHierarchy\(candidateBlocks\)/);
+  assert.match(directEditor, /canPlaceKnowledgeSubsection\(candidateBlocks, index\)/);
   assert.match(directEditor, /A subsection must have a section before it/);
+  assert.doesNotMatch(directEditor, /if \(!acceptHierarchy\(blocks\)\) return/);
   assert.match(directEditor, /const isHeading = \["section", "subsection"\]\.includes\(block\.type\)/);
   assert.match(directEditor, /if \(isHeading\) fields\.append\(title\)/);
 });

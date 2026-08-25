@@ -5,6 +5,7 @@ import {
   buildKnowledgeOutline,
   buildEntryFileTree,
   buildProjectMapTree,
+  canPlaceKnowledgeSubsection,
   groupEntriesByFolder,
   hasValidKnowledgeHierarchy,
   normalizeFolderCatalog,
@@ -55,6 +56,19 @@ test("subsections require an earlier section", () => {
     { type: "section" },
   ]), false);
   assert.equal(hasValidKnowledgeHierarchy([{ type: "subsection" }]), false);
+});
+
+test("subsection placement checks only the moved block and its destination", () => {
+  const blocks = [
+    { type: "subsection" },
+    { type: "text" },
+    { type: "section" },
+    { type: "subsection" },
+  ];
+  assert.equal(canPlaceKnowledgeSubsection(blocks, 0), false);
+  assert.equal(canPlaceKnowledgeSubsection(blocks, 1), true);
+  assert.equal(canPlaceKnowledgeSubsection(blocks, 2), true);
+  assert.equal(canPlaceKnowledgeSubsection(blocks, 3), true);
 });
 
 test("section bodies become separate text blocks while headings stay header-only", () => {

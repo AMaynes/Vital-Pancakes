@@ -43,14 +43,14 @@ import {
   buildKnowledgeOutline,
   buildEntryFileTree,
   buildProjectMapTree,
-  hasValidKnowledgeHierarchy,
+  canPlaceKnowledgeSubsection,
   normalizeFolderPath,
   normalizeKnowledgeHeaderBlocks,
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
   serializeKnowledgeContent,
-} from "./knowledge-entry-model.mjs?v=6";
+} from "./knowledge-entry-model.mjs?v=7";
 import { listGlossaryEntries, saveGlossaryEntry } from "./knowledge-db.mjs";
 
 const appMain = document.querySelector("#app-main");
@@ -3270,8 +3270,8 @@ function showInlineStudyContentEditor(section, item) {
     body: "",
   });
 
-  const acceptHierarchy = (candidateBlocks) => {
-    if (hasValidKnowledgeHierarchy(candidateBlocks)) return true;
+  const acceptSubsectionPlacement = (candidateBlocks, index) => {
+    if (canPlaceKnowledgeSubsection(candidateBlocks, index)) return true;
     showToast("A subsection must have a section before it.");
     return false;
   };
@@ -3281,7 +3281,7 @@ function showInlineStudyContentEditor(section, item) {
     const insertionIndex = Math.max(0, Math.min(index, blocks.length));
     const candidateBlocks = [...blocks];
     candidateBlocks.splice(insertionIndex, 0, block);
-    if (!acceptHierarchy(candidateBlocks)) return;
+    if (!acceptSubsectionPlacement(candidateBlocks, insertionIndex)) return;
     blocks.splice(0, blocks.length, ...candidateBlocks);
     editingBlockId = block.editorId;
     renderBlocks();
@@ -3303,8 +3303,9 @@ function showInlineStudyContentEditor(section, item) {
     const adjustedTarget = targetBlock
       ? candidateBlocks.findIndex(({ editorId }) => editorId === targetBlock.editorId)
       : candidateBlocks.length;
-    candidateBlocks.splice(Math.max(0, adjustedTarget + (targetBlock && insertAfter ? 1 : 0)), 0, moved);
-    if (!acceptHierarchy(candidateBlocks)) return;
+    const insertionIndex = Math.max(0, adjustedTarget + (targetBlock && insertAfter ? 1 : 0));
+    candidateBlocks.splice(insertionIndex, 0, moved);
+    if (!acceptSubsectionPlacement(candidateBlocks, insertionIndex)) return;
     blocks.splice(0, blocks.length, ...candidateBlocks);
     renderBlocks();
   };
@@ -3341,7 +3342,6 @@ function showInlineStudyContentEditor(section, item) {
         const index = blocks.findIndex(({ editorId }) => editorId === block.editorId);
         if (index < 0) return;
         const candidateBlocks = blocks.filter(({ editorId }) => editorId !== block.editorId);
-        if (!acceptHierarchy(candidateBlocks)) return;
         blocks.splice(0, blocks.length, ...candidateBlocks);
         if (editingBlockId === block.editorId) editingBlockId = "";
         renderBlocks();
@@ -3363,13 +3363,6 @@ function showInlineStudyContentEditor(section, item) {
           typeSelect.append(option);
         });
         typeSelect.addEventListener("change", () => {
-          const candidateBlocks = blocks.map((candidate) => (
-            candidate.editorId === block.editorId ? { ...candidate, type: typeSelect.value } : candidate
-          ));
-          if (!acceptHierarchy(candidateBlocks)) {
-            typeSelect.value = block.type;
-            return;
-          }
           block.type = typeSelect.value;
           renderBlocks();
         });
@@ -3443,7 +3436,6 @@ function showInlineStudyContentEditor(section, item) {
   const save = createElement("button", "button button-primary button-small", "Save");
   save.type = "button";
   save.addEventListener("click", () => {
-    if (!acceptHierarchy(blocks)) return;
     updateItem(section.id, item.id, { content: serializeKnowledgeContent(blocks) });
     renderWorkspace();
     showToast("Study content updated.");
