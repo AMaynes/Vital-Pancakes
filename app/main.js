@@ -3237,6 +3237,7 @@ function showInlineStudyContentEditor(section, item) {
   const layout = detail.querySelector(".knowledge-entry-layout");
   const content = layout?.querySelector(".knowledge-entry-content");
   if (!layout || !content || layout.classList.contains("is-direct-editing")) return;
+  const abstract = content.querySelector(".knowledge-abstract");
 
   const labels = {
     text: "Text",
@@ -3302,9 +3303,9 @@ function showInlineStudyContentEditor(section, item) {
       element.draggable = true;
       if (block.editorId === editingBlockId) element.classList.add("is-editing");
 
-      const controls = createElement("div", "knowledge-direct-block-controls");
       const handle = createElement("span", "knowledge-direct-handle", "⋮⋮");
       handle.title = "Drag to reorder";
+      const controls = createElement("div", "knowledge-direct-block-controls");
       const edit = createElement("button", "knowledge-direct-control", "✎");
       edit.type = "button";
       edit.title = `Edit ${labels[block.type]}`;
@@ -3326,8 +3327,8 @@ function showInlineStudyContentEditor(section, item) {
         if (editingBlockId === block.editorId) editingBlockId = "";
         renderBlocks();
       });
-      controls.append(handle, edit, remove);
-      element.prepend(controls);
+      controls.append(edit, remove);
+      element.prepend(handle, controls);
 
       if (block.editorId === editingBlockId) {
         const fields = createElement("div", "knowledge-direct-fields");
@@ -3358,7 +3359,9 @@ function showInlineStudyContentEditor(section, item) {
         body.setAttribute("aria-label", block.type === "equation" ? "Equation in LaTeX" : "Block content");
         body.addEventListener("input", () => { block.body = body.value; });
         fields.append(typeSelect, title, body);
-        [...element.children].filter((child) => child !== controls).forEach((child) => child.remove());
+        [...element.children]
+          .filter((child) => child !== handle && child !== controls)
+          .forEach((child) => child.remove());
         element.append(fields);
       }
 
@@ -3429,7 +3432,9 @@ function showInlineStudyContentEditor(section, item) {
   });
 
   layout.classList.add("is-direct-editing");
-  content.replaceChildren(toolbar, canvas);
+  content.replaceChildren(toolbar);
+  if (abstract) content.append(abstract);
+  content.append(canvas);
   renderBlocks();
   toolbar.scrollIntoView({ block: "nearest" });
 }

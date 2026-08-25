@@ -93,8 +93,10 @@ test("Study editing turns the reading surface into the editor instead of opening
   assert.match(controller, /section\.type !== "study"[\s\S]*openItemDialog/);
   assert.match(controller, /function showInlineStudyContentEditor\(section, item\)/);
   assert.match(controller, /querySelector\("\.knowledge-entry-content"\)/);
+  assert.match(controller, /const abstract = content\.querySelector\("\.knowledge-abstract"\)/);
   assert.match(controller, /layout\.classList\.add\("is-direct-editing"\)/);
-  assert.match(controller, /content\.replaceChildren\(toolbar, canvas\)/);
+  assert.match(controller, /if \(abstract\) content\.append\(abstract\)/);
+  assert.match(controller, /content\.append\(canvas\)/);
   assert.match(controller, /updateItem\(section\.id, item\.id, \{ content: serializeKnowledgeContent\(blocks\) \}\)/);
   assert.doesNotMatch(controller, /createElement\("form", "inline-content-editor"\)/);
 });
@@ -109,6 +111,8 @@ test("Study block types drag directly into the reading surface with inline contr
   assert.match(directEditor, /createKnowledgeBlock\(block, definitions\)/);
   assert.match(directEditor, /knowledge-direct-control", "✎"/);
   assert.match(directEditor, /knowledge-direct-control", "×"/);
+  assert.match(directEditor, /controls\.append\(edit, remove\)/);
+  assert.match(directEditor, /element\.prepend\(handle, controls\)/);
   assert.match(directEditor, /moveOrInsertBlock/);
 });
 
