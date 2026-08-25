@@ -3234,34 +3234,204 @@ function openItemEditor(section, item) {
 function showInlineStudyContentEditor(section, item) {
   const detail = appMain.querySelector(".entry-detail");
   if (!detail) return;
-  detail.querySelector(".inline-content-editor")?.remove();
+  const layout = detail.querySelector(".knowledge-entry-layout");
+  const content = layout?.querySelector(".knowledge-entry-content");
+  if (!layout || !content || layout.classList.contains("is-direct-editing")) return;
 
-  const form = createElement("form", "inline-content-editor");
-  const heading = createElement("div", "inline-content-editor-heading");
-  heading.append(
-    createElement("h2", "", "Edit content"),
-    createElement("span", "card-kicker", item.title),
-  );
-  const builder = createRichContentField(item.content ?? "");
-  const actions = createElement("div", "inline-content-editor-actions");
-  const cancel = createElement("button", "button button-quiet", "Cancel");
+  const labels = {
+    text: "Text",
+    section: "Section",
+    subsection: "Subsection",
+    image: "Image",
+    diagram: "Diagram",
+    interactable: "Interactable",
+    video: "Video",
+    equation: "Equation",
+  };
+  const definitions = parseDefinitionLines(item.definitions);
+  const blocks = parseKnowledgeContent(item.content).map((block) => ({ ...block, editorId: createId() }));
+  const toolbar = createElement("div", "knowledge-direct-toolbar");
+  const tools = createElement("div", "knowledge-direct-tools");
+  const actions = createElement("div", "knowledge-direct-actions");
+  const canvas = createElement("div", "knowledge-direct-canvas");
+  let editingBlockId = "";
+  let draggedBlockId = "";
+  let draggedNewType = "";
+
+  const createNewBlock = (type) => ({
+    editorId: createId(),
+    id: "",
+    type,
+    title: type === "text" ? "" : `New ${labels[type].toLocaleLowerCase()}`,
+    body: "",
+  });
+
+  const addBlock = (type, index = blocks.length) => {
+    const block = createNewBlock(type);
+    blocks.splice(index, 0, block);
+    editingBlockId = block.editorId;
+    renderBlocks();
+    queueMicrotask(() => canvas.querySelector(`[data-editor-block-id="${block.editorId}"] input`)?.select());
+  };
+
+  const moveOrInsertBlock = (targetBlock, insertAfter) => {
+    const targetIndex = targetBlock
+      ? blocks.findIndex(({ editorId }) => editorId === targetBlock.editorId)
+      : blocks.length;
+    if (draggedNewType) {
+      addBlock(draggedNewType, Math.max(0, targetIndex + (insertAfter ? 1 : 0)));
+      return;
+    }
+    const fromIndex = blocks.findIndex(({ editorId }) => editorId === draggedBlockId);
+    if (fromIndex < 0 || (targetBlock && fromIndex === targetIndex)) return;
+    const [moved] = blocks.splice(fromIndex, 1);
+    const adjustedTarget = targetBlock
+      ? blocks.findIndex(({ editorId }) => editorId === targetBlock.editorId)
+      : blocks.length;
+    blocks.splice(Math.max(0, adjustedTarget + (targetBlock && insertAfter ? 1 : 0)), 0, moved);
+    renderBlocks();
+  };
+
+  function renderBlocks() {
+    canvas.replaceChildren();
+    if (!blocks.length) canvas.append(createElement("p", "knowledge-direct-empty", "Drag a content type here."));
+    blocks.forEach((block) => {
+      const element = createKnowledgeBlock(block, definitions);
+      element.classList.add("knowledge-direct-block");
+      element.dataset.editorBlockId = block.editorId;
+      element.draggable = true;
+      if (block.editorId === editingBlockId) element.classList.add("is-editing");
+
+      const controls = createElement("div", "knowledge-direct-block-controls");
+      const handle = createElement("span", "knowledge-direct-handle", "⋮⋮");
+      handle.title = "Drag to reorder";
+      const edit = createElement("button", "knowledge-direct-control", "✎");
+      edit.type = "button";
+      edit.title = `Edit ${labels[block.type]}`;
+      edit.setAttribute("aria-label", edit.title);
+      edit.addEventListener("click", () => {
+        editingBlockId = editingBlockId === block.editorId ? "" : block.editorId;
+        renderBlocks();
+        if (editingBlockId) {
+          queueMicrotask(() => canvas.querySelector(`[data-editor-block-id="${block.editorId}"] input`)?.focus());
+        }
+      });
+      const remove = createElement("button", "knowledge-direct-control", "×");
+      remove.type = "button";
+      remove.title = `Delete ${labels[block.type]}`;
+      remove.setAttribute("aria-label", remove.title);
+      remove.addEventListener("click", () => {
+        const index = blocks.findIndex(({ editorId }) => editorId === block.editorId);
+        if (index >= 0) blocks.splice(index, 1);
+        if (editingBlockId === block.editorId) editingBlockId = "";
+        renderBlocks();
+      });
+      controls.append(handle, edit, remove);
+      element.prepend(controls);
+
+      if (block.editorId === editingBlockId) {
+        const fields = createElement("div", "knowledge-direct-fields");
+        const typeSelect = document.createElement("select");
+        typeSelect.setAttribute("aria-label", "Block type");
+        Object.entries(labels).forEach(([type, label]) => {
+          const option = document.createElement("option");
+          option.value = type;
+          option.textContent = label;
+          option.selected = type === block.type;
+          typeSelect.append(option);
+        });
+        typeSelect.addEventListener("change", () => {
+          block.type = typeSelect.value;
+          renderBlocks();
+        });
+        const title = document.createElement("input");
+        title.className = "knowledge-direct-title-input";
+        title.value = block.title;
+        title.placeholder = block.type === "text" ? "Optional title" : labels[block.type];
+        title.setAttribute("aria-label", "Block title");
+        title.addEventListener("input", () => { block.title = title.value; });
+        const body = document.createElement("textarea");
+        body.className = "knowledge-direct-body-input";
+        body.rows = ["section", "subsection", "text"].includes(block.type) ? 6 : 3;
+        body.value = block.body;
+        body.placeholder = block.type === "diagram" ? "Part A > Part B > Result" : "";
+        body.setAttribute("aria-label", block.type === "equation" ? "Equation in LaTeX" : "Block content");
+        body.addEventListener("input", () => { block.body = body.value; });
+        fields.append(typeSelect, title, body);
+        [...element.children].filter((child) => child !== controls).forEach((child) => child.remove());
+        element.append(fields);
+      }
+
+      element.addEventListener("dragstart", (event) => {
+        draggedBlockId = block.editorId;
+        draggedNewType = "";
+        element.classList.add("is-dragging");
+        event.dataTransfer?.setData("text/plain", block.editorId);
+      });
+      element.addEventListener("dragend", () => {
+        draggedBlockId = "";
+        element.classList.remove("is-dragging");
+      });
+      element.addEventListener("dragover", (event) => {
+        if ((!draggedBlockId && !draggedNewType) || draggedBlockId === block.editorId) return;
+        event.preventDefault();
+        element.classList.add("is-drop-target");
+      });
+      element.addEventListener("dragleave", () => element.classList.remove("is-drop-target"));
+      element.addEventListener("drop", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const insertAfter = event.clientY > element.getBoundingClientRect().top + element.offsetHeight / 2;
+        moveOrInsertBlock(block, insertAfter);
+        draggedBlockId = "";
+        draggedNewType = "";
+      });
+      canvas.append(element);
+    });
+    renderKnowledgeMath(canvas);
+  }
+
+  Object.entries(labels).forEach(([type, label]) => {
+    const tool = createElement("button", "knowledge-direct-tool", `+ ${label}`);
+    tool.type = "button";
+    tool.draggable = true;
+    tool.addEventListener("click", () => addBlock(type));
+    tool.addEventListener("dragstart", (event) => {
+      draggedNewType = type;
+      draggedBlockId = "";
+      event.dataTransfer?.setData("text/plain", `new:${type}`);
+    });
+    tool.addEventListener("dragend", () => { draggedNewType = ""; });
+    tools.append(tool);
+  });
+
+  const cancel = createElement("button", "button button-quiet button-small", "Cancel");
   cancel.type = "button";
-  cancel.addEventListener("click", () => form.remove());
-  const save = createElement("button", "button button-primary", "Save changes");
-  save.type = "submit";
-  actions.append(cancel, save);
-  form.append(heading, builder, actions);
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const content = String(new FormData(form).get("content") ?? "").trim();
-    updateItem(section.id, item.id, { content });
+  cancel.addEventListener("click", () => renderWorkspace());
+  const save = createElement("button", "button button-primary button-small", "Save");
+  save.type = "button";
+  save.addEventListener("click", () => {
+    updateItem(section.id, item.id, { content: serializeKnowledgeContent(blocks) });
     renderWorkspace();
     showToast("Study content updated.");
   });
-  const body = detail.querySelector(".entry-detail-content");
-  detail.insertBefore(form, body);
-  form.querySelector(".rich-content-add")?.focus();
-  form.scrollIntoView({ block: "nearest" });
+  actions.append(cancel, save);
+  toolbar.append(tools, actions);
+  canvas.addEventListener("dragover", (event) => {
+    if (draggedBlockId || draggedNewType) event.preventDefault();
+  });
+  canvas.addEventListener("drop", (event) => {
+    if (event.target.closest(".knowledge-direct-block")) return;
+    event.preventDefault();
+    moveOrInsertBlock(null, false);
+    draggedBlockId = "";
+    draggedNewType = "";
+  });
+
+  layout.classList.add("is-direct-editing");
+  content.replaceChildren(toolbar, canvas);
+  renderBlocks();
+  toolbar.scrollIntoView({ block: "nearest" });
 }
 
 function createRichContentField(value) {

@@ -88,13 +88,28 @@ test("Study equations use the local KaTeX bundle instead of raw CDN-dependent so
   assert.doesNotMatch(controller, /cdn\.jsdelivr\.net\/npm\/katex/);
 });
 
-test("Study editing reveals an inline content builder instead of the item dialog", () => {
+test("Study editing turns the reading surface into the editor instead of opening a builder", () => {
   assert.match(controller, /function openItemEditor\(section, item\)/);
   assert.match(controller, /section\.type !== "study"[\s\S]*openItemDialog/);
   assert.match(controller, /function showInlineStudyContentEditor\(section, item\)/);
-  assert.match(controller, /createElement\("form", "inline-content-editor"\)/);
-  assert.match(controller, /createRichContentField\(item\.content \?\? ""\)/);
-  assert.match(controller, /updateItem\(section\.id, item\.id, \{ content \}\)/);
+  assert.match(controller, /querySelector\("\.knowledge-entry-content"\)/);
+  assert.match(controller, /layout\.classList\.add\("is-direct-editing"\)/);
+  assert.match(controller, /content\.replaceChildren\(toolbar, canvas\)/);
+  assert.match(controller, /updateItem\(section\.id, item\.id, \{ content: serializeKnowledgeContent\(blocks\) \}\)/);
+  assert.doesNotMatch(controller, /createElement\("form", "inline-content-editor"\)/);
+});
+
+test("Study block types drag directly into the reading surface with inline controls", () => {
+  const directEditor = controller.match(
+    /function showInlineStudyContentEditor\(section, item\) \{([\s\S]*?)\n\}\n\nfunction createRichContentField/,
+  )?.[1] ?? "";
+
+  assert.match(directEditor, /tool\.draggable = true/);
+  assert.match(directEditor, /knowledge-direct-canvas/);
+  assert.match(directEditor, /createKnowledgeBlock\(block, definitions\)/);
+  assert.match(directEditor, /knowledge-direct-control", "✎"/);
+  assert.match(directEditor, /knowledge-direct-control", "×"/);
+  assert.match(directEditor, /moveOrInsertBlock/);
 });
 
 test("the content builder edits draggable blocks instead of exposing its storage syntax", () => {
