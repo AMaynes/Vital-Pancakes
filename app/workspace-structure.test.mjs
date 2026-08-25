@@ -143,6 +143,7 @@ test("Study block types drag directly into the reading surface with inline contr
   assert.match(directEditor, /picker\.accept = `\$\{block\.type\}\/\*`/);
   assert.match(directEditor, /event\.clipboardData\?\.items/);
   assert.match(directEditor, /saveKnowledgeMedia\(file\)/);
+  assert.match(directEditor, /type === "section"\s*\? \[block, createNewBlock\("text"\)\]/);
 });
 
 test("direct Study editing keeps fields visually embedded in the reading surface", () => {
@@ -170,6 +171,7 @@ test("the content builder edits draggable blocks instead of exposing its storage
   assert.match(builder, /addEventListener\("drop"/);
   assert.match(builder, /rich-content-block-action", "✎"/);
   assert.match(builder, /rich-content-block-action", "×"/);
+  assert.match(builder, /type === "section"[\s\S]*type: "text"/);
   assert.doesNotMatch(builder, /document\.createElement\("select"\)|Block type|typeSelect/);
   assert.doesNotMatch(builder, /textarea\.rows = 14|setRangeText|::section Overview/);
 });

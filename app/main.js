@@ -3338,9 +3338,12 @@ function showInlineStudyContentEditor(section, item) {
 
   const addBlock = (type, index = blocks.length) => {
     const block = createNewBlock(type);
+    const insertedBlocks = type === "section"
+      ? [block, createNewBlock("text")]
+      : [block];
     const insertionIndex = Math.max(0, Math.min(index, blocks.length));
     const candidateBlocks = [...blocks];
-    candidateBlocks.splice(insertionIndex, 0, block);
+    candidateBlocks.splice(insertionIndex, 0, ...insertedBlocks);
     if (!acceptSubsectionPlacement(candidateBlocks, insertionIndex)) return;
     blocks.splice(0, blocks.length, ...candidateBlocks);
     editingBlockId = block.editorId;
@@ -3794,7 +3797,16 @@ function createRichContentField(value) {
         title: type === "text" ? "" : `New ${label.toLocaleLowerCase()}`,
         body: "",
       };
-      blocks.push(block);
+      const insertedBlocks = type === "section"
+        ? [block, {
+          editorId: createId(),
+          id: "",
+          type: "text",
+          title: "",
+          body: "",
+        }]
+        : [block];
+      blocks.push(...insertedBlocks);
       editingBlockId = block.editorId;
       syncContent();
       renderBlocks();
