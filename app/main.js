@@ -45,11 +45,12 @@ import {
   buildProjectMapTree,
   hasValidKnowledgeHierarchy,
   normalizeFolderPath,
+  normalizeKnowledgeHeaderBlocks,
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
   serializeKnowledgeContent,
-} from "./knowledge-entry-model.mjs?v=5";
+} from "./knowledge-entry-model.mjs?v=6";
 import { listGlossaryEntries, saveGlossaryEntry } from "./knowledge-db.mjs";
 
 const appMain = document.querySelector("#app-main");
@@ -2168,7 +2169,7 @@ function createKnowledgeEntryLayout(section, item, options = {}) {
   const layout = createElement("div", "knowledge-entry-layout");
   const sidebar = createElement("aside", "knowledge-entry-sidebar");
   const definitions = parseDefinitionLines(item.definitions);
-  const blocks = parseKnowledgeContent(item.content);
+  const blocks = normalizeKnowledgeHeaderBlocks(parseKnowledgeContent(item.content));
   const outline = item.format === "lesson"
     ? (item.lesson?.sections ?? []).map((lessonSection, index) => ({
       id: `lesson-section-${index + 1}`,
@@ -2286,12 +2287,10 @@ function createKnowledgeBlock(block, definitions) {
   element.id = block.id;
   if (block.type === "section") {
     element.append(createElement("h2", "", block.title || "Section"));
-    appendDefinitionAwareText(element, block.body, definitions);
     return element;
   }
   if (block.type === "subsection") {
     element.append(createElement("h3", "", block.title || "Subsection"));
-    appendDefinitionAwareText(element, block.body, definitions);
     return element;
   }
   if (block.type === "text") {
@@ -3253,7 +3252,8 @@ function showInlineStudyContentEditor(section, item) {
     equation: "Equation",
   };
   const definitions = parseDefinitionLines(item.definitions);
-  const blocks = parseKnowledgeContent(item.content).map((block) => ({ ...block, editorId: createId() }));
+  const blocks = normalizeKnowledgeHeaderBlocks(parseKnowledgeContent(item.content))
+    .map((block) => ({ ...block, editorId: createId() }));
   const toolbar = createElement("div", "knowledge-direct-toolbar");
   const tools = createElement("div", "knowledge-direct-tools");
   const actions = createElement("div", "knowledge-direct-actions");
@@ -3351,9 +3351,11 @@ function showInlineStudyContentEditor(section, item) {
 
       if (block.editorId === editingBlockId) {
         const fields = createElement("div", "knowledge-direct-fields");
+        const isHeading = ["section", "subsection"].includes(block.type);
+        if (isHeading) fields.classList.add("is-heading-only");
         const typeSelect = document.createElement("select");
         typeSelect.setAttribute("aria-label", "Block type");
-        Object.entries(labels).forEach(([type, label]) => {
+        Object.entries(labels).filter(([type]) => !["section", "subsection"].includes(type)).forEach(([type, label]) => {
           const option = document.createElement("option");
           option.value = type;
           option.textContent = label;
@@ -3372,7 +3374,7 @@ function showInlineStudyContentEditor(section, item) {
           renderBlocks();
         });
         const title = document.createElement("input");
-        title.className = "knowledge-direct-title-input";
+        title.className = `knowledge-direct-title-input${isHeading ? ` is-${block.type}` : ""}`;
         title.value = block.title;
         title.placeholder = block.type === "text" ? "Optional title" : labels[block.type];
         title.setAttribute("aria-label", "Block title");
@@ -3384,7 +3386,8 @@ function showInlineStudyContentEditor(section, item) {
         body.placeholder = block.type === "diagram" ? "Part A > Part B > Result" : "";
         body.setAttribute("aria-label", block.type === "equation" ? "Equation in LaTeX" : "Block content");
         body.addEventListener("input", () => { block.body = body.value; });
-        fields.append(typeSelect, title, body);
+        if (isHeading) fields.append(title);
+        else fields.append(typeSelect, title, body);
         [...element.children]
           .filter((child) => child !== handle && child !== controls)
           .forEach((child) => child.remove());
@@ -3480,7 +3483,7 @@ function createRichContentField(value) {
     video: "Video",
     equation: "Equation",
   };
-  const blocks = parseKnowledgeContent(value).map((block) => ({
+  const blocks = normalizeKnowledgeHeaderBlocks(parseKnowledgeContent(value)).map((block) => ({
     ...block,
     editorId: createId(),
   }));
@@ -3559,10 +3562,12 @@ function createRichContentField(value) {
 
       if (block.editorId === editingBlockId) {
         const fields = createElement("div", "rich-content-block-fields");
+        const isHeading = ["section", "subsection"].includes(block.type);
+        if (isHeading) fields.classList.add("is-heading-only");
         const typeLabel = createElement("label", "rich-content-block-type");
         typeLabel.append(document.createTextNode("Block type"));
         const typeSelect = document.createElement("select");
-        Object.entries(labels).forEach(([type, label]) => {
+        Object.entries(labels).filter(([type]) => !["section", "subsection"].includes(type)).forEach(([type, label]) => {
           const option = document.createElement("option");
           option.value = type;
           option.textContent = label;
@@ -3607,7 +3612,8 @@ function createRichContentField(value) {
           populatePreview(preview, block);
         });
         bodyLabel.append(bodyInput);
-        fields.append(typeLabel, titleLabel, bodyLabel);
+        if (isHeading) fields.append(titleLabel);
+        else fields.append(typeLabel, titleLabel, bodyLabel);
         row.append(fields);
       }
 

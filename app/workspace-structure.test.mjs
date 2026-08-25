@@ -127,6 +127,8 @@ test("Study block types drag directly into the reading surface with inline contr
   assert.match(directEditor, /moveOrInsertBlock/);
   assert.match(directEditor, /hasValidKnowledgeHierarchy\(candidateBlocks\)/);
   assert.match(directEditor, /A subsection must have a section before it/);
+  assert.match(directEditor, /const isHeading = \["section", "subsection"\]\.includes\(block\.type\)/);
+  assert.match(directEditor, /if \(isHeading\) fields\.append\(title\)/);
 });
 
 test("the content builder edits draggable blocks instead of exposing its storage syntax", () => {

@@ -8,6 +8,7 @@ import {
   groupEntriesByFolder,
   hasValidKnowledgeHierarchy,
   normalizeFolderCatalog,
+  normalizeKnowledgeHeaderBlocks,
   parseDefinitionLines,
   parseKnowledgeContent,
   parseNotecardLinks,
@@ -54,6 +55,17 @@ test("subsections require an earlier section", () => {
     { type: "section" },
   ]), false);
   assert.equal(hasValidKnowledgeHierarchy([{ type: "subsection" }]), false);
+});
+
+test("section bodies become separate text blocks while headings stay header-only", () => {
+  assert.deepEqual(normalizeKnowledgeHeaderBlocks([
+    { id: "overview", type: "section", title: "Overview", body: "Existing paragraph" },
+    { id: "details", type: "subsection", title: "Details", body: "" },
+  ]), [
+    { id: "overview", type: "section", title: "Overview", body: "" },
+    { id: "", type: "text", title: "", body: "Existing paragraph" },
+    { id: "details", type: "subsection", title: "Details", body: "" },
+  ]);
 });
 
 test("definitions and notecard links parse bounded pipe rows", () => {

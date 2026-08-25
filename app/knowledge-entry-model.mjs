@@ -92,6 +92,22 @@ export function hasValidKnowledgeHierarchy(blocks) {
   return true;
 }
 
+/**
+ * Section and subsection blocks are headings only. Older heading bodies become
+ * ordinary text immediately after their heading so no saved writing is lost.
+ */
+export function normalizeKnowledgeHeaderBlocks(blocks) {
+  return (Array.isArray(blocks) ? blocks : []).flatMap((block) => {
+    if (!["section", "subsection"].includes(block?.type) || !String(block.body ?? "").trim()) {
+      return [{ ...block }];
+    }
+    return [
+      { ...block, body: "" },
+      { id: "", type: "text", title: "", body: String(block.body).trim() },
+    ];
+  });
+}
+
 export function buildKnowledgeOutline(source) {
   return parseKnowledgeContent(source)
     .filter((block) => ["section", "subsection"].includes(block.type) && block.title)
