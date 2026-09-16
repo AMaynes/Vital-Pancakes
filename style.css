@@ -851,6 +851,12 @@ main > section:has(> .tab-nav) > .tab-content {
   }
 }
 
+.knowledge-wip-list { margin: 0; }
+.knowledge-wip-list > div { padding: 16px 0; border-top: 1px solid currentColor; }
+.knowledge-wip-list dt { font-weight: 700; }
+.knowledge-wip-list dd { margin: 6px 0 0; max-width: 80ch; line-height: 1.6; }
+.knowledge-wip-label { margin-left: 8px; font: 600 11px sans-serif; }
+
 .knowledge-center {
   margin: 1.5rem calc(50% - 50vw) 0;
   border-top: 1px solid var(--border-strong);

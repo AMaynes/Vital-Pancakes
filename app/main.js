@@ -54,8 +54,6 @@ import {
 } from "./knowledge-entry-model.mjs?v=8";
 import {
   getKnowledgeMedia,
-  listGlossaryEntries,
-  saveGlossaryEntry,
   saveKnowledgeMedia,
 } from "./knowledge-db.mjs?v=2";
 
@@ -2217,7 +2215,7 @@ function createKnowledgeEntryLayout(section, item, options = {}) {
       definitionList.append(button);
     });
   } else {
-    definitionList.append(createElement("p", "knowledge-sidebar-empty", "Definitions saved here also appear in the main glossary."));
+    definitionList.append(createElement("p", "knowledge-sidebar-empty", "Definitions are saved with this entry. The central glossary is WIP."));
   }
   definitionPanel.append(definitionList);
 
@@ -4413,66 +4411,21 @@ document.querySelectorAll("[data-folder-dialog-close]").forEach((button) => {
   button.addEventListener("click", () => folderDialog.close());
 });
 
-itemForm.addEventListener("submit", async (event) => {
+itemForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const section = getSection(activeSectionId);
   if (!section) return;
   const itemInput = readItemForm(section);
   const wasEditing = Boolean(editingItemId);
-  let savedItem;
   if (editingItemId) {
-    savedItem = updateItem(section.id, editingItemId, itemInput);
+    updateItem(section.id, editingItemId, itemInput);
   } else {
-    savedItem = addItem(section.id, itemInput);
+    addItem(section.id, itemInput);
   }
-  const glossaryResult = await syncEntryDefinitions(section, savedItem);
   itemDialog.close();
   renderWorkspace();
-  showToast(glossaryResult
-    ? `${wasEditing ? "Entry updated" : "Entry added"}; ${glossaryResult} definition${glossaryResult === 1 ? "" : "s"} synced to the glossary.`
-    : (wasEditing ? "Entry updated." : "Entry added."));
+  showToast(wasEditing ? "Entry updated." : "Entry added.");
 });
-
-async function syncEntryDefinitions(section, item, options = {}) {
-  const definitions = parseDefinitionLines(item?.definitions);
-  if (!definitions.length) return 0;
-  try {
-    const glossary = await listGlossaryEntries();
-    let savedCount = 0;
-    for (const definition of definitions) {
-      const existing = glossary.find((entry) => entry.term.toLocaleLowerCase() === definition.term.toLocaleLowerCase());
-      const linked = findStudyRecord(definition.linkedStudyId);
-      const link = linked
-        ? `workspace.html${buildContentHash(linked.sectionId, linked.id)}`
-        : `workspace.html${buildContentHash(section.id, item.id)}`;
-      const saved = await saveGlossaryEntry({
-        ...existing,
-        id: existing?.id,
-        term: definition.term,
-        definition: definition.definition,
-        links: [...new Set([...(existing?.links ?? []), link])],
-        tags: [...new Set([...(existing?.tags ?? []), "study definition"])],
-        createdAt: existing?.createdAt,
-      });
-      glossary.push(saved);
-      savedCount += 1;
-    }
-    return savedCount;
-  } catch (error) {
-    console.warn("Study definitions could not be synchronized to the glossary.", error);
-    if (!options.quiet) showToast("Entry saved; one or more glossary definitions need review.");
-    return 0;
-  }
-}
-
-async function syncAllWorkspaceDefinitions(workspace = getWorkspace()) {
-  const sections = workspace.sections.filter((section) => ["study", "idea", "cooking-guide"].includes(section.type));
-  for (const section of sections) {
-    for (const item of section.items) {
-      if (item.definitions) await syncEntryDefinitions(section, item, { quiet: true });
-    }
-  }
-}
 
 document.querySelectorAll("[data-dialog-close]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog")?.close());
@@ -4480,13 +4433,11 @@ document.querySelectorAll("[data-dialog-close]").forEach((button) => {
 window.addEventListener("hashchange", renderWorkspace);
 
 renderWorkspace();
-syncAllWorkspaceDefinitions().catch((error) => console.warn("Glossary synchronization was not completed.", error));
 
 installAiPageHost(createWorkspaceAiAdapter({
   readWorkspace: getWorkspace,
   commitWorkspace: (workspace) => {
     saveWorkspace(workspace);
-    syncAllWorkspaceDefinitions(workspace).catch((error) => console.warn("Glossary synchronization was not completed.", error));
     window.requestAnimationFrame(renderWorkspace);
   },
   createId,

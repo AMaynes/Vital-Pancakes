@@ -71,14 +71,15 @@ test("tool identifiers are unique and planned contracts are never advertised as 
   });
 });
 
-test("AI routing stays backend-only and inference belongs to Knowledge Home", () => {
+test("AI routing stays backend-only and Knowledge Center is WIP", () => {
   const mainSource = readFileSync(resolve(repositoryRoot, "app/main.js"), "utf8");
   const homeSource = readFileSync(resolve(repositoryRoot, "index.html"), "utf8");
   assert.equal(AI_TOOL_CATALOG.some((tool) => tool.id === "ai-command-center"), false);
   assert.equal(AI_TOOL_CATALOG.some((tool) => tool.id === "inference"), false);
   assert.doesNotMatch(mainSource, /AI Command Center|Inference Tool/);
-  assert.match(homeSource, /id="knowledge-inference-open"/);
-  assert.match(homeSource, /id="knowledge-inference-dialog"/);
+  assert.match(homeSource, /id="knowledge-wip-title"/);
+  assert.equal(CURRENT_AI_TOOLS.some((tool) => tool.id === "knowledge-home"), false);
+  assert.doesNotMatch(homeSource, /id="knowledge-inference-(open|dialog)"/);
 });
 
 test("glossary is a Knowledge Center function instead of global navigation", () => {
@@ -86,10 +87,10 @@ test("glossary is a Knowledge Center function instead of global navigation", () 
   const homeSource = readFileSync(resolve(repositoryRoot, "index.html"), "utf8");
   const homeControllerSource = readFileSync(resolve(repositoryRoot, "app/home-knowledge.js"), "utf8");
   assert.doesNotMatch(navigationSource, /install(?:Global|Knowledge)Glossary/);
-  assert.match(homeSource, /id="knowledge-glossary-open"/);
-  assert.match(homeSource, /aria-controls="knowledge-glossary-dialog"/);
+  assert.match(homeSource, /Glossary <span class="knowledge-wip-label">WIP/);
+  assert.doesNotMatch(homeSource, /id="knowledge-glossary-open"/);
   assert.doesNotMatch(homeSource, /id="homepage-glossary-/);
-  assert.match(homeControllerSource, /installKnowledgeGlossary\s*\(/);
+  assert.doesNotMatch(homeControllerSource, /installKnowledgeGlossary\s*\(/);
 });
 
 test("durable repository instructions require AI adapter maintenance", () => {

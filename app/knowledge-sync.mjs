@@ -3,11 +3,6 @@
  */
 
 import {
-  listGlossaryEntries,
-  replaceKnowledgeIndex,
-} from "./knowledge-db.mjs";
-import {
-  buildAutomaticKnowledgeLinks,
   collectIndexableText,
   extractRecordReferences,
   normalizeKnowledgeDocument,
@@ -16,49 +11,11 @@ import {
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const LOCAL_TOOLS_DATABASE = "vital-pancakes-local-tools";
 const MASTER_LESSON_DATABASE = "vital-pancakes-master-lessons";
-let activeSync = null;
-let scheduledSync = null;
+// WIP: entry points remain inert for older callers.
+export function scheduleKnowledgeSync() {}
 
-export function scheduleKnowledgeSync(options = {}) {
-  if (scheduledSync) return;
-  const run = () => {
-    scheduledSync = null;
-    syncKnowledgeIndex(options).catch((error) => {
-      console.warn("Vital Pancakes knowledge indexing was not completed.", error);
-    });
-  };
-  scheduledSync = globalThis.requestIdleCallback
-    ? requestIdleCallback(run, { timeout: 4_000 })
-    : setTimeout(run, 750);
-}
-
-export function syncKnowledgeIndex(options = {}) {
-  if (activeSync) return activeSync;
-  activeSync = performSync(options).finally(() => {
-    activeSync = null;
-  });
-  return activeSync;
-}
-
-async function performSync(options) {
-  const warnings = [];
-  const documents = [];
-  documents.push(...readWorkspaceDocuments(options.localStorageRef));
-  documents.push(...readOtherLocalStorageDocuments(options.localStorageRef));
-  try {
-    documents.push(...await readLocalToolDocuments(options));
-  } catch (error) {
-    warnings.push(`Local tools: ${error.message}`);
-  }
-  try {
-    documents.push(...await readMasterLessonDocuments(options.indexedDBRef));
-  } catch (error) {
-    warnings.push(`Master Lesson Builder: ${error.message}`);
-  }
-  const glossary = await listGlossaryEntries();
-  const normalized = deduplicateDocuments(documents);
-  const links = buildAutomaticKnowledgeLinks(normalized, glossary);
-  return replaceKnowledgeIndex(normalized, links, { warnings });
+export function syncKnowledgeIndex() {
+  return Promise.resolve({ status: "WIP", available: false });
 }
 
 export function readWorkspaceDocuments(storage = globalThis.localStorage) {
