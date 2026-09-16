@@ -402,6 +402,18 @@ main {
   font-weight: 700;
 }
 
+.contact-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.contact-block h2 { margin: 0; }
+.contact-block a { overflow-wrap: anywhere; min-width: 0; }
+
 .closing-note {
   display: grid;
   grid-template-columns: 8rem minmax(0, 0.8fr) minmax(0, 1fr);
