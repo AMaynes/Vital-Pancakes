@@ -1,5 +1,13 @@
 # Vital Pancakes
 
+## Storage and synchronization — WIP
+
+The homepage documents planned Google Drive storage, account isolation, phone/desktop local fallback, and website browser recovery. Every homepage WIP item opens its complete note. These notes are requirements, not evidence of a working cloud connection.
+
+Editable Workspace entries currently use browser localStorage. Their clickable Browser symbols disclose the origin, storage key, section, and record ID, plus the absence of confirmed cloud copies. Browser storage has no known deletion deadline. A PWA still uses browser-managed storage. Storage coverage of standalone tools, native device files, Google authorization, uploads, automatic retries, conflicts, and recovery versions remains WIP.
+
+Target behavior: native apps retain durable device copies and upload queued edits when connectivity and execution resume; the website uses Drive primarily with browser storage only as recovery fallback. Never discard the sole unsynced copy or mark a cloud upload complete before acknowledgement. No Google credentials, accounts, uploads, or external services are configured by this documentation change.
+
 [View the live website](https://amaynes.github.io/Vital-Pancakes/) · [Open the workspace](https://amaynes.github.io/Vital-Pancakes/workspace.html#area=tools) · [Download the app](https://amaynes.github.io/Vital-Pancakes/download-app.html)
 
 **Vital Pancakes**—*Pinakes Vitae*, comically renamed—is Alex Maynes's living, local-first index of knowledge. It gathers research, literature, studies, everyday-life guides, and working tools into a single enduring catalogue so that what was learned can be found and used again. The project carries forward the spirit of the lost *Pinakes* by *Callimachus*, which catalogued the works of the Library of Alexandria; this version records personally learned knowledge that Alex hopes not to lose, even as forgetting remains inevitable.

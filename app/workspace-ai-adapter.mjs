@@ -293,6 +293,7 @@ export function getWorkspaceAiCapabilities() {
   return {
     tool: "workspace",
     version: 1,
+    storage: { backend: "browser-localStorage", cloudSync: "WIP-unavailable", nativeDeviceStorage: false },
     commands: cloneJson(COMMAND_DEFINITIONS),
     sectionTypes: Object.fromEntries(
       Object.entries(SECTION_SCHEMAS).map(([sectionType, schema]) => [
@@ -375,6 +376,7 @@ export function serializeWorkspaceContext(sourceWorkspace, options = {}) {
   return {
     tool: "workspace",
     revision: calculateWorkspaceRevision(workspace),
+    storage: { backend: "browser-localStorage", key: "artificially-neuroscience-workspace-v1", cloudSync: "WIP-unavailable", nativeDeviceStorage: false },
     sectionCount: workspace.sections.length,
     itemCount: workspace.sections.reduce(
       (total, section) => total + section.items.length,

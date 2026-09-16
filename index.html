@@ -140,6 +140,36 @@ Keep the homepage concise and use deeper pages for detailed material.
       </dl>
     </section>
 
+    <section class="knowledge-center knowledge-wip" aria-labelledby="storage-wip-title">
+      <h2 id="storage-wip-title">Storage, Google Drive &amp; automatic sync — WIP</h2>
+      <p>This entire storage system is being designed. Google sign-in, cloud uploads, automatic sync, and native device storage are not available yet. Today, editable Workspace entries remain in this browser. Do not assume a cloud backup exists.</p>
+      <dl class="knowledge-wip-list">
+        <div>
+          <dt>Google account and workspace folder — WIP</dt>
+          <dd>Planned: each person signs in with their own Google account and selects or creates a Drive folder. The website and future apps manage their own entries, images, attachments, and recovery copies there. Users do not configure APIs or manually arrange files in Drive. Developer registration and authorization infrastructure still need implementation. Accounts stay separate unless sharing is explicitly added; this is not a promise of privacy from Google.</dd>
+        </div>
+        <div>
+          <dt>Phone and desktop apps: durable local fallback — WIP</dt>
+          <dd>Planned: use Google Drive when connected, with durable storage on the phone or computer when Drive or the internet is unavailable. Save edits on the device and queue them for automatic upload when connectivity returns and the app can run. Operating systems may suspend background apps; pending work must resume on reopening. A local-only workspace should remain usable without connecting Google.</dd>
+        </div>
+        <div>
+          <dt>Website: cloud first, browser fallback last — WIP</dt>
+          <dd>Planned: the website primarily reads and saves through the connected Drive workspace. Browser storage is only a recovery fallback when cloud access fails, not the durable offline workspace promised for native apps. Unsynced browser edits must be clearly marked and offered recovery when the site is reopened and connected. Never clear the only unsynced copy automatically.</dd>
+          <dd>Current behavior differs: entries are browser-only. Browser data has no known expiry date, but clearing site data, ending a private session, or browser cleanup can remove it. Installing this website as a PWA does not turn its storage into native device files.</dd>
+        </div>
+        <div>
+          <dt>Storage symbols on every entry — WIP</dt>
+          <dd>Planned: cloud, local-device, and website-cache symbols open a full location note. The note should name Google Drive and the selected folder, the phone/computer workspace when known, or the browser and website origin. Entries may have multiple copies. Show pending, synced, or failed status separately; only mark cloud-saved after a confirmed upload. Never invent a device path or deletion deadline.</dd>
+          <dd>Available now: editable Workspace entry rows, cards, and detail pages show a clickable Browser badge with the actual storage backend and record location. Coverage of individual tools and future cloud/native storage remains WIP.</dd>
+        </div>
+        <div>
+          <dt>Recovery, conflicts and free usage — WIP</dt>
+          <dd>Planned: retry interrupted transfers, preserve both versions of conflicting edits, recover deleted entries, and verify uploads before reporting success. Automatic sync is not a backup: retain separate recovery versions. Drive quota, revoked permission, and unavailable services must leave an explicit error and preserve pending edits. The design targets free service allowances; reaching a free limit may pause cloud sync. Hosting and public Google authorization still require setup and validation.</dd>
+        </div>
+      </dl>
+    </section>
+    <link rel="stylesheet" href="app/storage-notes.css?v=1">
+    <script type="module" src="app/storage-notes.js?v=1"></script>
     <section class="contact-block" aria-labelledby="contact-title">
       <h2 class="eyebrow" id="contact-title">Contact Me</h2>
       <a href="mailto:alex.maynes2001@gmail.com">alex.maynes2001@gmail.com</a>

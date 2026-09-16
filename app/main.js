@@ -16,6 +16,7 @@
  * cleared on every route render so they cannot outlive their visible cards.
  */
 
+import { createStorageIndicator } from "./storage-notes.js?v=1";
 import {
   addFolder,
   addItem,
@@ -1575,7 +1576,7 @@ function createFileTreeEntry(section, item) {
   deleteButton.title = `Delete ${item.title}`;
   deleteButton.setAttribute("aria-label", `Delete ${item.title}`);
   deleteButton.addEventListener("click", () => confirmItemDelete(section, item));
-  actions.append(editButton, deleteButton);
+  actions.append(createStorageIndicator(section, item), editButton, deleteButton);
   row.append(handle, icon, link, type, actions);
   return row;
 }
@@ -1636,7 +1637,7 @@ function renderEntryDetail(section, item) {
   const deleteButton = createElement("button", "button button-quiet", "Delete");
   deleteButton.type = "button";
   deleteButton.addEventListener("click", () => confirmItemDelete(section, item));
-  actions.append(editButton, deleteButton);
+  actions.append(createStorageIndicator(section, item), editButton, deleteButton);
   heading.append(headingCopy, actions);
 
   const lead = createElement("div", "entry-detail-lead");
@@ -1886,7 +1887,7 @@ function createEntryCard(section, item) {
   deleteButton.type = "button";
   deleteButton.title = "Delete";
   deleteButton.addEventListener("click", () => confirmItemDelete(section, item));
-  cardActions.append(editButton, deleteButton);
+  cardActions.append(createStorageIndicator(section, item), editButton, deleteButton);
   header.append(titleGroup, cardActions);
   card.append(header);
 

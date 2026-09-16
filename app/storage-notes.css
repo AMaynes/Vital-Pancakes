@@ -1,0 +1,25 @@
+.storage-indicator, .wip-note-button {
+  cursor: pointer;
+  padding: .35rem .6rem;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: .75rem;
+}
+.wip-note-button { display: block; margin-top: .6rem; }
+.storage-note-dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: 80vh;
+  overflow: auto;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #fbfaf6;
+  color: #24231f;
+  border: 1px solid #777;
+  line-height: 1.6;
+}
+.storage-note-dialog::backdrop { background: rgb(0 0 0 / 45%); }
+.storage-note-dialog p { white-space: pre-line; overflow-wrap: anywhere; }
+.storage-note-dialog button { padding: .5rem 1rem; cursor: pointer; }

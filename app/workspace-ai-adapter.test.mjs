@@ -98,6 +98,9 @@ test("Workspace context is bounded metadata and capabilities describe truthful c
   const harness = createHarness();
   const context = await harness.registry.getContext("workspace", { limit: 2 });
   const capabilities = harness.registry.getCapabilities("workspace");
+  assert.equal(context.storage.backend, "browser-localStorage");
+  assert.equal(context.storage.cloudSync, "WIP-unavailable");
+  assert.equal(capabilities.storage.nativeDeviceStorage, false);
 
   assert.equal(context.sections.length, 2);
   assert.equal(context.omittedSectionCount, 1);
