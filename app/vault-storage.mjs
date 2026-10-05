@@ -20,6 +20,7 @@ const KNOWN_DATABASES = [
   "vital-pancakes-master-lessons",
   "vital-pancakes-caption-relay",
   "vital-pancakes-knowledge",
+  "vital-pancakes-database",
 ];
 const REGENERABLE_DATABASE = /(?:webllm|mlc[-_/ ]?cache|tvmjs|transformers-cache)/i;
 
@@ -417,6 +418,9 @@ async function inspectDatabaseSchemas(indexedDBRef = globalThis.indexedDB) {
     try {
       const stores = [];
       for (const storeName of database.objectStoreNames) {
+        // Native folder permissions and Drive receipts belong to this device,
+        // not to an encrypted portable archive. Canonical state/assets remain.
+        if (name === "vital-pancakes-database" && storeName === "device") continue;
         const transaction = database.transaction(storeName, "readonly");
         const store = transaction.objectStore(storeName);
         stores.push({

@@ -16,3 +16,10 @@
 - [ ] Add optional cloud sync only when the local-first workspace needs to span multiple devices.
 - [ ] Evaluate a custom domain and privacy-preserving usage analytics after the audience and publishing cadence are established.
 - [ ] Add automated HTML, link, and JSON validation to prevent broken content paths from reaching GitHub Pages.
+
+## Personal database follow-up
+
+- Configure a Google web OAuth client ID and authorized origins, then verify Drive consent, conditional writes, and multi-device sync against a real account.
+- Build SharedVP publication, private link access, and public discovery.
+- Keep native app-store packaging separate from the static website and PWA.
+- Consider consolidating tool-specific project stores only with per-tool migrations and matching AI contracts; the Unified Vault already backs them up.

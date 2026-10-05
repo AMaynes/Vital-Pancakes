@@ -7,6 +7,8 @@ import {
   extractRecordReferences,
   normalizeKnowledgeDocument,
 } from "./knowledge-model.mjs?v=2";
+import { databaseReady, getDatabase } from "./database-store.mjs";
+import { workspaceProjection } from "./database-model.mjs";
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const LOCAL_TOOLS_DATABASE = "vital-pancakes-local-tools";
@@ -19,7 +21,7 @@ export function syncKnowledgeIndex() {
 }
 
 export function readWorkspaceDocuments(storage = globalThis.localStorage) {
-  const workspace = parseStorageJson(storage, WORKSPACE_KEY);
+  const workspace = databaseReady() && storage === globalThis.localStorage && getDatabase().migrations.workspace ? workspaceProjection(getDatabase()) : parseStorageJson(storage, WORKSPACE_KEY);
   if (!Array.isArray(workspace?.sections)) return [];
   return workspace.sections.flatMap((section) => (
     (Array.isArray(section.items) ? section.items : []).map((item, index) => createDocument({

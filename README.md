@@ -4,9 +4,9 @@
 
 The homepage documents planned Google Drive storage, account isolation, phone/desktop local fallback, and website browser recovery. Every homepage WIP item opens its complete note. These notes are requirements, not evidence of a working cloud connection.
 
-Editable Workspace entries currently use browser localStorage. Their clickable Browser symbols disclose the origin, storage key, section, and record ID, plus the absence of confirmed cloud copies. Browser storage has no known deletion deadline. A PWA still uses browser-managed storage. Storage coverage of standalone tools, native device files, Google authorization, uploads, automatic retries, conflicts, and recovery versions remains WIP.
+Editable content now uses the canonical personal database in IndexedDB. Library provides manual folder/ZIP backups, recovery copies, and selective Drive sync. Clickable Browser symbols disclose the current backend and whether a matching Drive copy has been confirmed. Browser storage has no known deletion deadline; a PWA still uses browser-managed storage. Live Drive verification requires OAuth setup. Automatic retries, native app storage, and standalone tool synchronization remain planned.
 
-Target behavior: native apps retain durable device copies and upload queued edits when connectivity and execution resume; the website uses Drive primarily with browser storage only as recovery fallback. Never discard the sole unsynced copy or mark a cloud upload complete before acknowledgement. No Google credentials, accounts, uploads, or external services are configured by this documentation change.
+Target behavior: native apps retain durable device copies and upload queued edits when connectivity and execution resume; the website uses Drive primarily with browser storage only as recovery fallback. Never discard the sole unsynced copy or mark a cloud upload complete before acknowledgement. No Google credentials or accounts are configured by default.
 
 [View the live website](https://amaynes.github.io/Vital-Pancakes/) · [Open the workspace](https://amaynes.github.io/Vital-Pancakes/workspace.html#area=tools) · [Download the app](https://amaynes.github.io/Vital-Pancakes/download-app.html)
 
@@ -26,23 +26,25 @@ Then open [http://localhost:8000](http://localhost:8000). Opening files directly
 
 ## System Overview
 
-GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` routes the editable Everyday Life, Studies & Projects, and tools-only Workspace areas. `research-literature.html` unifies the research and reading collections, and `download-app.html` provides app previews and installation guidance. `site-navigation.css` and `site-navigation.js` keep the five-section header, file-like page path, and browser-history controls consistent across every page and tool.
+GitHub Pages serves the repository as a static website. `index.html` is the public homepage, while `workspace.html` routes the editable Everyday Life, Studies & Projects, and tools-only Workspace areas. `research-literature.html` unifies the research and reading collections, and `download-app.html` provides app previews and installation guidance. `site-navigation.css` and `site-navigation.js` keep the seven-section header, file-like page path, and browser-history controls consistent across every page and tool.
 
 Repository-managed lists use small text files containing `<Entry>` blocks. `genericListLoader.js` fetches those files, parses their metadata, sorts entries alphabetically, and renders safe links.
 
-The mathematics and arts flashcard applications load subject-specific `flashcards.json` files. Quiz scores, missed-answer queues, and drafted submissions remain in the visitor's browser through `localStorage`.
+The mathematics and arts practice pages seed the central Notecards library from the existing public `flashcards.json` files. Cards have stable IDs; edits and reviews are preserved in the personal database. Subject-scoped browser keys remain as recovery caches for the existing practice views.
 
-The homepage also hosts the shared local Knowledge Center: universal text search, backlinks, related entries, an interactive relationship graph, button-driven glossary and inference functions, and the Unified Vault. The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches only the bounded homepage and Workspace startup shell; tools, PDF dependencies, and public-archive files are cached after they are used.
+The homepage describes the Knowledge Center and Unified Vault as work in progress. Library separately provides the implemented personal database, glossary, and bounded hierarchy graph. The workspace uses `app/main.js` for routes and editors and `app/store.js` for its browser-local data model. Each tool under `tools/` is a standalone workspace module. A service worker pre-caches only the bounded homepage and Workspace startup shell; tools, PDF dependencies, and public-archive files are cached after they are used.
 
 Every editable content collection shares one predictable interior structure without flattening its subject matter. The collection index can switch between a compact list and a visual grid, remembers that choice per collection, and opens each item as a dedicated page. Entry pages pair a compact subject visual and concise orientation with the complete type-specific record—for example, stove-readable recipe steps, training prescriptions, study evidence, runnable language notes, or algorithm traces.
 
 See [STRUCTURE.md](STRUCTURE.md) for the annotated repository map.
 
-## Five Top-Level Sections
+## Seven Top-Level Sections
 
+- **SharedVP** — Reserved for future public collections and private share links; personal content is not published.
 - **Everyday Life** — Study-shaped cooking methods, recipe references, condensed exercise guides, house-cleaning and self-care systems, and an Other library for random practical how-tos.
 - **Research & Literature** — My research manuscripts, selected papers, and literature reviews.
 - **Studies & Projects** — Four top-level areas: Notecards, Studies, Ideas, and Projects. Algorithms and Programming Languages live under Studies; Working Ideas and Idea Playground live under Ideas.
+- **Library** — Live knowledge graphs, standalone documents, and glossary definitions.
 - **Workspace** — An always-visible Main shelf for Overhead, Visual Board, PDF Tool, and Software Architect, followed by a collapsed Other tools grid.
 - **Download App** — Animated previews, phone screens, installation instructions, and the supported browser install action.
 
@@ -80,19 +82,15 @@ The editable areas use eleven permanent underlying libraries, grouped into the s
 
 These eleven core libraries cannot be added, renamed, or deleted. Their entries—including every starter example—remain editable and can be deleted after a standard confirmation, with no password requirement. Saved entries from the former Protocols area migrate into an optional Personal Routines library, while existing user-authored algorithms migrate into Personal Algorithms without being discarded.
 
-User-created entries, boards, caption projects, tool projects, literature curations, travel plans, and software architecture models stay in the current browser. They are not uploaded or synchronized. Clearing site data removes them, so important content should be backed up first.
+Personal entries, directories, glossary definitions, notecards, decks and saved graph views share a versioned `database.json` with binary files in `assets/`. Library provides folder and ZIP import/export; the folder picker starts in Documents. Local/cloud/both are storage preferences, inherited from directories, and Drive sync uploads only selected content after explicit connection. A completed upload is required before a synced badge appears. Configure the public OAuth client ID in `cloud-config.json` before using Google Drive. See [the database format and setup](docs/DATABASE.md).
+
+Existing Workspace tools retain their tool-specific browser storage. The personal database package covers content records and attached files; the Unified Vault remains the full-app backup for tool projects too. Repository-managed public archive files remain in GitHub. Clearing site data removes browser copies and device permissions, so keep a file backup.
 
 Existing `localStorage` namespaces retain their earlier `pinakes-vitae-*` and `artificially-neuroscience-*` identifiers. They are implementation-level compatibility keys, not public branding, and must remain unchanged unless a migration preserves previously saved user data.
 
 ## Knowledge Center and Unified Vault
 
-The homepage builds one browser-local text index across Workspace entries, Studies, generated lessons, literature annotations, algorithms, recipes, projects, and tool records. Searches return bounded snippets and source links. `[[Term]]` references and existing record IDs create automatic relationships; every entry can show backlinks and related records. The graph adds accepted manual links and review-before-accept local WebLLM suggestions without uploading records.
-
-**Analyze knowledge** opens a button-driven local inference panel directly in the Knowledge Center. It retrieves cited evidence from the existing index, runs an explicitly loaded local model, stores reviewable sessions in the Knowledge database, and can convert accepted results into Working Ideas or Studies. Existing standalone inference sessions migrate without deleting their legacy storage records.
-
-The shared glossary stores definitions, aliases, examples, links, and tags in IndexedDB. Its editor opens from the Knowledge Center’s **Glossary** button, and **Insert** writes a `[[Term]]` reference into the most recently focused text editor or copies it when no editor is active.
-
-Unified Vault exports local settings, discovered user IndexedDB schemas and records, binary values, lesson data, annotations, boards, plans, and OPFS files into one chunked `.vpvault` archive. PBKDF2-SHA-256 derives a key from the chosen password and every frame uses authenticated AES-GCM encryption. Entry names and metadata are encrypted along with content. Restore verifies the complete archive before changing storage, supports merge or replace behavior, preserves database keys and indexes, and can be cancelled. Regenerable runtime/model caches and temporary session state are excluded. The password is never stored and cannot be recovered.
+The homepage preserves the Knowledge Center and Unified Vault planning notes. Their legacy entry points remain inert while these features are under development. Library provides the active glossary, hierarchy graph, portable backups and browser recovery. The retained index, inference and encrypted archive modules are available for future integration; they are not active homepage controls.
 
 ## Workspace Tools
 

@@ -16,14 +16,31 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v127";
+const CACHE_NAME = "vital-pancakes-app-v128";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
 ]);
 const OFFLINE_ASSET_CATALOG = [
-  "./app/main.js?v=47",
-  "./app/storage-notes.js?v=1",
-  "./app/storage-notes.css?v=1",
+  "./app/main.js?v=48",
+  "./app/storage-notes.js?v=2",
+  "./app/storage-notes.css?v=2",
+  "./app/notecard-practice-ai.mjs",
+  "./app/notecard-bridge.mjs",
+  "./library.html",
+  "./sharedvp.html",
+  "./cloud-config.json",
+  "./site-navigation.js?v=20",
+  "./app/main.js?v=22",
+  "./app/store.js?v=19",
+  "./app/database.css",
+  "./app/database-model.mjs",
+  "./app/database-store.mjs",
+  "./app/database-package.mjs",
+  "./app/database-drive.mjs",
+  "./app/database-ai-adapter.mjs",
+  "./app/database-files-ai-adapter.mjs",
+  "./app/database-ui.mjs",
+
   "./",
   "./index.html",
   "./style.css?v=22",
@@ -342,6 +359,8 @@ const OFFLINE_ASSET_CATALOG = [
 ];
 
 const STARTUP_PATHS = new Set([
+  "./app/database-model.mjs",
+  "./app/database-store.mjs",
   "./",
   "./index.html",
   "./style.css",

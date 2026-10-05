@@ -1,4 +1,7 @@
 // Informational UI only: this module never uploads or modifies saved records.
+import { databaseReady, getDatabase, getDeviceValue } from "./database-store.mjs";
+import { sameRecord } from "./database-model.mjs";
+
 export function showNote(title, paragraphs) {
   const previousFocus = document.activeElement;
   const dialog = document.createElement("dialog");
@@ -33,13 +36,18 @@ export function createStorageIndicator(section, item) {
   button.textContent = "▣ Browser";
   button.title = "Show storage location";
   button.setAttribute("aria-label", `Storage location for ${item.title}: browser storage`);
-  button.addEventListener("click", (event) => {
+  button.addEventListener("click", async (event) => {
     event.stopPropagation();
+    const db = databaseReady() ? getDatabase() : null;
+    const id = `workspace:${section.id}:${item.id}`;
+    let receipt;
+    try { if (db) receipt = await getDeviceValue("drive-receipt"); } catch { /* A missing receipt never confirms a cloud copy. */ }
+    const confirmed = receipt?.datasetId === db?.datasetId && sameRecord(receipt?.database?.entries?.[id], db?.entries?.[id]) && Boolean(db?.entries?.[id]);
     showNote(`Storage: ${item.title}`, [
-      "Website caching / browser storage on this device. This entry is managed in this browser profile, not Google Drive or a native phone/computer file. An installed website (PWA) still uses browser-managed storage.",
-      `Location: ${location.origin} → localStorage → artificially-neuroscience-workspace-v1 → ${section.id} → ${item.id}. The browser manages the disk location; this page cannot report a filesystem path or device name.`,
+      "This entry has a browser copy on this device. An installed website (PWA) still uses browser-managed storage. Local file backups and selected Google Drive copies are managed through Library → Storage & backup.",
+      db ? `Location: ${location.origin} → IndexedDB → vital-pancakes-database → state → database → entries → ${id}. The browser manages the disk location.` : `Location: ${location.origin} → localStorage → artificially-neuroscience-workspace-v1 → ${section.id} → ${item.id}. The browser manages the disk location.`,
       "Browser storage usually survives closing the page. There is no known deletion date. Clearing site data, private browsing ending, or browser storage cleanup can remove it. This indicator identifies the storage backend; it is not proof that the latest write succeeded.",
-      "Cloud storage and automatic synchronization are WIP and unavailable. No cloud copy or pending upload is confirmed. Existing image/video links are references and do not mean those files have been copied into storage.",
+      confirmed ? `A matching copy was confirmed in the last completed Drive sync (${new Date(receipt.at).toLocaleString()}). This does not check subsequent remote changes.` : "No matching cloud copy is confirmed for the current entry. Drive requires OAuth setup and an explicit sync. Automatic synchronization remains planned. External image/video links remain references rather than copied attachments.",
     ]);
   });
   return button;

@@ -28,7 +28,7 @@ Practice progress and review queues are stored locally in the browser.
   <link rel="icon" href="../../assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="../../style.css?v=18" />
   <link rel="stylesheet" href="../../site-navigation.css?v=22" />
-  <script type="module" src="../../site-navigation.js?v=18"></script>
+  <script type="module" src="../../site-navigation.js?v=20"></script>
   <!-- KaTeX for LaTeX rendering -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -1527,6 +1527,13 @@ Practice progress and review queues are stored locally in the browser.
   </main>
 
   <script>
+    const canonicalCards = import('../../app/notecard-bridge.mjs');
+    function persistPractice(fields) {
+      canonicalCards.then(api => api.savePracticeState('Arts', fields)).catch(error => console.error('Card progress save failed; browser recovery retained.', error));
+    }
+    function recordCanonicalReview(card, remembered) {
+      canonicalCards.then(api => api.recordPracticeReview('Arts', card, remembered)).catch(error => console.error('Card review save failed.', error));
+    }
     // State
     let data = null;
     let activeCards = [];
@@ -1552,11 +1559,11 @@ Practice progress and review queues are stored locally in the browser.
 
     // Wrong answer tracking (cards that need to come back)
     let wrongAnswerQueue = [];
-    const WRONG_QUEUE_STORAGE_KEY = 'flashcard_wrong_queue';
+    const WRONG_QUEUE_STORAGE_KEY = 'vp-cards-arts-wrong-queue';
 
     // Local Storage Keys
-    const STORAGE_KEY = 'flashcard_pending_reviews';
-    const QUIZ_STORAGE_KEY = 'flashcard_quiz_daily_stats';
+    const STORAGE_KEY = 'vp-cards-arts-pending-reviews';
+    const QUIZ_STORAGE_KEY = 'vp-cards-arts-quiz-stats';
 
     // ========== SEEDED RANDOM NUMBER GENERATOR ==========
     // Mulberry32 - fast, good quality PRNG
@@ -2391,7 +2398,7 @@ Practice progress and review queues are stored locally in the browser.
     // Load wrong answer queue from localStorage
     function loadWrongQueue() {
       try {
-        const stored = localStorage.getItem(WRONG_QUEUE_STORAGE_KEY);
+        const stored = localStorage.getItem(WRONG_QUEUE_STORAGE_KEY) ?? localStorage.getItem('flashcard_wrong_queue');
         wrongAnswerQueue = stored ? JSON.parse(stored) : [];
       } catch (e) {
         wrongAnswerQueue = [];
@@ -2401,6 +2408,7 @@ Practice progress and review queues are stored locally in the browser.
     // Save wrong answer queue
     function saveWrongQueue() {
       localStorage.setItem(WRONG_QUEUE_STORAGE_KEY, JSON.stringify(wrongAnswerQueue));
+      persistPractice({ wrongQueue: wrongAnswerQueue });
     }
 
     // Add a card to wrong queue
@@ -2463,7 +2471,7 @@ Practice progress and review queues are stored locally in the browser.
     // Load pending reviews from localStorage
     function loadPendingReviews() {
       try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('flashcard_pending_reviews');
         pendingReviews = stored ? JSON.parse(stored) : [];
         
         // Auto-delete reviews older than 6 months
@@ -2488,6 +2496,7 @@ Practice progress and review queues are stored locally in the browser.
     // Save pending reviews to localStorage
     function savePendingReviews() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingReviews));
+      persistPractice({ pendingReviews });
       updateReviewBadge();
     }
 
@@ -2689,7 +2698,7 @@ Practice progress and review queues are stored locally in the browser.
       try {
         const response = await fetch('flashcards.json');
         if (!response.ok) throw new Error('Failed to load flashcards');
-        data = await response.json();
+        data = await (await canonicalCards).loadCanonicalSubject('Arts', await response.json());
         populateTopicDropdown();
         showTopicSelection();
       } catch (error) {
@@ -3329,6 +3338,7 @@ Practice progress and review queues are stored locally in the browser.
 
     // Mark current card as correct
     function markCorrect() {
+      recordCanonicalReview(currentCard, true);
       if (currentCard && currentCard.isGenerated) {
         removeFromWrongQueue(currentCard);
       }
@@ -3337,6 +3347,7 @@ Practice progress and review queues are stored locally in the browser.
 
     // Mark current card as incorrect - will come back
     function markIncorrect() {
+      recordCanonicalReview(currentCard, false);
       if (currentCard && currentCard.isGenerated) {
         addToWrongQueue(currentCard);
       }
@@ -3451,7 +3462,7 @@ Practice progress and review queues are stored locally in the browser.
     // Load quiz stats from localStorage
     function loadQuizStats() {
       try {
-        const stored = localStorage.getItem(QUIZ_STORAGE_KEY);
+        const stored = localStorage.getItem(QUIZ_STORAGE_KEY) ?? localStorage.getItem('flashcard_quiz_daily_stats');
         if (stored) {
           const stats = JSON.parse(stored);
           if (stats.date === getTodayString()) {
@@ -3479,6 +3490,7 @@ Practice progress and review queues are stored locally in the browser.
         streak: quizStreak
       };
       localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(stats));
+      persistPractice({ quizStats: stats });
     }
 
     // Initialize the quiz
@@ -3604,6 +3616,7 @@ Practice progress and review queues are stored locally in the browser.
 
       const selectedAnswer = quizOptions[idx];
       const isCorrect = selectedAnswer === quizCurrentCard.answer;
+      recordCanonicalReview(quizCurrentCard, isCorrect);
       const correctIdx = quizOptions.indexOf(quizCurrentCard.answer);
 
       // Disable all options and show colors
@@ -3643,11 +3656,18 @@ Practice progress and review queues are stored locally in the browser.
     }
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const progress = await (await canonicalCards).loadPracticeState('Arts');
+        if (progress?.wrongQueue) localStorage.setItem(WRONG_QUEUE_STORAGE_KEY, JSON.stringify(progress.wrongQueue));
+        if (progress?.pendingReviews) localStorage.setItem(STORAGE_KEY, JSON.stringify(progress.pendingReviews));
+        if (progress?.quizStats) localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(progress.quizStats));
+      } catch (error) { console.error('Using browser recovery for card practice.', error); }
       loadPendingReviews();
       loadWrongQueue();
       loadFlashcards();
     });
   </script>
+  <script type="module" src="../../app/notecard-practice-ai.mjs"></script>
 </body>
 </html>

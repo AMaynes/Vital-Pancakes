@@ -458,3 +458,11 @@ npm test --prefix integrations/ai-bridge
 
 The catalog and integration tests intentionally fail when a Workspace tool
 route lacks a catalog entry, adapter module, or page-host installation.
+
+## Personal database commands
+
+Library exposes `database` and `database-files` through the same page host as the existing tools. Subject practice pages use `notecards-math` / `notecards-arts` with the same card contract. Get capabilities for current schemas, examples, permissions, and limits.
+
+`directories.list/save`, `entries.get/save`, `records.delete`, `storage.set`, `relationships.save/delete`, `notecards.review`, and `graph.explore` are semantic, batchable and previewable. Content is limited to explicit page-session grants; context contains counts and allowed IDs, not ungranted content. Updates to specialized workspace entries continue through `workspace`.
+
+File operations are single-command actions: `package.download`, `package.save-folder`, `package.import-folder`, `package.restore-recovery`, and `drive.sync`. Preview performs no I/O. Apply requires a specific one-action session grant plus protocol permissions. Native folder selection and Google consent are human steps. File actions return completion summaries, never tokens or file bytes.

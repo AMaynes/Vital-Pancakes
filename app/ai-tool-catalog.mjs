@@ -7,6 +7,10 @@
 
 export const CURRENT_AI_TOOLS = Object.freeze([
   current("workspace", "Workspace Libraries", "workspace.html", "app/workspace-ai-adapter.mjs"),
+  current("database", "Personal Database", "library.html", "app/database-ai-adapter.mjs"),
+  current("database-files", "Database Files & Sync", "library.html", "app/database-files-ai-adapter.mjs"),
+  current("notecards-math", "Mathematics Notecards", "educational_resources/mathematics/flashcard-practice.html", "app/database-ai-adapter.mjs"),
+  current("notecards-arts", "Arts Notecards", "educational_resources/arts/flashcard-practice.html", "app/database-ai-adapter.mjs"),
   current("visual-board", "Visual Board", "tools/visual-board.html", "tools/visual-board-ai-adapter.mjs"),
   current("overhead", "Overhead", "tools/overhead.html", "tools/current-tool-ai-adapter.mjs"),
   current("graphing", "Graphing Tool", "tools/graphing.html", "tools/current-tool-ai-adapter.mjs"),

@@ -16,7 +16,7 @@
  * cleared on every route render so they cannot outlive their visible cards.
  */
 
-import { createStorageIndicator } from "./storage-notes.js?v=1";
+import { createStorageIndicator } from "./storage-notes.js?v=2";
 import {
   addFolder,
   addItem,
@@ -31,9 +31,10 @@ import {
   removeFolder,
   saveWorkspace,
   updateItem,
-} from "./store.js?v=18";
+} from "./store.js?v=19";
 import { installAiPageHost } from "./ai-page-host.mjs";
 import { createWorkspaceAiAdapter } from "./workspace-ai-adapter.mjs";
+import { databaseReady, getDatabase } from "./database-store.mjs";
 import { buildContentHash } from "./content-view.mjs";
 import {
   collectEntryTags,
@@ -599,6 +600,18 @@ function renderWorkspace() {
   } else {
     renderDashboard(area);
   }
+  if (area !== AREA_TOOLS && !getRouteItemId()) renderPersonalChildren(section ? `section:${section.id}` : area === AREA_EVERYDAY ? "everyday" : "studies-projects");
+}
+
+function renderPersonalChildren(parentId) {
+  if (!databaseReady()) return;
+  const db = getDatabase();
+  const records = [...Object.values(db.folders).filter(folder => folder.parentId === parentId && !folder.legacySection && !folder.workspaceSectionId && !["cooking", "gym", "notecards"].includes(folder.id)),
+    ...Object.values(db.entries).filter(entry => entry.parentId === parentId && !entry.id.startsWith("workspace:"))];
+  if (!records.length) return;
+  const grid = createElement("div", "tool-grid");
+  for (const record of records) grid.append(createToolCard({ title: record.title, copy: db.folders[record.id] ? "Directory" : record.type, href: `library.html#${db.folders[record.id] ? "folder" : "entry"}=${encodeURIComponent(record.id)}`, icon: db.folders[record.id] ? "▸" : "▤", accent: "ochre" }));
+  appMain.append(grid);
 }
 
 /**
@@ -708,6 +721,13 @@ function renderStudiesDashboard(workspace) {
   notecardHeading.append(notecardHeadingCopy);
   const notecardGrid = createElement("div", "tool-grid");
   [
+    {
+      title: "Notecards Library",
+      copy: "Your cards, shared references, decks, and review progress in the personal database.",
+      href: "library.html#folder=notecards",
+      icon: "▤",
+      accent: "ochre",
+    },
     {
       title: "Mathematics Notecards",
       copy: "Mixed practice, tests, missed-answer review, and worked explanations.",
@@ -4432,14 +4452,20 @@ document.querySelectorAll("[data-dialog-close]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog")?.close());
 });
 window.addEventListener("hashchange", renderWorkspace);
+window.addEventListener("database:changed", () => {
+  // Uploading media commits asset bytes while the study draft is still open.
+  if (!activeDirectEditorController) renderWorkspace();
+});
+window.addEventListener("database:error", event => showToast(event.detail));
 
 renderWorkspace();
 
 installAiPageHost(createWorkspaceAiAdapter({
   readWorkspace: getWorkspace,
   commitWorkspace: (workspace) => {
-    saveWorkspace(workspace);
+    const saved = saveWorkspace(workspace);
     window.requestAnimationFrame(renderWorkspace);
+    return saved;
   },
   createId,
 }));

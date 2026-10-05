@@ -9,6 +9,8 @@ import {
   normalizeKnowledgeLink,
 } from "./knowledge-model.mjs";
 import { validateKnowledgeInferenceSession } from "./knowledge-inference.mjs";
+import { initializeDatabase, getDatabase, saveDatabase, addAsset, getAsset } from "./database-store.mjs";
+import { removeRecord } from "./database-model.mjs";
 
 const DATABASE_NAME = "vital-pancakes-knowledge";
 const DATABASE_VERSION = 3;
@@ -69,6 +71,11 @@ export async function saveKnowledgeMedia(file) {
   if (!(file instanceof Blob) || !/^(?:image|video)\//i.test(file.type)) {
     throw new TypeError("Choose an image or video file.");
   }
+  if (typeof window !== "undefined") {
+    await initializeDatabase();
+    const asset = await addAsset(file);
+    return { id: asset.id, blob: file, name: asset.name, mimeType: asset.mime, size: asset.size };
+  }
   const id = globalThis.crypto?.randomUUID?.() ?? `media-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const record = {
     id,
@@ -82,7 +89,12 @@ export async function saveKnowledgeMedia(file) {
   return record;
 }
 
-export function getKnowledgeMedia(id) {
+export async function getKnowledgeMedia(id) {
+  if (typeof window !== "undefined") {
+    await initializeDatabase();
+    const asset = getDatabase().assets[id];
+    if (asset) return { id, blob: await getAsset(id), name: asset.name, mimeType: asset.mime, size: asset.size };
+  }
   return getStoreValue(MEDIA_STORE, String(id));
 }
 
@@ -90,8 +102,8 @@ export async function getKnowledgeState() {
   await migrateLegacyInferenceSessions();
   const [documents, links, glossary, inferenceSessions, meta] = await Promise.all([
     listStore(DOCUMENT_STORE),
-    listStore(LINK_STORE),
-    listStore(GLOSSARY_STORE),
+    listKnowledgeLinks(),
+    listGlossaryEntries(),
     listKnowledgeInferenceSessions(),
     getStoreValue(META_STORE, "index"),
   ]);
@@ -155,11 +167,27 @@ export function listKnowledgeDocuments() {
   return listStore(DOCUMENT_STORE);
 }
 
-export function listKnowledgeLinks() {
-  return listStore(LINK_STORE);
+export async function listKnowledgeLinks() {
+  const indexed = await listStore(LINK_STORE);
+  if (typeof window === "undefined") return indexed;
+  await initializeDatabase(); let db = getDatabase();
+  const known = id => Boolean(db.entries[id] || db.folders[id]);
+  if (db.migrations.workspace && !db.migrations.knowledgeLinks) {
+    for (const link of indexed) if (!["reference", "record"].includes(link.origin) && known(link.sourceId) && known(link.targetId)) db.links[link.id] ??= { ...link, type: link.relation };
+    db.migrations.knowledgeLinks = true; await saveDatabase(db); db = getDatabase();
+  }
+  const portable = Object.values(db.links).map(link => normalizeKnowledgeLink({ ...link, relation: link.relation ?? link.type }));
+  const derived = indexed.filter(link => ["reference", "record"].includes(link.origin) || !known(link.sourceId) || !known(link.targetId));
+  return deduplicateLinks([...derived, ...portable]);
 }
 
-export function listGlossaryEntries() {
+export async function listGlossaryEntries() {
+  if (typeof window !== "undefined") {
+    await initializeDatabase();
+    return Object.values(getDatabase().entries).filter(entry => entry.type === "glossary")
+      .map(entry => ({ ...entry.data, id: entry.data.id ?? entry.id.replace(/^glossary:/, ""), term: entry.title }))
+      .sort((left, right) => left.term.localeCompare(right.term));
+  }
   return listStore(GLOSSARY_STORE).then((entries) => entries.sort((left, right) => (
     left.term.localeCompare(right.term)
   )));
@@ -202,13 +230,21 @@ export async function saveGlossaryEntry(value) {
   if (collision) {
     throw new TypeError(`“${entry.term}” conflicts with glossary entry “${collision.term}”.`);
   }
-  await putStoreValue(GLOSSARY_STORE, entry);
+  if (typeof window !== "undefined") {
+    await initializeDatabase();
+    const db = getDatabase(); const id = `glossary:${entry.id}`;
+    db.entries[id] = { ...db.entries[id], id, parentId: db.entries[id]?.parentId ?? "glossary", type: "glossary", title: entry.term, storage: db.entries[id]?.storage ?? "inherit", content: db.entries[id]?.content ?? [], data: entry };
+    delete db.tombstones[id];
+    await saveDatabase(db);
+  } else await putStoreValue(GLOSSARY_STORE, entry);
   dispatchKnowledgeChanged();
   return entry;
 }
 
 export async function deleteGlossaryEntry(id) {
-  await deleteStoreValue(GLOSSARY_STORE, String(id));
+  if (typeof window !== "undefined") {
+    await initializeDatabase(); const db = getDatabase(); removeRecord(db, `glossary:${id}`); await saveDatabase(db);
+  } else await deleteStoreValue(GLOSSARY_STORE, String(id));
   const links = await listKnowledgeLinks();
   const target = `glossary:${id}`;
   await Promise.all(
@@ -225,18 +261,27 @@ export async function saveKnowledgeLink(value) {
     createdAt: value.createdAt ?? now,
     updatedAt: now,
   });
+  if (typeof window !== "undefined") {
+    await initializeDatabase(); const db = getDatabase();
+    if ((db.entries[link.sourceId] || db.folders[link.sourceId]) && (db.entries[link.targetId] || db.folders[link.targetId])) {
+      db.links[link.id] = { ...link, type: link.relation }; await saveDatabase(db);
+    }
+  }
   await putStoreValue(LINK_STORE, link);
   dispatchKnowledgeChanged();
   return link;
 }
 
 export async function setKnowledgeLinkStatus(id, status) {
-  const link = await getStoreValue(LINK_STORE, String(id));
+  const link = (await listKnowledgeLinks()).find(link => link.id === String(id));
   if (!link) throw new TypeError("Knowledge relationship not found.");
   return saveKnowledgeLink({ ...link, status });
 }
 
 export async function deleteKnowledgeLink(id) {
+  if (typeof window !== "undefined") {
+    await initializeDatabase(); const db = getDatabase(); if (db.links[id]) { delete db.links[id]; await saveDatabase(db); }
+  }
   await deleteStoreValue(LINK_STORE, String(id));
   dispatchKnowledgeChanged();
 }

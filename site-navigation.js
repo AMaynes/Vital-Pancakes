@@ -9,12 +9,34 @@ import { registerOfflineShell } from "./app/offline-shell.mjs?v=2";
 
 const SITE_ROOT = new URL("./", import.meta.url);
 
+// Normalize headers on older public pages as well as maintained tool pages.
+const primaryNavigation = document.querySelector('.site-header nav[aria-label="Primary navigation"]');
+if (primaryNavigation) {
+  const routes = [
+    ["SharedVP", "sharedvp.html", "shared"],
+    ["Everyday Life", "workspace.html#area=everyday", "everyday"],
+    ["Research & Literature", "research-literature.html", "research"],
+    ["Studies & Projects", "workspace.html#area=studies", "studies"],
+    ["Library", "library.html", "library"],
+    ["Workspace", "workspace.html#area=tools", "tools"],
+    ["Download App", "download-app.html", "download"],
+  ];
+  primaryNavigation.replaceChildren(...routes.map(([title, path, area]) => {
+    const anchor = document.createElement("a"); anchor.textContent = title; anchor.href = new URL(path, SITE_ROOT).href; anchor.dataset.siteArea = area;
+    const url = new URL(anchor.href);
+    if (url.pathname === location.pathname && (!url.hash || url.hash === location.hash)) anchor.setAttribute("aria-current", "page");
+    return anchor;
+  }));
+}
+
 registerOfflineShell().catch((error) => {
   console.error("Offline service worker registration failed.", error);
 });
 
 const PAGE_TRAILS = {
   "": [],
+  "library.html": [segment("library", "library.html")],
+  "sharedvp.html": [segment("sharedvp", "sharedvp.html")],
   "download-app.html": [
     segment("download-app"),
   ],

@@ -11,10 +11,13 @@ vital-pancakes/
 ├── README.md — Explains the public site, workspace, tools, and deployment.
 ├── TODO.md — Tracks pressing and eventual work.
 ├── STRUCTURE.md — Maps the maintained repository.
-├── index.html — Serves as the public homepage, Knowledge Center, and Unified Vault interface.
+├── index.html — Serves as the public homepage and Knowledge Center / Unified Vault planning notes.
 ├── style.css — Defines the public site and Knowledge Center archival visual system.
 ├── site-navigation.css — Styles the shared header, page path, history controls, and Knowledge Center glossary dialog.
-├── site-navigation.js — Builds page paths, browser-history controls, and homepage background indexing.
+├── site-navigation.js — Builds page paths, browser-history controls, and the shared section navigation.
+├── library.html — Browses personal directories, mixed entries, glossary, cards, live graphs and storage controls.
+├── sharedvp.html — Reserves the future sharing section without publishing content.
+├── cloud-config.json — Public Google OAuth configuration; starts unconfigured and contains no secrets.
 ├── research-literature.html — Unifies research, publications, and reading analysis.
 ├── download-app.html — Presents phone previews and the install guide.
 ├── download-app.css — Styles app previews and archival motion accents.
@@ -24,6 +27,14 @@ vital-pancakes/
 ├── sw.js — Pre-caches the bounded startup shell and caches other same-origin assets after use.
 ├── genericListLoader.js — Renders repository-managed text lists.
 ├── app/
+│   ├── database-model.mjs — Defines the portable versioned hierarchy, references, selection, migrations and merges.
+│   ├── database-store.mjs — Persists canonical content and immutable assets with revision checks and device-local recovery.
+│   ├── database-package.mjs — Reads and writes database.json + assets/ folder/ZIP packages.
+│   ├── database-drive.mjs — Provides explicit selective Drive sync with memory-only tokens and conditional writes.
+│   ├── database-ui.mjs / database.css — Renders the personal content browser and editor.
+│   ├── database-ai-adapter.mjs / database-files-ai-adapter.mjs — Exposes scoped content commands and one-action file grants.
+│   ├── notecard-bridge.mjs / notecard-practice-ai.mjs — Connects existing subject practice to canonical card IDs and commands.
+│   ├── database.test.mjs — Verifies migration, selection, references, backup integrity, conflicts and AI permissions.
 │   ├── ai-command-protocol.mjs — Validates provider-independent semantic command envelopes and permissions.
 │   ├── ai-command-registry.mjs — Routes previewed and applied commands through registered tool adapters.
 │   ├── ai-page-host.mjs — Exposes the shared versioned AI page API and message bridge.
@@ -31,7 +42,7 @@ vital-pancakes/
 │   ├── home-knowledge.js — Coordinates homepage search, graph, glossary, local AI suggestions, inference, and encrypted vault workflows.
 │   ├── home-knowledge-ai-adapter.mjs — Exposes bounded search, glossary, relationship, inference-review, and vault-summary commands.
 │   ├── glossary-ui.mjs — Installs the Knowledge Center glossary dialog and reference inserter.
-│   ├── knowledge-db.mjs — Stores documents, relationships, glossary entries, inference sessions, and index metadata.
+│   ├── knowledge-db.mjs — Stores the derived search index and inference sessions; glossary edits use the canonical personal database.
 │   ├── knowledge-inference.mjs — Owns evidence chunking, retrieval, citation enforcement, session migration, and conversion.
 │   ├── knowledge-inference-ui.mjs — Coordinates the button-driven Knowledge Center analysis dialog.
 │   ├── knowledge-inference-worker.js — Prepares the existing local Knowledge index off the main thread.
@@ -50,7 +61,7 @@ vital-pancakes/
 │   ├── knowledge-entry-model.test.mjs — Verifies study blocks, hierarchy, definitions, and folder grouping.
 │   ├── download-app.js — Connects the install page to supported PWA prompts.
 │   ├── store.test.mjs — Verifies permanent libraries, one-time samples, and safe legacy migration.
-│   └── store.js — Owns browser-local data, persistence, and deletion policy.
+│   └── store.js — Preserves specialized editor compatibility over canonical content, with legacy migration and recovery.
 ├── assets/
 │   ├── vital-pancakes-logo-transparent-black.png — Active black transparent site mark and light-mode favicon.
 │   ├── vital-pancakes-logo-transparent-white.png — White transparent dark-mode favicon.

@@ -4,18 +4,22 @@
  *
  * Architectural Relationships
  * Called by: The workspace dashboard and Software Architect.
- * Calls: Browser localStorage and workspace change events.
+ * Calls: The canonical personal database and workspace change events.
  *
  * External Resources
  * localStorage key "artificially-neuroscience-workspace-v1".
  *
  * Notes
- * State is intentionally device-local.
+ * The original localStorage record remains available for migration recovery.
  */
 
 import { ALGORITHM_ANALYSIS_SAMPLES } from "./algorithm-analysis-samples.mjs?v=1";
 import { ALGORITHM_SAMPLES } from "./algorithm-samples.mjs?v=2";
 import { normalizeFolderCatalog, normalizeFolderPath } from "./knowledge-entry-model.mjs?v=3";
+import { initializeDatabase, databaseReady, getDatabase, saveDatabase } from "./database-store.mjs";
+import { migrateWorkspace as migrateIntoDatabase, workspaceProjection, replaceWorkspace } from "./database-model.mjs";
+
+if (typeof window !== "undefined" && globalThis.indexedDB) await initializeDatabase();
 
 const WORKSPACE_KEY = "artificially-neuroscience-workspace-v1";
 const CURRENT_WORKSPACE_VERSION = 16;
@@ -2566,12 +2570,19 @@ export function isCoreSectionId(sectionId) {
  * @returns {{version: number, sections: Array<object>}} Current workspace data.
  */
 export function getWorkspace() {
+  if (databaseReady() && getDatabase().migrations.workspace) {
+    const db = getDatabase();
+    const migration = migrateWorkspace(workspaceProjection(db));
+    if (migration.changed) saveDatabase(replaceWorkspace(db, migration.workspace)).catch(error => console.error("Workspace upgrade failed; original database retained.", error));
+    return migration.workspace;
+  }
   const storedWorkspace = localStorage.getItem(WORKSPACE_KEY);
   if (!storedWorkspace) {
     const initialWorkspace = createInitialWorkspace();
     // Initialization happens during rendering; avoid a synchronous change event
     // re-entering the interface before that first render has completed.
     localStorage.setItem(WORKSPACE_KEY, JSON.stringify(initialWorkspace));
+    migratePersonalWorkspace(initialWorkspace);
     return initialWorkspace;
   }
 
@@ -2584,11 +2595,17 @@ export function getWorkspace() {
     if (migration.changed) {
       localStorage.setItem(WORKSPACE_KEY, JSON.stringify(migration.workspace));
     }
+    migratePersonalWorkspace(migration.workspace);
     return migration.workspace;
   } catch (error) {
     console.error("Unable to read saved workspace; using an empty workspace.", error);
     return createInitialWorkspace();
   }
+}
+
+function migratePersonalWorkspace(workspace) {
+  if (!databaseReady()) return;
+  saveDatabase(migrateIntoDatabase(getDatabase(), workspace)).catch(error => console.error("Personal database migration failed; original workspace retained.", error));
 }
 
 /**
@@ -2597,6 +2614,12 @@ export function getWorkspace() {
  * @param {{version: number, sections: Array<object>}} workspace Workspace to save.
  */
 export function saveWorkspace(workspace) {
+  if (databaseReady()) {
+    const result = saveDatabase(replaceWorkspace(getDatabase(), workspace));
+    result.catch(error => console.error("Workspace save failed; database recovery is available.", error));
+    window.dispatchEvent(new CustomEvent("workspace:changed", { detail: workspace }));
+    return result;
+  }
   localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
   window.dispatchEvent(new CustomEvent("workspace:changed", { detail: workspace }));
 }

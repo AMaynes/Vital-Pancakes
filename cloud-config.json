@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "provider": "google-drive",
+  "clientId": "",
+  "scope": "https://www.googleapis.com/auth/drive.file",
+  "folderName": "Vital Pancakes",
+  "defaultLocalDirectory": "documents"
+}
