@@ -166,6 +166,34 @@ main {
   box-shadow: none;
 }
 
+.home-drive {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+  margin-top: 0.85rem;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+.home-drive-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.home-drive-link:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-soft);
+}
+
 .hero-emblem::before,
 .hero-emblem::after {
   display: none;

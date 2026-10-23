@@ -26,7 +26,7 @@ Keep the homepage concise and use deeper pages for detailed material.
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png">
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-black.png?v=1" type="image/png" media="(prefers-color-scheme: light)">
   <link rel="icon" href="assets/vital-pancakes-logo-transparent-white.png?v=1" type="image/png" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="style.css?v=24">
+  <link rel="stylesheet" href="style.css?v=25">
   <link rel="stylesheet" href="site-navigation.css?v=23">
   <script type="module" src="site-navigation.js?v=20"></script>
 </head>
@@ -66,6 +66,10 @@ Keep the homepage concise and use deeper pages for detailed material.
         <div class="button-row">
           <a class="button button-primary" href="workspace.html#area=studies">Open Studies &amp; Projects</a>
           <a class="button button-secondary" href="workspace.html#area=tools">Open Workspace</a>
+        </div>
+        <div class="home-drive">
+          <a class="home-drive-link" href="library.html#storage" aria-describedby="home-drive-note">Sign in with Google</a>
+          <span id="home-drive-note">Google Drive · WIP. Opens connection &amp; backup settings.</span>
         </div>
       </div>
 
@@ -142,11 +146,11 @@ Keep the homepage concise and use deeper pages for detailed material.
 
     <section class="knowledge-center knowledge-wip" aria-labelledby="storage-wip-title">
       <h2 id="storage-wip-title">Storage, Google Drive &amp; automatic sync — WIP</h2>
-      <p>This entire storage system is being designed. Google sign-in, cloud uploads, automatic sync, and native device storage are not available yet. Today, editable Workspace entries remain in this browser. Do not assume a cloud backup exists.</p>
+      <p>Storage remains a work in progress. The Google sign-in link above opens Library’s connection and backup settings. Drive connection and manual sync require the site owner’s one-time Google configuration, which is not yet set up. Automatic sync and native device storage are not available yet. Do not assume a cloud backup exists.</p>
       <dl class="knowledge-wip-list">
         <div>
           <dt>Google account and workspace folder — WIP</dt>
-          <dd>Planned: each person signs in with their own Google account and selects or creates a Drive folder. The website and future apps manage their own entries, images, attachments, and recovery copies there. Users do not configure APIs or manually arrange files in Drive. Developer registration and authorization infrastructure still need implementation. Accounts stay separate unless sharing is explicitly added; this is not a promise of privacy from Google.</dd>
+          <dd>The Library has a Google connection flow and manual sync for cloud-selected content, including images and attachments, into a dedicated Drive folder. The site owner must complete Google registration and configure the public OAuth client ID before this can be used; visitors do not configure APIs. Live sign-in and sync still need verification. Connecting alone does not upload entries, and the connection lasts only for the current page session. Future apps and automatic sync remain planned. Sync does not change Drive sharing permissions; this is not a promise of privacy from Google.</dd>
         </div>
         <div>
           <dt>Phone and desktop apps: durable local fallback — WIP</dt>

@@ -42,7 +42,7 @@ Writes compare revisions within a transaction. A stale tab receives an error ins
 
 1. Enable Drive API in a Google Cloud project. Create a web OAuth client and add the deployed website origin (and your localhost origin for development).
 2. Set its public `clientId` in the repository's `cloud-config.json`. Keep the limited `drive.file` scope. Tokens, passwords, client secrets and refresh tokens never belong in this file.
-3. Use Library → Storage & backup to connect Google and sync selected content. A dedicated package folder is created for the dataset. Another device can import that accessible folder using its ID, then connect it for subsequent syncs.
+3. Use the small **Sign in with Google** link on the home page, or Library → Storage & backup, to open the existing connection controls and sync selected content. The home-page link is navigation, not an automatic authorization or upload. A dedicated package folder is created for the dataset. Another device can import that accessible folder using its ID, then connect it for subsequent syncs.
 
 Tokens remain in memory and expire. Only local/cloud/both preferences selecting cloud are uploaded. Structural ancestors are retained with unnecessary metadata stripped; local-only cross-references stop sync rather than silently publishing their content. Assets upload before the manifest. Three-way merge handles independent changes; concurrent edits/deletions stop and preserve both copies for explicit resolution. ETag-conditional manifest updates reject concurrent remote writes. A synced badge is based on the last completed upload and matching content.
 
