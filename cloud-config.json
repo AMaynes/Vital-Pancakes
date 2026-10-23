@@ -1,7 +1,7 @@
 {
   "version": 1,
   "provider": "google-drive",
-  "clientId": "",
+  "clientId": "189340309723-a4a5dqplrrc4tk98dg9ic5iiaqv0eh1u.apps.googleusercontent.com",
   "scope": "https://www.googleapis.com/auth/drive.file",
   "folderName": "Vital Pancakes",
   "defaultLocalDirectory": "documents"

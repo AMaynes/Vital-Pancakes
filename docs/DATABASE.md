@@ -40,6 +40,10 @@ Writes compare revisions within a transaction. A stale tab receives an error ins
 
 ## Google Drive setup
 
+The hosted website is configured with the public web client from Google Cloud project `vital-pancakes`, using authorized JavaScript origin `https://amaynes.github.io` and only the `drive.file` scope. The Drive API is enabled. The OAuth app remains **External / Testing** with the owner's approved account on the test-user list; it is not publicly launched. New users must be added in Google Auth Platform → Audience until production readiness and any required verification are complete. End-to-end sign-in and sync still require user consent and verification; configuration alone does not back up content.
+
+For a separately hosted copy:
+
 1. Enable Drive API in a Google Cloud project. Create a web OAuth client and add the deployed website origin (and your localhost origin for development).
 2. Set its public `clientId` in the repository's `cloud-config.json`. Keep the limited `drive.file` scope. Tokens, passwords, client secrets and refresh tokens never belong in this file.
 3. Use the small **Sign in with Google** link on the home page, or Library → Storage & backup, to open the existing connection controls and sync selected content. The home-page link is navigation, not an automatic authorization or upload. A dedicated package folder is created for the dataset. Another device can import that accessible folder using its ID, then connect it for subsequent syncs.
