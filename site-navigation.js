@@ -7,6 +7,12 @@
 
 import { registerOfflineShell } from "./app/offline-shell.mjs?v=2";
 
+// The shared page shell resumes only explicitly enabled Drive sync. It never
+// opens Google consent or grants cloud storage to local-only records.
+import("./app/drive-service.mjs").then(module => module.startDriveService()).catch(() => {
+  // Storage/configuration failures must not prevent public navigation working.
+});
+
 const SITE_ROOT = new URL("./", import.meta.url);
 
 // Normalize headers on older public pages as well as maintained tool pages.

@@ -1,20 +1,46 @@
 /**
- * Explicit, selective Drive package sync. OAuth tokens exist only in memory.
+ * Selective Drive package sync. Remembering is opt-in and browser-profile local.
  * Drive v2 exposes the file ETag in its JSON metadata, allowing conditional
- * writes even when CORS does not expose response headers. No sync runs silently.
+ * writes even when CORS does not expose response headers.
  */
 import { cloudSubset, mergeDatabases, validateDatabase, clone, sameRecord } from "./database-model.mjs";
-import { getDatabase, getAsset, saveDatabase, flushDatabase, getDeviceValue, setDeviceValue } from "./database-store.mjs";
+import { getDatabase, getAsset, saveDatabase, flushDatabase, getDeviceValue, setDeviceValue, bindDriveAccount } from "./database-store.mjs";
 import { verifyAsset, PACKAGE_README } from "./database-package.mjs";
+import { createDriveSession } from "./drive-session.mjs";
 
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-let token = null;
-let tokenExpires = 0;
 let identityReady;
 let syncing = false;
+let session;
+let initialization;
+let connectionAttempt = 0;
+const authChannel = typeof window !== "undefined" && globalThis.BroadcastChannel ? new BroadcastChannel("vp-drive-auth") : null;
+export function initializeDrive(config) {
+  return initialization ??= (async () => {
+    let storage; try { storage = globalThis.sessionStorage; } catch { /* Memory-only fallback. */ }
+    session = createDriveSession({ read: getDeviceValue, write: setDeviceValue, bindAccount: bindDriveAccount, storage,
+      identify: async (accessToken, signal) => {
+        const account = await createDriveClient(accessToken, globalThis.fetch, { signal }).account();
+        return account;
+      } });
+    await session.initialize(config);
+  })().catch(error => { initialization = null; throw error; });
+}
+export function driveState() { return session?.state() ?? { connected: false, remember: false, autoSync: false }; }
+export async function driveAccount() { return session?.account() ?? null; }
+export async function setDriveSettings(changes) {
+  if (changes.autoSync === true && !globalThis.navigator?.locks) throw new Error("Automatic sync needs safe cross-tab locking. Use manual sync in this browser.");
+  await session.settings(changes); notifyDriveState();
+}
+export async function refreshDriveSettings() { await session.refresh(); }
+export function notifyDriveState() { globalThis.window?.dispatchEvent(new Event("drive:state")); }
+export function driveConnected() { return session?.connected() ?? false; }
+export async function disconnectDrive(options) {
+  connectionAttempt++;
+  await session.disconnect(options); authChannel?.postMessage("disconnect"); notifyDriveState();
+}
+if (authChannel) authChannel.onmessage = () => { connectionAttempt++; session?.invalidate(); notifyDriveState(); };
 
-export function driveConnected() { return Boolean(token && Date.now() < tokenExpires); }
-export function disconnectDrive() { token = null; tokenExpires = 0; }
 export function prepareDriveIdentity(config) {
   if (!config.clientId) return Promise.resolve(false);
   return identityReady ??= new Promise((resolve, reject) => {
@@ -24,23 +50,27 @@ export function prepareDriveIdentity(config) {
   });
 }
 export async function connectDrive(config) {
+  const attempt = ++connectionAttempt;
   if (!config.clientId) throw new Error("Google Drive is not configured. Set the public OAuth client ID in cloud-config.json and authorize this website origin in Google Cloud.");
   if (config.scope !== DRIVE_SCOPE) throw new Error("Cloud configuration must use the limited drive.file scope.");
-  await prepareDriveIdentity(config);
+  await initializeDrive(config); await prepareDriveIdentity(config);
+  const account = await driveAccount();
   await new Promise((resolve, reject) => {
     const client = google.accounts.oauth2.initTokenClient({ client_id: config.clientId, scope: DRIVE_SCOPE,
-      callback: response => {
+      callback: async response => {
+        if (attempt !== connectionAttempt) { reject(new Error("Connection cancelled.")); return; }
         if (response.error || !response.access_token || !google.accounts.oauth2.hasGrantedAllScopes(response, DRIVE_SCOPE)) { reject(new Error(response.error_description ?? "Drive access was not granted.")); return; }
-        token = response.access_token; tokenExpires = Date.now() + Math.max(0, Number(response.expires_in) - 60) * 1000; resolve();
+        try { await session.accept(response); notifyDriveState(); resolve(); } catch (error) { reject(error); }
       }, error_callback: error => reject(new Error(error.type ?? "Google sign-in was cancelled.")) });
-    client.requestAccessToken({ prompt: "select_account" });
+    client.requestAccessToken({ prompt: account && driveState().remember ? "" : "select_account", ...(account?.email && driveState().remember ? { login_hint: account.email } : {}) });
   });
 }
 
 /** Injectable HTTP boundary used by sync contract tests. */
-export function createDriveClient(accessToken, fetchRef = globalThis.fetch) {
+export function createDriveClient(accessToken, fetchRef = globalThis.fetch, { signal, guard } = {}) {
   const request = async (path, options = {}) => {
-    const response = await fetchRef(`https://www.googleapis.com/${path}`, { ...options, headers: { Authorization: `Bearer ${accessToken}`, ...options.headers } });
+    await guard?.();
+    const response = await fetchRef(`https://www.googleapis.com/${path}`, { ...options, signal, headers: { Authorization: `Bearer ${accessToken}`, ...options.headers } });
     if (!response.ok) {
       const message = response.status === 412 ? "Drive changed during sync. Retry to merge the newest copy." : response.status === 401 ? "Drive authorization expired. Connect again." : `Drive request failed (${response.status}). Your local database is intact.`;
       const error = new Error(message); error.status = response.status; throw error;
@@ -50,6 +80,11 @@ export function createDriveClient(accessToken, fetchRef = globalThis.fetch) {
   const escape = value => String(value).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   const fields = "id,title,etag,mimeType";
   return {
+    async account() {
+      const about = await (await request("drive/v2/about?fields=permissionId,user(emailAddress)")).json();
+      if (!about.permissionId) throw new Error("Google did not identify the Drive account. Nothing was uploaded.");
+      return { id: about.permissionId, email: about.user?.emailAddress ?? "" };
+    },
     async find(parentId, title) {
       const query = `trashed = false and title = '${escape(title)}'${parentId ? ` and '${escape(parentId)}' in parents` : ""}`;
       const result = await (await request(`drive/v2/files?q=${encodeURIComponent(query)}&maxResults=1000&fields=${encodeURIComponent(`items(${fields}),nextPageToken`)}`)).json();
@@ -79,9 +114,21 @@ export function createDriveClient(accessToken, fetchRef = globalThis.fetch) {
   };
 }
 
+async function authorizedClient() {
+  const credentials = await session.credentials();
+  const client = createDriveClient(credentials.accessToken, globalThis.fetch, { signal: credentials.signal, guard: async () => {
+    const current = await session.credentials();
+    if (current.accessToken !== credentials.accessToken) throw new Error("Drive connection changed. Retry sync.");
+  } });
+  // Recheck with Google before any package IO, including restored tab sessions.
+  const account = await client.account();
+  if (account.id !== credentials.account.id) { await disconnectDrive(); throw new Error("Google account changed. Nothing was uploaded."); }
+  return client;
+}
+
 export async function readDrivePackage(folderId) {
   if (!driveConnected()) throw new Error("Connect Google Drive first.");
-  const client = createDriveClient(token); const file = await client.find(folderId, "database.json");
+  const client = await authorizedClient(); const file = await client.find(folderId, "database.json");
   if (!file) throw new Error("No database.json was found in that Drive folder. The app can access only files it created or was granted access to.");
   const database = validateDatabase(JSON.parse(await (await client.read(file.id)).text())); const blobs = {};
   const assets = Object.keys(database.assets).length ? await client.find(folderId, "assets") : null;
@@ -94,13 +141,20 @@ export async function readDrivePackage(folderId) {
 }
 
 export async function syncDrive(config) {
+  if (globalThis.navigator?.locks) return navigator.locks.request("vp-drive-package-sync", { ifAvailable: true }, lock => {
+    if (!lock) throw new Error("Another tab is syncing Drive. Try again shortly.");
+    return syncDriveUnlocked(config);
+  });
+  return syncDriveUnlocked(config);
+}
+async function syncDriveUnlocked(config) {
   if (syncing) throw new Error("A Drive sync is already running.");
   if (!driveConnected()) throw new Error("Connect Google Drive first.");
   syncing = true;
   try {
     await flushDatabase();
     const full = getDatabase(); const local = cloudSubset(full); const revision = full.revision;
-    const client = createDriveClient(token);
+    const client = await authorizedClient();
     const savedFolder = await getDeviceValue(`drive-folder:${full.datasetId}`);
     const root = savedFolder ? await client.metadata(savedFolder) : await client.folder(`${config.folderName || "Vital Pancakes"} — ${full.datasetId}`);
     if (root.mimeType !== "application/vnd.google-apps.folder") throw new Error("The selected Drive package is not a folder.");
@@ -138,6 +192,9 @@ export async function syncDrive(config) {
     await setDeviceValue("drive-receipt", { folderId: root.id, datasetId: full.datasetId, at: new Date().toISOString(), database: merged });
     await setDeviceValue("drive-conflicts", null);
     return { folderId: root.id, entryCount: Object.keys(merged.entries).length };
+  } catch (error) {
+    if (error.status === 401) { session.invalidate(); notifyDriveState(); }
+    throw error;
   } finally { syncing = false; }
 }
 

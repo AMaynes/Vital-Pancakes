@@ -47,7 +47,7 @@ export function createStorageIndicator(section, item) {
       "This entry has a browser copy on this device. An installed website (PWA) still uses browser-managed storage. Local file backups and selected Google Drive copies are managed through Library → Storage & backup.",
       db ? `Location: ${location.origin} → IndexedDB → vital-pancakes-database → state → database → entries → ${id}. The browser manages the disk location.` : `Location: ${location.origin} → localStorage → artificially-neuroscience-workspace-v1 → ${section.id} → ${item.id}. The browser manages the disk location.`,
       "Browser storage usually survives closing the page. There is no known deletion date. Clearing site data, private browsing ending, or browser storage cleanup can remove it. This indicator identifies the storage backend; it is not proof that the latest write succeeded.",
-      confirmed ? `A matching copy was confirmed in the last completed Drive sync (${new Date(receipt.at).toLocaleString()}). This does not check subsequent remote changes.` : "No matching cloud copy is confirmed for the current entry. Drive requires OAuth setup and an explicit sync. Automatic synchronization remains planned. External image/video links remain references rather than copied attachments.",
+      confirmed ? `A matching copy was confirmed in the last completed Drive sync (${new Date(receipt.at).toLocaleString()}). This does not check subsequent remote changes.` : "No matching cloud copy is confirmed for the current entry. Connect Drive and sync in Library → Storage & backup, or enable automatic sync while the site is open. Expired Google access requires reconnection. External image/video links remain references rather than copied attachments.",
     ]);
   });
   return button;

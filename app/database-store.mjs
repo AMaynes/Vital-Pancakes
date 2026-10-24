@@ -104,6 +104,24 @@ export async function getAsset(id) {
 export async function getDeviceValue(key) { await initializeDatabase(); return read("device", key); }
 export async function setDeviceValue(key, value) { await initializeDatabase(); return write("device", key, value); }
 
+/** First connection binds this browser library, atomically across tabs. Signing
+ * out does not remove this guard or move existing personal data to another user. */
+export async function bindDriveAccount(account) {
+  if (!account?.id) throw new Error("Google did not identify the Drive account.");
+  await initializeDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = connection.transaction("device", "readwrite"); const store = tx.objectStore("device");
+    const request = store.get("drive-account"); let mismatch = false;
+    request.onsuccess = () => {
+      if (request.result && request.result.id !== account.id) { mismatch = true; tx.abort(); return; }
+      store.put({ id: account.id, email: account.email ?? "" }, "drive-account");
+    };
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(new Error(mismatch ? "This browser library belongs to a different Google account. Use its original account, or a separate browser profile for another person. Nothing was uploaded." : "Could not save the Drive account binding."));
+  });
+}
+
 export async function addAsset(file) {
   if (!(file instanceof Blob) || file.size > 50 * 1024 * 1024) throw new TypeError("Choose an attachment smaller than 50 MB.");
   const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))].map(byte => byte.toString(16).padStart(2, "0")).join("");

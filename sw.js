@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v129";
+const CACHE_NAME = "vital-pancakes-app-v130";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
 ]);
@@ -37,6 +37,9 @@ const OFFLINE_ASSET_CATALOG = [
   "./app/database-store.mjs",
   "./app/database-package.mjs",
   "./app/database-drive.mjs",
+  "./app/drive-session.mjs",
+  "./app/drive-autosync.mjs",
+  "./app/drive-service.mjs",
   "./app/database-ai-adapter.mjs",
   "./app/database-files-ai-adapter.mjs",
   "./app/database-ui.mjs",

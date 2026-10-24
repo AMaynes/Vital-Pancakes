@@ -56,7 +56,7 @@ export function createDatabaseAiAdapter({ id = "database", getSnapshot, commitSn
         if (folder && (folder.role || folder.legacySection || folder.parentId === null)) throw new TypeError("Permanent directories cannot be deleted.");
         removeRecord(state, input.id); return { state, deletedIds: [input.id] };
       }),
-      command("storage.set", "Set a directory or entry to local, cloud, both or inherit. This does not upload anything.", ["update"], true,
+      command("storage.set", "Set a directory or entry to local, cloud, both or inherit. Cloud-selected content is queued if the user has enabled automatic sync; otherwise sync is manual.", ["update"], true,
         { id: string, storage: { enum: STORAGE_POLICIES } }, ["id", "storage"], { id: "studies-projects", storage: "both" }, (state, input) => {
           requireAccess(input.id); if (!STORAGE_POLICIES.includes(input.storage)) throw new TypeError("Invalid storage policy.");
           const record = state.folders[input.id] ?? state.entries[input.id]; if (!record) throw new Error("Record not found."); record.storage = input.storage;

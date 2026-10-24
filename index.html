@@ -146,11 +146,11 @@ Keep the homepage concise and use deeper pages for detailed material.
 
     <section class="knowledge-center knowledge-wip" aria-labelledby="storage-wip-title">
       <h2 id="storage-wip-title">Storage, Google Drive &amp; automatic sync — WIP</h2>
-      <p>Storage remains a work in progress. The Google sign-in link above opens Library’s connection and backup settings. Google Drive is configured for testing: only accounts added to the app’s test-user list can connect. Automatic sync and native device storage are not available yet. Do not assume a cloud backup exists until a manual sync succeeds.</p>
+      <p>Storage remains a work in progress. The Google sign-in link above opens Library’s connection and backup settings. Google Drive is configured for testing: only accounts added to the app’s test-user list can connect. Optional automatic sync works while the website is open and Google access is valid. Permanent sign-in, closed-site background sync, and native device storage are not available yet. Do not assume a cloud backup exists until a sync succeeds.</p>
       <dl class="knowledge-wip-list">
         <div>
           <dt>Google account and workspace folder — WIP</dt>
-          <dd>The Library has a Google connection flow and manual sync for cloud-selected content, including images and attachments, into a dedicated Drive folder. Google registration and the public OAuth client ID are configured for the website. The app remains in testing mode; public availability and end-to-end sync verification are still pending. Visitors do not configure APIs. Connecting alone does not upload entries, and the connection lasts only for the current page session. Future apps and automatic sync remain planned. Sync does not change Drive sharing permissions; this is not a promise of privacy from Google.</dd>
+          <dd>The Library has a Google connection flow and selective sync, including images and attachments, into a dedicated Drive folder. Visitors do not configure APIs. Connecting alone does not upload entries unless automatic sync was previously enabled in this browser. “Remember this browser” keeps the short-lived connection through reloads and navigation in the same tab, and remembers your account preference for later reconnection. Google access still expires; a Reconnect click may be needed. Other devices and browser profiles start disconnected. This browser’s library is bound to its original Google account so another account cannot accidentally receive it. Disconnect / Forget connection stop sync but do not hide or delete local entries or remove that safety binding: use separate browser profiles for different people. The app is still in testing; public availability and live regression checks remain pending. Sync does not change Drive sharing permissions; this is not a promise of privacy from Google.</dd>
         </div>
         <div>
           <dt>Phone and desktop apps: durable local fallback — WIP</dt>
@@ -158,7 +158,7 @@ Keep the homepage concise and use deeper pages for detailed material.
         </div>
         <div>
           <dt>Website: cloud first, browser fallback last — WIP</dt>
-          <dd>Planned: the website primarily reads and saves through the connected Drive workspace. Browser storage is only a recovery fallback when cloud access fails, not the durable offline workspace promised for native apps. Unsynced browser edits must be clearly marked and offered recovery when the site is reopened and connected. Never clear the only unsynced copy automatically.</dd>
+          <dd>Currently, edits are saved in this browser first. Opt-in automatic sync uploads only Cloud / Local + cloud content, retries after connectivity returns while the site is open, and checks Drive about once a minute. Local-only entries and separate tool stores are not uploaded. Conflicts pause sync and keep both copies. Without valid Google access, edits stay pending until you reconnect. Closing the site stops sync; browser cache is not a substitute for a folder or ZIP backup. Seamless long-term sign-in needs a separate secure backend; no refresh token or client secret is stored in the website. Unsynced entries are never cleared automatically.</dd>
           <dd>Current behavior differs: entries are browser-only. Browser data has no known expiry date, but clearing site data, ending a private session, or browser cleanup can remove it. Installing this website as a PWA does not turn its storage into native device files.</dd>
         </div>
         <div>

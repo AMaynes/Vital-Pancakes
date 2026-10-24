@@ -3,8 +3,9 @@ import { getWorkspace } from "./store.js?v=19";
 import { getDatabase, saveDatabase, initializeDatabase, getAsset, addAsset, getDeviceValue, setDeviceValue, flushDatabase, listRecoveryCopies, restoreRecoveryCopy } from "./database-store.mjs";
 import { newId, clone, ENTRY_TYPES, STORAGE_POLICIES, storagePolicy, removeRecord, graphNeighborhood, importNotecards, sameRecord, reviewNotecard } from "./database-model.mjs";
 
-import { loadCloudConfig, chooseLocalDirectory, localDirectory, writeFolderPackage, readFolderPackage, downloadPackage, readPackageFile, importPackage } from "./database-package.mjs";
-import { prepareDriveIdentity, connectDrive, disconnectDrive, driveConnected, syncDrive, readDrivePackage } from "./database-drive.mjs";
+import { chooseLocalDirectory, localDirectory, writeFolderPackage, readFolderPackage, downloadPackage, readPackageFile, importPackage } from "./database-package.mjs";
+import { prepareDriveIdentity, connectDrive, disconnectDrive, driveConnected, syncDrive, readDrivePackage, driveState, driveAccount, setDriveSettings } from "./database-drive.mjs";
+import { startDriveService, driveSyncStatus } from "./drive-service.mjs";
 import { createDatabaseAiAdapter } from "./database-ai-adapter.mjs";
 import { createDatabaseFilesAiAdapter } from "./database-files-ai-adapter.mjs";
 import { installAiPageHost } from "./ai-page-host.mjs";
@@ -44,21 +45,33 @@ function locationIds() { const params = new URLSearchParams(location.hash.slice(
 async function start() {
   try {
     await initializeDatabase(); getWorkspace(); await flushDatabase(); await listKnowledgeLinks();
-    config = await loadCloudConfig(); receipt = await getDeviceValue("drive-receipt");
+    config = await startDriveService(); receipt = await getDeviceValue("drive-receipt");
     installAiPageHost(createDatabaseAiAdapter({ getSnapshot: getDatabase, commitSnapshot: saveDatabase, allowedIds, getLocation: () => locationIds().entryId ?? locationIds().folderId }));
     installAiPageHost(createDatabaseFilesAiAdapter({ getRevision: () => getDatabase().revision,
-      getSummary: () => ({ entryCount: Object.keys(getDatabase().entries).length, assetCount: Object.keys(getDatabase().assets).length, driveConnected: driveConnected(), driveConfigured: Boolean(config.clientId) }), grants: fileGrants,
+      getSummary: () => ({ entryCount: Object.keys(getDatabase().entries).length, assetCount: Object.keys(getDatabase().assets).length, driveConnected: driveConnected(), driveConfigured: Boolean(config.clientId), driveRemembered: driveState().remember, driveAutoSync: driveState().autoSync }), grants: fileGrants,
       actions: {
         "package.download": async () => { await downloadPackage(config); return {}; },
         "package.save-folder": async () => { await writeFolderPackage(await localDirectory(), config); return {}; },
         "package.import-folder": async () => { await importPackage(await readFolderPackage(await localDirectory())); allowedIds.clear(); fileGrants.clear(); receipt = null; location.hash = "#folder=library"; return {}; },
-        "drive.sync": async () => { const result = await syncDrive(config); receipt = await getDeviceValue("drive-receipt"); render(); return { entryCount: result.entryCount }; },
+        "drive.sync": async () => { const result = await syncDrive(config); window.dispatchEvent(new Event("drive:manual-sync")); receipt = await getDeviceValue("drive-receipt"); render(); return { entryCount: result.entryCount }; },
+        "drive.remember": async () => { await setDriveSettings({ remember: true }); render(); return {}; },
+        "drive.auto-sync.enable": async () => { await setDriveSettings({ autoSync: true }); render(); return {}; },
+        "drive.auto-sync.disable": async () => { await setDriveSettings({ autoSync: false }); render(); return {}; },
+        "drive.disconnect": async () => { await disconnectDrive(); render(); return {}; },
+        "drive.forget": async () => { await disconnectDrive({ forget: true }); render(); return {}; },
         "package.restore-recovery": async () => { if (!selectedRecovery) throw new Error("Select a recovery copy first."); await restoreRecoveryCopy(selectedRecovery); allowedIds.clear(); fileGrants.clear(); receipt = null; render(); return {}; },
       },
     }));
     window.addEventListener("hashchange", render);
     window.addEventListener("database:changed", render);
     window.addEventListener("database:error", event => message(event.detail, true));
+    window.addEventListener("drive:status", () => {
+      const node = document.getElementById("drive-sync-status"); if (node) node.textContent = driveSyncStatus();
+      const connection = document.getElementById("drive-connection"); if (connection) connection.textContent = driveConnected() ? "Disconnect Drive" : connection.dataset.idleLabel;
+      const auto = document.getElementById("drive-auto-sync"); if (auto) { auto.disabled = !driveConnected() || !navigator.locks; auto.checked = driveState().autoSync; }
+      const remember = document.getElementById("drive-remember"); if (remember) remember.checked = driveState().remember;
+    });
+    window.addEventListener("drive:synced", async () => { receipt = await getDeviceValue("drive-receipt"); if (!dialog.open) render(); });
     document.getElementById("package-import").addEventListener("change", async event => {
       const file = event.target.files[0]; event.target.value = ""; if (!file) return;
       try { await confirmImport(await readPackageFile(file)); } catch (error) { message(error.message, true); }
@@ -238,7 +251,7 @@ function selectField(title, options, selected) { const control = field(title, "s
 function policyControl(selected) { return selectField("Storage", STORAGE_POLICIES.map(value => [value, { inherit: "Inherit directory setting", local: "Local", cloud: "Cloud (browser cache while editing)", both: "Local + cloud" }[value]]), selected); }
 function editStorage(record) {
   const policy = policyControl(record.storage ?? "inherit");
-  showForm("Storage preference", [policy.label, el("p", "This changes the preference. Use Storage & backup to save files or sync Google Drive.", "database-help")], async () => { const db = getDatabase(); (db.folders[record.id] ?? db.entries[record.id]).storage = policy.input.value; await saveDatabase(db); });
+  showForm("Storage preference", [policy.label, el("p", "Cloud-selected content will be queued if automatic sync is enabled. Otherwise, use Storage & backup to save files or sync Google Drive manually.", "database-help")], async () => { const db = getDatabase(); (db.folders[record.id] ?? db.entries[record.id]).storage = policy.input.value; await saveDatabase(db); });
 }
 function editFolder(parentId, existing = null) {
   const title = field("Directory name", "input", existing?.title ?? ""); title.input.required = true;
@@ -346,13 +359,28 @@ async function renderStorage() {
   const localActions = el("div", "", "database-actions");
   localActions.append(button("Choose local folder", async () => { await chooseLocalDirectory(); render(); }), button("Save to folder", async () => { await writeFolderPackage(await localDirectory(), config); message("Saved database.json, assets/, cloud-config.json and README.md to your folder."); }), button("Import folder", async () => { await confirmImport(await readFolderPackage(await localDirectory())); }), button("Download complete ZIP", async () => { await downloadPackage(config); message("Complete database package downloaded."); }), button("Import ZIP / JSON", () => document.getElementById("package-import").click()));
   main.append(localActions, el("p", "Folder access depends on your browser. ZIP import and export work without it. Saving refuses to overwrite a changed folder copy.", "database-help"));
-  main.append(el("h2", "Google Drive"), el("p", config.clientId ? "Google sign-in is configured. Your token stays in memory and expires; connect again when needed." : "Not configured. Add a Google web OAuth client ID to cloud-config.json and authorize this site’s origin. No password or secret belongs in that file.", "database-help"));
+  main.append(el("h2", "Google Drive"), el("p", config.clientId ? "Google sign-in is configured. Remember this browser to retain your connection through reloads and navigation in this tab. Google access still expires; reconnect when prompted. Other browser profiles and devices start disconnected." : "Not configured. Add a Google web OAuth client ID to cloud-config.json and authorize this site’s origin. No password or secret belongs in that file.", "database-help"));
+  const account = await driveAccount();
+  if (account) main.append(el("p", `This browser library is bound to ${account.email || "your original Google account"}. A different account cannot sync it.`, "database-help"));
+  main.append(el("p", "Shared device? Use separate browser profiles. Disconnect and Forget connection stop Drive access but do not hide or delete this browser’s library. Forget keeps the account safety binding. Browser storage is not encrypted by this feature.", "database-help"));
+  const status = el("p", driveSyncStatus(), "database-help"); status.id = "drive-sync-status"; status.setAttribute("role", "status"); main.append(status);
   if (config.clientId) void prepareDriveIdentity(config).catch(error => message(error.message, true));
   const cloudActions = el("div", "", "database-actions");
-  cloudActions.append(button(driveConnected() ? "Disconnect Drive" : "Connect Google Drive", async () => { if (driveConnected()) disconnectDrive(); else await connectDrive(config); render(); }), button("Sync selected content", async () => {
-    message("Syncing selected content…"); const result = await syncDrive(config); receipt = await getDeviceValue("drive-receipt"); message(`Drive sync complete: ${result.entryCount} entries.`); render();
+  cloudActions.append(button(driveConnected() ? "Disconnect Drive" : account ? "Reconnect Google Drive" : "Connect Google Drive", async () => { if (driveConnected()) await disconnectDrive(); else await connectDrive(config); render(); }), button("Sync selected content", async () => {
+    message("Syncing selected content…"); const result = await syncDrive(config); window.dispatchEvent(new Event("drive:manual-sync")); receipt = await getDeviceValue("drive-receipt"); message(`Drive sync complete: ${result.entryCount} entries.`); render();
   }));
+  cloudActions.firstElementChild.id = "drive-connection";
+  cloudActions.firstElementChild.dataset.idleLabel = account ? "Reconnect Google Drive" : "Connect Google Drive";
   main.append(cloudActions);
+  const remember = el("label", "Remember this browser (use only in your own browser profile) ");
+  const rememberInput = el("input"); rememberInput.id = "drive-remember"; rememberInput.type = "checkbox"; rememberInput.checked = driveState().remember;
+  rememberInput.addEventListener("change", async () => { try { await setDriveSettings({ remember: rememberInput.checked }); } catch (error) { message(error.message, true); } render(); }); remember.prepend(rememberInput);
+  const auto = el("label", "Automatically sync cloud-selected content while this site is open ");
+  const autoInput = el("input"); autoInput.id = "drive-auto-sync"; autoInput.type = "checkbox"; autoInput.checked = driveState().autoSync; autoInput.disabled = !driveConnected() || !navigator.locks;
+  autoInput.addEventListener("change", async () => { try { await setDriveSettings({ autoSync: autoInput.checked }); } catch (error) { message(error.message, true); } render(); }); auto.prepend(autoInput);
+  const preferences = el("div", "", "database-drive-preferences"); preferences.append(remember, auto);
+  const forgetActions = el("div", "", "database-actions"); forgetActions.append(button("Forget connection in this browser", async () => { await disconnectDrive({ forget: true }); message("Connection forgotten and automatic sync stopped. Local entries and the account safety binding remain."); render(); }));
+  main.append(preferences, el("p", "Automatic sync includes future edits to Cloud / Local + cloud entries and checks for changes about once a minute. Offline edits stay pending in this browser. Closing the site stops sync; expired Google access needs a Reconnect click. Local-only entries and separate tool stores are not uploaded.", "database-help"), forgetActions);
   if (receipt?.datasetId === getDatabase().datasetId) main.append(el("p", `Last completed sync: ${new Date(receipt.at).toLocaleString()}`, "database-help"), link("Open Drive package →", `https://drive.google.com/drive/folders/${encodeURIComponent(receipt.folderId)}`, "database-reference"));
   const folderId = field("Existing VP Drive folder ID (for another device)"); const cloudImport = el("div", "", "database-actions");
   cloudImport.append(button("Import Drive package", async () => { const packageData = await readDrivePackage(folderId.input.value.trim()); if (await confirmImport(packageData)) await setDeviceValue(`drive-folder:${packageData.database.datasetId}`, packageData.folderId); }));
@@ -375,7 +403,7 @@ async function renderStorage() {
     main.append(el("h2", "Recovery"), recovery.label, button("Restore selected copy", async () => { if (!confirm("Restore this copy? Your current database will be retained as a new recovery copy.")) return; await restoreRecoveryCopy(selectedRecovery); allowedIds.clear(); receipt = null; message("Recovery copy restored."); render(); }));
   }
   main.append(el("h2", "AI file access"), el("p", "Grant one specific action after selecting your folder or connecting Drive. The command receives a completion receipt; your files and credentials are not returned.", "database-help"));
-  const action = selectField("Allow once", [["package.download", "Download complete ZIP"], ["package.save-folder", "Save selected local folder"], ["package.import-folder", "Import selected local folder (replace current database)"], ["drive.sync", "Sync selected cloud content"], ["package.restore-recovery", "Restore selected recovery copy"]], "package.download");
+  const action = selectField("Allow once", [["package.download", "Download complete ZIP"], ["package.save-folder", "Save selected local folder"], ["package.import-folder", "Import selected local folder (replace current database)"], ["drive.sync", "Sync selected cloud content"], ["drive.remember", "Remember this browser connection"], ["drive.auto-sync.enable", "Enable ongoing sync of cloud-selected content"], ["drive.auto-sync.disable", "Disable automatic sync"], ["drive.disconnect", "Disconnect Drive (keeps local data)"], ["drive.forget", "Forget connection (keeps local data and safety binding)"], ["package.restore-recovery", "Restore selected recovery copy"]], "package.download");
   main.append(action.label, button("Allow this AI action once", () => { fileGrants.add(action.input.value); message(`Allowed once: ${action.input.value}. Access ends when this page closes.`); }));
 }
 function conflictVersion(title, record) {
