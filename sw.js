@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v130";
+const CACHE_NAME = "vital-pancakes-app-v131";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
 ]);
@@ -418,7 +418,8 @@ const STARTUP_SHELL = OFFLINE_ASSET_CATALOG.filter((asset) => (
 function handleInstall(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STARTUP_SHELL))
+      // A new release must not seed its cache from an older HTTP-cached module.
+      .then((cache) => cache.addAll(STARTUP_SHELL.map(path => new Request(path, { cache: "reload" }))))
       .then(() => self.skipWaiting()),
   );
 }
@@ -466,9 +467,9 @@ function handleFetch(event) {
   }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.open(CACHE_NAME).then(cache => cache.match(event.request)).then((cachedResponse) => {
       if (cachedResponse) return cachedResponse;
-      return fetch(event.request).then((networkResponse) => {
+      return fetch(event.request, { cache: "no-cache" }).then((networkResponse) => {
         if (networkResponse.ok) {
           const responseCopy = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseCopy));

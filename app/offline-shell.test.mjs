@@ -102,8 +102,14 @@ test("service worker installation pre-caches only the bounded startup shell", as
     /const STARTUP_PATHS = new Set\(\[([\s\S]*?)\]\);/,
   )?.[1] ?? "";
 
-  assert.match(source, /cache\.addAll\(STARTUP_SHELL\)/);
+  assert.match(source, /cache\.addAll\(STARTUP_SHELL\.map\(path => new Request\(path, \{ cache: "reload" \}\)\)\)/);
   assert.match(startupPaths, /index\.html/);
   assert.match(startupPaths, /workspace\.html/);
   assert.doesNotMatch(startupPaths, /\.pdf|file-converter-app|visual-board\.js|pdf\.worker/);
+});
+
+test("cache misses revalidate HTTP assets so a new release cannot reuse stale modules", async () => {
+  const source = await readFile(new URL("../sw.js", import.meta.url), "utf8");
+  assert.match(source, /fetch\(event\.request, \{ cache: "no-cache" \}\)/);
+  assert.match(source, /caches\.open\(CACHE_NAME\)\.then\(cache => cache\.match\(event\.request\)\)/);
 });
