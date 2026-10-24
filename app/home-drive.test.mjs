@@ -10,6 +10,8 @@ test("home Google entry point opens existing storage controls and discloses WIP"
   assert.match(home, /Test accounts only/);
   const library = readFileSync(new URL("../library.html", import.meta.url), "utf8");
   assert.match(library, /app\/database-ui\.mjs/);
+  assert.match(home, /site-navigation\.js\?v=21/);
+  assert.match(library, /site-navigation\.js\?v=21/);
   const controller = readFileSync(new URL("./database-ui.mjs", import.meta.url), "utf8");
   assert.match(controller, /settings: params\.has\("storage"\)/);
   assert.match(controller, /await connectDrive\(config\)/);

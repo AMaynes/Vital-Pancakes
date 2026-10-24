@@ -49,6 +49,13 @@ test("different account is rejected without retaining its credentials, even afte
   assert.equal(f.device.get("drive-account").id, "alice");
 });
 
+test("incomplete remembered session is discarded rather than claiming a connection", async () => {
+  const f = fixture(); f.device.set("drive-preferences", { remember: true });
+  f.tab.set(DRIVE_SESSION_KEY, JSON.stringify({ clientId: f.config.clientId, expiresAt: 9999999, epoch: null }));
+  const session = f.create(); await session.initialize(f.config);
+  assert.equal(session.connected(), false); assert.equal(f.tab.size, 0);
+});
+
 test("disconnect aborts requests and invalidates other/restored tabs while retaining local account binding", async () => {
   const f = fixture(), session = f.create(); await session.initialize(f.config); await session.settings({ remember: true }); await session.accept(f.response); await session.settings({ autoSync: true });
   const other = f.create(); await other.initialize(f.config);

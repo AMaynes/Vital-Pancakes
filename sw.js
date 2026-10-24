@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v132";
+const CACHE_NAME = "vital-pancakes-app-v133";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
 ]);
@@ -30,6 +30,7 @@ const OFFLINE_ASSET_CATALOG = [
   "./sharedvp.html",
   "./cloud-config.json",
   "./site-navigation.js?v=20",
+  "./site-navigation.js?v=21",
   "./app/main.js?v=22",
   "./app/store.js?v=19",
   "./app/database.css",

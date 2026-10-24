@@ -22,7 +22,7 @@ export function createDriveSession({ read, write, bindAccount, identify, storage
         try {
           const saved = JSON.parse(storage?.getItem(DRIVE_SESSION_KEY) ?? "null");
           const owner = await read("drive-account");
-          if (saved?.clientId === config.clientId && saved.expiresAt > now() && saved.account?.id === owner?.id && saved.epoch === await read("drive-session-epoch")) auth = saved;
+          if (saved?.clientId === config.clientId && typeof saved.accessToken === "string" && saved.accessToken && Number.isFinite(saved.expiresAt) && saved.expiresAt > now() && saved.account?.id && saved.account.id === owner?.id && saved.epoch === await read("drive-session-epoch")) auth = saved;
           else remove();
         } catch { remove(); }
       } else remove();
