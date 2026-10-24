@@ -16,7 +16,7 @@
  * the application shell. Large model weights are never pre-cached.
  */
 
-const CACHE_NAME = "vital-pancakes-app-v131";
+const CACHE_NAME = "vital-pancakes-app-v132";
 const RETAINED_CACHE_NAMES = new Set([
   CACHE_NAME,
 ]);
@@ -405,9 +405,9 @@ const STARTUP_PATHS = new Set([
   "./tools/current-tool-ai-adapter.mjs",
   "./tools/local-webllm-client.mjs",
 ]);
-const STARTUP_SHELL = OFFLINE_ASSET_CATALOG.filter((asset) => (
+const STARTUP_SHELL = [...new Set(OFFLINE_ASSET_CATALOG.filter((asset) => (
   STARTUP_PATHS.has(asset.split("?")[0])
-));
+)))];
 
 /**
  * Pre-caches only the routes and modules required to start the homepage and

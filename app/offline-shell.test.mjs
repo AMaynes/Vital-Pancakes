@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runInNewContext } from "node:vm";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -112,4 +113,11 @@ test("cache misses revalidate HTTP assets so a new release cannot reuse stale mo
   const source = await readFile(new URL("../sw.js", import.meta.url), "utf8");
   assert.match(source, /fetch\(event\.request, \{ cache: "no-cache" \}\)/);
   assert.match(source, /caches\.open\(CACHE_NAME\)\.then\(cache => cache\.match\(event\.request\)\)/);
+});
+
+test("startup cache contains no duplicate requests that would reject service worker installation", async () => {
+  const source = await readFile(new URL("../sw.js", import.meta.url), "utf8");
+  const startup = runInNewContext(source.slice(0, source.indexOf("function handleInstall")) + "; STARTUP_SHELL");
+  assert.ok(startup.length > 0);
+  assert.equal(startup.length, new Set(startup).size);
 });
